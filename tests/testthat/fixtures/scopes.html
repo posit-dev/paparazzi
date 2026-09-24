@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi scopes fixture</title>
+</head>
+<body style="margin: 0">
+  <!-- Two top-level scope containers with parallel structure so counts
+       and nth-selection are unambiguous once a scope is pushed or
+       pinned. Namespaced ids/classes: scope-, sc-*. -->
+  <section id="scope-a">
+    <div class="sc-item">A1</div>
+    <div class="sc-item">A2</div>
+    <div class="sc-item">A3</div>
+    <div class="sc-item">
+      <span class="sc-label">nested-a</span>
+    </div>
+    <div class="sc-item sc-target">shared target</div>
+    <div class="sc-item" data-task="get_weather">get_weather</div>
+  </section>
+
+  <section id="scope-b">
+    <div class="sc-item">B1</div>
+    <div class="sc-item">B2</div>
+    <div class="sc-item">
+      <span class="sc-label">nested-b</span>
+    </div>
+    <div class="sc-item sc-target">shared target</div>
+    <div class="sc-item" data-task="get_time">get_time</div>
+  </section>
+</body>
+</html>
