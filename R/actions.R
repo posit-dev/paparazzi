@@ -2,6 +2,9 @@
 # domain -- real trusted events, never JS .click() substitutes. The one
 # sanctioned exception is element focus()/blur() in pz_focus()/pz_blur()
 # (element-state methods, not input events; Playwright does the same).
+# Value and file setting is DOM state, not pointer input: the native
+# prototype setters plus dispatched events (pz_set_value()), and
+# DOM.setFileInputFiles (pz_set_files()).
 #' Click an element
 #'
 #' Auto-waits for the element to be actionable -- visible with a
@@ -419,4 +422,338 @@ insert_text <- function(ctx, target, text, call = caller_env()) {
       timeout_ = ctx$page$default_timeout
     )
   )
+}
+#' Set the value of a form control
+#'
+#' Auto-waits for a match, then sets the value instantly -- never staged
+#' as typing, even while recording -- and dispatches `input` and
+#' `change`, so the page reacts exactly as if a user had made the edit.
+#' Framework-controlled inputs (React and friends) notice the change:
+#' the value is assigned through the browser's native value setter, not
+#' the instance-level property those frameworks intercept.
+#'
+#' Covers text inputs and textareas (clear with `pz_set_value(ctx, "")`),
+#' native `<select>` elements (matched by option `value`), checkboxes
+#' and radios (`TRUE`/`FALSE`; a radio set to `TRUE` unchecks the others
+#' in its group), and range, date, and number inputs. A contenteditable
+#' element (plain or framework-driven, e.g. ProseMirror) has its
+#' content replaced in one step.
+#'
+#' @inheritParams pz_click
+#' @param value A string (most controls), a number (range, number), or
+#'   `TRUE`/`FALSE` (checkboxes, radios).
+#'
+#' @return `ctx`, invisibly.
+#'
+#' @seealso [pz_type()] for visible, keystroke-by-keystroke input and
+#'   [pz_set_files()].
+#'
+#' @export
+pz_set_value <- function(ctx, value, ..., target = NULL) {
+  check_context(ctx)
+  check_dots_empty()
+  arg <- set_value_argument(value)
+
+  found <- action_elements(ctx, target)
+  if (!found$pinned) {
+    withr::defer(release_elements(found$els))
+  }
+  el_scroll_into_view(found$els)
+
+  res <- els_arg_values(found$els, set_value_js, list(list(value = arg)))
+  if (identical(res$status, "contenteditable")) {
+    els_call(found$els, select_all_js)
+    insert_text(ctx, found$els$description, arg$text)
+    return(invisible(ctx))
+  }
+  if (!identical(res$status, "ok")) {
+    cli::cli_abort(
+      c(res$message, i = "Target: {found$els$description}"),
+      class = "paparazzi_error_value"
+    )
+  }
+  invisible(ctx)
+}
+#' Attach files to a file input
+#'
+#' Auto-waits for a match, then sets the input's files to the given
+#' local files through the browser's own file-input channel, so the
+#' input's `FileList` holds the real names, sizes, and contents, and
+#' `change` fires exactly as if the files had been picked in a dialog.
+#'
+#' @inheritParams pz_click
+#' @param files A character vector of paths to existing local files.
+#'
+#' @return `ctx`, invisibly.
+#'
+#' @seealso [pz_set_value()]
+#'
+#' @export
+pz_set_files <- function(ctx, files, ..., target = NULL) {
+  check_context(ctx)
+  check_dots_empty()
+  files <- check_file_paths(files)
+
+  found <- action_elements(ctx, target)
+  if (!found$pinned) {
+    withr::defer(release_elements(found$els))
+  }
+  el_scroll_into_view(found$els)
+  if (
+    !isTRUE(els_call(
+      found$els,
+      "function() { const el = this[0]; return el.tagName === 'INPUT' && el.type === 'file'; }"
+    ))
+  ) {
+    cli::cli_abort(
+      c("Target is not a file input.", i = "Target: {found$els$description}"),
+      class = "paparazzi_error_value"
+    )
+  }
+
+  # A resolved set's handle is the JS array of elements, not the
+  # element; DOM.setFileInputFiles addresses the element itself.
+  el_object_id <- els_first_object_id(found$els)
+  withr::defer(try(
+    found$els$page$session$Runtime$releaseObject(
+      el_object_id,
+      timeout_ = found$els$page$default_timeout
+    ),
+    silent = TRUE
+  ))
+  action_cdp(
+    ctx,
+    "setting files on",
+    found$els$description,
+    cmd = ctx$page$session$DOM$setFileInputFiles(
+      # A single path must stay a one-element array in the CDP payload.
+      as.list(files),
+      objectId = el_object_id,
+      timeout_ = ctx$page$default_timeout
+    )
+  )
+  invisible(ctx)
+}
+# pz_set_value()'s `value` as the CDP callArgument the brancher reads: a
+# kind discriminator ("text" or "checked") plus the value in both
+# shapes, so the payload has the same shape for every R type.
+set_value_argument <- function(value, call = caller_env()) {
+  if (!is.character(value) && !is.numeric(value) && !is.logical(value)) {
+    stop_input_type(
+      value,
+      "a string, a number, or TRUE/FALSE",
+      arg = "value",
+      call = call
+    )
+  }
+  if (length(value) != 1L) {
+    cli::cli_abort(
+      "{.arg value} must be a single string, number, or TRUE/FALSE.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  if (anyNA(value)) {
+    cli::cli_abort(
+      "{.arg value} can't be `NA`.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  if (is.logical(value)) {
+    list(kind = "checked", checked = value, text = "")
+  } else {
+    list(kind = "text", checked = FALSE, text = as.character(value))
+  }
+}
+# els_values() with CDP callArguments: the resolved set stays `this`,
+# and each entry of `args` is a {value: ...} callArgument. Same timeout
+# and error mapping as els_values().
+els_arg_values <- function(els, js, args, call = caller_env()) {
+  timeout <- els$page$default_timeout
+  res <- tryCatch(
+    els$page$session$Runtime$callFunctionOn(
+      js,
+      objectId = els$object_id,
+      arguments = args,
+      returnByValue = TRUE,
+      timeout_ = timeout
+    ),
+    error = function(e) {
+      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+        cli::cli_abort(
+          "Timed out after {timeout}s working with elements matching {els$description}.",
+          class = "paparazzi_error_timeout",
+          call = call,
+          parent = e
+        )
+      }
+      stop(e)
+    }
+  )
+  err <- res$exceptionDetails
+  if (!is.null(err)) {
+    cli::cli_abort(
+      "JavaScript error working with elements matching {els$description}: {err$exception$description %||% err$text %||% 'unknown error'}.",
+      class = "paparazzi_error_js",
+      call = call
+    )
+  }
+  res$result$value
+}
+# The first element's own remote objectId. The caller releases the
+# returned object; a detached element surfaces as the raw chromote
+# error, like every other callFunctionOn.
+els_first_object_id <- function(els, call = caller_env()) {
+  timeout <- els$page$default_timeout
+  res <- tryCatch(
+    els$page$session$Runtime$callFunctionOn(
+      "function() { return this[0]; }",
+      objectId = els$object_id,
+      returnByValue = FALSE,
+      timeout_ = timeout
+    ),
+    error = function(e) {
+      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+        cli::cli_abort(
+          "Timed out after {timeout}s working with elements matching {els$description}.",
+          class = "paparazzi_error_timeout",
+          call = call,
+          parent = e
+        )
+      }
+      stop(e)
+    }
+  )
+  res$result$objectId
+}
+# pz_set_value()'s whole element branch. The native prototype setters
+# bypass instance-level value/checked overrides (what framework
+# controlled inputs install), and the readback goes through the native
+# getter for the same reason. Errors are statuses, not exceptions, so
+# the R side wraps them in paparazzi_error_value.
+set_value_js <- "function(value) {
+  const el = this[0];
+  if (el.isContentEditable) {
+    if (value.kind !== 'text') {
+      return {
+        status: 'error',
+        message: 'A contenteditable element takes a string, not TRUE/FALSE.'
+      };
+    }
+    return { status: 'contenteditable' };
+  }
+  const isControl =
+    el.tagName === 'SELECT' || el.tagName === 'INPUT' ||
+    el.tagName === 'TEXTAREA';
+  if (!isControl) {
+    return {
+      status: 'error',
+      message: 'Target is a <' + el.tagName.toLowerCase() +
+        '>, not a form control or contenteditable element.'
+    };
+  }
+  el.focus();
+  const dispatch = () => {
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  if (el.tagName === 'SELECT') {
+    if (value.kind !== 'text') {
+      return {
+        status: 'error',
+        message: 'A <select> takes an option value (a string), not TRUE/FALSE.'
+      };
+    }
+    const has = Array.from(el.options).some((o) => o.value === value.text);
+    if (!has) {
+      return {
+        status: 'error',
+        message: 'No option with value \"' + value.text + '\".'
+      };
+    }
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')
+      .set.call(el, value.text);
+    dispatch();
+    return { status: 'ok' };
+  }
+  const isCheckable = el.tagName === 'INPUT' &&
+    (el.type === 'checkbox' || el.type === 'radio');
+  if (isCheckable) {
+    if (value.kind !== 'checked') {
+      return {
+        status: 'error',
+        message: 'A ' + el.type + ' input takes TRUE or FALSE.'
+      };
+    }
+    const setChecked = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'checked'
+    ).set;
+    setChecked.call(el, value.checked);
+    if (el.type === 'radio' && value.checked && el.name) {
+      // The native checked setter doesn't maintain radio groups --
+      // that's the browser's pre-click activation behavior -- so the
+      // group (same form owner or tree root, same name) is unchecked
+      // by hand.
+      const root = el.form || el.getRootNode();
+      root.querySelectorAll('input[type=radio]').forEach((r) => {
+        if (r !== el && r.name === el.name) {
+          setChecked.call(r, false);
+        }
+      });
+    }
+    dispatch();
+    return { status: 'ok' };
+  }
+  // Every other input type and textareas: the text path.
+  if (value.kind !== 'text') {
+    return {
+      status: 'error',
+      message: 'This ' + el.tagName.toLowerCase() +
+        ' takes a string (or number), not TRUE/FALSE.'
+    };
+  }
+  const proto = el.tagName === 'TEXTAREA'
+    ? HTMLTextAreaElement.prototype
+    : HTMLInputElement.prototype;
+  const valueProp = Object.getOwnPropertyDescriptor(proto, 'value');
+  valueProp.set.call(el, value.text);
+  const kept = valueProp.get.call(el);
+  if (kept !== value.text) {
+    return {
+      status: 'error',
+      message: 'The element kept \"' + kept + '\" instead -- the browser ' +
+        'rejected or clamped the value.'
+    };
+  }
+  dispatch();
+  return { status: 'ok' };
+}"
+# The contenteditable fallback's first half: focus the element and
+# select all of its contents, so the insertText that follows replaces
+# everything -- an insertText with an active selection, empty text
+# included, deletes the selection.
+select_all_js <- "function() {
+  const el = this[0];
+  el.focus();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}"
+# pz_set_files()'s `files`: paths to existing local files, normalized
+# to the absolute paths the browser reads.
+check_file_paths <- function(files, call = caller_env()) {
+  check_character(files, call = call)
+  missing <- files[!file.exists(files)]
+  if (length(missing) > 0L) {
+    cli::cli_abort(
+      "File{?s} {.file {missing}} {?doesn't/don't} exist.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  unname(normalizePath(files, winslash = "/", mustWork = TRUE))
 }
