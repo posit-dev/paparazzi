@@ -341,7 +341,7 @@ pz_expect_focused <- function(
 #' [pz_expect_checked()] passes when at least one element matches and
 #' every match is checked (the browser's `:checked` selector, so
 #' checkboxes, radios, and select options all count). Toggle with
-#' [pz_click()] or [pz_set_value()].
+#' [pz_click()] or `pz_set_value()`.
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
 #' `"paparazzi_expectation_failure"`; inside testthat, the failure is

@@ -26,7 +26,7 @@ pz_wait <- function(ctx, seconds) {
 #'
 #' There is deliberately no element-state wait (`pz_wait_for(target,
 #' state =)`): [pz_expect_visible()], [pz_expect_hidden()], and
-#' [pz_expect_exists(not = TRUE)] already retry, so they wait.
+#' [pz_expect_exists()] with `not = TRUE` already retry, so they wait.
 #'
 #' @inheritParams pz_click
 #' @param expr A string of JavaScript that evaluates truthy when the
@@ -72,7 +72,7 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
 #' samples within its own `timeout` budget.
 #'
 #' There is deliberately no element-state wait: [pz_expect_visible()],
-#' [pz_expect_hidden()], and [pz_expect_exists(not = TRUE)] already
+#' [pz_expect_hidden()], and [pz_expect_exists()] with `not = TRUE` already
 #' retry, so they wait.
 #'
 #' @inheritParams pz_click

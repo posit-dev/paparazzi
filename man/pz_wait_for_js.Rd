@@ -29,7 +29,7 @@ failed poll.
 }
 \details{
 There is deliberately no element-state wait (\code{pz_wait_for(target, state =)}): \code{\link[=pz_expect_visible]{pz_expect_visible()}}, \code{\link[=pz_expect_hidden]{pz_expect_hidden()}}, and
-\link{pz_expect_exists(not = TRUE)} already retry, so they wait.
+\code{\link[=pz_expect_exists]{pz_expect_exists()}} with \code{not = TRUE} already retry, so they wait.
 }
 \examples{
 \dontrun{

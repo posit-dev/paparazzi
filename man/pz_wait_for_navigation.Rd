@@ -29,17 +29,18 @@ default.}
 \description{
 The explicit wait after an action that navigates -- a clicked link, a
 submitted form, a JS redirect. Paparazzi never detects navigations on
-its own, so a wait marks exactly where one is expected. It waits for
-the document the action navigated to to finish loading, then resets
-the scope to the root and releases every pinned scope object:
-contexts scoped before the navigation raise \code{paparazzi_error_detached}
-on their next use, like \code{\link[=pz_find_reset]{pz_find_reset()}} never does.
+its own, so a wait marks exactly where one is expected. Call it
+immediately after the action: it waits for the document the action
+navigated to to finish loading and then hold still for a moment, so a
+navigation that is in flight when the wait starts is waited out, not
+raced. On success it resets the scope to the root and releases every
+pinned scope object: contexts scoped before the navigation error on
+their next use instead of acting on a stale set.
 }
 \details{
-The navigation is recognized against a snapshot taken when the wait
-starts, so call it immediately after the action. A navigation that
-fully finished before the wait started is indistinguishable from no
-navigation and times out.
+A navigation the page hasn't started yet -- a redirect scheduled
+seconds later -- is beyond a post-action wait; block on its trigger
+with \code{\link[=pz_wait_for_js]{pz_wait_for_js()}} first.
 }
 \examples{
 \dontrun{

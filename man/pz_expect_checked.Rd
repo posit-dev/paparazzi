@@ -29,7 +29,7 @@ live), the page body at the root.}
 \code{\link[=pz_expect_checked]{pz_expect_checked()}} passes when at least one element matches and
 every match is checked (the browser's \verb{:checked} selector, so
 checkboxes, radios, and select options all count). Toggle with
-\code{\link[=pz_click]{pz_click()}} or \code{\link[=pz_set_value]{pz_set_value()}}.
+\code{\link[=pz_click]{pz_click()}} or \code{pz_set_value()}.
 
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
