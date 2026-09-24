@@ -10,7 +10,11 @@ pz_get_style(ctx, props = NULL, ..., target = NULL)
 \item{ctx}{A paparazzi context.}
 
 \item{props}{A character vector of CSS property names, or \code{NULL} for
-all computed properties.}
+all computed properties. With \code{NULL} the columns are the union of
+property names across matches, first-seen order (standard
+computed properties are the same for every element, but custom
+properties vary); a match that doesn't report a property reads as
+\code{""} (empty string).}
 
 \item{...}{Checked empty; reserved for future use.}
 

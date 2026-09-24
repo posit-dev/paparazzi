@@ -23,7 +23,11 @@
 #'
 #' @param ctx A paparazzi context.
 #' @param props A character vector of CSS property names, or `NULL` for
-#'   all computed properties.
+#'   all computed properties. With `NULL` the columns are the union of
+#'   property names across matches, first-seen order (standard
+#'   computed properties are the same for every element, but custom
+#'   properties vary); a match that doesn't report a property reads as
+#'   `""` (empty string).
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
@@ -52,10 +56,20 @@ pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
     timeout = NULL,
     read = function(els, call) {
       vals <- els_values(els, style_get_js(props), call = call)
-      out_props <- if (is.null(props)) names(vals[[1]]) else props
+      out_props <- if (is.null(props)) {
+        # Union across matches, first-seen order: standard computed
+        # properties are enumerated for every element, but a custom
+        # property appears only where it's set or inherited, so the
+        # first match's set can miss columns later matches have.
+        unique(unlist(lapply(vals, names)))
+      } else {
+        props
+      }
+      # Missing = "" (empty string), not NA: the property simply
+      # isn't in that match's computed style.
       cols <- lapply(
         out_props,
-        function(p) chr_or_na(lapply(vals, function(v) v[[p]]))
+        function(p) vapply(vals, function(v) v[[p]] %||% "", character(1))
       )
       names(cols) <- out_props
       new_get_tibble(ctx, els, target, !!!cols, call = call)

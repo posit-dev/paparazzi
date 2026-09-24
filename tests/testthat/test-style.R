@@ -43,6 +43,17 @@ test_that("pz_get_style with props = NULL returns every computed property", {
   expect_false("margin" %in% names(styles))
 })
 
+test_that("pz_get_style with props = NULL unions properties across matches", {
+  page <- local_style_page()
+  # Only #custom reports --bs-primary: the column set is the union
+  # across matches, so the column exists, and the #sizes row (no
+  # such custom property) reads as "".
+  styles <- pz_get_style(page, target = "#sizes, #custom")
+  expect_identical(nrow(styles), 2L)
+  expect_true("--bs-primary" %in% names(styles))
+  expect_identical(styles["--bs-primary"][[1]], c("", "#0d6efd"))
+})
+
 test_that("pz_get_style reads one row per match in order", {
   page <- local_style_page()
   cards <- pz_get_style(page, "color", target = ".card")
