@@ -294,14 +294,13 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #' Type text into an element
 #'
 #' With a `target`, auto-waits for the element to be actionable --
-#' visible with a non-empty box -- then scrolls it into view, clicks the
-#' center of it (real mouse events, so the element genuinely gains
-#' focus), and
-#' inserts `text` at the caret -- the caret lands where the click lands,
-#' just like a real user. With `target = NULL` at the root context,
-#' inserts into whatever element currently has focus; if nothing
-#' editable is focused, the text goes nowhere, exactly like typing into
-#' a page with no focused field.
+#' visible with a non-empty box -- then scrolls it into view, clicks
+#' the center of it (real mouse events, so the element genuinely gains
+#' focus), and inserts `text` at the caret -- the caret lands where the
+#' click lands, just like a real user. With `target = NULL` at the
+#' root context, inserts into whatever element currently has focus;
+#' if nothing editable is focused, the text goes nowhere, exactly like
+#' typing into a page with no focused field.
 #'
 #' Insertion is instant (one `insertText`); natural, per-keystroke
 #' typing arrives with the recording task. For a value-setting primitive
