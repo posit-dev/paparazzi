@@ -42,6 +42,19 @@
       animation: drift 200ms infinite;
     }
   </style>
+  <script>
+    // #nav-link routes its navigation through a 150 ms timer: a plain
+    // file:// link commits and loads faster than the R-side wait can
+    // snapshot the page it started on, so the click-driven navigation
+    // has to begin after pz_wait_for_navigation() starts -- the routed
+    // click is the JS-redirect shape the wait exists for.
+    document.addEventListener('click', function (e) {
+      const link = e.target.closest('#nav-link');
+      if (!link) return;
+      e.preventDefault();
+      setTimeout(function () { location.href = link.href; }, 150);
+    });
+  </script>
 </head>
 <body>
   <!-- Text stability: #ticker changes every 50 ms for 1 s, then
@@ -56,6 +69,8 @@
     <div id="endless"></div>
   </div>
 
+  <!-- Routed through a timer by the click handler above; still the
+       click -> navigation -> pz_wait_for_navigation() flow. -->
   <a id="nav-link" href="nav-target.html">Go to the target page</a>
 
   <script>

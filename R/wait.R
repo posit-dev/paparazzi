@@ -176,13 +176,17 @@ pz_wait_for_stable <- function(
 #' immediately after the action: it waits for the document the action
 #' navigated to to finish loading and then hold still for a moment, so a
 #' navigation that is in flight when the wait starts is waited out, not
-#' raced. On success it resets the scope to the root and releases every
-#' pinned scope object: contexts scoped before the navigation error on
-#' their next use instead of acting on a stale set.
+#' raced. A navigation that begins while the wait is already running is
+#' caught too; one scheduled beyond the timeout can't be -- block on
+#' its trigger with [pz_wait_for_js()] first.
 #'
-#' A navigation the page hasn't started yet -- a redirect scheduled
-#' seconds later -- is beyond a post-action wait; block on its trigger
-#' with [pz_wait_for_js()] first.
+#' The settled state alone is not enough: the wait snapshots the
+#' document it starts on and passes only when the settled document is
+#' a different one, so a page where nothing navigates times out with
+#' a classed error rather than passing. On success it resets the scope
+#' to the root and releases every pinned scope object: contexts scoped
+#' before the navigation error on their next use instead of acting on
+#' a stale set.
 #'
 #' @inheritParams pz_click
 #' @param wait What to wait for: `"auto"` resolves to `"load"` (the
@@ -218,12 +222,19 @@ pz_wait_for_navigation <- function(
   # "auto" waits for what pz_open() does; other resolutions (shiny)
   # arrive with the Shiny-integration task. Both phases share the
   # budget: each gets the full timeout, like wait_for_stable's resolve
-  # and stability windows.
+  # and stability windows. The snapshot precedes them both: a complete,
+  # settled page satisfies the settle check with nothing navigating,
+  # so the wait must hold the identity of the document it started on
+  # and only pass on a different document (a new timeOrigin) -- or on
+  # one it caught incomplete, the in-flight navigation this wait
+  # waits out.
+  snapshot <- nav_snapshot(ctx, timeout)
   wait_for_load(ctx$page, timeout = timeout)
   nav_settle(
     ctx,
     settle = nav_settle_secs,
-    timeout = timeout
+    timeout = timeout,
+    snapshot = snapshot
   )
   invisible(wait_nav_reset(ctx))
 }
@@ -233,12 +244,37 @@ pz_wait_for_navigation <- function(
 # window and is waited out; anything later than that is beyond a
 # post-action wait.
 nav_settle_secs <- 0.5
+# The wait-start document identity: readyState completeness plus the
+# document's timeOrigin, the token a navigation always replaces. A
+# read that fails mid-swap can't pin the identity, so it degrades to
+# the in-flight reading (incomplete at wait start).
+nav_snapshot <- function(ctx, timeout) {
+  s <- tryCatch(
+    pz_js(
+      ctx,
+      "JSON.stringify([document.readyState === 'complete', performance.timeOrigin])",
+      timeout = timeout
+    ),
+    error = function(e) NULL
+  )
+  if (is.null(s)) {
+    list(complete = FALSE, origin = NULL)
+  } else {
+    state <- jsonlite::fromJSON(s, simplifyVector = FALSE)
+    list(complete = isTRUE(state[[1]]), origin = state[[2]])
+  }
+}
 # Phase two of pz_wait_for_navigation(): the page's load state -- the
 # readyState and the document's timeOrigin -- must be complete AND
 # unchanged for `settle` seconds. Any change restarts the window, so a
 # document swap mid-window (the commit the action triggered) is caught
-# and its load is waited out before passing.
-nav_settle <- function(ctx, settle, timeout, call = caller_env()) {
+# and its load is waited out before passing. Completing the window is
+# not enough on its own: the pass needs positive evidence a navigation
+# occurred, a timeOrigin the wait-start snapshot doesn't hold (or a
+# snapshot that caught the document incomplete -- the in-flight case),
+# so a settled page with nothing navigated times out instead of
+# passing.
+nav_settle <- function(ctx, settle, timeout, snapshot, call = caller_env()) {
   read <- function() {
     tryCatch(
       pz_js(
@@ -267,7 +303,8 @@ nav_settle <- function(ctx, settle, timeout, call = caller_env()) {
       # simplifyVector = FALSE keeps the boolean a boolean: the mixed
       # [boolean, number] JSON would coerce TRUE to 1 otherwise.
       state <- jsonlite::fromJSON(s, simplifyVector = FALSE)
-      isTRUE(state[[1]]) &&
+      nav <- !identical(state[[2]], snapshot$origin) || !isTRUE(snapshot$complete)
+      isTRUE(state[[1]]) && nav &&
         as.numeric(difftime(now, stable_since, units = "secs")) >= settle
     },
     timeout = timeout,
