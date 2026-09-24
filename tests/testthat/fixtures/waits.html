@@ -11,8 +11,22 @@
       from { left: 0; }
       to { left: 300px; }
     }
+    /* The text elements have fixed heights so their fill-in can't shift
+         the layout, and the animated boxes live far inside their own
+         relative container, so they can never overlap the link below
+         and steal its clicks. */
+    #ticker, #never-still {
+      height: 20px;
+      margin: 0;
+    }
+    #anim-space {
+      position: relative;
+      height: 540px;
+    }
     #bouncer {
       position: absolute;
+      top: 0;
+      left: 0;
       width: 40px;
       height: 40px;
       background: rebeccapurple;
@@ -20,7 +34,8 @@
     }
     #endless {
       position: absolute;
-      top: 500px;
+      top: 250px;
+      left: 0;
       width: 20px;
       height: 20px;
       background: firebrick;
@@ -36,8 +51,10 @@
 
   <!-- Layout stability: #bouncer animates for 1.2 s then stops;
        #endless animates forever. -->
-  <div id="bouncer"></div>
-  <div id="endless"></div>
+  <div id="anim-space">
+    <div id="bouncer"></div>
+    <div id="endless"></div>
+  </div>
 
   <a id="nav-link" href="nav-target.html">Go to the target page</a>
 
