@@ -154,6 +154,16 @@ key_parse <- function(spec, call = caller_env()) {
   tokens <- if (nchar(spec) == 1L) {
     spec
   } else {
+    if (substr(spec, nchar(spec), nchar(spec)) == "+") {
+      cli::cli_abort(
+        c(
+          "{.val {spec}} ends with {.val +} but no key follows it.",
+          i = "Pass a key spec like {.val \"Control+A\"}."
+        ),
+        class = "paparazzi_error_key",
+        call = call
+      )
+    }
     strsplit(spec, "+", fixed = TRUE)[[1]]
   }
   modifier_tokens <- tokens[-length(tokens)]
@@ -193,6 +203,22 @@ key_parse <- function(spec, call = caller_env()) {
     )
   }
 
+  # Explicit Shift shifts the main character, following Playwright's
+  # USKeyboardLayout: the shifted sibling of the unshifted entry supplies
+  # key/text while code/keyCode stay put. Entries that are already
+  # shifted ("A", "!") and keys with no shifted form are untouched.
+  if ("Shift" %in% explicit && is.null(entry$implied_shift)) {
+    shifted <- key_shifted_sibling(entry)
+    if (!is.null(shifted)) {
+      entry <- list(
+        key = shifted$key,
+        code = entry$code,
+        keyCode = entry$keyCode,
+        text = shifted$text
+      )
+    }
+  }
+
   # An uppercase letter or shifted symbol implies Shift on the main
   # events only; it never gets its own down/up.
   modifiers <- explicit
@@ -210,6 +236,21 @@ key_parse <- function(spec, call = caller_env()) {
       text = entry$text
     )
   )
+}
+
+# The key_table entry produced when Shift is held with `entry`: the
+# shifted sibling sharing its code, or NULL when the key has none.
+key_shifted_sibling <- function(entry) {
+  for (candidate in key_table) {
+    if (
+      identical(candidate$code, entry$code) &&
+        isTRUE(candidate$implied_shift) &&
+        !identical(candidate$key, entry$key)
+    ) {
+      return(candidate)
+    }
+  }
+  NULL
 }
 
 key_modifiers_mask <- function(modifiers) {
@@ -237,8 +278,8 @@ key_cdp_event <- function(type, modifiers, entry, text = NULL) {
 #'
 #' One call per spec element: the explicit modifier keyDowns in spec order
 #' (rawKeyDown, cumulative mask), the main keyDown/keyUp, then the modifier
-#' keyUps in reverse. A modifier keyUp still reports its own bit, matching
-#' real browser events (a Control keyup has ctrlKey true). The main keyDown
+#' keyUps in reverse; a modifier's keyUp no longer reports its own bit, like
+#' a real browser keyup (a Control keyup has ctrlKey false). The main keyDown
 #' is type "keyDown" with `text` only when the key produces a character
 #' and neither Control nor Meta is held; otherwise a "rawKeyDown" without
 #' text. Implied Shift (from "A" or "!") raises the mask on the main events
@@ -277,11 +318,12 @@ key_events <- function(parsed) {
   )
 
   for (modifier in rev(parsed$modifier_keys)) {
+    # Release the bit before the keyUp so it doesn't report itself held.
+    mask <- mask - key_modifier_bits[[modifier]]
     events <- c(
       events,
       list(key_cdp_event("keyUp", mask, key_table[[modifier]]))
     )
-    mask <- mask - key_modifier_bits[[modifier]]
   }
 
   events

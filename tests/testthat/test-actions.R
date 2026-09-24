@@ -209,6 +209,25 @@ test_that("element actions error on multiple matches", {
   expect_error(pz_focus(page, ".dup"), class = "paparazzi_error_multiple")
 })
 
+test_that("pz_blur on a scoped context", {
+  page <- local_actions_page()
+
+  els <- loc_resolve(page, ".dup", multiple = "all")
+  on.exit(release_elements(els), add = TRUE)
+  ctx <- PaparazziContext$new(page)
+  ctx$scope <- list(els)
+  expect_error(pz_blur(ctx), class = "paparazzi_error_multiple")
+
+  els1 <- loc_resolve(page, "#name", multiple = "error")
+  on.exit(release_elements(els1), add = TRUE)
+  ctx <- PaparazziContext$new(page)
+  ctx$scope <- list(els1)
+  pz_focus(page, "#name")
+  expect_equal(pz_js(page, "document.activeElement.id"), "name")
+  pz_blur(ctx)
+  expect_equal(pz_js(page, "document.activeElement.tagName"), "BODY")
+})
+
 test_that("actions reject extra arguments", {
   page <- local_actions_page()
   expect_error(pz_click(page, "#save", "bogus"), "empty")

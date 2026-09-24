@@ -142,6 +142,74 @@ test_that("key_parse rejects bad specs with paparazzi_error_key", {
 
   # A multi-character token that isn't a named key.
   expect_error(key_parse("F13"), class = "paparazzi_error_key")
+
+  # A trailing separator would otherwise swallow the key token.
+  expect_error(key_parse("Control+"), class = "paparazzi_error_key")
+  expect_error(key_parse("Control+"), "Control\\+")
+  expect_error(key_parse("Shift+Control+"), class = "paparazzi_error_key")
+})
+
+test_that("a lone plus presses the plus key", {
+  parsed <- key_parse("+")
+  # Like "!" and "A", the shifted symbol implies Shift.
+  expect_identical(parsed$modifiers, "Shift")
+  expect_identical(
+    parsed$key,
+    list(key = "+", code = "Equal", keyCode = 187L, text = "+")
+  )
+})
+
+test_that("explicit Shift shifts the main character", {
+  shifted_a <- key_parse("Shift+a")
+  expect_identical(shifted_a$modifiers, "Shift")
+  expect_identical(shifted_a$modifier_keys, "Shift")
+  expect_identical(
+    shifted_a$key,
+    list(key = "A", code = "KeyA", keyCode = 65L, text = "A")
+  )
+
+  bang <- key_parse("Shift+1")
+  expect_identical(
+    bang$key,
+    list(key = "!", code = "Digit1", keyCode = 49L, text = "!")
+  )
+
+  # Keys without a shifted form are unchanged.
+  shift_tab <- key_parse("Shift+Tab")
+  expect_identical(shift_tab$key$key, "Tab")
+  expect_null(shift_tab$key$text)
+  shift_space <- key_parse("Shift+Space")
+  expect_identical(shift_space$key$key, " ")
+  expect_identical(shift_space$key$text, " ")
+
+  # Already-shifted entries aren't doubled or un-shifted.
+  shift_upper <- key_parse("Shift+A")
+  expect_identical(
+    shift_upper$key,
+    list(key = "A", code = "KeyA", keyCode = 65L, text = "A")
+  )
+  shift_bang <- key_parse("Shift+!")
+  expect_identical(
+    shift_bang$key,
+    list(key = "!", code = "Digit1", keyCode = 49L, text = "!")
+  )
+
+  # The shifted character flows through to the dispatched events.
+  events <- key_events(key_parse("Shift+a"))
+  expect_identical(events[[2]]$type, "keyDown")
+  expect_identical(events[[2]]$key, "A")
+  expect_identical(events[[2]]$text, "A")
+  expect_identical(events[[2]]$code, "KeyA")
+  expect_identical(events[[2]]$modifiers, 8L)
+})
+
+test_that("modifier keyUps drop their own bit", {
+  events <- key_events(key_parse("Control+A"))
+  expect_identical(events[[4]]$key, "Control")
+  expect_identical(events[[4]]$type, "keyUp")
+  expect_false(bitwAnd(events[[4]]$modifiers, 2L) == 2L)
+  # The main key's keyUp keeps the full mask.
+  expect_identical(events[[3]]$modifiers, 10L)
 })
 
 test_that("the text field is present only for text-producing keys", {
@@ -233,10 +301,11 @@ test_that("key_events wraps the main key with modifier down/up events", {
     events[[3]],
     list(type = "keyUp", modifiers = 10L, windowsVirtualKeyCode = 65L, key = "A", code = "KeyA")
   )
-  # Control's keyUp still reports Control, like a real browser event.
+  # Control's keyUp no longer reports its own bit, like a real browser
+  # keyup (ctrlKey false once the key is up).
   expect_identical(
     events[[4]],
-    list(type = "keyUp", modifiers = 2L, windowsVirtualKeyCode = 17L, key = "Control", code = "ControlLeft")
+    list(type = "keyUp", modifiers = 0L, windowsVirtualKeyCode = 17L, key = "Control", code = "ControlLeft")
   )
 })
 
@@ -295,13 +364,13 @@ test_that("modifier keyUps fire in reverse order with a cumulative mask", {
   expect_identical(events[[2]]$modifiers, 3L)
   expect_identical(events[[3]]$modifiers, 3L)
   # The main keyUp still reports the full mask, then ups unwind in
-  # reverse: Alt first (still reporting Alt), Control last.
+  # reverse, each dropping its own bit first: Alt (2), then Control (0).
   expect_identical(events[[4]]$key, "Delete")
   expect_identical(events[[4]]$modifiers, 3L)
   expect_identical(events[[5]]$key, "Alt")
-  expect_identical(events[[5]]$modifiers, 3L)
+  expect_identical(events[[5]]$modifiers, 2L)
   expect_identical(events[[6]]$key, "Control")
-  expect_identical(events[[6]]$modifiers, 2L)
+  expect_identical(events[[6]]$modifiers, 0L)
 })
 
 test_that("a bare modifier dispatches rawKeyDown/keyUp as the main key", {

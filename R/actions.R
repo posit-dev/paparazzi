@@ -23,19 +23,23 @@ scope_top <- function(ctx) {
 # scope once the pz_find machinery lands; until then the actions see
 # the pinned set. Returns list(els, pinned): a pinned set must NOT be
 # released by the caller (its scope owns it).
+check_scope_single <- function(scoped, call = caller_env()) {
+  if (scoped$count > 1) {
+    cli::cli_abort(
+      c(
+        "Found {scoped$count} elements in the current scope.",
+        i = "Narrow the scope, or target one element with {.fn pz_loc} and {.arg which}."
+      ),
+      class = "paparazzi_error_multiple",
+      call = call
+    )
+  }
+}
+
 action_elements <- function(ctx, target, call = caller_env()) {
   scoped <- scope_top(ctx)
   if (!is.null(scoped)) {
-    if (scoped$count > 1) {
-      cli::cli_abort(
-        c(
-          "Found {scoped$count} elements in the current scope.",
-          i = "Narrow the scope, or target one element with {.fn pz_loc} and {.arg which}."
-        ),
-        class = "paparazzi_error_multiple",
-        call = call
-      )
-    }
+    check_scope_single(scoped, call = call)
     return(list(els = scoped, pinned = TRUE))
   }
   if (is.null(target)) {
@@ -383,6 +387,7 @@ pz_blur <- function(ctx, ...) {
   call <- current_env()
   scoped <- scope_top(ctx)
   if (!is.null(scoped)) {
+    check_scope_single(scoped, call = call)
     els_call(
       scoped,
       "function() { if (this.length) this[0].blur(); }",
