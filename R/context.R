@@ -6,7 +6,7 @@
 #' `PaparazziPage`) or a scoped context created by `pz_find*()`: a context
 #' holding an immutable stack of pinned element sets. The stack is never
 #' mutated in place -- `pz_find*()` derive a new context sharing the
-#' parent's pinned sets -- and `pz_find_pop()`/`pz_find_reset()` unwind it
+#' parent's pinned sets -- and [pz_find_pop()]/[pz_find_reset()] unwind it
 #' the same way. Session-level state -- the Chromote session, default
 #' timeout, staging settings, recorder state -- lives on the page.
 #'

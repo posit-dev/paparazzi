@@ -20,6 +20,6 @@ body at the root.}
 A character vector, one entry per match.
 }
 \description{
-\code{pz_get_html()} returns the outer HTML of every element matching
+\code{\link[=pz_get_html]{pz_get_html()}} returns the outer HTML of every element matching
 \code{target}, one entry per match.
 }

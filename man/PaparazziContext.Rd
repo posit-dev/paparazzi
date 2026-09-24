@@ -10,7 +10,7 @@ A \strong{context} is the first argument and invisible return value of every
 \code{PaparazziPage}) or a scoped context created by \verb{pz_find*()}: a context
 holding an immutable stack of pinned element sets. The stack is never
 mutated in place -- \verb{pz_find*()} derive a new context sharing the
-parent's pinned sets -- and \code{pz_find_pop()}/\code{pz_find_reset()} unwind it
+parent's pinned sets -- and \code{\link[=pz_find_pop]{pz_find_pop()}}/\code{\link[=pz_find_reset]{pz_find_reset()}} unwind it
 the same way. Session-level state -- the Chromote session, default
 timeout, staging settings, recorder state -- lives on the page.
 }

@@ -264,7 +264,7 @@ find_push <- function(ctx, locs, from_root, call) {
 #' Find elements and push them as the current scope
 #'
 #' @description
-#' `pz_find()` resolves `target` (auto-waiting for at least one match),
+#' [pz_find()] resolves `target` (auto-waiting for at least one match),
 #' pins the matched set as the current scope, and returns a new context:
 #' later calls on it operate inside that scope. Explicit targets resolve
 #' lazily among the scope's descendants at use time -- re-renders within
@@ -316,7 +316,7 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
 
 #' Find the first match and push it as the current scope
 #'
-#' `pz_find_first()` is [pz_find()] with `which = "first"`. With a
+#' [pz_find_first()] is [pz_find()] with `which = "first"`. With a
 #' `target`, it pins the spec's first match. Without a `target`, it
 #' narrows the current scope to its first element: one eager slice of
 #' the pinned set, with no re-query and no waiting.
@@ -342,7 +342,7 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
 
 #' Find the last match and push it as the current scope
 #'
-#' `pz_find_last()` is [pz_find()] with `which = "last"`. With a
+#' [pz_find_last()] is [pz_find()] with `which = "last"`. With a
 #' `target`, it pins the spec's last match. Without a `target`, it
 #' narrows the current scope to its last element: one eager slice of
 #' the pinned set, with no re-query and no waiting.
@@ -363,7 +363,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 
 #' Find the nth match and push it as the current scope
 #'
-#' `pz_find_nth()` is [pz_find()] with `which = n`. With a `target`, it
+#' [pz_find_nth()] is [pz_find()] with `which = n`. With a `target`, it
 #' pins the spec's `n`th match; an out-of-range `n` means no match, so
 #' the call keeps auto-waiting like any [pz_loc()] resolution. Without
 #' a `target`, it narrows the current scope to its `n`th element: one

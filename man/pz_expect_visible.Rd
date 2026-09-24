@@ -27,8 +27,8 @@ scope; at the root context a target is required.}
 \code{ctx}, invisibly.
 }
 \description{
-\code{pz_expect_visible()} passes when at least one element matches and
-every match is visible. \code{pz_expect_hidden()} is exactly
+\code{\link[=pz_expect_visible]{pz_expect_visible()}} passes when at least one element matches and
+every match is visible. \code{\link[=pz_expect_hidden]{pz_expect_hidden()}} is exactly
 \code{pz_expect_visible(not = TRUE)}: it passes when no match is visible,
 including when nothing matches.
 

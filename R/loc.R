@@ -1,7 +1,7 @@
 #' Locate elements by CSS, with text, position, and scope qualifiers
 #'
 #' @description
-#' `pz_loc()` builds a page-independent element spec: a CSS selector,
+#' [pz_loc()] builds a page-independent element spec: a CSS selector,
 #' optionally narrowed by required text content (`has_text`), a match
 #' position (`which`), and an ancestor scope (`within`). Specs are lazy --
 #' they resolve at use time, so they follow DOM changes between uses --
@@ -20,7 +20,7 @@
 #'   1-based positive integer. Applied after `css` and `has_text`
 #'   filtering; an out-of-range position means *no* match, not an error.
 #' @param within Only match descendants of elements matching this spec
-#'   (a string or `pz_loc()`, itself fully qualified). If `within`
+#'   (a string or [pz_loc()], itself fully qualified). If `within`
 #'   matches nothing, the whole spec matches nothing.
 #'
 #' @return An S3 object of class `paparazzi_loc`.

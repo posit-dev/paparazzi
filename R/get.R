@@ -129,7 +129,7 @@ new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
 
 #' Count matching elements
 #'
-#' `pz_get_count()` returns the number of elements matching `target`,
+#' [pz_get_count()] returns the number of elements matching `target`,
 #' counted inside the current scope. Unlike the other getters it
 #' doesn't wait for a match: `0` is a valid answer, so it resolves once
 #' and returns immediately. One exception: on a scope whose pinned
@@ -172,9 +172,9 @@ pz_get_count <- function(ctx, ..., target = NULL) {
 
 #' Read the text of matching elements
 #'
-#' `pz_get_text()` returns the `textContent` of every element matching
+#' [pz_get_text()] returns the `textContent` of every element matching
 #' `target`, one entry per match. By default runs of whitespace are
-#' collapsed to single spaces and trimmed, matching `pz_expect_text()`;
+#' collapsed to single spaces and trimmed, matching [pz_expect_text()];
 #' `raw = TRUE` returns the text exactly as the browser holds it.
 #'
 #' @param ctx A paparazzi context.
@@ -206,7 +206,7 @@ pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
 
 #' Read the value of matching elements
 #'
-#' `pz_get_value()` returns the `value` property of every element
+#' [pz_get_value()] returns the `value` property of every element
 #' matching `target`, one entry per match. Elements without a value
 #' property (non-form elements) give `NA`.
 #'
@@ -229,7 +229,7 @@ pz_get_value <- function(ctx, ..., target = NULL) {
 
 #' Read an attribute of matching elements
 #'
-#' `pz_get_attr()` returns the named attribute of every element matching
+#' [pz_get_attr()] returns the named attribute of every element matching
 #' `target`, one entry per match. Missing attributes give `NA`.
 #'
 #' @inheritParams pz_get_text
@@ -260,7 +260,7 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
 
 #' Read the geometry of matching elements
 #'
-#' `pz_get_rect()` returns the bounding box of every element matching
+#' [pz_get_rect()] returns the bounding box of every element matching
 #' `target`, one row per match in match order.
 #'
 #' @inheritParams pz_get_text
@@ -289,7 +289,7 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
 
 #' Describe matching elements
 #'
-#' `pz_get_elements()` returns a summary of every element matching
+#' [pz_get_elements()] returns a summary of every element matching
 #' `target`, one row per match in match order: the lowercased tag name,
 #' the `id` and `class` attributes, and the whitespace-collapsed text.
 #' `id` and `class` are `NA` when the attribute is absent.
@@ -328,7 +328,7 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
 
 #' Read the HTML of matching elements
 #'
-#' `pz_get_html()` returns the outer HTML of every element matching
+#' [pz_get_html()] returns the outer HTML of every element matching
 #' `target`, one entry per match.
 #'
 #' @inheritParams pz_get_text
@@ -350,7 +350,7 @@ pz_get_html <- function(ctx, ..., target = NULL) {
 
 #' Read the page URL
 #'
-#' `pz_get_url()` returns the page's current URL.
+#' [pz_get_url()] returns the page's current URL.
 #'
 #' @inheritParams pz_click
 #'
@@ -364,7 +364,7 @@ pz_get_url <- function(ctx) {
 
 #' Read the page title
 #'
-#' `pz_get_title()` returns the page's current title.
+#' [pz_get_title()] returns the page's current title.
 #'
 #' @inheritParams pz_click
 #'

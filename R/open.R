@@ -199,8 +199,8 @@ pz_close <- function(page) {
 
 #' Open a page that closes when a block or calling frame exits
 #'
-#' `pz_with_page()` evaluates `code` with the page open and closes it on exit,
-#' including on error. `pz_local_page()` opens a page and closes it when the
+#' [pz_with_page()] evaluates `code` with the page open and closes it on exit,
+#' including on error. [pz_local_page()] opens a page and closes it when the
 #' calling frame (e.g. a test) exits, via [withr::defer()]. Both accept an
 #' already-open page or anything [pz_open()] accepts, and always close on
 #' exit: the block owns the resource.
@@ -214,7 +214,7 @@ pz_close <- function(page) {
 #' @param ... Passed to [pz_open()] when `x` is not already a page.
 #' @param .env The frame whose exit closes the page.
 #'
-#' @return `pz_with_page()` returns the page invisibly; `pz_local_page()`
+#' @return [pz_with_page()] returns the page invisibly; [pz_local_page()]
 #'   returns it visibly.
 #'
 #' @export

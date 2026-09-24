@@ -23,12 +23,12 @@ function.}
 \item{.env}{The frame whose exit closes the page.}
 }
 \value{
-\code{pz_with_page()} returns the page invisibly; \code{pz_local_page()}
+\code{\link[=pz_with_page]{pz_with_page()}} returns the page invisibly; \code{\link[=pz_local_page]{pz_local_page()}}
 returns it visibly.
 }
 \description{
-\code{pz_with_page()} evaluates \code{code} with the page open and closes it on exit,
-including on error. \code{pz_local_page()} opens a page and closes it when the
+\code{\link[=pz_with_page]{pz_with_page()}} evaluates \code{code} with the page open and closes it on exit,
+including on error. \code{\link[=pz_local_page]{pz_local_page()}} opens a page and closes it when the
 calling frame (e.g. a test) exits, via \code{\link[withr:defer]{withr::defer()}}. Both accept an
 already-open page or anything \code{\link[=pz_open]{pz_open()}} accepts, and always close on
 exit: the block owns the resource.

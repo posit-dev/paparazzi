@@ -22,7 +22,7 @@ the current scope? Requires a \code{target}.}
 A new context, invisibly.
 }
 \description{
-\code{pz_find_last()} is \code{\link[=pz_find]{pz_find()}} with \code{which = "last"}. With a
+\code{\link[=pz_find_last]{pz_find_last()}} is \code{\link[=pz_find]{pz_find()}} with \code{which = "last"}. With a
 \code{target}, it pins the spec's last match. Without a \code{target}, it
 narrows the current scope to its last element: one eager slice of
 the pinned set, with no re-query and no waiting.

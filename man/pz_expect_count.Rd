@@ -33,7 +33,7 @@ scope; at the root context a target is required.}
 \code{ctx}, invisibly.
 }
 \description{
-\code{pz_expect_count()} passes when the number of elements matching
+\code{\link[=pz_expect_count]{pz_expect_count()}} passes when the number of elements matching
 \code{target} satisfies the requirement: \code{n} is exact, or \code{min} and/or
 \code{max} give an inclusive range (either may be \code{NULL}, meaning
 unbounded). With \code{not = TRUE} it passes when the count does anything

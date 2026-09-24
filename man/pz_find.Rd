@@ -25,7 +25,7 @@ stack, so \code{\link[=pz_find_pop]{pz_find_pop()}} returns to the previous scop
 A new context, invisibly.
 }
 \description{
-\code{pz_find()} resolves \code{target} (auto-waiting for at least one match),
+\code{\link[=pz_find]{pz_find()}} resolves \code{target} (auto-waiting for at least one match),
 pins the matched set as the current scope, and returns a new context:
 later calls on it operate inside that scope. Explicit targets resolve
 lazily among the scope's descendants at use time -- re-renders within

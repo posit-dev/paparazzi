@@ -20,7 +20,7 @@ body at the root.}
 A character vector, one entry per match.
 }
 \description{
-\code{pz_get_value()} returns the \code{value} property of every element
+\code{\link[=pz_get_value]{pz_get_value()}} returns the \code{value} property of every element
 matching \code{target}, one entry per match. Elements without a value
 property (non-form elements) give \code{NA}.
 }

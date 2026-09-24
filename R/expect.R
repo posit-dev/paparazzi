@@ -1,7 +1,7 @@
 #' Expect at least one element to match
 #'
 #' @description
-#' `pz_expect_exists()` passes when at least one element matching `target`
+#' [pz_expect_exists()] passes when at least one element matching `target`
 #' is in the DOM, visible or not. It's the one expectation where multiple
 #' matches don't all have to satisfy the check: existence needs only one.
 #' With `not = TRUE` it passes when nothing matches.
@@ -17,7 +17,7 @@
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context (so
-#'   `pz_expect_exists()` on one trivially passes while the scope is
+#'   [pz_expect_exists()] on one trivially passes while the scope is
 #'   live), the page body at the root.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
@@ -54,7 +54,7 @@ pz_expect_exists <- function(
 #' Expect a number of matching elements
 #'
 #' @description
-#' `pz_expect_count()` passes when the number of elements matching
+#' [pz_expect_count()] passes when the number of elements matching
 #' `target` satisfies the requirement: `n` is exact, or `min` and/or
 #' `max` give an inclusive range (either may be `NULL`, meaning
 #' unbounded). With `not = TRUE` it passes when the count does anything
@@ -138,8 +138,8 @@ pz_expect_count <- function(
 #' Expect elements to be visible
 #'
 #' @description
-#' `pz_expect_visible()` passes when at least one element matches and
-#' every match is visible. `pz_expect_hidden()` is exactly
+#' [pz_expect_visible()] passes when at least one element matches and
+#' every match is visible. [pz_expect_hidden()] is exactly
 #' `pz_expect_visible(not = TRUE)`: it passes when no match is visible,
 #' including when nothing matches.
 #'
@@ -205,7 +205,7 @@ pz_expect_hidden <- function(
 #' Expect element text content
 #'
 #' @description
-#' `pz_expect_text()` passes when at least one element matches and the
+#' [pz_expect_text()] passes when at least one element matches and the
 #' text of every match satisfies `text`. Whitespace collapses on both
 #' sides before comparing, so `"Save   now"` matches text reading
 #' "Save now".
@@ -229,7 +229,7 @@ pz_expect_hidden <- function(
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
-#'   body at the root, so `pz_expect_text(page, "Welcome")` checks the
+#'   body at the root, so [pz_expect_text(page, "Welcome")] checks the
 #'   page text.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`

@@ -22,7 +22,7 @@ the current scope? Requires a \code{target}.}
 A new context, invisibly.
 }
 \description{
-\code{pz_find_first()} is \code{\link[=pz_find]{pz_find()}} with \code{which = "first"}. With a
+\code{\link[=pz_find_first]{pz_find_first()}} is \code{\link[=pz_find]{pz_find()}} with \code{which = "first"}. With a
 \code{target}, it pins the spec's first match. Without a \code{target}, it
 narrows the current scope to its first element: one eager slice of
 the pinned set, with no re-query and no waiting.
