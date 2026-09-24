@@ -22,7 +22,7 @@ per match, plus an \code{element} list-column of contexts scoped to
 each match, pinned at get time (see \code{\link[=pz_get_rect]{pz_get_rect()}}).
 }
 \description{
-\code{pz_get_elements()} returns a summary of every element matching
+\code{\link[=pz_get_elements]{pz_get_elements()}} returns a summary of every element matching
 \code{target}, one row per match in match order: the lowercased tag name,
 the \code{id} and \code{class} attributes, and the whitespace-collapsed text.
 \code{id} and \code{class} are \code{NA} when the attribute is absent.

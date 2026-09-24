@@ -263,7 +263,8 @@ find_push <- function(ctx, locs, from_root, call = caller_env()) {
 
 #' Find elements and push them as the current scope
 #'
-#' `pz_find()` resolves `target` (auto-waiting for at least one match),
+#' @description
+#' [pz_find()] resolves `target` (auto-waiting for at least one match),
 #' pins the matched set as the current scope, and returns a new context:
 #' later calls on it operate inside that scope. Explicit targets resolve
 #' lazily among the scope's descendants at use time -- re-renders within
@@ -280,18 +281,20 @@ find_push <- function(ctx, locs, from_root, call = caller_env()) {
 #' are called on, and contexts derived from the same parent share its
 #' pinned sets.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). Required: there
 #'   is nothing to find without a target, so `NULL` is an error. To
 #'   narrow an existing scope, use [pz_find_first()], [pz_find_last()],
 #'   or [pz_find_nth()] without a target.
-#' @param ... Checked empty; reserved for future use.
 #' @param from_root Resolve the target from the page root instead of
 #'   the current scope? The new scope is still pushed on top of the
 #'   stack, so [pz_find_pop()] returns to the previous scope.
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find_first()], [pz_find_pop()], [pz_find_reset()]
+#'
 #' @export
 pz_find <- function(ctx, target, ..., from_root = FALSE) {
   check_context(ctx)
@@ -311,20 +314,22 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
 
 #' Find the first match and push it as the current scope
 #'
-#' `pz_find_first()` is [pz_find()] with `which = "first"`. With a
+#' [pz_find_first()] is [pz_find()] with `which = "first"`. With a
 #' `target`, it pins the spec's first match. Without a `target`, it
 #' narrows the current scope to its first element: one eager slice of
 #' the pinned set, with no re-query and no waiting.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_click
 #' @param target A CSS selector string or a [pz_loc()] spec. `NULL`
 #'   narrows the current scope; a union can't pick one match by
 #'   position, and a spec that already carries `which` is an error.
 #' @param from_root Resolve the target from the page root instead of
 #'   the current scope? Requires a `target`.
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_last()], [pz_find_nth()]
+#'
 #' @export
 pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
@@ -335,20 +340,17 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
 
 #' Find the last match and push it as the current scope
 #'
-#' `pz_find_last()` is [pz_find()] with `which = "last"`. With a
+#' [pz_find_last()] is [pz_find()] with `which = "last"`. With a
 #' `target`, it pins the spec's last match. Without a `target`, it
 #' narrows the current scope to its last element: one eager slice of
 #' the pinned set, with no re-query and no waiting.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string or a [pz_loc()] spec. `NULL`
-#'   narrows the current scope; a union can't pick one match by
-#'   position, and a spec that already carries `which` is an error.
-#' @param from_root Resolve the target from the page root instead of
-#'   the current scope? Requires a `target`.
+#' @inheritParams pz_find_first
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_nth()]
+#'
 #' @export
 pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
@@ -359,7 +361,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 
 #' Find the nth match and push it as the current scope
 #'
-#' `pz_find_nth()` is [pz_find()] with `which = n`. With a `target`, it
+#' [pz_find_nth()] is [pz_find()] with `which = n`. With a `target`, it
 #' pins the spec's `n`th match; an out-of-range `n` means no match, so
 #' the call keeps auto-waiting like any [pz_loc()] resolution. Without
 #' a `target`, it narrows the current scope to its `n`th element: one
@@ -367,17 +369,14 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #' immediately -- the set was fixed at pin time, so there is nothing to
 #' wait for.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_find_first
 #' @param n The match to pick, 1-based (`"first"`/`"last"` are the
 #'   [pz_find_first()]/[pz_find_last()] wrappers, not values here).
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string or a [pz_loc()] spec. `NULL`
-#'   narrows the current scope; a union can't pick one match by
-#'   position, and a spec that already carries `which` is an error.
-#' @param from_root Resolve the target from the page root instead of
-#'   the current scope? Requires a `target`.
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_last()]
+#'
 #' @export
 pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
   check_context(ctx)
@@ -394,9 +393,12 @@ pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
 #' pop may still hold it -- and popping never mutates the context it
 #' was called on. At the root it is a no-op returning `ctx` unchanged.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_reset()]
+#'
 #' @export
 pz_find_pop <- function(ctx) {
   check_context(ctx)
@@ -413,9 +415,12 @@ pz_find_pop <- function(ctx) {
 #' still hold them -- and resetting never mutates the context it was
 #' called on. At the root it is a no-op returning `ctx` unchanged.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_pop()]
+#'
 #' @export
 pz_find_reset <- function(ctx) {
   check_context(ctx)

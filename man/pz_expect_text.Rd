@@ -25,7 +25,7 @@ every match, length \code{n} is compared pairwise in order.}
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
 current context: the pinned set at a scoped context, or the page
-body at the root, so \code{pz_expect_text(page, "Welcome")} checks the
+body at the root, so \link{pz_expect_text(page, "Welcome")} checks the
 page text.}
 
 \item{match}{How to compare \code{text}: \code{"contains"} (substring),
@@ -40,12 +40,11 @@ page text.}
 \code{ctx}, invisibly.
 }
 \description{
-\code{pz_expect_text()} passes when at least one element matches and the
+\code{\link[=pz_expect_text]{pz_expect_text()}} passes when at least one element matches and the
 text of every match satisfies \code{text}. Whitespace collapses on both
 sides before comparing, so \code{"Save   now"} matches text reading
 "Save now".
-}
-\details{
+
 A length-1 \code{text} applies to every match. A length-\code{n} \code{text} requires
 exactly \code{n} matches and compares pairwise, in order. With
 \code{not = TRUE}, the expectation passes when no match satisfies \code{text},
@@ -63,4 +62,5 @@ page |> pz_expect_text("Example Domain")
 page |> pz_expect_text("Example", target = "h1", match = "exact")
 page |> pz_expect_text("example", target = "h1", not = TRUE)
 }
+
 }

@@ -14,7 +14,7 @@ pz_expect_exists(ctx, ..., target = NULL, not = FALSE, timeout = NULL)
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
 current context: the pinned set at a scoped context (so
-\code{pz_expect_exists()} on one trivially passes while the scope is
+\code{\link[=pz_expect_exists]{pz_expect_exists()}} on one trivially passes while the scope is
 live), the page body at the root.}
 
 \item{not}{Invert the check.}
@@ -26,12 +26,11 @@ live), the page body at the root.}
 \code{ctx}, invisibly.
 }
 \description{
-\code{pz_expect_exists()} passes when at least one element matching \code{target}
+\code{\link[=pz_expect_exists]{pz_expect_exists()}} passes when at least one element matching \code{target}
 is in the DOM, visible or not. It's the one expectation where multiple
 matches don't all have to satisfy the check: existence needs only one.
 With \code{not = TRUE} it passes when nothing matches.
-}
-\details{
+
 Expectations retry until they pass or \code{timeout} elapses, then return
 \code{ctx} invisibly. Outside of testthat, a failure aborts with a classed
 error of class \code{"paparazzi_expectation_failure"} showing the target,
@@ -45,4 +44,5 @@ page <- pz_open("https://example.com")
 page |> pz_expect_exists(target = "a")
 page |> pz_expect_exists(target = ".modal", not = TRUE)
 }
+
 }

@@ -1,6 +1,7 @@
 #' Expect at least one element to match
 #'
-#' `pz_expect_exists()` passes when at least one element matching `target`
+#' @description
+#' [pz_expect_exists()] passes when at least one element matching `target`
 #' is in the DOM, visible or not. It's the one expectation where multiple
 #' matches don't all have to satisfy the check: existence needs only one.
 #' With `not = TRUE` it passes when nothing matches.
@@ -12,16 +13,16 @@
 #' failure is instead reported as a test failure, and a pass counts as a
 #' successful testthat expectation.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context (so
-#'   `pz_expect_exists()` on one trivially passes while the scope is
+#'   [pz_expect_exists()] on one trivially passes while the scope is
 #'   live), the page body at the root.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
+#'
 #' @return `ctx`, invisibly.
 #' @examples
 #' \dontrun{
@@ -29,6 +30,7 @@
 #' page |> pz_expect_exists(target = "a")
 #' page |> pz_expect_exists(target = ".modal", not = TRUE)
 #' }
+#'
 #' @export
 pz_expect_exists <- function(
   ctx,
@@ -50,7 +52,8 @@ pz_expect_exists <- function(
 
 #' Expect a number of matching elements
 #'
-#' `pz_expect_count()` passes when the number of elements matching
+#' @description
+#' [pz_expect_count()] passes when the number of elements matching
 #' `target` satisfies the requirement: `n` is exact, or `min` and/or
 #' `max` give an inclusive range (either may be `NULL`, meaning
 #' unbounded). With `not = TRUE` it passes when the count does anything
@@ -61,20 +64,10 @@ pz_expect_exists <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @param ctx A paparazzi context.
-#' @param n Exact number of matching elements.
-#' @param ... Checked empty; reserved for future use.
-#' @param min Inclusive lower bound on the number of matches (`NULL` =
-#'   unbounded).
-#' @param max Inclusive upper bound on the number of matches (`NULL` =
-#'   unbounded).
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
-#' @param not Invert the check.
-#' @param timeout Seconds to wait for the expectation to pass; `NULL`
-#'   (default) uses the session default, `0` checks once.
+#' @inheritParams pz_click
+#' @inheritParams pz_get_text
+#' @inheritParams pz_expect_exists
+#'
 #' @return `ctx`, invisibly.
 #' @examples
 #' \dontrun{
@@ -83,6 +76,7 @@ pz_expect_exists <- function(
 #' page |> pz_expect_count(min = 1, target = "a")
 #' page |> pz_expect_count(0, target = ".modal", not = TRUE)
 #' }
+#'
 #' @export
 pz_expect_count <- function(
   ctx,
@@ -137,13 +131,14 @@ pz_expect_count <- function(
 
 #' Expect elements to be visible
 #'
-#' `pz_expect_visible()` passes when at least one element matches and
-#' every match is visible. `pz_expect_hidden()` is exactly
+#' @description
+#' [pz_expect_visible()] passes when at least one element matches and
+#' every match is visible. [pz_expect_hidden()] is exactly
 #' `pz_expect_visible(not = TRUE)`: it passes when no match is visible,
 #' including when nothing matches.
 #'
-#' Visibility follows the browser's own
-#' [checkVisibility()](https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility)
+#' Visibility follows the browser's own `checkVisibility()`
+#' (<https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility>)
 #' with CSS checks, so `display: none` and `visibility: hidden` anywhere
 #' up the ancestor chain count as hidden; opacity and viewport position
 #' are not considered (a `pz_expect_in_viewport()` entry may arrive
@@ -154,15 +149,10 @@ pz_expect_count <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
-#' @param not Invert the check.
-#' @param timeout Seconds to wait for the expectation to pass; `NULL`
-#'   (default) uses the session default, `0` checks once.
+#' @inheritParams pz_click
+#' @inheritParams pz_get_text
+#' @inheritParams pz_expect_exists
+#'
 #' @return `ctx`, invisibly.
 #' @examples
 #' \dontrun{
@@ -170,6 +160,7 @@ pz_expect_count <- function(
 #' page |> pz_expect_visible(target = "h1")
 #' page |> pz_expect_hidden(target = ".modal")
 #' }
+#'
 #' @export
 pz_expect_visible <- function(
   ctx,
@@ -206,7 +197,8 @@ pz_expect_hidden <- function(
 
 #' Expect element text content
 #'
-#' `pz_expect_text()` passes when at least one element matches and the
+#' @description
+#' [pz_expect_text()] passes when at least one element matches and the
 #' text of every match satisfies `text`. Whitespace collapses on both
 #' sides before comparing, so `"Save   now"` matches text reading
 #' "Save now".
@@ -221,20 +213,21 @@ pz_expect_hidden <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #' @param text A character vector of expected text: length 1 applies to
 #'   every match, length `n` is compared pairwise in order.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_expect_exists
 #' @param match How to compare `text`: `"contains"` (substring),
 #'   `"exact"`, or `"regex"` (an R regex matched with [grepl()]).
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
-#'   body at the root, so `pz_expect_text(page, "Welcome")` checks the
+#'   body at the root, so [pz_expect_text(page, "Welcome")] checks the
 #'   page text.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
+#'
 #' @return `ctx`, invisibly.
 #' @examples
 #' \dontrun{
@@ -243,6 +236,7 @@ pz_expect_hidden <- function(
 #' page |> pz_expect_text("Example", target = "h1", match = "exact")
 #' page |> pz_expect_text("example", target = "h1", not = TRUE)
 #' }
+#'
 #' @export
 pz_expect_text <- function(
   ctx,

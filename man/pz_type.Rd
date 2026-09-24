@@ -29,8 +29,7 @@ click lands, just like a real user. With \code{target = NULL} at the
 root context, inserts into whatever element currently has focus;
 if nothing editable is focused, the text goes nowhere, exactly like
 typing into a page with no focused field.
-}
-\details{
+
 Insertion is instant (one \code{insertText}); natural, per-keystroke
 typing arrives with the recording task. For a value-setting primitive
 that works on selects, checkboxes, and range inputs, see

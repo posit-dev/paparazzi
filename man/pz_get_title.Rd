@@ -13,5 +13,5 @@ pz_get_title(ctx)
 A character vector of length one.
 }
 \description{
-\code{pz_get_title()} returns the page's current title.
+\code{\link[=pz_get_title]{pz_get_title()}} returns the page's current title.
 }

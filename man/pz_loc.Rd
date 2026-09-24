@@ -20,20 +20,19 @@ Case-sensitive; whitespace collapses on both sides, so
 filtering; an out-of-range position means \emph{no} match, not an error.}
 
 \item{within}{Only match descendants of elements matching this spec
-(a string or \code{pz_loc()}, itself fully qualified). If \code{within}
+(a string or \code{\link[=pz_loc]{pz_loc()}}, itself fully qualified). If \code{within}
 matches nothing, the whole spec matches nothing.}
 }
 \value{
 An S3 object of class \code{paparazzi_loc}.
 }
 \description{
-\code{pz_loc()} builds a page-independent element spec: a CSS selector,
+\code{\link[=pz_loc]{pz_loc()}} builds a page-independent element spec: a CSS selector,
 optionally narrowed by required text content (\code{has_text}), a match
 position (\code{which}), and an ancestor scope (\code{within}). Specs are lazy --
 they resolve at use time, so they follow DOM changes between uses --
 and can be defined once and reused across sessions.
-}
-\details{
+
 Wherever a spec is accepted, a bare string is promoted to
 \code{pz_loc(string)}, and a list of specs and strings is a union that
 matches the elements of any member.
@@ -47,4 +46,5 @@ pz_loc(
   which = "last",
   within = ".chat"
 )
+
 }

@@ -5,13 +5,14 @@
 #' and an escape hatch for one-off scripts. Unlike most `pz_*()` functions it
 #' **ends the chain**: it returns the value, not the context.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #' @param expr A string of JavaScript to evaluate.
-#' @param ... Checked empty; reserved for future use.
 #' @param await Await a promise returned by `expr` before returning its value.
 #' @param timeout Seconds before the evaluation fails; `NULL` uses the
 #'   session default.
+#'
 #' @return The value produced by `expr` (converted to R), or `NULL`.
+#'
 #' @export
 pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   check_context(ctx)
@@ -90,8 +91,10 @@ js_value <- function(result) {
 #'
 #' Escape hatch for raw Chrome DevTools Protocol calls.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
+#'
 #' @return The `chromote::ChromoteSession` backing the page.
+#'
 #' @export
 pz_chromote <- function(ctx) {
   check_context(ctx)

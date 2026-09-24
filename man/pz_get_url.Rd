@@ -13,5 +13,5 @@ pz_get_url(ctx)
 A character vector of length one.
 }
 \description{
-\code{pz_get_url()} returns the page's current URL.
+\code{\link[=pz_get_url]{pz_get_url()}} returns the page's current URL.
 }

@@ -15,9 +15,8 @@ pz_expect_hidden(ctx, ..., target = NULL, not = FALSE, timeout = NULL)
 \item{...}{Checked empty; reserved for future use.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs and strings (a union matching any of them). \code{NULL} means the
-current context: the pinned set at a scoped context, or the page
-body at the root.}
+specs (a union matching any of them). \code{NULL} uses the current
+scope; at the root context a target is required.}
 
 \item{not}{Invert the check.}
 
@@ -28,14 +27,13 @@ body at the root.}
 \code{ctx}, invisibly.
 }
 \description{
-\code{pz_expect_visible()} passes when at least one element matches and
-every match is visible. \code{pz_expect_hidden()} is exactly
+\code{\link[=pz_expect_visible]{pz_expect_visible()}} passes when at least one element matches and
+every match is visible. \code{\link[=pz_expect_hidden]{pz_expect_hidden()}} is exactly
 \code{pz_expect_visible(not = TRUE)}: it passes when no match is visible,
 including when nothing matches.
-}
-\details{
-Visibility follows the browser's own
-\href{https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility}{checkVisibility()}
+
+Visibility follows the browser's own \code{checkVisibility()}
+(\url{https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility})
 with CSS checks, so \code{display: none} and \code{visibility: hidden} anywhere
 up the ancestor chain count as hidden; opacity and viewport position
 are not considered (a \code{pz_expect_in_viewport()} entry may arrive
@@ -52,4 +50,5 @@ page <- pz_open("https://example.com")
 page |> pz_expect_visible(target = "h1")
 page |> pz_expect_hidden(target = ".modal")
 }
+
 }

@@ -20,7 +20,7 @@ comes back without a re-query, or the page body at the root.}
 An integer.
 }
 \description{
-\code{pz_get_count()} returns the number of elements matching \code{target},
+\code{\link[=pz_get_count]{pz_get_count()}} returns the number of elements matching \code{target},
 counted inside the current scope. Unlike the other getters it
 doesn't wait for a match: \code{0} is a valid answer, so it resolves once
 and returns immediately. One exception: on a scope whose pinned

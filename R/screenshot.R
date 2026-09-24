@@ -1,5 +1,6 @@
 #' Take a screenshot
 #'
+#' @description
 #' Captures a PNG of the page and writes it to `path`, returning the
 #' context invisibly so screenshots slot into `|>` chains.
 #'
@@ -17,10 +18,9 @@
 #' dpr. Framing a capture (padding, aspect ratio, bounds via
 #' `pz_frame()`) is not yet implemented.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #' @param path File path the PNG is written to; an existing file is
 #'   overwritten.
-#' @param ... Checked empty; reserved for future use.
 #' @param target What to capture: `NULL` for the viewport (root context)
 #'   or the scope's box (scoped context), or a CSS selector string,
 #'   `pz_loc()` spec, or list of either for the union of matched
@@ -28,7 +28,9 @@
 #' @param frame Framing to apply to the capture. Only `NULL` (the
 #'   default) and `FALSE` are supported, both meaning "capture without
 #'   framing"; framing via `pz_frame()` is not yet implemented.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @export
 pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   check_context(ctx)

@@ -18,20 +18,11 @@ pz_expect_count(
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{n}{Exact number of matching elements.}
-
 \item{...}{Checked empty; reserved for future use.}
 
-\item{min}{Inclusive lower bound on the number of matches (\code{NULL} =
-unbounded).}
-
-\item{max}{Inclusive upper bound on the number of matches (\code{NULL} =
-unbounded).}
-
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs and strings (a union matching any of them). \code{NULL} means the
-current context: the pinned set at a scoped context, or the page
-body at the root.}
+specs (a union matching any of them). \code{NULL} uses the current
+scope; at the root context a target is required.}
 
 \item{not}{Invert the check.}
 
@@ -42,13 +33,12 @@ body at the root.}
 \code{ctx}, invisibly.
 }
 \description{
-\code{pz_expect_count()} passes when the number of elements matching
+\code{\link[=pz_expect_count]{pz_expect_count()}} passes when the number of elements matching
 \code{target} satisfies the requirement: \code{n} is exact, or \code{min} and/or
 \code{max} give an inclusive range (either may be \code{NULL}, meaning
 unbounded). With \code{not = TRUE} it passes when the count does anything
 else. Specify exactly one of \code{n} or \code{min}/\code{max}.
-}
-\details{
+
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
 reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect_exists()}} for the
@@ -61,4 +51,5 @@ page |> pz_expect_count(1, target = "h1")
 page |> pz_expect_count(min = 1, target = "a")
 page |> pz_expect_count(0, target = ".modal", not = TRUE)
 }
+
 }

@@ -129,7 +129,7 @@ new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
 
 #' Count matching elements
 #'
-#' `pz_get_count()` returns the number of elements matching `target`,
+#' [pz_get_count()] returns the number of elements matching `target`,
 #' counted inside the current scope. Unlike the other getters it
 #' doesn't wait for a match: `0` is a valid answer, so it resolves once
 #' and returns immediately. One exception: on a scope whose pinned
@@ -137,13 +137,14 @@ new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
 #' instead of returning `0`, because the pinned set promises a live set
 #' and is never silently re-queried.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, whose count
 #'   comes back without a re-query, or the page body at the root.
+#'
 #' @return An integer.
+#'
 #' @export
 pz_get_count <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -169,9 +170,9 @@ pz_get_count <- function(ctx, ..., target = NULL) {
 
 #' Read the text of matching elements
 #'
-#' `pz_get_text()` returns the `textContent` of every element matching
+#' [pz_get_text()] returns the `textContent` of every element matching
 #' `target`, one entry per match. By default runs of whitespace are
-#' collapsed to single spaces and trimmed, matching `pz_expect_text()`;
+#' collapsed to single spaces and trimmed, matching [pz_expect_text()];
 #' `raw = TRUE` returns the text exactly as the browser holds it.
 #'
 #' @param ctx A paparazzi context.
@@ -181,7 +182,9 @@ pz_get_count <- function(ctx, ..., target = NULL) {
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
 #' @param raw Return the text without collapsing whitespace?
+#'
 #' @return A character vector, one entry per match.
+#'
 #' @export
 pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
   check_dots_empty()
@@ -199,17 +202,14 @@ pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
 
 #' Read the value of matching elements
 #'
-#' `pz_get_value()` returns the `value` property of every element
+#' [pz_get_value()] returns the `value` property of every element
 #' matching `target`, one entry per match. Elements without a value
 #' property (non-form elements) give `NA`.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
+#' @inheritParams pz_get_text
+#'
 #' @return A character vector, one entry per match.
+#'
 #' @export
 pz_get_value <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -223,17 +223,14 @@ pz_get_value <- function(ctx, ..., target = NULL) {
 
 #' Read an attribute of matching elements
 #'
-#' `pz_get_attr()` returns the named attribute of every element matching
+#' [pz_get_attr()] returns the named attribute of every element matching
 #' `target`, one entry per match. Missing attributes give `NA`.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_get_text
 #' @param name The attribute name.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
+#'
 #' @return A character vector, one entry per match.
+#'
 #' @export
 pz_get_attr <- function(ctx, name, ..., target = NULL) {
   check_dots_empty()
@@ -255,20 +252,17 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
 
 #' Read the geometry of matching elements
 #'
-#' `pz_get_rect()` returns the bounding box of every element matching
+#' [pz_get_rect()] returns the bounding box of every element matching
 #' `target`, one row per match in match order.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
+#' @inheritParams pz_get_text
+#'
 #' @return A tibble with columns `x`, `y`, `width`, `height` (doubles,
 #'   CSS pixels, viewport-relative), one row per match, plus an
 #'   `element` list-column. Each `element` entry is a context scoped
 #'   to that one match, pinned at get time, so a chain can continue
 #'   from it: `rects$element[[2]] |> pz_hover()`.
+#'
 #' @export
 pz_get_rect <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -285,20 +279,17 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
 
 #' Describe matching elements
 #'
-#' `pz_get_elements()` returns a summary of every element matching
+#' [pz_get_elements()] returns a summary of every element matching
 #' `target`, one row per match in match order: the lowercased tag name,
 #' the `id` and `class` attributes, and the whitespace-collapsed text.
 #' `id` and `class` are `NA` when the attribute is absent.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
+#' @inheritParams pz_get_text
+#'
 #' @return A tibble with columns `tag`, `id`, `class`, `text`, one row
 #'   per match, plus an `element` list-column of contexts scoped to
 #'   each match, pinned at get time (see [pz_get_rect()]).
+#'
 #' @export
 pz_get_elements <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -324,16 +315,13 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
 
 #' Read the HTML of matching elements
 #'
-#' `pz_get_html()` returns the outer HTML of every element matching
+#' [pz_get_html()] returns the outer HTML of every element matching
 #' `target`, one entry per match.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
+#' @inheritParams pz_get_text
+#'
 #' @return A character vector, one entry per match.
+#'
 #' @export
 pz_get_html <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -347,10 +335,12 @@ pz_get_html <- function(ctx, ..., target = NULL) {
 
 #' Read the page URL
 #'
-#' `pz_get_url()` returns the page's current URL.
+#' [pz_get_url()] returns the page's current URL.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
+#'
 #' @return A character vector of length one.
+#'
 #' @export
 pz_get_url <- function(ctx) {
   check_context(ctx)
@@ -359,10 +349,12 @@ pz_get_url <- function(ctx) {
 
 #' Read the page title
 #'
-#' `pz_get_title()` returns the page's current title.
+#' [pz_get_title()] returns the page's current title.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
+#'
 #' @return A character vector of length one.
+#'
 #' @export
 pz_get_title <- function(ctx) {
   check_context(ctx)

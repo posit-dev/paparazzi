@@ -1,6 +1,7 @@
 #' Locate elements by CSS, with text, position, and scope qualifiers
 #'
-#' `pz_loc()` builds a page-independent element spec: a CSS selector,
+#' @description
+#' [pz_loc()] builds a page-independent element spec: a CSS selector,
 #' optionally narrowed by required text content (`has_text`), a match
 #' position (`which`), and an ancestor scope (`within`). Specs are lazy --
 #' they resolve at use time, so they follow DOM changes between uses --
@@ -11,7 +12,7 @@
 #' matches the elements of any member.
 #'
 #' @param css A CSS selector string.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_click
 #' @param has_text Substring the element's text content must contain.
 #'   Case-sensitive; whitespace collapses on both sides, so
 #'   `has_text = "Save now"` matches text reading "Save   now".
@@ -19,8 +20,9 @@
 #'   1-based positive integer. Applied after `css` and `has_text`
 #'   filtering; an out-of-range position means *no* match, not an error.
 #' @param within Only match descendants of elements matching this spec
-#'   (a string or `pz_loc()`, itself fully qualified). If `within`
+#'   (a string or [pz_loc()], itself fully qualified). If `within`
 #'   matches nothing, the whole spec matches nothing.
+#'
 #' @return An S3 object of class `paparazzi_loc`.
 #' @examples
 #' pz_loc("#chat_user_input .ProseMirror")
@@ -31,6 +33,7 @@
 #'   which = "last",
 #'   within = ".chat"
 #' )
+#'
 #' @export
 pz_loc <- function(css, ..., has_text = NULL, which = NULL, within = NULL) {
   check_dots_empty()

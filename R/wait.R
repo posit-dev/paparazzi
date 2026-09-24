@@ -4,9 +4,11 @@
 #' scheduled on it (e.g. recording capture) keep firing during the wait.
 #' Never sleeps without pumping the loop.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #' @param seconds Number of seconds to wait.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @export
 pz_wait <- function(ctx, seconds) {
   check_context(ctx)

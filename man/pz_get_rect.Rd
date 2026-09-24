@@ -24,6 +24,6 @@ to that one match, pinned at get time, so a chain can continue
 from it: \code{rects$element[[2]] |> pz_hover()}.
 }
 \description{
-\code{pz_get_rect()} returns the bounding box of every element matching
+\code{\link[=pz_get_rect]{pz_get_rect()}} returns the bounding box of every element matching
 \code{target}, one row per match in match order.
 }

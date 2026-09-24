@@ -25,7 +25,7 @@ the current scope? Requires a \code{target}.}
 A new context, invisibly.
 }
 \description{
-\code{pz_find_nth()} is \code{\link[=pz_find]{pz_find()}} with \code{which = n}. With a \code{target}, it
+\code{\link[=pz_find_nth]{pz_find_nth()}} is \code{\link[=pz_find]{pz_find()}} with \code{which = n}. With a \code{target}, it
 pins the spec's \code{n}th match; an out-of-range \code{n} means no match, so
 the call keeps auto-waiting like any \code{\link[=pz_loc]{pz_loc()}} resolution. Without
 a \code{target}, it narrows the current scope to its \code{n}th element: one

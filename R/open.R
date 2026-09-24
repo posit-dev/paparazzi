@@ -19,7 +19,9 @@
 #' @param timeout Session default timeout in seconds; `NULL` uses the package
 #'   default (10 s). Per-call `timeout = NULL` means "session default".
 #' @param shiny_options,envvars Reserved for Shiny app support.
+#'
 #' @return A `PaparazziPage` (the root context).
+#'
 #' @export
 pz_open <- function(
   x,
@@ -185,7 +187,9 @@ wait_for_load <- function(page, timeout, call = caller_env()) {
 #' page is a no-op.
 #'
 #' @param page A `PaparazziPage` from [pz_open()].
+#'
 #' @return `page`, invisibly.
+#'
 #' @export
 pz_close <- function(page) {
   check_page(page)
@@ -195,8 +199,8 @@ pz_close <- function(page) {
 
 #' Open a page that closes when a block or calling frame exits
 #'
-#' `pz_with_page()` evaluates `code` with the page open and closes it on exit,
-#' including on error. `pz_local_page()` opens a page and closes it when the
+#' [pz_with_page()] evaluates `code` with the page open and closes it on exit,
+#' including on error. [pz_local_page()] opens a page and closes it when the
 #' calling frame (e.g. a test) exits, via [withr::defer()]. Both accept an
 #' already-open page or anything [pz_open()] accepts, and always close on
 #' exit: the block owns the resource.
@@ -209,8 +213,10 @@ pz_close <- function(page) {
 #'   function.
 #' @param ... Passed to [pz_open()] when `x` is not already a page.
 #' @param .env The frame whose exit closes the page.
-#' @return `pz_with_page()` returns the page invisibly; `pz_local_page()`
+#'
+#' @return [pz_with_page()] returns the page invisibly; [pz_local_page()]
 #'   returns it visibly.
+#'
 #' @export
 pz_with_page <- function(x, code, ...) {
   page <- if (is_pz_page(x)) x else pz_open(x, ...)
