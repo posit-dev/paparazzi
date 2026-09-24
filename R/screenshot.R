@@ -76,6 +76,9 @@ clip_viewport <- function(ctx, call = caller_env()) {
     ctx,
     "[window.scrollX, window.scrollY, window.innerWidth, window.innerHeight]"
   )
+  # pz_js() converts a JS array to an R list, so flatten it before the
+  # shape check.
+  v <- unlist(v)
   if (!is.numeric(v) || length(v) != 4) {
     cli::cli_abort(
       "Internal error: the viewport read returned {.obj_type_friendly {v}}, not four numbers.",
