@@ -127,26 +127,28 @@ scope_slice_js <- function(which) {
 }
 
 # A narrowed scope's description: a single loc takes `which` directly
-# and re-formats with format_loc(); a union can't carry a which, so its
-# description is the parent's plus a match suffix.
-scope_narrow_description <- function(scoped, which) {
-  if (length(scoped$locs) == 1) {
-    loc <- scoped$locs[[1]]
+# and re-formats with format_loc(); a union (or no locs at all) can't
+# carry a which, so its description is the parent's plus a match
+# suffix. Shared by scope narrowing (the parent is the pinned set) and
+# the element list-column (the parent is the getter's matched array).
+narrow_description <- function(locs, description, which) {
+  if (length(locs) == 1) {
+    loc <- locs[[1]]
     loc$which <- which
     format_loc(loc)
   } else {
-    paste0(scoped$description, " (match: ", which, ")")
+    paste0(description, " (match: ", which, ")")
   }
 }
 
-scope_narrow_locs <- function(scoped, which) {
-  if (length(scoped$locs) == 1) {
-    loc <- scoped$locs[[1]]
+narrow_locs <- function(locs, which) {
+  if (length(locs) == 1) {
+    loc <- locs[[1]]
     loc$which <- which
     list(loc)
   } else {
     # A union can't take a which; the description carries the match.
-    scoped$locs
+    locs
   }
 }
 
@@ -217,7 +219,7 @@ find_narrow <- function(ctx, which, from_root, call) {
       call = call
     )
   }
-  description <- scope_narrow_description(scoped, which)
+  description <- narrow_description(scoped$locs, scoped$description, which)
   els <- loc_resolve_once(
     ctx,
     scope_slice_js(which),
@@ -231,7 +233,7 @@ find_narrow <- function(ctx, which, from_root, call) {
     els$object_id,
     els$count,
     description,
-    locs = scope_narrow_locs(scoped, which)
+    locs = narrow_locs(scoped$locs, which)
   )
   push_scope(ctx, pinned)
 }

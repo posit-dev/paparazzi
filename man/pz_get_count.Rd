@@ -13,13 +13,18 @@ pz_get_count(ctx, ..., target = NULL)
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
-page body.}
+current context: the pinned set at a scoped context, whose count
+comes back without a re-query, or the page body at the root.}
 }
 \value{
 An integer.
 }
 \description{
-\code{pz_get_count()} returns the number of elements matching \code{target}.
-Unlike the other getters it doesn't wait for a match: \code{0} is a valid
-answer, so it resolves once and returns immediately.
+\code{pz_get_count()} returns the number of elements matching \code{target},
+counted inside the current scope. Unlike the other getters it
+doesn't wait for a match: \code{0} is a valid answer, so it resolves once
+and returns immediately. One exception: on a scope whose pinned
+elements have left the page it raises \code{paparazzi_error_detached}
+instead of returning \code{0}, because the pinned set promises a live set
+and is never silently re-queried.
 }
