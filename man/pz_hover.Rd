@@ -19,10 +19,11 @@ scope; at the root context a target is required.}
 \code{ctx}, invisibly.
 }
 \description{
-Scrolls the element into view (instantly) and moves the pointer to
-the center of it with a real \code{mousemove} event, without pressing any
-button. This is what drives \verb{:hover} styles and \code{mouseenter}/
-\code{mouseover} handlers.
+Auto-waits for the element to be actionable -- visible with a
+non-empty box -- then scrolls it into view (instantly) and moves the
+pointer to the center of it with a real \code{mousemove} event, without
+pressing any button. This is what drives \verb{:hover} styles and
+\code{mouseenter}/\code{mouseover} handlers.
 }
 \seealso{
 \code{\link[=pz_click]{pz_click()}}
