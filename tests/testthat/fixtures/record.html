@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi record fixture</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    #box {
+      position: absolute;
+      left: 40px;
+      top: 30px;
+      width: 100px;
+      height: 60px;
+      background-color: teal;
+    }
+    #ticker {
+      position: absolute;
+      left: 40px;
+      top: 120px;
+      width: 100px;
+      height: 40px;
+      font: 24px monospace;
+      background-color: khaki;
+    }
+  </style>
+</head>
+<body>
+  <div id="box"></div>
+  <div id="ticker">0</div>
+  <script>
+    // A visible change every 100ms so consecutive frames differ.
+    let tick = 0;
+    setInterval(function() {
+      tick += 1;
+      document.getElementById("ticker").textContent = String(tick);
+    }, 100);
+    // Test hook: grow #box so when = "start"/"stop" crops differ.
+    function growBox() {
+      document.getElementById("box").style.width = "200px";
+    }
+  </script>
+</body>
+</html>
