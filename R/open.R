@@ -128,10 +128,11 @@ open_target_url <- function(x, call = caller_env()) {
 # Conventional Shiny app file names: app.R/ui.R/server.R, and the variants
 # Shiny's editor tooling recognizes: app-*.R/app_*.R and *-app.R/*_app.R.
 is_shiny_app_file <- function(name) {
-  name %in%
-    c("app.R", "app.r", "ui.R", "server.R") ||
-    grepl("^app[_-].+[.]R$", name) ||
-    grepl("^.+[_-]app[.]R$", name)
+  if (name %in% c("app.R", "app.r", "ui.R", "server.R")) {
+    return(TRUE)
+  }
+
+  grepl("^(app[_-].+|.+[_-]app)[.]R$", name)
 }
 
 file_url <- function(path) {
