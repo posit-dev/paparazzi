@@ -68,12 +68,18 @@ Builds on the action pipeline (`actions.md`: `action_elements()`,
 
 (newest first; three lines per session: landed / next / provisional)
 
-- 2026-09-25 (pat5): landed the phase note and the three actions
-  (select_text Range+Selection, scroll by/to/into-view with the
-  container walk, drag mouse + CDP drag interception replay), the
-  advanced.html fixture with helper-advanced.R, and acceptance tests
-  (selection across inline tags, scoped and root scroll, box drag,
-  HTML5 DnD payload). Next: roborev review, then cursor staging (rvj4)
-  animates at the seams above. Provisional: `pz_scroll(by/to)` falls
-  back to the document when no scope ancestor scrolls -- revisit only
-  if a real page wants an error instead.
+- 2026-09-25 (pat5): landed the phase note, fixture + helper, the
+  three actions, and acceptance tests (f768367..b0d4c05); roborev 1250
+  (codex) findings fixed: destination viewport check with a clear
+  error (drag endpoints must share one viewport, like a real drag),
+  exception-safe cleanup latches for the held button and interception
+  on every exit path, case-insensitive `draggable` keywords, and an
+  explicit `to = NULL` no longer resolving to document.body. Suite
+  1152 green. Next: rvj4 animates at the seams above. Provisional:
+  `pz_scroll(by/to)` falls back to the document when no scope ancestor
+  scrolls -- revisit only if a real page wants an error instead.
+- 2026-09-25 (pat5 start): design verified before code: the CDP
+  drag interception sequence (callback before moves, interception off
+  before release, dropzone needs preventDefault), selection and
+  scroll mechanisms as decided above. Landed nothing yet.
+  Next: implement. Provisional: none.

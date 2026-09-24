@@ -883,3 +883,25 @@ test_that("pz_drag validates its input and errors on multiple matches", {
     class = "paparazzi_error_multiple"
   )
 })
+
+test_that("pz_drag review fixes: NULL to, uppercase draggable, viewport", {
+  page <- local_advanced_page()
+  # An explicit to = NULL is absent, not document.body.
+  expect_error(
+    pz_drag(page, "#dragbox", NULL),
+    class = "paparazzi_error_input"
+  )
+  # draggable attribute keywords are case-insensitive: an uppercase
+  # source still routes through the HTML5 pipeline.
+  pz_drag(page, "#draggable-uc", "#dropzone")
+  expect_equal(
+    pz_js(page, "document.getElementById('dropzone').textContent"),
+    "got:payload-uc"
+  )
+  # Bringing a far source into view pushes the destination out of the
+  # viewport; the drag errors instead of dropping on empty space.
+  expect_error(
+    pz_drag(page, "#tall-bottom", "#editor"),
+    class = "paparazzi_error_target"
+  )
+})

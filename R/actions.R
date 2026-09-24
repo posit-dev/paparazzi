@@ -1029,13 +1029,17 @@ scroll_arg_json <- function(by = NULL, to = NULL) {
 pz_drag <- function(ctx, target, to, ..., by = NULL) {
   check_context(ctx)
   check_dots_empty()
-  if (missing(to) && is.null(by)) {
+  # An explicit to = NULL is absent, not a target: it must not fall
+  # through to the resolver's document.body meaning.
+  to_dest <- !missing(to) && !is.null(to)
+  by_offset <- !is.null(by)
+  if (!to_dest && !by_offset) {
     cli::cli_abort(
       "Supply {.arg to} or {.arg by}.",
       class = "paparazzi_error_input"
     )
   }
-  if (!missing(to) && !is.null(by)) {
+  if (to_dest && by_offset) {
     cli::cli_abort(
       "Supply either {.arg to} or {.arg by}, not both.",
       class = "paparazzi_error_input"
@@ -1047,7 +1051,7 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
     withr::defer(release_elements(found$els))
   }
 
-  if (missing(to)) {
+  if (!to_dest) {
     from <- el_pointer_point(ctx, found$els)
     offset <- check_offset(by, arg = "by")
     to_point <- c(
@@ -1059,15 +1063,28 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
     withr::defer(release_elements(dest))
     # Destination point first: the source's scroll can shift the
     # destination rect, so the drop point is re-read once after (no
-    # scroll, so it can't shift back).
+    # scroll, so it can't shift back). Both endpoints must then share
+    # the viewport -- a real drag can't span two screens of a tall
+    # page, and a drop dispatched off-screen lands on nothing.
     to_point <- el_pointer_point(ctx, dest)
     from <- el_pointer_point(ctx, found$els)
-    probe <- els_call(dest, pointer_actionable_js)
-    if (length(probe) == 5L && probe[1] == 1 && probe[4] > 0 && probe[5] > 0) {
-      to_point <- c(
+    probe <- els_call(dest, dest_point_js)
+    if (length(probe) == 7L && probe[1] == 1 && probe[4] > 0 && probe[5] > 0) {
+      drop <- c(
         x = probe[2] + probe[4] / 2,
         y = probe[3] + probe[5] / 2
       )
+      if (drop[[1]] < 0 || drop[[1]] > probe[6] ||
+        drop[[2]] < 0 || drop[[2]] > probe[7]) {
+        cli::cli_abort(
+          c(
+            "The drag destination is outside the viewport after bringing the source into view.",
+            i = "Both endpoints must be visible at once, like a real drag; scroll or scope so they are."
+          ),
+          class = "paparazzi_error_target"
+        )
+      }
+      to_point <- drop
     }
   }
 
@@ -1084,27 +1101,52 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
   }
   invisible(ctx)
 }
+# The destination's final point after the source settles: the
+# actionability probe (visible, non-empty box) plus the viewport size,
+# so the drop center can be checked in-view.
+dest_point_js <- "function() {
+  const el = this[0];
+  const r = el.getBoundingClientRect();
+  return [
+    el.checkVisibility({ checkVisibilityCSS: true }) ? 1 : 0,
+    r.x, r.y, r.width, r.height,
+    window.innerWidth, window.innerHeight
+  ];
+}"
 # Is the source a real HTML5 drag source? Own or inherited draggable
 # attribute (the IDL property only reflects the element's own
 # attribute, so inheritance needs the closest() walk; an explicit
-# false opts out), or the img / <a href> element defaults.
+# false opts out; the attribute keywords are case-insensitive), or the
+# img / <a href> element defaults.
 draggable_js <- "function() {
   const el = this[0];
   const own = el.getAttribute('draggable');
   if (own !== null && own !== '') {
-    return own === 'true';
+    return own.toLowerCase() === 'true';
   }
   const inherited = el.closest('[draggable]');
   if (inherited) {
-    return inherited.getAttribute('draggable') === 'true';
+    return inherited.getAttribute('draggable').toLowerCase() === 'true';
   }
   return el.tagName === 'IMG' ||
     (el.tagName === 'A' && el.hasAttribute('href'));
 }"
 # The instant mouse drag: press at the source, one move to the
 # destination, release. The move is the seam where recording swaps in
-# the cursor glide; press and release stay.
+# the cursor glide; press and release stay. A dispatch error between
+# press and release leaves the button held, so the release is
+# re-attempted on exit until the normal path completes it.
 dispatch_mouse_drag <- function(ctx, action, target, from, to, call = caller_env()) {
+  pressed <- FALSE
+  withr::defer(if (pressed) {
+    try(
+      dispatch_mouse(
+        ctx, action, target, "mouseReleased", to,
+        button = "left", buttons = 0, clickCount = 1, call = call
+      ),
+      silent = TRUE
+    )
+  })
   dispatch_mouse(
     ctx, action, target, "mouseMoved", from,
     button = "none", buttons = 0, clickCount = 0, call = call
@@ -1113,6 +1155,7 @@ dispatch_mouse_drag <- function(ctx, action, target, from, to, call = caller_env
     ctx, action, target, "mousePressed", from,
     button = "left", buttons = 1, clickCount = 1, call = call
   )
+  pressed <- TRUE
   dispatch_mouse(
     ctx, action, target, "mouseMoved", to,
     button = "left", buttons = 1, clickCount = 0, call = call
@@ -1121,6 +1164,7 @@ dispatch_mouse_drag <- function(ctx, action, target, from, to, call = caller_env
     ctx, action, target, "mouseReleased", to,
     button = "left", buttons = 0, clickCount = 1, call = call
   )
+  pressed <- FALSE
 }
 # HTML5 drag-and-drop, intercept-then-replay. With interception on, the
 # press-and-move starts a REAL drag (the page's dragstart runs), and the
@@ -1141,6 +1185,25 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   )
   withr::defer(try(dereg(), silent = TRUE))
 
+  settled <- FALSE
+  # Any exit before the release leaves the button held and interception
+  # on -- a CDP error mid-sequence, or a dragstart the page cancels (the
+  # interception event never fires, so the poll times out). Both are
+  # undone here; the latch drops once the normal path has released.
+  withr::defer(if (!settled) {
+    try(
+      session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout),
+      silent = TRUE
+    )
+    try(
+      dispatch_mouse(
+        ctx, "dragging", els$description, "mouseReleased", to,
+        button = "left", buttons = 0, clickCount = 1, call = call
+      ),
+      silent = TRUE
+    )
+  })
+
   action_cdp(
     ctx, "dragging", els$description, call = call,
     cmd = session$Input$setInterceptDrags(enabled = TRUE, timeout_ = timeout)
@@ -1157,31 +1220,12 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     ctx, "dragging", els$description, "mouseMoved", to,
     button = "left", buttons = 1, clickCount = 0, call = call
   )
-  tryCatch(
-    pz_poll(
-      fn = function() !is.null(data),
-      timeout = timeout,
-      loop = ctx$page$child_loop,
-      what = paste0("the drag from ", els$description, " to start"),
-      call = call
-    ),
-    error = function(e) {
-      # A dragstart canceled by the page never intercepts; undo the
-      # held button and the interception so the page isn't left
-      # mid-gesture.
-      try(
-        session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout),
-        silent = TRUE
-      )
-      try(
-        dispatch_mouse(
-          ctx, "dragging", els$description, "mouseReleased", to,
-          button = "left", buttons = 0, clickCount = 1, call = call
-        ),
-        silent = TRUE
-      )
-      stop(e)
-    }
+  pz_poll(
+    fn = function() !is.null(data),
+    timeout = timeout,
+    loop = ctx$page$child_loop,
+    what = paste0("the drag from ", els$description, " to start"),
+    call = call
   )
 
   action_cdp(
@@ -1192,6 +1236,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     ctx, "dragging", els$description, "mouseReleased", to,
     button = "left", buttons = 0, clickCount = 1, call = call
   )
+  settled <- TRUE
   for (type in c("dragEnter", "dragOver", "drop")) {
     action_cdp(
       ctx, "dragging", els$description, call = call,

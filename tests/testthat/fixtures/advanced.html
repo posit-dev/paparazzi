@@ -10,7 +10,7 @@
     #scroller .inner { height: 1200px; background: linear-gradient(#8ac, #468); }
     #editor { border: 1px solid #999; min-height: 2em; padding: 0.25em; }
     #dragbox { width: 60px; height: 40px; background: #a86; position: absolute; left: 700px; top: 200px; }
-    #draggable { width: 60px; height: 40px; background: #8ac; }
+    #draggable, #draggable-uc { width: 60px; height: 40px; background: #8ac; }
     #dropzone { width: 120px; height: 80px; background: #caa; margin-top: 40px; }
   </style>
 </head>
@@ -28,6 +28,7 @@
        viewport, and neither can a real user's single drag. -->
   <div id="dragbox">drag me</div>
   <div id="draggable" draggable="true">html5 drag me</div>
+  <div id="draggable-uc" draggable="TRUE">uppercase drag me</div>
   <div id="dropzone">drop here</div>
 
   <!-- scroll: a scrollable inner container, then a tall page. -->
@@ -86,12 +87,14 @@
     // HTML5 drag-and-drop with a real payload. The dropzone cancels
     // dragover, as real drop zones must -- without that, drop never
     // fires.
-    document.getElementById("draggable").addEventListener(
-      "dragstart",
-      function (e) {
-        e.dataTransfer.setData("text/plain", "payload-123");
-      }
-    );
+    ["draggable", "draggable-uc"].forEach(function (id) {
+      document.getElementById(id).addEventListener("dragstart", function (e) {
+        e.dataTransfer.setData(
+          "text/plain",
+          id === "draggable" ? "payload-123" : "payload-uc"
+        );
+      });
+    });
     var zone = document.getElementById("dropzone");
     zone.addEventListener("dragover", function (e) { e.preventDefault(); });
     zone.addEventListener("drop", function (e) {
