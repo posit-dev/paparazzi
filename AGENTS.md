@@ -15,7 +15,9 @@
 1. **Validate user input with rlang's `check_*()` functions** (`check_bool()`,
    `check_string()`, `check_number_*()`, `check_data_frame()`); use
    `stop_input_type()` where no `check_*()` fits; hand-rolled classed errors
-   only when the class is needed.
+   only when the class is needed. Use paparazzi's own checkers in
+   `R/utils-check.R` (e.g. `check_character()`, `check_page()`) where they
+   fit; extend that file as new shared checkers come up.
 
 ## Work Mechanics
 
