@@ -359,3 +359,254 @@ test_that("pz_type with a hidden target times out before typing", {
   )
   expect_length(log_entries(page), 0)
 })
+
+# The form fixture (form.html) exercises value setting end to end: a
+# form with every control pz_set_value() covers, a framework-style
+# controlled input whose instance-level value accessor is trapped
+# (window.__pzTraps counts trap hits -- the native prototype setter
+# must never trigger it), and a contenteditable div. The sink logs
+# input and change with {type, id, isTrusted, value, checked}.
+
+test_that("pz_set_value sets a text input and dispatches input then change", {
+  page <- local_form_page()
+  page <- expect_invisible(pz_set_value(page, "Ada", target = "#text"))
+  expect_equal(pz_js(page, "document.getElementById('text').value"), "Ada")
+
+  text <- log_ids(log_entries(page), "text")
+  expect_identical(log_types(text), c("input", "change"))
+  expect_equal(text[[1]]$value, "Ada")
+  # focus came first: the element is focused after the set
+  expect_equal(pz_js(page, "document.activeElement.id"), "text")
+})
+
+test_that("pz_set_value sets and clears a textarea", {
+  page <- local_form_page()
+  pz_set_value(page, "a bio", target = "#textarea")
+  expect_equal(
+    pz_js(page, "document.getElementById('textarea').value"),
+    "a bio"
+  )
+  # Clearing is pz_set_value("") -- there is no pz_clear().
+  pz_set_value(page, "", target = "#textarea")
+  expect_equal(pz_js(page, "document.getElementById('textarea').value"), "")
+})
+
+test_that("pz_set_value selects a native select by option value", {
+  page <- local_form_page()
+  pz_set_value(page, "b", target = "#select")
+  el <- "document.getElementById('select')"
+  expect_equal(pz_js(page, paste0(el, ".value")), "b")
+  expect_equal(
+    pz_js(page, paste0(el, ".selectedOptions[0].textContent")),
+    "Beta"
+  )
+
+  err <- expect_error(
+    pz_set_value(page, "zz", target = "#select"),
+    class = "paparazzi_error_value"
+  )
+  expect_match(
+    paste(conditionMessage(err), collapse = " "),
+    "No option with value"
+  )
+})
+
+test_that("pz_set_value checks and unchecks a checkbox", {
+  page <- local_form_page()
+  pz_set_value(page, TRUE, target = "#check")
+  expect_true(pz_js(page, "document.getElementById('check').checked"))
+  check <- log_ids(log_entries(page), "check", "change")
+  expect_length(check, 1)
+
+  pz_set_value(page, FALSE, target = "#check")
+  expect_false(pz_js(page, "document.getElementById('check').checked"))
+})
+
+test_that("pz_set_value maintains radio groups", {
+  page <- local_form_page()
+  radios <- c("radio1", "radio2", "radio3")
+  state <- function() {
+    vapply(
+      radios,
+      function(id) {
+        pz_js(page, paste0("document.getElementById('", id, "').checked"))
+      },
+      logical(1)
+    )
+  }
+
+  pz_set_value(page, TRUE, target = "#radio1")
+  expect_identical(state(), c(radio1 = TRUE, radio2 = FALSE, radio3 = FALSE))
+
+  # Checking radio2 unchecks radio1 but leaves the other-named group
+  # alone; the native checked setter doesn't do this by itself.
+  pz_set_value(page, TRUE, target = "#radio2")
+  expect_identical(state(), c(radio1 = FALSE, radio2 = TRUE, radio3 = FALSE))
+})
+
+test_that("pz_set_value covers range and number inputs", {
+  page <- local_form_page()
+  pz_set_value(page, 75, target = "#range")
+  expect_equal(pz_js(page, "document.getElementById('range').value"), "75")
+  pz_set_value(page, 5, target = "#number")
+  expect_equal(pz_js(page, "document.getElementById('number').value"), "5")
+
+  # A value the browser clamps or rejects is an error, not a silent set.
+  err <- expect_error(
+    pz_set_value(page, 150, target = "#range"),
+    class = "paparazzi_error_value"
+  )
+  expect_match(paste(conditionMessage(err), collapse = " "), "kept")
+})
+
+test_that("pz_set_value covers date inputs and rejects malformed dates", {
+  page <- local_form_page()
+  pz_set_value(page, "2026-01-01", target = "#date")
+  expect_equal(
+    pz_js(page, "document.getElementById('date').value"),
+    "2026-01-01"
+  )
+  expect_error(
+    pz_set_value(page, "not a date", target = "#date"),
+    class = "paparazzi_error_value"
+  )
+})
+
+test_that("pz_set_value bypasses a framework's controlled input", {
+  page <- local_form_page()
+  # The controlled input traps instance-level value assignment, the way
+  # a framework that owns the value property does. The native prototype
+  # setter must bypass the trap entirely: the trap counter stays at 0
+  # while the native getter reads back the new value.
+  pz_set_value(page, "via native", target = "#controlled")
+  expect_equal(pz_js(page, "window.__pzTraps"), 0)
+  expect_equal(
+    pz_js(
+      page,
+      paste(
+        "Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')",
+        ".get.call(document.getElementById('controlled'))"
+      )
+    ),
+    "via native"
+  )
+  # The trap's own backing value never moved.
+  expect_equal(pz_js(page, "document.getElementById('controlled').value"), "")
+  controlled <- log_ids(log_entries(page), "controlled")
+  expect_identical(log_types(controlled), c("input", "change"))
+})
+
+test_that("pz_set_value replaces contenteditable content in one step", {
+  page <- local_form_page()
+  pz_set_value(page, "new text", target = "#editor")
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "new text"
+  )
+  # The fallback goes through CDP insertText, so the input event is a
+  # real, trusted one.
+  ed <- log_ids(log_entries(page), "editor", "input")
+  expect_length(ed, 1)
+  expect_true(ed[[1]]$isTrusted)
+
+  # An empty value selects all and deletes, leaving the element empty.
+  pz_set_value(page, "", target = "#editor")
+  expect_equal(pz_js(page, "document.getElementById('editor').textContent"), "")
+})
+
+test_that("pz_set_value rejects mismatched values and targets", {
+  page <- local_form_page()
+  expect_error(
+    pz_set_value(page, TRUE, target = "#text"),
+    class = "paparazzi_error_value"
+  )
+  expect_error(
+    pz_set_value(page, "yes", target = "#check"),
+    class = "paparazzi_error_value"
+  )
+  err <- expect_error(
+    pz_set_value(page, "x", target = "#para"),
+    class = "paparazzi_error_value"
+  )
+  expect_match(
+    paste(conditionMessage(err), collapse = " "),
+    "not a form control"
+  )
+})
+
+test_that("pz_set_value validates its input", {
+  page <- local_form_page()
+  expect_error(pz_set_value(page, c("a", "b"), target = "#text"), "single")
+  expect_error(pz_set_value(page, NA, target = "#text"), "NA")
+  expect_error(pz_set_value(page, 42, "bogus", target = "#text"), "empty")
+  expect_error(pz_set_value(page, list()), class = "rlang_error")
+})
+
+test_that("pz_set_value needs a target at the root and errors on multiple matches", {
+  page <- local_form_page()
+  f <- tempfile()
+  writeLines("x", f)
+  expect_error(pz_set_value(page, "x"), class = "paparazzi_error_target")
+  expect_error(pz_set_files(page, f), class = "paparazzi_error_target")
+  expect_error(
+    pz_set_value(page, "x", target = "#the-form input[type=radio]"),
+    class = "paparazzi_error_multiple"
+  )
+  expect_error(
+    pz_set_files(page, f, target = ".dupfile"),
+    class = "paparazzi_error_multiple"
+  )
+})
+
+test_that("pz_set_value acts on the scope element of a scoped context", {
+  page <- local_form_page()
+  ctx <- pz_find(page, "#text")
+  pz_set_value(ctx, "scoped")
+  expect_equal(pz_js(page, "document.getElementById('text').value"), "scoped")
+})
+
+test_that("pz_set_files attaches files to a file input", {
+  page <- local_form_page()
+  f1 <- tempfile(fileext = ".txt")
+  writeLines("hello", f1)
+  f2 <- tempfile(fileext = ".txt")
+  writeLines("world", f2)
+
+  pz_set_files(page, f1, target = "#file")
+  el <- "document.getElementById('file')"
+  expect_equal(pz_js(page, paste0(el, ".files.length")), 1)
+  expect_equal(pz_js(page, paste0(el, ".files[0].name")), basename(f1))
+  expect_equal(pz_js(page, paste0(el, ".files[0].size")), 6)
+  # setFileInputFiles produces a genuine, trusted change event.
+  change <- log_ids(log_entries(page), "file", "change")
+  expect_length(change, 1)
+  expect_true(change[[1]]$isTrusted)
+
+  pz_set_files(page, c(f1, f2), target = "#file-multi")
+  el <- "document.getElementById('file-multi')"
+  expect_equal(pz_js(page, paste0(el, ".files.length")), 2)
+  expect_equal(
+    pz_js(
+      page,
+      paste0("Array.from(", el, ".files).map((f) => f.name).join('|')")
+    ),
+    paste(c(basename(f1), basename(f2)), collapse = "|")
+  )
+})
+
+test_that("pz_set_files rejects non-file inputs and validates paths", {
+  page <- local_form_page()
+  f <- tempfile()
+  writeLines("x", f)
+  expect_error(
+    pz_set_files(page, f, target = "#text"),
+    class = "paparazzi_error_value"
+  )
+  expect_error(
+    pz_set_files(page, tempfile(), target = "#file"),
+    class = "paparazzi_error_input"
+  )
+  expect_error(pz_set_files(page, character(0), target = "#file"), "at least 1")
+  expect_error(pz_set_files(page, NA, target = "#file"), "NA")
+  expect_error(pz_set_files(page, f, "bogus", target = "#file"), "empty")
+})
