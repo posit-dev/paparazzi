@@ -362,10 +362,19 @@ test_that("pz_type with a hidden target times out before typing", {
 
 # The form fixture (form.html) exercises value setting end to end: a
 # form with every control pz_set_value() covers, a framework-style
-# controlled input whose instance-level value accessor is trapped
+# controlled input whose instance-level value SETTER is trapped
 # (window.__pzTraps counts trap hits -- the native prototype setter
 # must never trigger it), and a contenteditable div. The sink logs
 # input and change with {type, id, isTrusted, value, checked}.
+
+# Every successful pz_set_value() dispatches input then change; helper
+# for the per-control assertions. `times` is the number of sets.
+expect_value_events <- function(page, id, times = 1) {
+  expect_identical(
+    log_types(log_ids(log_entries(page), id)),
+    rep(c("input", "change"), times)
+  )
+}
 
 test_that("pz_set_value sets a text input and dispatches input then change", {
   page <- local_form_page()
@@ -389,6 +398,7 @@ test_that("pz_set_value sets and clears a textarea", {
   # Clearing is pz_set_value("") -- there is no pz_clear().
   pz_set_value(page, "", target = "#textarea")
   expect_equal(pz_js(page, "document.getElementById('textarea').value"), "")
+  expect_value_events(page, "textarea", times = 2)
 })
 
 test_that("pz_set_value selects a native select by option value", {
@@ -400,6 +410,7 @@ test_that("pz_set_value selects a native select by option value", {
     pz_js(page, paste0(el, ".selectedOptions[0].textContent")),
     "Beta"
   )
+  expect_value_events(page, "select")
 
   err <- expect_error(
     pz_set_value(page, "zz", target = "#select"),
@@ -415,11 +426,12 @@ test_that("pz_set_value checks and unchecks a checkbox", {
   page <- local_form_page()
   pz_set_value(page, TRUE, target = "#check")
   expect_true(pz_js(page, "document.getElementById('check').checked"))
-  check <- log_ids(log_entries(page), "check", "change")
-  expect_length(check, 1)
+  expect_value_events(page, "check")
 
   pz_set_value(page, FALSE, target = "#check")
   expect_false(pz_js(page, "document.getElementById('check').checked"))
+  # Both states dispatched the full event sequence.
+  expect_value_events(page, "check", times = 2)
 })
 
 test_that("pz_set_value maintains radio groups", {
@@ -435,13 +447,23 @@ test_that("pz_set_value maintains radio groups", {
     )
   }
 
+  # Check the other-named group first, so leaving it alone is really
+  # observable: switching radio1/radio2 must not clear it.
+  pz_set_value(page, TRUE, target = "#radio3")
+
   pz_set_value(page, TRUE, target = "#radio1")
-  expect_identical(state(), c(radio1 = TRUE, radio2 = FALSE, radio3 = FALSE))
+  expect_identical(state(), c(radio1 = TRUE, radio2 = FALSE, radio3 = TRUE))
 
   # Checking radio2 unchecks radio1 but leaves the other-named group
   # alone; the native checked setter doesn't do this by itself.
   pz_set_value(page, TRUE, target = "#radio2")
-  expect_identical(state(), c(radio1 = FALSE, radio2 = TRUE, radio3 = FALSE))
+  expect_identical(state(), c(radio1 = FALSE, radio2 = TRUE, radio3 = TRUE))
+
+  # Each set radio dispatched its own pair; unchecking a sibling (or
+  # leaving it alone) dispatches nothing on it.
+  expect_value_events(page, "radio1")
+  expect_value_events(page, "radio2")
+  expect_value_events(page, "radio3")
 })
 
 test_that("pz_set_value radio groups stop at the form owner", {
@@ -478,8 +500,11 @@ test_that("pz_set_value covers range and number inputs", {
   expect_equal(pz_js(page, "document.getElementById('range').value"), "75")
   pz_set_value(page, 5, target = "#number")
   expect_equal(pz_js(page, "document.getElementById('number').value"), "5")
+  expect_value_events(page, "range")
+  expect_value_events(page, "number")
 
-  # A value the browser clamps or rejects is an error, not a silent set.
+  # A value the browser clamps or rejects is an error, not a silent set,
+  # and dispatches nothing.
   err <- expect_error(
     pz_set_value(page, 150, target = "#range"),
     class = "paparazzi_error_value"
@@ -544,26 +569,19 @@ test_that("pz_set_value rejects file inputs", {
 
 test_that("pz_set_value bypasses a framework's controlled input", {
   page <- local_form_page()
-  # The controlled input traps instance-level value assignment, the way
-  # a framework that owns the value property does. The native prototype
-  # setter must bypass the trap entirely: the trap counter stays at 0
-  # while the native getter reads back the new value.
+  # The controlled input overrides the instance-level value setter (a
+  # framework's trap), keeping the native getter. The native prototype
+  # setter must bypass the trap entirely -- the counter stays at 0 --
+  # while the getter and the event listeners observe the new value.
   pz_set_value(page, "via native", target = "#controlled")
   expect_equal(pz_js(page, "window.__pzTraps"), 0)
   expect_equal(
-    pz_js(
-      page,
-      paste(
-        "Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')",
-        ".get.call(document.getElementById('controlled'))"
-      )
-    ),
+    pz_js(page, "document.getElementById('controlled').value"),
     "via native"
   )
-  # The trap's own backing value never moved.
-  expect_equal(pz_js(page, "document.getElementById('controlled').value"), "")
   controlled <- log_ids(log_entries(page), "controlled")
   expect_identical(log_types(controlled), c("input", "change"))
+  expect_equal(controlled[[1]]$value, "via native")
 })
 
 test_that("pz_set_value replaces contenteditable content in one step", {
@@ -646,7 +664,7 @@ test_that("pz_set_files attaches files to a file input", {
   el <- "document.getElementById('file')"
   expect_equal(pz_js(page, paste0(el, ".files.length")), 1)
   expect_equal(pz_js(page, paste0(el, ".files[0].name")), basename(f1))
-  expect_equal(pz_js(page, paste0(el, ".files[0].size")), 6)
+  expect_equal(pz_js(page, paste0(el, ".files[0].size")), file.info(f1)$size)
   # setFileInputFiles produces a genuine, trusted change event.
   change <- log_ids(log_entries(page), "file", "change")
   expect_length(change, 1)

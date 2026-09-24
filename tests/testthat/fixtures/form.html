@@ -54,10 +54,11 @@
   <input type="radio" name="orphan" id="orphan-free" value="o1">
 
   <!-- Framework-style controlled input: the instance-level value
-       accessor is trapped, like a framework that owns the value
-       property. A naive `el.value = x` hits the trap setter; the
-       native prototype setter must bypass it. __pzTraps counts trap
-       hits, __pzVal is what the trap getter hands back. -->
+       SETTER is overridden, the way React-style controlled inputs
+       install it; the getter stays native, so a genuine set is
+       observable through it. A naive `el.value = x` hits the trap and
+       does nothing; the native prototype setter must bypass it.
+       __pzTraps counts trap hits. -->
   <div><input type="text" id="controlled"></div>
 
   <div id="editor" contenteditable>old <b>bold</b> text</div>
@@ -82,13 +83,16 @@
       document.addEventListener(t, __pzLogEvent, true);
     });
 
-    // The controlled input: instance-level value accessor override.
+    // The controlled input: instance-level setter override, native
+    // getter kept.
     var controlled = document.getElementById("controlled");
     window.__pzTraps = 0;
-    controlled.__pzVal = "";
     Object.defineProperty(controlled, "value", {
-      get: function () { return this.__pzVal; },
-      set: function (v) { window.__pzTraps++; this.__pzVal = String(v); }
+      get: Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value"
+      ).get,
+      set: function () { window.__pzTraps++; }
     });
   </script>
 </body>
