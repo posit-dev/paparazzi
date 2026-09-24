@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi actions fixture</title>
+  <style>
+    body { font-family: sans-serif; margin: 1em; }
+    .spacer { height: 2000px; }
+    form div { margin-bottom: 0.5em; }
+    button { display: block; margin: 0.25em 0; }
+  </style>
+</head>
+<body>
+  <form>
+    <div><input type="text" id="name" placeholder="name"></div>
+    <div><textarea id="bio" placeholder="bio"></textarea></div>
+    <button type="button" id="save">save</button>
+    <button type="button" class="dup">dup 1</button>
+    <button type="button" class="dup">dup 2</button>
+  </form>
+
+  <!-- Tall spacer pushes #below-fold out of the initial viewport so
+       auto-scroll-before-click can be tested. -->
+  <div class="spacer"></div>
+  <button type="button" id="below-fold">below the fold</button>
+
+  <script>
+    // Event sink for the actions tests. Records real (trusted) browser
+    // events into window.__pzLog so tests can assert that CDP-dispatched
+    // input produced genuine events rather than synthetic ones.
+    //
+    // Recorded types: click, mousedown, mouseup, mousemove, keydown,
+    // keyup, input, focus, blur.
+    //
+    // mousemove: only moves over elements with an id are recorded, so
+    // hovering across the page doesn't flood the log with hundreds of
+    // entries over anonymous nodes. One entry per qualifying move.
+    //
+    // focus/blur do not bubble, so they are attached directly to the
+    // form fields (input/textarea) plus the document, where focus
+    // changes are observable via focusin/focusout-style capture below.
+    window.__pzLog = [];
+    function __pzLogEvent(e) {
+      var isKey = e.type === "keydown" || e.type === "keyup";
+      window.__pzLog.push({
+        type: e.type,
+        id: e.target.id || e.target.className || e.target.tagName,
+        key: isKey ? e.key : null,
+        mods: isKey
+          ? ["Alt", "Control", "Meta", "Shift"].filter(function (m) {
+              return e.getModifierState(m);
+            })
+          : null,
+        isTrusted: e.isTrusted,
+        value: e.type === "input" ? e.target.value : null
+      });
+    }
+
+    ["click", "mousedown", "mouseup", "keydown", "keyup"].forEach(function (t) {
+      document.addEventListener(t, __pzLogEvent);
+    });
+    document.addEventListener("input", __pzLogEvent, true);
+
+    // mousemove: record only when the target has an id.
+    document.addEventListener("mousemove", function (e) {
+      if (e.target.id) { __pzLogEvent(e); }
+    });
+
+    // focus/blur don't bubble, but capture-phase document listeners see
+    // them on every element (fields and buttons alike).
+    document.addEventListener("focus", __pzLogEvent, true);
+    document.addEventListener("blur", __pzLogEvent, true);
+  </script>
+</body>
+</html>
