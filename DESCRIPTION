@@ -15,6 +15,7 @@ Roxygen: list(markdown = TRUE)
 Imports: 
     chromote,
     cli,
+    jsonlite,
     later,
     R6,
     rlang (>= 1.2.0),

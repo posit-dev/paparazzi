@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi elements fixture</title>
+</head>
+<body>
+  <!-- Decoy for the overlay contract: the recording overlay will live
+       under #paparazzi-overlay-root, and resolution must never see it. -->
+  <div id="paparazzi-overlay-root">
+    <div class="shiny-tool-request">overlay-decoy</div>
+    <button class="btn">overlay-decoy</button>
+  </div>
+
+  <ul id="messages">
+    <li class="message user">What's the weather?</li>
+    <li class="message assistant">The weather is sunny.</li>
+    <li class="message assistant">Bring a hat.</li>
+  </ul>
+
+  <div class="chat" id="chat-a">
+    <div class="shiny-tool-request">get_weather</div>
+    <div class="shiny-tool-request">send_email</div>
+  </div>
+
+  <div class="chat" id="chat-b">
+    <div class="shiny-tool-request">get_weather</div>
+  </div>
+
+  <!-- Nested containers: panel-inner sits inside panel-a, so a within
+       search on .panel matches its buttons through both ancestors. -->
+  <div class="panel" id="panel-a">
+    <button class="btn">Save</button>
+    <button class="btn">Cancel</button>
+    <div class="panel" id="panel-inner">
+      <button class="btn">  Save   now  </button>
+      <button class="btn">Reset</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-b">
+    <button class="btn">Delete</button>
+    <button class="btn">Save</button>
+  </div>
+</body>
+</html>
