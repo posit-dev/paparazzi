@@ -444,6 +444,34 @@ test_that("pz_set_value maintains radio groups", {
   expect_identical(state(), c(radio1 = FALSE, radio2 = TRUE, radio3 = FALSE))
 })
 
+test_that("pz_set_value radio groups stop at the form owner", {
+  page <- local_form_page()
+  # Same name in two different forms: separate groups, even though the
+  # candidates for a formless radio come from the whole document.
+  pz_set_value(page, TRUE, target = "#orphan-free")
+  expect_true(pz_js(page, "document.getElementById('orphan-free').checked"))
+  expect_false(pz_js(page, "document.getElementById('orphan-form').checked"))
+
+  pz_set_value(page, TRUE, target = "#orphan-form")
+  # Different form owners (one formless, one inside the-form): neither
+  # is in the other's group, so both stay checked.
+  expect_true(pz_js(page, "document.getElementById('orphan-free').checked"))
+  expect_true(pz_js(page, "document.getElementById('orphan-form').checked"))
+
+  # Same again for formless radios associated via the form="..."
+  # attribute: peers are found through the tree root and matched by
+  # form owner, so loose-b and loose-c stay independent.
+  pz_set_value(page, TRUE, target = "#loose-b")
+  expect_true(pz_js(page, "document.getElementById('loose-b').checked"))
+  expect_false(pz_js(page, "document.getElementById('loose-c').checked"))
+
+  pz_set_value(page, TRUE, target = "#loose-c")
+  # form-b and form-c are distinct form owners, so loose-c's set does
+  # not uncheck loose-b.
+  expect_true(pz_js(page, "document.getElementById('loose-b').checked"))
+  expect_true(pz_js(page, "document.getElementById('loose-c').checked"))
+})
+
 test_that("pz_set_value covers range and number inputs", {
   page <- local_form_page()
   pz_set_value(page, 75, target = "#range")
@@ -470,6 +498,48 @@ test_that("pz_set_value covers date inputs and rejects malformed dates", {
     pz_set_value(page, "not a date", target = "#date"),
     class = "paparazzi_error_value"
   )
+})
+
+test_that("pz_set_value leaves a control untouched when the set fails", {
+  page <- local_form_page()
+  # A failed set must not leave the element mutated: the browser
+  # clamps or coerces before rejecting, so the JS restores the
+  # previous value before returning the error.
+  pz_set_value(page, "2026-01-01", target = "#date")
+  expect_error(
+    pz_set_value(page, "not a date", target = "#date"),
+    class = "paparazzi_error_value"
+  )
+  expect_equal(
+    pz_js(page, "document.getElementById('date').value"),
+    "2026-01-01"
+  )
+
+  pz_set_value(page, 5, target = "#number")
+  expect_error(
+    pz_set_value(page, "abc", target = "#number"),
+    class = "paparazzi_error_value"
+  )
+  expect_equal(pz_js(page, "document.getElementById('number').value"), "5")
+
+  # No events either: the element never observes a failed set.
+  n <- length(log_entries(page))
+  expect_error(pz_set_value(page, "not a date", target = "#date"))
+  expect_length(log_entries(page), n)
+})
+
+test_that("pz_set_value rejects file inputs", {
+  page <- local_form_page()
+  err <- expect_error(
+    pz_set_value(page, "x", target = "#file"),
+    class = "paparazzi_error_value"
+  )
+  expect_match(
+    paste(conditionMessage(err), collapse = " "),
+    "use pz_set_files\\(\\)"
+  )
+  # The error fires before the element is focused or mutated.
+  expect_equal(pz_js(page, "document.activeElement.id"), "")
 })
 
 test_that("pz_set_value bypasses a framework's controlled input", {

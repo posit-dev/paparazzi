@@ -653,6 +653,12 @@ set_value_js <- "function(value) {
         '>, not a form control or contenteditable element.'
     };
   }
+  if (el.tagName === 'INPUT' && el.type === 'file') {
+    return {
+      status: 'error',
+      message: 'A file input takes files, not a value -- use pz_set_files().'
+    };
+  }
   el.focus();
   const dispatch = () => {
     el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -694,11 +700,16 @@ set_value_js <- "function(value) {
     if (el.type === 'radio' && value.checked && el.name) {
       // The native checked setter doesn't maintain radio groups --
       // that's the browser's pre-click activation behavior -- so the
-      // group (same form owner or tree root, same name) is unchecked
-      // by hand.
-      const root = el.form || el.getRootNode();
+      // group is unchecked by hand. Per HTML a radio group is same
+      // tree root AND same form owner AND same name: filtering by name
+      // alone would uncheck same-name radios in other forms (relevant
+      // once the element sits outside any form, where the candidates
+      // come from the whole document), and candidates must come from
+      // the root because a form attribute (form='...') associates a radio
+      // with a form it isn't inside.
+      const root = el.getRootNode();
       root.querySelectorAll('input[type=radio]').forEach((r) => {
-        if (r !== el && r.name === el.name) {
+        if (r !== el && r.name === el.name && r.form === el.form) {
           setChecked.call(r, false);
         }
       });
@@ -718,12 +729,17 @@ set_value_js <- "function(value) {
     ? HTMLTextAreaElement.prototype
     : HTMLInputElement.prototype;
   const valueProp = Object.getOwnPropertyDescriptor(proto, 'value');
+  // Capture the previous value before setting: if the browser rejects
+  // or clamps the new one, restoring it keeps a failed set from
+  // leaving the element mutated with no events fired.
+  const previous = valueProp.get.call(el);
   valueProp.set.call(el, value.text);
   const kept = valueProp.get.call(el);
   if (kept !== value.text) {
+    valueProp.set.call(el, previous);
     return {
       status: 'error',
-      message: 'The element kept \"' + kept + '\" instead -- the browser ' +
+      message: 'The element kept \"' + previous + '\" instead -- the browser ' +
         'rejected or clamped the value.'
     };
   }
