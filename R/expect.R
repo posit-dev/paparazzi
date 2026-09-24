@@ -315,10 +315,12 @@ expect_retry <- function(fn, timeout, loop, interval = 0.1) {
 #' the observed values to R first, so nothing pins across iterations.
 #' `check(els)` returns `list(pass, observed)`; comparison happens in R,
 #' not in a JS predicate, so the classed failure reports a real
-#' last-seen value. The scope root is resolved once, before the retry
-#' loop (one use, one check): every attempt then re-queries lazily
-#' inside the pinned scope, so re-renders within a scope are fine and a
-#' mid-retry detach surfaces through the probe's error mapping.
+#' last-seen value. Every attempt re-queries lazily inside the pinned
+#' scope (re-renders within a scope are fine) behind a fresh detach
+#' probe: a scope detaching mid-expectation aborts with the classed
+#' error instead of degrading into a failing check on a stale set. At
+#' the root the probe is a pure NULL read, so each attempt is
+#' byte-identical to the unscoped path.
 #' `target = NULL` means the current context: at a scoped context that
 #' is the pinned set itself, used as-is and never released (its scope
 #' owns it); at the root it resolves to a single implicit
@@ -345,26 +347,35 @@ expect_impl <- function(
   expr <- target_expr$fn
   target_desc <- target_expr$description
 
-  # One use, one check: the scope root is resolved once, before the
-  # retry loop, so a detached scope aborts the expectation immediately
-  # instead of burning the timeout re-querying nothing.
-  root <- scope_root(ctx, call = call)
+  # scope_top() is the raw stack read, for routing only: is this a
+  # scoped context? The detach probe itself runs inside the retry
+  # loop, once per attempt: a scope detaching mid-expectation aborts
+  # with the classed error instead of degrading into a failing check
+  # on a stale set. At the root scope_root() is a pure NULL read, so
+  # every attempt is byte-identical to the unscoped path.
+  scoped <- scope_top(ctx)
 
   start <- Sys.time()
-  if (is.null(target) && !is.null(root)) {
+  if (is.null(target) && !is.null(scoped)) {
     # target = NULL on a scoped context: the pinned set itself, no
     # resolution and no re-query. check() re-reads the DOM through it
     # on every attempt, so retries still follow re-renders.
-    target_desc <- root$description
+    target_desc <- scoped$description
     result <- expect_retry(
-      fn = function() check(root),
+      fn = function() check(scope_root(ctx, call = call)),
       timeout = timeout,
       loop = ctx$page$child_loop
     )
   } else {
     result <- expect_retry(
       fn = function() {
-        els <- loc_resolve_once(ctx, expr, target_desc, call, root = root)
+        els <- loc_resolve_once(
+          ctx,
+          expr,
+          target_desc,
+          call,
+          root = scope_root(ctx, call = call)
+        )
         on.exit(release_elements(els), add = TRUE)
         check(els)
       },

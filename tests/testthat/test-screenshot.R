@@ -200,3 +200,22 @@ test_that("pz_screenshot validates its inputs", {
   expect_error(pz_screenshot(page, path, extra = 1), "empty")
   expect_error(pz_screenshot(page, 42), class = "rlang_error")
 })
+
+test_that("pz_screenshot clips to the current scope's pinned set", {
+  page <- local_screenshot_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- local_dpr(page)
+
+  ctx <- pz_find(page, "#shot-a")
+  expect_invisible(pz_screenshot(ctx, path))
+  expect_identical(png_dimensions(path), as.integer(round(c(100, 60) * dpr)))
+})
+
+test_that("pz_screenshot raises on a detached scope", {
+  page <- local_screenshot_page()
+  path <- withr::local_tempfile(fileext = ".png")
+
+  ctx <- pz_find(page, "#shot-b")
+  pz_js(page, "document.getElementById('shot-b').remove()")
+  expect_error(pz_screenshot(ctx, path), class = "paparazzi_error_detached")
+})

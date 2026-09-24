@@ -53,11 +53,13 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   clip <- if (is.null(target) && length(ctx$scope) == 0) {
     clip_viewport(ctx, call = call)
   } else if (is.null(target)) {
-    # Seam: pz_find*() (which fills ctx$scope) doesn't exist yet, so this
-    # branch is untestable for now. The clip is the union of the boxes of
-    # the innermost pinned scope set; revisit if scoping settles on
+    # The clip is the union of the boxes of the current scope's pinned
+    # set, detach-checked once per call (one use, one check): a scope
+    # that left the page raises the classed error instead of clipping
+    # to stale zero boxes. Revisit if scoping settles on
     # intersect-instead-of-union.
-    clip_rects_union(ctx, el_rects(ctx$scope[[length(ctx$scope)]], call = call), call = call)
+    scoped <- scope_root(ctx, call = call)
+    clip_rects_union(ctx, el_rects(scoped, call = call), call = call)
   } else {
     els <- loc_resolve(ctx, target, multiple = "all", call = call)
     on.exit(release_elements(els), add = TRUE)

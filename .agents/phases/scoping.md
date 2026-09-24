@@ -85,12 +85,14 @@ written into `action_elements()` (`.agents/phases/actions.md`).
   `from_root = FALSE`, which makes `scope_root()` return NULL so
   `pz_find(from_root = TRUE)` resolves from `document` but still pushes
   on top of the stack (pop returns to the previous scope, per the
-  SPEC). `expect_impl()` resolves the root once before its retry loop
-  and passes it to every per-attempt `loc_resolve_once()` -- each
-  attempt re-queries lazily inside the pinned scope (re-renders within a
-  scope are fine); a mid-retry detach surfaces via the probe's error
-  mapping below. `action_elements()`, `get_impl()`, and `pz_get_count()`
-  call `scope_root()` once.
+  SPEC). `expect_impl()` probes the root inside its retry loop, once
+  per attempt (revised by the roborev triage below: resolving it once
+  per call let a mid-retry detach keep reading the dead subtree and
+  pass or time out, because a DOM detach leaves the remote object
+  alive and the probe's error mapping only covers group release) --
+  each attempt re-queries lazily inside the pinned scope (re-renders
+  within a scope are fine). `action_elements()`, `get_impl()`, and
+  `pz_get_count()` call `scope_root()` once.
 - **target = NULL on a scoped context.** Per the SPEC table, NULL means
   the current scope: the pinned set itself, no resolution and no
   re-query (document.body is the root-only meaning; keep the existing
@@ -240,6 +242,28 @@ Four things to keep visible:
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
+
+- 2026-09-24 (roborev triage): landed fixes for all four review
+  findings on the scoping stack (none rejected; each reproduced
+  first): scope_slice_js() no longer branches through switch(), which
+  treated a numeric which as an alternative's position (2 narrowed to
+  the LAST element, > 3 produced no JS function and a raw CDP
+  deserialize error); expect_impl() probes the scope once per retry
+  attempt instead of once per call (a mid-retry DOM detach leaves the
+  remote object alive, so the once-per-call probe let attempts read
+  the dead subtree and pass or time out instead of raising
+  paparazzi_error_detached -- the probe's error mapping only covers
+  group release); pz_screenshot()'s scoped target = NULL path routes
+  through scope_root() (a detached scope previously clipped to stale
+  zero boxes and surfaced a raw CDP error); and
+  narrow_description()/narrow_locs() keep a loc's original which (a
+  which = "last" pin was re-labeled match 1, so its later detach error
+  named the wrong match). 803 tests green. The "One use, one check"
+  decision above is revised accordingly.
+  Next: the navigation task, unchanged from the close-out.
+  Provisional: per-attempt probing costs one extra CDP round trip per
+  expectation attempt on scoped contexts (free at the root); the
+  other consumers keep the once-per-call probe.
 
 - 2026-09-24 (close-out): landed the scoping task end to end on this
   branch (72d42d8..): the pz_find*() stack (context scope stack, pinned

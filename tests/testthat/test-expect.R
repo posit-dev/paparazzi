@@ -384,3 +384,38 @@ test_that("a detached scope aborts expectations before the retry loop", {
     class = "paparazzi_error_detached"
   )
 })
+
+test_that("a scope detaching mid-expectation raises the classed error", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-a .sc-item")
+
+  # The expectation fails and keeps retrying; the scope detaches
+  # mid-retry, and the next attempt's probe aborts instead of letting
+  # the checks degrade into failures on a stale set.
+  pz_js(
+    page,
+    "setTimeout(function() {
+      document.querySelectorAll('#scope-a .sc-item').forEach((el) => el.remove());
+    }, 300)"
+  )
+  expect_error(
+    ctx |> pz_expect_count(1, target = ".never", timeout = 3),
+    class = "paparazzi_error_detached"
+  )
+})
+
+test_that("a mid-expectation detach raises for target = NULL too", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-b .sc-item")
+
+  pz_js(
+    page,
+    "setTimeout(function() {
+      document.getElementById('scope-b').remove();
+    }, 300)"
+  )
+  expect_error(
+    ctx |> pz_expect_text("never appears", timeout = 3),
+    class = "paparazzi_error_detached"
+  )
+})
