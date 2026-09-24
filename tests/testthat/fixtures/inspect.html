@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>paparazzi inspect fixture</title>
+<style>
+  body { margin: 0; background: #ffffff; }
+  #insp-plain {
+    position: absolute; left: 0; top: 0;
+    width: 200px; height: 200px; background: #ffffff;
+  }
+  #insp-list { margin-top: 220px; }
+  .insp-item { width: 120px; height: 20px; margin: 4px; background: #eeeeee; }
+  #insp-btn {
+    position: absolute; left: 300px; top: 300px;
+    width: 80px; height: 30px;
+  }
+  #insp-hidden { display: none; }
+</style>
+</head>
+<body>
+  <div id="insp-plain"></div>
+  <div id="insp-list">
+    <div class="insp-item">Item 1</div>
+    <div class="insp-item">Item 2</div>
+    <div class="insp-item">Item 3</div>
+    <div class="insp-item">Item 4</div>
+    <div class="insp-item">Item 5</div>
+    <div class="insp-item">Item 6</div>
+    <div class="insp-item">Item 7</div>
+    <div class="insp-item">Item 8</div>
+    <div class="insp-item">Item 9</div>
+    <div class="insp-item">Item 10</div>
+    <div class="insp-item">Item 11</div>
+    <div class="insp-item">Item 12</div>
+  </div>
+  <button id="insp-btn" class="insp-btn" aria-label="Actions">Actions</button>
+  <button id="insp-disabled" disabled>Disabled</button>
+  <div id="insp-hidden" class="insp-hidden">Hidden</div>
+  <script>
+    // Arrives after 5s: the no-auto-wait assertions must not wait for it.
+    setTimeout(function () {
+      var d = document.createElement('div');
+      d.className = 'insp-late';
+      d.textContent = 'late';
+      document.body.appendChild(d);
+    }, 5000);
+  </script>
+</body>
+</html>

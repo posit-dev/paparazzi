@@ -249,11 +249,11 @@ test_that("scoped contexts print their stack", {
   ctx2 <- pz_find_nth(ctx, 2)
 
   out <- capture.output(print(ctx2))
-  expect_match(out[[1]], "<PaparazziContext>")
-  expect_match(out[[2]], "Scope: `\\.panel` `\\.panel` \\(which: 2\\)")
+  expect_match(out[[1]], "── paparazzi page")
+  expect_match(out[[4]], "^Scope      root › `\\.panel` \\(3\\) › `\\.panel` #2 \\(1\\)$")
 
-  expect_match(capture.output(print(ctx))[[2]], "Scope: `\\.panel`")
-  expect_match(capture.output(print(pz_find_reset(ctx2)))[[2]], "root")
+  expect_match(capture.output(print(ctx))[[4]], "^Scope      root › `\\.panel` \\(3\\)$")
+  expect_match(capture.output(print(pz_find_reset(ctx2)))[[4]], "^Scope      root$")
 })
 
 test_that("pillar renders contexts compactly", {

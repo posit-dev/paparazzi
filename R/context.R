@@ -45,19 +45,12 @@ PaparazziContext <- R6::R6Class(
       self$scope <- scope
     },
 
-    #' @description Print the scope stack.
+    #' @description Print the page summary (URL, device, scope stack,
+    #'   recording state) without the target section or visuals; see
+    #'   [pz_inspect()].
     #' @param ... Unused; included for compatibility with the `print()` generic.
     print = function(...) {
-      cli::cat_line("<PaparazziContext>")
-      scope <- vapply(
-        self$scope,
-        function(pinned) pinned$description,
-        character(1)
-      )
-      cli::cat_line(
-        "  Scope: ",
-        if (length(scope)) paste(scope, collapse = " ") else "root"
-      )
+      inspect_summary_print(self)
       invisible(self)
     }
   )
@@ -116,18 +109,16 @@ PaparazziPage <- R6::R6Class(
       private$closed_
     },
 
-    #' @description Print a short summary.
+    #' @description Print the page summary (URL, device, scope stack,
+    #'   recording state) without the target section or visuals; see
+    #'   [pz_inspect()]. A closed page prints one line.
     #' @param ... Unused; included for compatibility with the `print()` generic.
     print = function(...) {
-      state <- if (private$closed_) "closed" else "open"
-      cli::cat_line("<PaparazziPage: ", state, ">")
-      if (!private$closed_) {
-        url <- tryCatch(
-          private$chromote_$Runtime$evaluate("location.href")$result$value,
-          error = function(e) NULL
-        )
-        if (!is.null(url)) cli::cat_line("  URL: ", url)
+      if (private$closed_) {
+        cli::cat_line("<PaparazziPage: closed>")
+        return(invisible(self))
       }
+      inspect_summary_print(self)
       invisible(self)
     }
   ),

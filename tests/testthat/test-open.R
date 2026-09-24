@@ -211,8 +211,8 @@ test_that("file_url encodes literal percent signs in file names", {
 test_that("print() works on open and closed pages", {
   skip_if_no_chrome()
   page <- pz_open(fixture_file())
-  expect_output(print(page), "PaparazziPage: open")
-  expect_output(print(page), "URL: file:")
+  expect_output(print(page), "── paparazzi page")
+  expect_output(print(page), "URL        file:")
   pz_close(page)
   expect_output(print(page), "PaparazziPage: closed")
 })
