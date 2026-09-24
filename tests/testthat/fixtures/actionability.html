@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi actionability fixture</title>
+</head>
+<body>
+  <!-- #never exists in the DOM but is permanently display:none: it
+       matches selectors, yet no pointer action may ever dispatch on
+       it. -->
+  <button type="button" id="never" style="display: none">never</button>
+
+  <!-- #reveals is hidden now and shown after 500ms, so a pointer
+       action starting on it must wait out the transition. -->
+  <button type="button" id="reveals" style="display: none">reveals</button>
+
+  <!-- #zero is rendered and passes checkVisibility but has an empty
+       box; a dispatch at its center would hit whatever else is at
+       that point, so pointer actions must refuse it. -->
+  <button type="button" id="zero" style="display: block; width: 0; height: 0; padding: 0; border: 0;">zero</button>
+
+  <script>
+    // Click sink: one entry per click, {type, id, isTrusted}, matching
+    // the __pzLog shape the actions tests read. An action that
+    // dispatches at (0, 0) would land on one of these elements or the
+    // body and show up here with a null or wrong id.
+    window.__pzLog = [];
+    document.addEventListener("click", function (e) {
+      window.__pzLog.push({
+        type: "click",
+        id: e.target.id || null,
+        isTrusted: e.isTrusted
+      });
+    });
+
+    // The reveal is armed by the test, not at load: a load-time timer
+    // could fire while the page is still opening, leaving nothing to
+    // wait for. Armed at click time, the 500ms delay is deterministic.
+    window.__pzReveal = function () {
+      setTimeout(function () {
+        document.getElementById("reveals").style.display = "block";
+      }, 500);
+    };
+  </script>
+</body>
+</html>

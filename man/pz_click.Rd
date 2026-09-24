@@ -19,8 +19,10 @@ scope; at the root context a target is required.}
 \code{ctx}, invisibly.
 }
 \description{
-Scrolls the element into view (instantly) and clicks the center of
-it with real browser input events: a mouse move to the point, then a
+Auto-waits for the element to be actionable -- visible with a
+non-empty box, the same "visible" \code{\link[=pz_expect_visible]{pz_expect_visible()}} uses -- then
+scrolls it into view (instantly) and clicks the center of it with
+real browser input events: a mouse move to the point, then a
 left-button press and release. The page sees a trusted pointer
 sequence -- exactly what a user's click produces -- so \verb{:hover}
 state, focus, and click handlers all behave as they would live.
