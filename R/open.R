@@ -35,8 +35,8 @@ pz_open <- function(
   }
   wait <- rlang::arg_match(wait)
   if (identical(wait, "shiny")) {
-    rlang::abort(
-      '`wait = "shiny"` is not supported yet; use `wait = "load"` for now.',
+    cli::cli_abort(
+      '{.code wait = "shiny"} is not supported yet; use {.code wait = "load"} for now.',
       class = "paparazzi_error_unsupported"
     )
   }
@@ -44,14 +44,14 @@ pz_open <- function(
     wait <- "load"
   }
   if (!is.list(shiny_options)) {
-    rlang::abort(
-      "`shiny_options` must be a list.",
+    cli::cli_abort(
+      "{.arg shiny_options} must be a list.",
       class = "paparazzi_error_input"
     )
   }
   if (!is.null(envvars) && !is.character(envvars)) {
-    rlang::abort(
-      "`envvars` must be a character vector or `NULL`.",
+    cli::cli_abort(
+      "{.arg envvars} must be a character vector or {.code NULL}.",
       class = "paparazzi_error_input"
     )
   }
@@ -71,8 +71,8 @@ pz_open <- function(
   # CDP reports navigation failures as `errorText`, not as errors.
   nav <- session$Page$navigate(url)
   if (!is.null(nav$errorText) && nzchar(nav$errorText)) {
-    rlang::abort(
-      sprintf("Navigation to %s failed: %s", url, nav$errorText),
+    cli::cli_abort(
+      "Navigation to {.url {url}} failed: {nav$errorText}",
       class = "paparazzi_error_navigation"
     )
   }
@@ -84,25 +84,20 @@ pz_open <- function(
   page
 }
 
-#' Resolve `x` to a URL, or error for unsupported/unknown inputs
-#' @noRd
 open_target_url <- function(x, call = rlang::caller_env()) {
   if (inherits(x, "shiny.appobj")) {
-    rlang::abort(
+    cli::cli_abort(
       c(
         "Shiny app objects can't be opened directly.",
-        i = "Run the app in another process (e.g. `shiny::runApp()`) and pass its URL to `pz_open()`."
+        i = "Run the app in another process (e.g. {.fn shiny::runApp}) and pass its URL to {.fn pz_open}."
       ),
       class = "paparazzi_error_unsupported",
       call = call
     )
   }
   if (!rlang::is_string(x)) {
-    rlang::abort(
-      sprintf(
-        "`x` must be a URL, a path to a local file, or a ChromoteSession; not %s.",
-        obj_type_friendly(x)
-      ),
+    cli::cli_abort(
+      "{.arg x} must be a URL, a path to a local file, or a ChromoteSession; not {.obj_type_friendly {x}}.",
       class = "paparazzi_error_input",
       call = call
     )
@@ -111,10 +106,10 @@ open_target_url <- function(x, call = rlang::caller_env()) {
   # "C:/..." look like a URL scheme to it.
   if (file.exists(x)) {
     if (dir.exists(x) || is_shiny_app_file(basename(x))) {
-      rlang::abort(
+      cli::cli_abort(
         c(
           "Opening Shiny apps is not supported yet.",
-          i = "Start the app yourself in another process and pass its URL to `pz_open()`."
+          i = "Start the app yourself in another process and pass its URL to {.fn pz_open}."
         ),
         class = "paparazzi_error_unsupported",
         call = call
@@ -126,9 +121,9 @@ open_target_url <- function(x, call = rlang::caller_env()) {
   if (grepl("^[a-zA-Z][a-zA-Z0-9+.-]+:", x)) {
     return(x)
   }
-  rlang::abort(
+  cli::cli_abort(
     c(
-      sprintf("`x` is neither a URL nor an existing file: %s", x),
+      "{.arg x} is neither a URL nor an existing file: {.val {x}}",
       i = "URLs need a scheme, e.g. \"https://example.com\"."
     ),
     class = "paparazzi_error_input",
@@ -136,12 +131,8 @@ open_target_url <- function(x, call = rlang::caller_env()) {
   )
 }
 
-#' Is this file name a Shiny app file?
-#'
-#' Recognizes the conventional Shiny app file names: `app.R`, `ui.R`,
-#' `server.R`, variants like `app-main.R`/`app_ui.R`, and names ending in a
-#' separator immediately before the extension (`foo_.R`, `foo-.R`).
-#' @noRd
+# Conventional Shiny app file names: app.R/ui.R/server.R, app-*.R variants,
+# and names ending in a separator before the extension (foo_.R, foo-.R).
 is_shiny_app_file <- function(name) {
   name %in%
     c("app.R", "app.r", "ui.R", "server.R") ||
@@ -149,8 +140,6 @@ is_shiny_app_file <- function(name) {
     grepl("^.+[_-][.]R$", name)
 }
 
-#' Build a file:// URL from a local path, percent-encoding each segment
-#' @noRd
 file_url <- function(path) {
   path <- normalizePath(path, winslash = "/", mustWork = TRUE)
   segs <- strsplit(path, "/", fixed = TRUE)[[1]]
@@ -173,8 +162,6 @@ file_url <- function(path) {
   paste0("file://", path)
 }
 
-#' Poll until the page finishes loading
-#' @noRd
 wait_for_load <- function(page, timeout) {
   pz_poll(
     fn = function() {
@@ -200,8 +187,8 @@ wait_for_load <- function(page, timeout) {
 #' @export
 pz_close <- function(page) {
   if (!inherits(page, "PaparazziPage")) {
-    rlang::abort(
-      "`page` must be a page from `pz_open()`.",
+    cli::cli_abort(
+      "{.arg page} must be a page from {.fn pz_open}.",
       class = "paparazzi_error_input"
     )
   }

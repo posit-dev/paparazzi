@@ -29,8 +29,8 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
     ),
     error = function(e) {
       if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        rlang::abort(
-          sprintf("Timed out after %gs evaluating JavaScript.", timeout),
+        cli::cli_abort(
+          "Timed out after {timeout}s evaluating JavaScript.",
           class = "paparazzi_error_timeout"
         )
       }
@@ -40,8 +40,8 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   err <- res$exceptionDetails
   if (!is.null(err)) {
     msg <- err$exception$description %||% err$text %||% "unknown error"
-    rlang::abort(
-      paste0("JavaScript error: ", msg),
+    cli::cli_abort(
+      "JavaScript error: {msg}",
       class = "paparazzi_error_js"
     )
   }

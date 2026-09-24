@@ -63,8 +63,7 @@ PaparazziPage <- R6::R6Class(
     #' @description Print a short summary.
     print = function(...) {
       state <- if (private$closed_) "closed" else "open"
-      cat_line <- function(...) cat(..., "\n", sep = "")
-      cat_line("<PaparazziPage: ", state, ">")
+      cli::cat_line("<PaparazziPage: ", state, ">")
       if (!private$closed_) {
         url <- tryCatch(
           private$chromote_$Runtime$evaluate("location.href")$result$value,

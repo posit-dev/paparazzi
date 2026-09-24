@@ -15,8 +15,6 @@ pz_wait <- function(ctx, seconds) {
   invisible(ctx)
 }
 
-#' Drive a `later` event loop for `seconds`
-#' @noRd
 pump_loop <- function(loop, seconds, interval = 0.1) {
   deadline <- Sys.time() + seconds
   repeat {
@@ -48,8 +46,8 @@ pz_poll <- function(fn, timeout, interval = 0.1, loop, what = "condition") {
     }
     remaining <- as.numeric(difftime(deadline, Sys.time(), units = "secs"))
     if (remaining <= 0) {
-      rlang::abort(
-        sprintf("Timed out after %gs waiting for %s.", timeout, what),
+      cli::cli_abort(
+        "Timed out after {timeout}s waiting for {.val {what}}.",
         class = "paparazzi_error_timeout"
       )
     }
