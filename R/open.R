@@ -69,7 +69,7 @@ pz_open <- function(
     )
   }
   if (identical(wait, "load")) {
-    wait_for_load(page, timeout = page$default_timeout, call = current_env())
+    wait_for_load(page, timeout = page$default_timeout)
   }
 
   ok <- TRUE

@@ -44,8 +44,7 @@ pz_expect_exists <- function(
     not = not,
     timeout = timeout,
     check = check_exists(not),
-    description = if (not) "Expected no element to match" else "Expected an element to match",
-    call = current_env()
+    description = if (not) "Expected no element to match" else "Expected an element to match"
   )
 }
 
@@ -96,13 +95,11 @@ pz_expect_count <- function(
   timeout = NULL
 ) {
   check_dots_empty()
-  call <- current_env()
   if (!is.null(n)) {
     if (!is.null(min) || !is.null(max)) {
       cli::cli_abort(
         "Can't combine {.arg n} with {.arg min} or {.arg max}; {.arg n} is exact, so specify one or the other.",
-        class = "paparazzi_error_input",
-        call = call
+        class = "paparazzi_error_input"
       )
     }
     check_number_whole(n, min = 0)
@@ -112,8 +109,7 @@ pz_expect_count <- function(
     if (is.null(min) && is.null(max)) {
       cli::cli_abort(
         "Specify {.arg n} for an exact count, or {.arg min} and/or {.arg max} for a range.",
-        class = "paparazzi_error_input",
-        call = call
+        class = "paparazzi_error_input"
       )
     }
     if (!is.null(min)) {
@@ -125,8 +121,7 @@ pz_expect_count <- function(
     if (!is.null(min) && !is.null(max) && min > max) {
       cli::cli_abort(
         "{.arg min} ({min}) can't be greater than {.arg max} ({max}).",
-        class = "paparazzi_error_input",
-        call = call
+        class = "paparazzi_error_input"
       )
     }
   }
@@ -136,8 +131,7 @@ pz_expect_count <- function(
     not = not,
     timeout = timeout,
     check = check_count(min, max, not),
-    description = expect_headline_count(n, min, max, not),
-    call = call
+    description = expect_headline_count(n, min, max, not)
   )
 }
 
@@ -191,8 +185,7 @@ pz_expect_visible <- function(
     not = not,
     timeout = timeout,
     check = check_visible(not),
-    description = if (not) "Expected no element to be visible" else "Expected all elements to be visible",
-    call = current_env()
+    description = if (not) "Expected no element to be visible" else "Expected all elements to be visible"
   )
 }
 
@@ -269,8 +262,7 @@ pz_expect_text <- function(
     not = not,
     timeout = timeout,
     check = check_text(collapse_ws(text), match, not),
-    description = expect_headline_text(text, match, not),
-    call = current_env()
+    description = expect_headline_text(text, match, not)
   )
 }
 

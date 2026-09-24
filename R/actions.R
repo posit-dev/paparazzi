@@ -242,13 +242,12 @@ insert_text <- function(ctx, target, text, call = caller_env()) {
 pz_click <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
-  call <- current_env()
-  found <- action_elements(ctx, target, call = call)
+  found <- action_elements(ctx, target)
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
   }
-  point <- el_pointer_point(ctx, found$els, call = call)
-  dispatch_click(ctx, "clicking", found$els$description, point, call = call)
+  point <- el_pointer_point(ctx, found$els)
+  dispatch_click(ctx, "clicking", found$els$description, point)
   invisible(ctx)
 }
 
@@ -271,12 +270,11 @@ pz_click <- function(ctx, target = NULL, ...) {
 pz_hover <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
-  call <- current_env()
-  found <- action_elements(ctx, target, call = call)
+  found <- action_elements(ctx, target)
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
   }
-  point <- el_pointer_point(ctx, found$els, call = call)
+  point <- el_pointer_point(ctx, found$els)
   dispatch_mouse(
     ctx,
     "hovering over",
@@ -285,8 +283,7 @@ pz_hover <- function(ctx, target = NULL, ...) {
     point,
     button = "none",
     buttons = 0,
-    clickCount = 0,
-    call = call
+    clickCount = 0
   )
   invisible(ctx)
 }
@@ -321,25 +318,24 @@ pz_type <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
   check_string(text)
-  call <- current_env()
 
   # Root with no target: insert into whatever currently has focus.
   # Nothing editable focused means the text goes nowhere, matching what
   # a real keypress does in that situation.
   if (is.null(target) && is.null(scope_top(ctx))) {
-    insert_text(ctx, "the focused element", text, call = call)
+    insert_text(ctx, "the focused element", text)
     return(invisible(ctx))
   }
 
-  found <- action_elements(ctx, target, call = call)
+  found <- action_elements(ctx, target)
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
   }
-  point <- el_pointer_point(ctx, found$els, call = call)
+  point <- el_pointer_point(ctx, found$els)
   # Focus comes from the real click pipeline (not JS .focus()) so
   # pointer state stays real.
-  dispatch_click(ctx, "typing into", found$els$description, point, call = call)
-  insert_text(ctx, found$els$description, text, call = call)
+  dispatch_click(ctx, "typing into", found$els$description, point)
+  insert_text(ctx, found$els$description, text)
   invisible(ctx)
 }
 
@@ -369,16 +365,14 @@ pz_press <- function(ctx, key, ...) {
   check_dots_empty()
   check_character(key)
 
-  call <- current_env()
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
   for (spec in key) {
-    events <- key_events(key_parse(spec, call = call))
+    events <- key_events(key_parse(spec))
     for (event in events) {
       action_cdp(
         ctx,
         "pressing keys",
-        call = call,
         cmd = do.call(
           session$Input$dispatchKeyEvent,
           c(event, list(timeout_ = timeout))
@@ -408,16 +402,14 @@ pz_press <- function(ctx, key, ...) {
 pz_focus <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
-  call <- current_env()
-  found <- action_elements(ctx, target, call = call)
+  found <- action_elements(ctx, target)
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
   }
-  el_scroll_into_view(found$els, call = call)
+  el_scroll_into_view(found$els)
   els_call(
     found$els,
-    "function() { if (this.length) this[0].focus(); }",
-    call = call
+    "function() { if (this.length) this[0].focus(); }"
   )
   invisible(ctx)
 }
@@ -437,21 +429,18 @@ pz_focus <- function(ctx, target = NULL, ...) {
 pz_blur <- function(ctx, ...) {
   check_context(ctx)
   check_dots_empty()
-  call <- current_env()
-  scoped <- scope_root(ctx, call = call)
+  scoped <- scope_root(ctx)
   if (!is.null(scoped)) {
-    check_scope_single(scoped, call = call)
+    check_scope_single(scoped)
     els_call(
       scoped,
-      "function() { if (this.length) this[0].blur(); }",
-      call = call
+      "function() { if (this.length) this[0].blur(); }"
     )
   } else {
     action_cdp(
       ctx,
       "blurring",
       "the focused element",
-      call = call,
       cmd = ctx$page$session$Runtime$evaluate(
         "document.activeElement.blur()",
         returnByValue = TRUE,
