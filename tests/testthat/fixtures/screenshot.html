@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi screenshot fixture</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      height: 3000px;
+    }
+    #shot-a {
+      position: absolute;
+      left: 40px;
+      top: 30px;
+      width: 100px;
+      height: 60px;
+      background-color: red;
+    }
+    #shot-b {
+      position: absolute;
+      left: 200px;
+      top: 120px;
+      width: 140px;
+      height: 80px;
+      background-color: green;
+    }
+    #multi-1 {
+      position: absolute;
+      left: 40px;
+      top: 260px;
+      width: 80px;
+      height: 50px;
+      background-color: blue;
+    }
+    #multi-2 {
+      position: absolute;
+      left: 180px;
+      top: 300px;
+      width: 80px;
+      height: 50px;
+      background-color: orange;
+    }
+    #below-fold {
+      position: absolute;
+      left: 60px;
+      top: 2400px;
+      width: 200px;
+      height: 100px;
+      background-color: purple;
+    }
+  </style>
+</head>
+<body>
+  <div id="shot-a"></div>
+  <div id="shot-b"></div>
+  <div id="multi-1" class="multi"></div>
+  <div id="multi-2" class="multi"></div>
+  <div id="below-fold">below</div>
+</body>
+</html>

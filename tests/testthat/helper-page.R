@@ -39,3 +39,28 @@ getters_fixture_file <- function() {
 local_getters_page <- function(.env = parent.frame()) {
   local_page(getters_fixture_file(), .env = .env)
 }
+
+screenshot_fixture_file <- function() {
+  test_path("fixtures", "screenshot.html")
+}
+
+local_screenshot_page <- function(.env = parent.frame()) {
+  local_page(screenshot_fixture_file(), .env = .env)
+}
+
+# PNG pixel dimensions parsed straight from the IHDR chunk (the png
+# package isn't available): the first 24 bytes are the 8-byte
+# signature, the 4-byte chunk length, "IHDR" (bytes 13-16), then
+# big-endian uint32 width (bytes 17-20) and height (bytes 21-24).
+# Returns c(width, height) as integers.
+png_dimensions <- function(path) {
+  png <- readBin(path, "raw", n = 24)
+  signature <- as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a))
+  stopifnot(
+    identical(png[1:8], signature),
+    identical(png[13:16], charToRaw("IHDR"))
+  )
+  width <- readBin(png[17:20], "integer", size = 4, endian = "big")
+  height <- readBin(png[21:24], "integer", size = 4, endian = "big")
+  c(as.integer(width), as.integer(height))
+}
