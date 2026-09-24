@@ -1,2 +1,5 @@
 review_agent = 'claude-code'
 review_model = 'claude-opus-5-5'
+
+[kata_context]
+mode = 'current'
