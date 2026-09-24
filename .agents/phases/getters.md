@@ -83,6 +83,17 @@ phase only. Builds on the resolution engine
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close-pending-review): landed phase note, fixture
+  getters.html + helpers, R/get.R (all nine getters) with the
+  els_values()/target_resolver_expr() seams, and test-get.R (21 tests,
+  59 expectations). 364 tests green. One deviation: loc_resolve()
+  itself routes through target_resolver_expr(), so target = NULL works
+  for getters too (it had no other callers). Next: roborev review,
+  close 5cqf. Provisional carried: has_text collapse doesn't trim;
+  element column is a NULL stub until scoping. New provisional:
+  pz_get_text() at the root includes inline <script> text (spec-correct
+  textContent, but if "visible page text" is ever wanted, the scoping
+  task should skip script/style subtrees).
 - 2026-09-24 (start): claimed 5cqf; baseline green at 3f392e7 (305
   tests). Blockers a3vj/gayb closed; primitives as promised. Decisions
   above resolved before code. Next: fixture + R/get.R in parallel,
