@@ -253,3 +253,24 @@ test_that("scoped contexts print their stack", {
   expect_match(capture.output(print(ctx))[[2]], "Scope: `\\.panel`")
   expect_match(capture.output(print(pz_find_reset(ctx2)))[[2]], "root")
 })
+
+test_that("pillar renders contexts compactly", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-a")
+
+  expect_identical(pillar::type_sum(ctx), "pz_ctx")
+  expect_identical(pillar::type_sum(page), "pz_ctx")
+
+  # The formatted shaft carries pillar attributes; strip them to
+  # compare the rendered text itself.
+  shaft <- function(x) {
+    out <- format(pillar::pillar_shaft(x), 60)
+    attributes(out) <- NULL
+    trimws(out)
+  }
+  expect_identical(shaft(ctx), "`#scope-a`")
+  # Root contexts -- and pages, defensively -- never appear in the
+  # element column; they show "root".
+  expect_identical(shaft(page), "root")
+  expect_identical(shaft(pz_find_reset(ctx)), "root")
+})
