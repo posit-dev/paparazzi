@@ -245,3 +245,30 @@ test_that("pz_type and pz_press validate their inputs", {
   expect_error(pz_press(page, character(0)), "at least one")
   expect_error(pz_press(page, NA_character_), "NA")
 })
+
+test_that("an explicit target resolves lazily inside a pinned scope", {
+  page <- local_actions_page()
+  page$default_timeout <- 0.5
+  ctx <- pz_find(page, "form")
+
+  # The explicit target resolves against the pinned scope, not the
+  # document: #save lives inside the form, #below-fold outside it.
+  expect_invisible(pz_click(ctx, "#save"))
+  expect_length(log_ids(log_entries(page), "save", "click"), 1)
+  expect_error(pz_click(ctx, "#below-fold"), class = "paparazzi_error_timeout")
+})
+
+test_that("a detached scope surfaces through an action as a classed error", {
+  page <- local_actions_page()
+  ctx <- pz_find(page, "#save")
+
+  # Re-render the form so the pinned element drops out of the page; the
+  # next action must raise, never silently re-query the scope.
+  pz_js(page, "document.querySelector('form').innerHTML = ''")
+  err <- expect_error(pz_click(ctx), class = "paparazzi_error_detached")
+  expect_match(
+    paste(conditionMessage(err), collapse = " "),
+    "Scope element is no longer in the page"
+  )
+  expect_length(log_ids(log_entries(page), "save", "click"), 0)
+})
