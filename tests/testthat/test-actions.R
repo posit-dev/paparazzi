@@ -205,7 +205,10 @@ test_that("element actions error on multiple matches", {
   page <- local_actions_page()
   expect_error(pz_click(page, ".dup"), class = "paparazzi_error_multiple")
   expect_error(pz_hover(page, ".dup"), class = "paparazzi_error_multiple")
-  expect_error(pz_type(page, "x", target = ".dup"), class = "paparazzi_error_multiple")
+  expect_error(
+    pz_type(page, "x", target = ".dup"),
+    class = "paparazzi_error_multiple"
+  )
   expect_error(pz_focus(page, ".dup"), class = "paparazzi_error_multiple")
 })
 
@@ -271,4 +274,73 @@ test_that("a detached scope surfaces through an action as a classed error", {
     "Scope element is no longer in the page"
   )
   expect_length(log_ids(log_entries(page), "save", "click"), 0)
+})
+
+# The actionability fixture (actionability.html) exercises the
+# auto-wait that stands between resolution and pointer dispatch:
+# #never is permanently display:none, #zero is visible by
+# checkVisibility() but has an empty box, and #reveals is hidden and
+# shown after 500ms. A pointer action on a non-actionable element
+# must time out rather than dispatch at (0, 0).
+
+test_that("pz_click waits out a hidden element's transition to visible", {
+  page <- local_actionability_page()
+  # #reveals is display:none now, block in 500ms; the click waits for
+  # it instead of dispatching while it is hidden.
+  expect_invisible(pz_click(page, "#reveals"))
+  log <- log_entries(page)
+  expect_length(log_ids(log, "reveals", "click"), 1)
+  expect_true(log_ids(log, "reveals", "click")[[1]]$isTrusted)
+  # Nothing was dispatched at (0, 0) while the element was hidden.
+  expect_length(log, 1)
+})
+
+test_that("pz_click on an element that never becomes visible times out", {
+  page <- local_actionability_page()
+  page$default_timeout <- 0.5
+  err <- expect_error(
+    pz_click(page, "#never"),
+    class = "paparazzi_error_timeout"
+  )
+  expect_match(paste(conditionMessage(err), collapse = " "), "#never")
+  # No dispatch ever happened, at (0, 0) or anywhere else.
+  expect_length(log_entries(page), 0)
+})
+
+test_that("pz_click refuses a zero-sized element", {
+  page <- local_actionability_page()
+  page$default_timeout <- 0.5
+  # #zero passes checkVisibility() but has an empty box, so the center
+  # point is not a place on the element; the click must time out
+  # without dispatching into whatever sits at that point.
+  expect_error(pz_click(page, "#zero"), class = "paparazzi_error_timeout")
+  expect_length(log_entries(page), 0)
+})
+
+test_that("pz_hover on a hidden element times out", {
+  page <- local_actionability_page()
+  page$default_timeout <- 0.5
+  # Hover shares the click pipeline's actionability wait.
+  expect_error(pz_hover(page, "#never"), class = "paparazzi_error_timeout")
+})
+
+test_that("a scoped pointer action waits out its pinned element's reveal", {
+  page <- local_actionability_page()
+  # A hidden element matches a scope pin (it is in the DOM); the
+  # pointer action on the pinned set must wait for it too.
+  ctx <- pz_find(page, "#reveals")
+  expect_invisible(pz_click(ctx))
+  log <- log_entries(page)
+  expect_length(log_ids(log, "reveals", "click"), 1)
+  expect_true(log_ids(log, "reveals", "click")[[1]]$isTrusted)
+})
+
+test_that("pz_type with a hidden target times out before typing", {
+  page <- local_actionability_page()
+  page$default_timeout <- 0.5
+  expect_error(
+    pz_type(page, "Ada", target = "#never"),
+    class = "paparazzi_error_timeout"
+  )
+  expect_length(log_entries(page), 0)
 })

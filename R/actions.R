@@ -59,19 +59,55 @@ action_elements <- function(ctx, target, call = caller_env()) {
   )
 }
 
+# One actionability probe: [visible, x, y, width, height] for the
+# first element. Visible is checkVisibility() with checkVisibilityCSS,
+# the same definition pz_expect_visible() uses, so "visible" means one
+# thing across actions and expectations. A zero-size probe means there
+# is no point to dispatch at (the center of an empty box is its corner).
+pointer_actionable_js <- "function() {
+  if (!this.length) return null;
+  const el = this[0];
+  const r = el.getBoundingClientRect();
+  return [
+    el.checkVisibility({ checkVisibilityCSS: true }) ? 1 : 0,
+    r.x, r.y, r.width, r.height
+  ];
+}"
+
 # Scroll the first element into view and return the center of its
 # bounding rect as c(x, y) (viewport CSS pixels, matching
-# getBoundingClientRect). Rects are viewport-relative and go stale
-# after the scroll, so the rect read must follow it. This helper is the
-# seam where the cursor/staging work swaps in the animated scroll and
-# the cursor glide; keep scroll + rect + center together.
-el_pointer_point <- function(els, call = caller_env()) {
-  el_scroll_into_view(els, call = call)
-  rect <- el_rects(els, call = call)[1, ]
-  c(
-    x = rect$x + rect$width / 2,
-    y = rect$y + rect$height / 2
+# getBoundingClientRect), auto-waiting until the element is
+# actionable: visible and with a non-empty box. Resolution auto-wait
+# only covers ">= 1 match", so without this wait a hidden or zero-sized
+# match would dispatch at (0, 0) and hit whatever sits there. Rects are
+# viewport-relative and go stale after the scroll, so each attempt
+# scrolls first, then reads. This helper is the seam where the
+# cursor/staging work swaps in the animated scroll and the cursor
+# glide; keep scroll + rect + center together.
+el_pointer_point <- function(ctx, els, call = caller_env()) {
+  point <- NULL
+  pz_poll(
+    fn = function() {
+      el_scroll_into_view(els, call = call)
+      probe <- els_call(els, pointer_actionable_js, call = call)
+      if (
+        length(probe) == 5L && probe[1] == 1 && probe[4] > 0 && probe[5] > 0
+      ) {
+        point <<- c(
+          x = probe[2] + probe[4] / 2,
+          y = probe[3] + probe[5] / 2
+        )
+        TRUE
+      } else {
+        FALSE
+      }
+    },
+    timeout = ctx$page$default_timeout,
+    loop = ctx$page$child_loop,
+    what = paste0(els$description, " to become visible with a non-empty box"),
+    call = call
   )
+  point
 }
 
 # Every CDP command from the actions runs with the page's default
@@ -138,16 +174,37 @@ dispatch_mouse <- function(
 # same point.
 dispatch_click <- function(ctx, action, target, point, call = caller_env()) {
   dispatch_mouse(
-    ctx, action, target, "mouseMoved", point,
-    button = "none", buttons = 0, clickCount = 0, call = call
+    ctx,
+    action,
+    target,
+    "mouseMoved",
+    point,
+    button = "none",
+    buttons = 0,
+    clickCount = 0,
+    call = call
   )
   dispatch_mouse(
-    ctx, action, target, "mousePressed", point,
-    button = "left", buttons = 1, clickCount = 1, call = call
+    ctx,
+    action,
+    target,
+    "mousePressed",
+    point,
+    button = "left",
+    buttons = 1,
+    clickCount = 1,
+    call = call
   )
   dispatch_mouse(
-    ctx, action, target, "mouseReleased", point,
-    button = "left", buttons = 0, clickCount = 1, call = call
+    ctx,
+    action,
+    target,
+    "mouseReleased",
+    point,
+    button = "left",
+    buttons = 0,
+    clickCount = 1,
+    call = call
   )
 }
 
@@ -166,8 +223,10 @@ insert_text <- function(ctx, target, text, call = caller_env()) {
 
 #' Click an element
 #'
-#' Scrolls the element into view (instantly) and clicks the center of
-#' it with real browser input events: a mouse move to the point, then a
+#' Auto-waits for the element to be actionable -- visible with a
+#' non-empty box, the same "visible" [pz_expect_visible()] uses -- then
+#' scrolls it into view (instantly) and clicks the center of it with
+#' real browser input events: a mouse move to the point, then a
 #' left-button press and release. The page sees a trusted pointer
 #' sequence -- exactly what a user's click produces -- so `:hover`
 #' state, focus, and click handlers all behave as they would live.
@@ -188,17 +247,18 @@ pz_click <- function(ctx, target = NULL, ...) {
   if (!found$pinned) {
     on.exit(release_elements(found$els), add = TRUE)
   }
-  point <- el_pointer_point(found$els, call = call)
+  point <- el_pointer_point(ctx, found$els, call = call)
   dispatch_click(ctx, "clicking", found$els$description, point, call = call)
   invisible(ctx)
 }
 
 #' Hover the pointer over an element
 #'
-#' Scrolls the element into view (instantly) and moves the pointer to
-#' the center of it with a real `mousemove` event, without pressing any
-#' button. This is what drives `:hover` styles and `mouseenter`/
-#' `mouseover` handlers.
+#' Auto-waits for the element to be actionable -- visible with a
+#' non-empty box -- then scrolls it into view (instantly) and moves the
+#' pointer to the center of it with a real `mousemove` event, without
+#' pressing any button. This is what drives `:hover` styles and
+#' `mouseenter`/`mouseover` handlers.
 #'
 #' @param ctx A paparazzi context.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
@@ -216,18 +276,27 @@ pz_hover <- function(ctx, target = NULL, ...) {
   if (!found$pinned) {
     on.exit(release_elements(found$els), add = TRUE)
   }
-  point <- el_pointer_point(found$els, call = call)
+  point <- el_pointer_point(ctx, found$els, call = call)
   dispatch_mouse(
-    ctx, "hovering over", found$els$description, "mouseMoved", point,
-    button = "none", buttons = 0, clickCount = 0, call = call
+    ctx,
+    "hovering over",
+    found$els$description,
+    "mouseMoved",
+    point,
+    button = "none",
+    buttons = 0,
+    clickCount = 0,
+    call = call
   )
   invisible(ctx)
 }
 
 #' Type text into an element
 #'
-#' With a `target`, scrolls the element into view, clicks the center of
-#' it (real mouse events, so the element genuinely gains focus), and
+#' With a `target`, auto-waits for the element to be actionable --
+#' visible with a non-empty box -- then scrolls it into view, clicks the
+#' center of it (real mouse events, so the element genuinely gains
+#' focus), and
 #' inserts `text` at the caret -- the caret lands where the click lands,
 #' just like a real user. With `target = NULL` at the root context,
 #' inserts into whatever element currently has focus; if nothing
@@ -267,7 +336,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
   if (!found$pinned) {
     on.exit(release_elements(found$els), add = TRUE)
   }
-  point <- el_pointer_point(found$els, call = call)
+  point <- el_pointer_point(ctx, found$els, call = call)
   # Focus comes from the real click pipeline (not JS .focus()) so
   # pointer state stays real.
   dispatch_click(ctx, "typing into", found$els$description, point, call = call)
