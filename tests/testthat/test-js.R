@@ -35,3 +35,29 @@ test_that("pz_js checks dots empty", {
   page <- local_page()
   expect_error(pz_js(page, "1", extra = TRUE), "empty")
 })
+
+test_that("pz_js respects the per-call timeout", {
+  page <- local_page()
+  expect_error(
+    pz_js(
+      page,
+      "new Promise(r => setTimeout(() => r(1), 2000))",
+      timeout = 0.2
+    ),
+    class = "paparazzi_error_timeout"
+  )
+})
+
+test_that("pz_js uses the session default timeout", {
+  page <- local_page(timeout = 15)
+  expect_identical(
+    pz_js(page, "new Promise(r => setTimeout(() => r(42), 500))"),
+    42L
+  )
+
+  page_short <- local_page(timeout = 0.2)
+  expect_error(
+    pz_js(page_short, "new Promise(r => setTimeout(() => r(1), 2000))"),
+    class = "paparazzi_error_timeout"
+  )
+})

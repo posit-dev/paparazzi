@@ -40,6 +40,15 @@ test_that("pz_with_page accepts an already-open page and closes it", {
   expect_true(page$is_closed())
 })
 
+test_that("a braced block is never called, even if it returns a function", {
+  skip_if_no_chrome()
+  called <- FALSE
+  pz_with_page(fixture_file(), {
+    function(page) called <<- TRUE
+  })
+  expect_false(called)
+})
+
 test_that("pz_local_page closes when the calling frame exits", {
   skip_if_no_chrome()
   page <- local({

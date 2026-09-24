@@ -68,7 +68,7 @@ staging settings, recorder state -- lives on the page.
 
 }
 \section{Super class}{
-\code{PaparazziContext} -> \code{PaparazziPage}
+\code{\link[paparazzi:PaparazziContext]{PaparazziContext}} -> \code{PaparazziPage}
 }
 \section{Active bindings}{
   \if{html}{\out{<div class="r6-active-bindings">}}

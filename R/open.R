@@ -67,7 +67,14 @@ pz_open <- function(
   ok <- FALSE
   on.exit(if (!ok) try(page$close(), silent = TRUE), add = TRUE)
 
-  session$Page$navigate(url)
+  # CDP reports navigation failures as `errorText`, not as errors.
+  nav <- session$Page$navigate(url)
+  if (!is.null(nav$errorText) && nzchar(nav$errorText)) {
+    rlang::abort(
+      sprintf("Navigation to %s failed: %s", url, nav$errorText),
+      class = "paparazzi_error_navigation"
+    )
+  }
   if (identical(wait, "load")) {
     wait_for_load(page, timeout = page$default_timeout)
   }
@@ -99,11 +106,10 @@ open_target_url <- function(x, call = rlang::caller_env()) {
       call = call
     )
   }
-  if (grepl("^[a-zA-Z][a-zA-Z0-9+.-]*:", x)) {
-    return(x)
-  }
+  # file.exists() comes before the scheme regex: Windows drive paths like
+  # "C:/..." look like a URL scheme to it.
   if (file.exists(x)) {
-    if (dir.exists(x) || grepl("[/\\\\]?app\\.[rR]$", x)) {
+    if (dir.exists(x) || identical(tolower(basename(x)), "app.r")) {
       rlang::abort(
         c(
           "Opening Shiny app directories is not supported yet.",
@@ -113,7 +119,11 @@ open_target_url <- function(x, call = rlang::caller_env()) {
         call = call
       )
     }
-    return(paste0("file://", normalizePath(x)))
+    return(file_url(x))
+  }
+  # Real schemes have 2+ characters; single-letter "schemes" are drive letters.
+  if (grepl("^[a-zA-Z][a-zA-Z0-9+.-]+:", x)) {
+    return(x)
   }
   rlang::abort(
     c(
@@ -123,6 +133,30 @@ open_target_url <- function(x, call = rlang::caller_env()) {
     class = "paparazzi_error_input",
     call = call
   )
+}
+
+#' Build a file:// URL from a local path, percent-encoding each segment
+#' @noRd
+file_url <- function(path) {
+  path <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  segs <- strsplit(path, "/", fixed = TRUE)[[1]]
+  enc <- vapply(
+    segs,
+    function(seg) {
+      # Leave Windows drive letters ("C:") alone; encode everything else.
+      if (grepl("^[A-Za-z]:$", seg)) {
+        seg
+      } else {
+        utils::URLencode(seg, reserved = TRUE)
+      }
+    },
+    character(1)
+  )
+  path <- paste(enc, collapse = "/")
+  if (!startsWith(path, "/")) {
+    path <- paste0("/", path)
+  }
+  paste0("file://", path)
 }
 
 #' Poll until the page finishes loading
@@ -172,7 +206,9 @@ pz_close <- function(page) {
 #' @param x An open page, or anything [pz_open()] accepts.
 #' @param code Code to run while the page is open. An expression (evaluated
 #'   as-is; useful when `x` is an already-open page the code can reference)
-#'   or a function, called with the page as its only argument.
+#'   or a function, called with the page as its only argument. A braced
+#'   `{ }` block is always treated as an expression, even if it returns a
+#'   function.
 #' @param ... Passed to [pz_open()] when `x` is not already a page.
 #' @param .env The frame whose exit closes the page.
 #' @return `pz_with_page()` returns the page invisibly; `pz_local_page()`
@@ -181,10 +217,13 @@ pz_close <- function(page) {
 pz_with_page <- function(x, code, ...) {
   page <- if (inherits(x, "PaparazziPage")) x else pz_open(x, ...)
   on.exit(pz_close(page), add = TRUE)
-  if (rlang::is_function(code)) {
-    code(page)
-  } else {
-    force(code)
+  # Decide expression-vs-function from the quoted form: a braced block is
+  # always an expression, even when its value happens to be a function.
+  expr <- substitute(code)
+  value <- eval(expr, envir = parent.frame())
+  is_block <- is.call(expr) && identical(expr[[1]], quote(`{`))
+  if (!is_block && rlang::is_function(value)) {
+    value <- value(page)
   }
   invisible(page)
 }

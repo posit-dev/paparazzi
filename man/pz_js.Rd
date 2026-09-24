@@ -4,7 +4,7 @@
 \alias{pz_js}
 \title{Evaluate JavaScript in the page}
 \usage{
-pz_js(ctx, expr, ..., await = TRUE)
+pz_js(ctx, expr, ..., await = TRUE, timeout = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -14,6 +14,9 @@ pz_js(ctx, expr, ..., await = TRUE)
 \item{...}{Checked empty; reserved for future use.}
 
 \item{await}{Await a promise returned by \code{expr} before returning its value.}
+
+\item{timeout}{Seconds before the evaluation fails; \code{NULL} uses the
+session default.}
 }
 \value{
 The value produced by \code{expr} (converted to R), or \code{NULL}.

@@ -9,18 +9,33 @@
 #' @param expr A string of JavaScript to evaluate.
 #' @param ... Checked empty; reserved for future use.
 #' @param await Await a promise returned by `expr` before returning its value.
+#' @param timeout Seconds before the evaluation fails; `NULL` uses the
+#'   session default.
 #' @return The value produced by `expr` (converted to R), or `NULL`.
 #' @export
-pz_js <- function(ctx, expr, ..., await = TRUE) {
+pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   check_context(ctx)
   rlang::check_dots_empty()
   rlang::check_string(expr)
   rlang::check_bool(await)
+  timeout <- resolve_timeout(timeout, ctx$page)
 
-  res <- ctx$page$session$Runtime$evaluate(
-    expr,
-    awaitPromise = await,
-    returnByValue = TRUE
+  res <- tryCatch(
+    ctx$page$session$Runtime$evaluate(
+      expr,
+      awaitPromise = await,
+      returnByValue = TRUE,
+      timeout_ = timeout
+    ),
+    error = function(e) {
+      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+        rlang::abort(
+          sprintf("Timed out after %gs evaluating JavaScript.", timeout),
+          class = "paparazzi_error_timeout"
+        )
+      }
+      stop(e)
+    }
   )
   err <- res$exceptionDetails
   if (!is.null(err)) {

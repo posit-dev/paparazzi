@@ -14,7 +14,9 @@ pz_local_page(x, ..., .env = rlang::caller_env())
 
 \item{code}{Code to run while the page is open. An expression (evaluated
 as-is; useful when \code{x} is an already-open page the code can reference)
-or a function, called with the page as its only argument.}
+or a function, called with the page as its only argument. A braced
+\code{{ }} block is always treated as an expression, even if it returns a
+function.}
 
 \item{...}{Passed to \code{\link[=pz_open]{pz_open()}} when \code{x} is not already a page.}
 

@@ -102,6 +102,45 @@ test_that("pz_close is idempotent and functions reject closed pages", {
   expect_error(pz_wait(page, 0), class = "paparazzi_error_closed")
 })
 
+test_that("pz_open aborts when navigation fails", {
+  skip_if_no_chrome()
+  expect_error(
+    pz_open("http://127.0.0.1:1/"),
+    class = "paparazzi_error_navigation"
+  )
+})
+
+test_that("files whose names end in app.R variants open fine", {
+  skip_if_no_chrome()
+  r_file <- withr::local_tempfile(fileext = "webapp.R")
+  writeLines("# not a shiny app", r_file)
+  page <- pz_open(r_file)
+  withr::defer(pz_close(page))
+  expect_match(pz_js(page, "location.protocol"), "file:")
+})
+
+test_that("file_url percent-encodes special characters", {
+  dir <- withr::local_tempdir()
+  weird <- file.path(dir, "my page #1?.html")
+  file.create(weird)
+  url <- file_url(weird)
+  expect_match(url, "^file:///")
+  expect_match(url, "my%20page%20%231%3F.html", fixed = TRUE)
+  expect_no_match(url, "#")
+
+  skip_if_no_chrome()
+  page <- pz_open(weird)
+  withr::defer(pz_close(page))
+  expect_match(pz_js(page, "location.protocol"), "file:")
+})
+
+test_that("Windows drive paths are not mistaken for URL schemes", {
+  expect_error(
+    open_target_url("C:/definitely/not/here.html"),
+    class = "paparazzi_error_input"
+  )
+})
+
 test_that("pz_close rejects non-pages", {
   expect_error(pz_close("nope"), class = "paparazzi_error_input")
 })
