@@ -50,6 +50,11 @@ choices and session handoffs for this phase only.
   defers `pz_close()` in `.env` via `withr::defer()`. Both always close,
   even when handed an already-open page (withr semantics: the block
   owns the resource).
+- **`pz_with_page()` block access to the page.** `code` may be an
+  expression (evaluated as-is; for when `x` is an already-open page the
+  caller can reference) or a function, which is called with the page.
+  Without this, the block form with a non-page `x` could never reach the
+  page it opened.
 - **Tests.** Static fixture `tests/testthat/fixtures/page.html`; helper
   `local_page()` opens it via `file://` and skips if no Chrome is
   available (session creation error). No network dependency in tests.
