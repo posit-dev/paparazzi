@@ -202,6 +202,9 @@ pz_expect_hidden <- function(
   not = FALSE,
   timeout = NULL
 ) {
+  # Validated here: inverting before the check would silently coerce
+  # non-booleans (e.g. not = 1 becomes FALSE).
+  check_bool(not)
   pz_expect_visible(ctx, ..., target = target, not = !not, timeout = timeout)
 }
 
@@ -349,7 +352,23 @@ expect_impl <- function(
   )
   waited <- round(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
 
-  msg <- expect_failure_message(description, target_desc, result$observed, waited)
+  # The failure text carries page-derived content (observed) and
+  # user-derived content (the headline holds the expected text, which
+  # may be a regex containing braces). Both are interpolated as cli
+  # VALUES, never pasted into templates: cli only evaluates the
+  # template, so braces inside a value stay literal and can't inject
+  # markup or code.
+  headline <- description
+  target <- target_desc
+  observed <- result$observed
+  msg_template <- c(
+    "{headline}",
+    "Target: {target}",
+    "Last seen: {observed}",
+    "Waited {waited}s."
+  )
+  # Plain-text rendering for the testthat bridge, which takes a string.
+  msg <- cli::format_message(msg_template)
   if (isTRUE(result$pass)) {
     expect_bridge(TRUE, msg)
     return(invisible(ctx))
@@ -358,7 +377,11 @@ expect_impl <- function(
     # Inside testthat the failure is already registered as a test failure.
     return(invisible(ctx))
   }
-  cli::cli_abort(msg, class = "paparazzi_expectation_failure", call = call)
+  cli::cli_abort(
+    msg_template,
+    class = "paparazzi_expectation_failure",
+    call = call
+  )
 }
 
 # testthat is in Suggests: inside tests, passes count and failures are
@@ -370,17 +393,6 @@ expect_bridge <- function(ok, msg) {
   }
   testthat::expect(ok, paste(msg, collapse = "\n"))
   TRUE
-}
-
-# The SPEC's failure format: headline, Target, Last seen, Waited. Unnamed
-# cli_abort() bullets render one per line, indented by the error display.
-expect_failure_message <- function(headline, target, observed, waited) {
-  c(
-    headline,
-    paste0("Target: ", target),
-    paste0("Last seen: ", observed),
-    paste0("Waited ", waited, "s.")
-  )
 }
 
 # Read observed values off a resolved element array with one
@@ -498,14 +510,21 @@ check_text <- function(text, match, not) {
       # stronger than "not all": partial satisfaction fails both forms.
       pass <- if (not) !any(hits) else all(hits)
     } else {
-      # A vector requires exactly n matches, compared pairwise in order;
-      # the negation passes when the pairwise condition doesn't hold.
-      pairwise <- els$count == length(text) && all(vapply(
-        seq_along(text),
-        function(i) expect_text_matches(texts[[i]], text[[i]], match),
-        logical(1)
-      ))
-      pass <- if (not) !pairwise else pairwise
+      # A vector requires exactly n matches, compared pairwise in order.
+      # Negated passes only when NO element satisfies its pairwise
+      # expectation (SPEC's "no match satisfies"); when the count
+      # differs from the vector length there is no pairwise
+      # correspondence at all, so the negation passes vacuously.
+      hits <- if (els$count == length(text)) {
+        vapply(
+          seq_along(text),
+          function(i) expect_text_matches(texts[[i]], text[[i]], match),
+          logical(1)
+        )
+      } else {
+        FALSE
+      }
+      pass <- if (not) !any(hits) else all(hits)
     }
     list(pass = pass, observed = expect_seen_texts(texts))
   }

@@ -171,6 +171,37 @@ test_that("pz_expect_text with not = TRUE", {
   testthat::expect_failure(
     pz_expect_text(page, "Save", target = ".btn", not = TRUE, timeout = 0)
   )
+  # Same for vectors: the first .twin satisfies its pairwise text, so
+  # the negation fails even though the second pair doesn't match.
+  testthat::expect_failure(
+    pz_expect_text(
+      page,
+      c("same words", "WRONG"),
+      target = ".twin",
+      not = TRUE,
+      timeout = 0
+    )
+  )
+  # When the count differs from the vector length there is no pairwise
+  # correspondence, so the negation passes vacuously.
+  pz_expect_text(
+    page,
+    c("What's the weather?", "Bring a hat."),
+    target = ".panel",
+    not = TRUE,
+    timeout = 0
+  )
+})
+
+test_that("page text is never interpreted as cli markup", {
+  page <- local_elements_page()
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_text(page, "nope", target = ".brace", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  # If the observed text were glued as a template this would read "2".
+  expect_match(conditionMessage(err), "{1 + 1}", fixed = TRUE)
 })
 
 test_that("pz_expect_text failure shows the last seen text", {
@@ -246,6 +277,7 @@ test_that("expectations validate their inputs", {
   expect_error(pz_expect_exists(page, extra = 1), "empty")
   expect_error(pz_expect_exists(1, target = ".btn"), class = "paparazzi_error_context")
   expect_error(pz_expect_exists(page, target = ".btn", not = "yes"), "yes")
+  expect_error(pz_expect_hidden(page, target = ".btn", not = 1), "not")
   expect_error(pz_expect_exists(page, target = ".btn", timeout = -1), "timeout")
   expect_error(pz_expect_text(page, 1), "character")
   expect_error(
