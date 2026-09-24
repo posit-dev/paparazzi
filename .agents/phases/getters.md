@@ -84,17 +84,16 @@ phase only. Builds on the resolution engine
 
 (newest first; three lines per session: landed / next / provisional)
 
-- 2026-09-24 (close-pending-review): landed phase note, fixture
+- 2026-09-24 (close): landed phase note, fixture
   getters.html + helpers, R/get.R (all nine getters) with the
-  els_values()/target_resolver_expr() seams, and test-get.R (21 tests,
-  59 expectations). 364 tests green. One deviation: loc_resolve()
-  itself routes through target_resolver_expr(), so target = NULL works
-  for getters too (it had no other callers). Next: roborev review,
-  close 5cqf. Provisional carried: has_text collapse doesn't trim;
-  element column is a NULL stub until scoping. Roborev 1226 review
-  fixes landed: deterministic auto-wait/count tests (no wall-clock
+  els_values()/target_resolver_expr() seams, and test-get.R (369
+  tests green). One deviation: loc_resolve() itself routes through
+  target_resolver_expr(), so target = NULL works for getters too (it
+  had no other callers). Roborev 1226 review fixes landed and the
+  review is closed: deterministic auto-wait/count tests (no wall-clock
   assertions), p.padded trim coverage, multi-match pz_get_html() test.
-  Next: close 5cqf. New provisional:
+  Provisional carried: has_text collapse doesn't trim; the element
+  column is a NULL stub until scoping. New provisional:
   pz_get_text() at the root includes inline <script> text (spec-correct
   textContent, but if "visible page text" is ever wanted, the scoping
   task should skip script/style subtrees).
