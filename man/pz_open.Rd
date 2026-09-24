@@ -21,9 +21,10 @@ pz_open(
 \item an existing \code{ChromoteSession} (wrapped as-is; nothing is navigated).
 }
 
-Shiny app directories and \code{pz_app()} handles are not yet supported;
-Shiny app \strong{objects} are never supported -- run the app in another
-process and pass its URL.}
+Shiny app directories and app files (\code{app.R}, \code{ui.R}, \code{server.R},
+\verb{app-*.R}, ...) and \code{pz_app()} handles are not yet supported; Shiny app
+\strong{objects} are never supported -- run the app in another process and
+pass its URL.}
 
 \item{...}{Checked empty for now. Will be forwarded to \code{pz_device()} for
 device emulation (e.g. \verb{width = 390, mobile = TRUE}).}

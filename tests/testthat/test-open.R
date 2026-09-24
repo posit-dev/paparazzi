@@ -110,6 +110,52 @@ test_that("pz_open aborts when navigation fails", {
   )
 })
 
+test_that("is_shiny_app_file recognizes Shiny app file names", {
+  shiny_files <- c(
+    "app.R",
+    "app.r",
+    "ui.R",
+    "server.R",
+    "app-main.R",
+    "app_ui.R",
+    "app-old-server.R",
+    "foo_.R",
+    "foo-.R"
+  )
+  for (f in shiny_files) {
+    expect_true(is_shiny_app_file(f), info = f)
+  }
+
+  plain_files <- c(
+    "webapp.R",
+    "snapp.R",
+    "utils.R",
+    "my-utils.R",
+    "screenshot.R",
+    "app.Rmd",
+    "appR.R",
+    "ui.R.bak"
+  )
+  for (f in plain_files) {
+    expect_false(is_shiny_app_file(f), info = f)
+  }
+})
+
+test_that("pz_open rejects Shiny app file names with advice", {
+  skip_if_no_chrome()
+  dir <- withr::local_tempdir()
+  for (f in c("ui.R", "server.R", "app-main.R")) {
+    path <- file.path(dir, f)
+    file.create(path)
+    expect_error(
+      pz_open(path),
+      regexp = "another process",
+      class = "paparazzi_error_unsupported",
+      info = f
+    )
+  }
+})
+
 test_that("files whose names end in app.R variants open fine", {
   skip_if_no_chrome()
   r_file <- withr::local_tempfile(fileext = "webapp.R")

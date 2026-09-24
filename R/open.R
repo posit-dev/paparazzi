@@ -8,9 +8,10 @@
 #'   * a path to an existing local file (opened as `file://`);
 #'   * an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
 #'
-#'   Shiny app directories and `pz_app()` handles are not yet supported;
-#'   Shiny app **objects** are never supported -- run the app in another
-#'   process and pass its URL.
+#'   Shiny app directories and app files (`app.R`, `ui.R`, `server.R`,
+#'   `app-*.R`, ...) and `pz_app()` handles are not yet supported; Shiny app
+#'   **objects** are never supported -- run the app in another process and
+#'   pass its URL.
 #' @param ... Checked empty for now. Will be forwarded to `pz_device()` for
 #'   device emulation (e.g. `width = 390, mobile = TRUE`).
 #' @param wait What to wait for before returning. `"auto"` currently resolves
@@ -109,10 +110,10 @@ open_target_url <- function(x, call = rlang::caller_env()) {
   # file.exists() comes before the scheme regex: Windows drive paths like
   # "C:/..." look like a URL scheme to it.
   if (file.exists(x)) {
-    if (dir.exists(x) || identical(tolower(basename(x)), "app.r")) {
+    if (dir.exists(x) || is_shiny_app_file(basename(x))) {
       rlang::abort(
         c(
-          "Opening Shiny app directories is not supported yet.",
+          "Opening Shiny apps is not supported yet.",
           i = "Start the app yourself in another process and pass its URL to `pz_open()`."
         ),
         class = "paparazzi_error_unsupported",
@@ -133,6 +134,19 @@ open_target_url <- function(x, call = rlang::caller_env()) {
     class = "paparazzi_error_input",
     call = call
   )
+}
+
+#' Is this file name a Shiny app file?
+#'
+#' Recognizes the conventional Shiny app file names: `app.R`, `ui.R`,
+#' `server.R`, variants like `app-main.R`/`app_ui.R`, and names ending in a
+#' separator immediately before the extension (`foo_.R`, `foo-.R`).
+#' @noRd
+is_shiny_app_file <- function(name) {
+  name %in%
+    c("app.R", "app.r", "ui.R", "server.R") ||
+    grepl("^app[_-].+[.]R$", name) ||
+    grepl("^.+[_-][.]R$", name)
 }
 
 #' Build a file:// URL from a local path, percent-encoding each segment
