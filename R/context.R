@@ -1,3 +1,7 @@
+# pillar rendering for the getters' element list-column: a short type
+# label, and a shaft showing the top scope's description compactly
+# (pillar truncates to the available width). Root contexts -- and
+# pages, defensively -- never appear in the column; they show "root".
 #' @importFrom pillar type_sum
 #' @export
 type_sum.PaparazziContext <- function(x) {
@@ -58,10 +62,6 @@ PaparazziContext <- R6::R6Class(
     }
   )
 )
-# pillar rendering for the getters' element list-column: a short type
-# label, and a shaft showing the top scope's description compactly
-# (pillar truncates to the available width). Root contexts -- and
-# pages, defensively -- never appear in the column; they show "root".
 #' @rdname PaparazziContext
 PaparazziPage <- R6::R6Class(
   "PaparazziPage",

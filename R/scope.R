@@ -4,11 +4,6 @@
 # stack. Targets passed to later pz_*() calls resolve lazily INSIDE the
 # pinned scope; the pinned set itself is checked once per use and never
 # silently re-queried.
-# The pinned set at the top of the scope stack, after the detach check;
-# NULL at the root context. The single seam every consumer reads once
-# per pz_*() call: "before each use" is per operation that touches the
-# scope, not per CDP command (an action's scroll-rect-dispatch sequence
-# is one use).
 #' Find elements and push them as the current scope
 #'
 #' @description
@@ -195,6 +190,11 @@ check_scope_single <- function(scoped, call = caller_env()) {
   }
 }
 
+# The pinned set at the top of the scope stack, after the detach check;
+# NULL at the root context. The single seam every consumer reads once
+# per pz_*() call: "before each use" is per operation that touches the
+# scope, not per CDP command (an action's scroll-rect-dispatch sequence
+# is one use).
 scope_root <- function(ctx, call = caller_env()) {
   scoped <- scope_top(ctx)
   if (is.null(scoped)) {

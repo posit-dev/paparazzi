@@ -1,12 +1,4 @@
 # Getters end the chain: they return values, not the context.
-# Driver for the target-based getters. `read(els, call)` pulls values into R;
-# it never sees an empty set, because loc_resolve() errors on timeout.
-# `target = NULL` means the current context: at a scoped context that is
-# the pinned set itself, used as-is, never released (its scope owns it),
-# and detach-checked here once; at the root, NULL keeps the implicit
-# document.body meaning through loc_resolve(). Explicit targets resolve
-# lazily inside the current scope -- loc_resolve() probes the scope once
-# per call.
 #' Count matching elements
 #'
 #' [pz_get_count()] returns the number of elements matching `target`,
@@ -232,6 +224,14 @@ pz_get_title <- function(ctx) {
   check_context(ctx)
   pz_js(ctx, "document.title")
 }
+# Driver for the target-based getters. `read(els, call)` pulls values into R;
+# it never sees an empty set, because loc_resolve() errors on timeout.
+# `target = NULL` means the current context: at a scoped context that is
+# the pinned set itself, used as-is, never released (its scope owns it),
+# and detach-checked here once; at the root, NULL keeps the implicit
+# document.body meaning through loc_resolve(). Explicit targets resolve
+# lazily inside the current scope -- loc_resolve() probes the scope once
+# per call.
 get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
   if (is.null(target)) {
     scoped <- scope_root(ctx, call = call)
