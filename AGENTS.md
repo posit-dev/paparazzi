@@ -2,27 +2,20 @@
 
 **Kata is the system of record** (the `kata` CLI issue tracker; the session environment provides its usage conventions). One issue per work item; decisions and dispositions land on issues, never only in chat scrollback. See `kata quickstart --agent` for usage details.
 
-**roborev provides external review, requested manually.** Do NOT install the post-commit hook. Request one review per completed unit of work (a coherent feature slice, possibly several commits), never per commit: `roborev review <sha>`, then `roborev show <job_id> --job` for the result. Close reviews when the fix is committed (`roborev close`).
+**roborev provides external review, requested manually.** Do NOT install the post-commit hook. Request one review per completed unit of work, never per commit: `roborev review <sha>`, then `roborev show <job_id> --job`. Close reviews when the fix is committed (`roborev close`).
 
 ## R Package Development
 
-1. **Internal helpers are undocumented by default.** Do not write roxygen for
-   internal helpers. Exception: an unusually complicated helper may carry a
-   short roxygen block, which must end with `@noRd`.
+1. **Internal helpers are undocumented by default.** No roxygen; an unusually
+   complicated helper may have a short block ending in `@noRd`.
 1. **Test files mirror source files.** `R/foo.R` -> `tests/testthat/test-foo.R`.
-   Tests for a function live in the file named after the R file where its
-   primary logic lives.
-1. **Use `cli` for all errors and informational messages.** Errors via
-   `cli::cli_abort()` (keep `class =` for classed errors); informational output
-   via `cli::cli_inform()`/`cli::cat_line()`. Prefer cli inline markup
-   (`{.arg}`, `{.val}`, `{.fn}`) over `sprintf()`. rlang's argument checkers
-   (`check_dots_empty()`, `check_string()`, etc.) are fine and stay.
+1. **Use `cli` for errors and messages:** `cli::cli_abort()` for errors,
+   `cli::cli_inform()`/`cli::cat_line()` for output; cli markup (`{.arg}`,
+   `{.val}`, `{.fn}`) over `sprintf()`.
 1. **Validate user input with rlang's `check_*()` functions** (`check_bool()`,
-   `check_string()`, `check_number_decimal()`, `check_number_whole()`,
-   `check_data_frame()`; DESCRIPTION pins rlang >= 1.2.0 for these). Where no
-   `check_*()` exists for the type, use `stop_input_type()`. Hand-rolled
-   `cli::cli_abort(class = ...)` checks are reserved for conditions that need
-   a `paparazzi_error_*` class (e.g. because tests match on it).
+   `check_string()`, `check_number_*()`, `check_data_frame()`); use
+   `stop_input_type()` where no `check_*()` fits; hand-rolled classed errors
+   only when the class is needed.
 
 ## Work Mechanics
 
