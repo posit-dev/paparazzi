@@ -49,7 +49,6 @@ pz_expect_exists <- function(
     description = if (not) "Expected no element to match" else "Expected an element to match"
   )
 }
-
 #' Expect a number of matching elements
 #'
 #' @description
@@ -128,7 +127,6 @@ pz_expect_count <- function(
     description = expect_headline_count(n, min, max, not)
   )
 }
-
 #' Expect elements to be visible
 #'
 #' @description
@@ -179,7 +177,6 @@ pz_expect_visible <- function(
     description = if (not) "Expected no element to be visible" else "Expected all elements to be visible"
   )
 }
-
 #' @rdname pz_expect_visible
 #' @export
 pz_expect_hidden <- function(
@@ -194,7 +191,6 @@ pz_expect_hidden <- function(
   check_bool(not)
   pz_expect_visible(ctx, ..., target = target, not = !not, timeout = timeout)
 }
-
 #' Expect element text content
 #'
 #' @description
@@ -259,7 +255,6 @@ pz_expect_text <- function(
     description = expect_headline_text(text, match, not)
   )
 }
-
 #' Retry an expectation check
 #'
 #' Like `pz_poll()`, but instead of aborting on the deadline it returns
@@ -283,7 +278,6 @@ expect_retry <- function(fn, timeout, loop, interval = 0.1) {
     later::run_now(timeoutSecs = min(remaining, interval), loop = loop)
   }
 }
-
 #' Drive one expectation: resolve, check, retry
 #'
 #' Resolves `target` once per poll iteration with `loc_resolve_once()`
@@ -392,7 +386,6 @@ expect_impl <- function(
     call = call
   )
 }
-
 # testthat is in Suggests: inside tests, passes count and failures are
 # reported through testthat::expect(); anywhere else, the caller gets the
 # classed error instead. Returns FALSE when the bridge is inactive.
@@ -403,7 +396,6 @@ expect_bridge <- function(ok, msg) {
   testthat::expect(ok, paste(msg, collapse = "\n"))
   TRUE
 }
-
 # Read observed values off a resolved element array with one
 # callFunctionOn. The handle is released by the caller right after;
 # timeouts surface as paparazzi_error_timeout, like loc_resolve_once().
@@ -440,34 +432,27 @@ els_values <- function(els, js, call = caller_env()) {
   }
   res$result$value
 }
-
 # Non-nullable reads flatten the per-element result list to a vector.
 els_call <- function(els, js, call = caller_env()) {
   unlist(els_values(els, js, call = call))
 }
-
 # Whitespace collapse for text comparison, both sides: runs collapse to a
 # single space, then leading/trailing space is dropped.
 collapse_ws <- function(x) {
   trimws(gsub("\\s+", " ", x))
 }
-
 expect_visible_js <- "function() {
   return this.map((el) => el.checkVisibility({ checkVisibilityCSS: true }));
 }"
-
 expect_text_js <- "function() {
   return this.map((el) => el.textContent);
 }"
-
 expect_seen_count <- function(count) {
   paste0(count, if (count == 1L) " match" else " matches")
 }
-
 expect_seen_texts <- function(texts) {
   expect_truncate(paste0('"', texts, '"', collapse = ", "))
 }
-
 expect_truncate <- function(x, width = 80) {
   if (nchar(x) > width) {
     paste0(substr(x, 1, width - 3), "...")
@@ -475,18 +460,15 @@ expect_truncate <- function(x, width = 80) {
     x
   }
 }
-
 # Each check takes a resolved element set and returns list(pass, observed).
 # `not` is folded in at construction: it passes when no match satisfies
 # the positive condition, including zero matches (SPEC table).
-
 check_exists <- function(not) {
   function(els) {
     pass <- if (not) els$count == 0L else els$count >= 1L
     list(pass = pass, observed = expect_seen_count(els$count))
   }
 }
-
 check_count <- function(min, max, not) {
   # n was already encoded as min = max = n; NULL bounds are unbounded.
   min <- min %||% -Inf
@@ -499,7 +481,6 @@ check_count <- function(min, max, not) {
     list(pass = pass, observed = expect_seen_count(els$count))
   }
 }
-
 check_visible <- function(not) {
   function(els) {
     if (els$count == 0L) {
@@ -512,7 +493,6 @@ check_visible <- function(not) {
     list(pass = pass, observed = paste0(n_visible, " of ", els$count, " visible"))
   }
 }
-
 check_text <- function(text, match, not) {
   function(els) {
     if (els$count == 0L) {
@@ -545,7 +525,6 @@ check_text <- function(text, match, not) {
     list(pass = pass, observed = expect_seen_texts(texts))
   }
 }
-
 expect_text_matches <- function(x, pattern, match) {
   switch(
     match,
@@ -554,7 +533,6 @@ expect_text_matches <- function(x, pattern, match) {
     regex = grepl(pattern, x)
   )
 }
-
 expect_headline_count <- function(n, min, max, not) {
   what <- if (!is.null(n)) {
     paste0("exactly ", n)
@@ -567,7 +545,6 @@ expect_headline_count <- function(n, min, max, not) {
   }
   paste0("Expected count ", if (not) "not " else "", "to be ", what)
 }
-
 expect_headline_text <- function(text, match, not) {
   what <- switch(
     match,

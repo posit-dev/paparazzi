@@ -77,7 +77,62 @@ pz_open <- function(
   ok <- TRUE
   page
 }
-
+#' Close a page
+#'
+#' Closes the page's browser session. Idempotent; closing an already-closed
+#' page is a no-op.
+#'
+#' @param page A `PaparazziPage` from [pz_open()].
+#'
+#' @return `page`, invisibly.
+#'
+#' @export
+pz_close <- function(page) {
+  check_page(page)
+  page$close()
+  invisible(page)
+}
+#' Open a page that closes when a block or calling frame exits
+#'
+#' [pz_with_page()] evaluates `code` with the page open and closes it on exit,
+#' including on error. [pz_local_page()] opens a page and closes it when the
+#' calling frame (e.g. a test) exits, via [withr::defer()]. Both accept an
+#' already-open page or anything [pz_open()] accepts, and always close on
+#' exit: the block owns the resource.
+#'
+#' @param x An open page, or anything [pz_open()] accepts.
+#' @param code Code to run while the page is open. An expression (evaluated
+#'   as-is; useful when `x` is an already-open page the code can reference)
+#'   or a function, called with the page as its only argument. A braced
+#'   `{ }` block is always treated as an expression, even if it returns a
+#'   function.
+#' @param ... Passed to [pz_open()] when `x` is not already a page.
+#' @param .env The frame whose exit closes the page.
+#'
+#' @return [pz_with_page()] returns the page invisibly; [pz_local_page()]
+#'   returns it visibly.
+#'
+#' @export
+pz_with_page <- function(x, code, ...) {
+  page <- if (is_pz_page(x)) x else pz_open(x, ...)
+  withr::defer(pz_close(page))
+  # Decide expression-vs-function from the quoted form: a braced block is
+  # always an expression, even when its value happens to be a function.
+  expr <- substitute(code)
+  value <- eval(expr, envir = parent.frame())
+  is_block <- is.call(expr) && identical(expr[[1]], quote(`{`))
+  if (!is_block && is_function(value)) {
+    value <- value(page)
+  }
+  invisible(page)
+}
+#' @rdname pz_with_page
+#' @export
+pz_local_page <- function(x, ..., .env = caller_env()) {
+  page <- if (is_pz_page(x)) x else pz_open(x, ...)
+  withr::defer(pz_close(page), envir = .env)
+  page
+}
 open_target_url <- function(x, call = caller_env()) {
   if (inherits(x, "shiny.appobj")) {
     cli::cli_abort(
@@ -124,7 +179,6 @@ open_target_url <- function(x, call = caller_env()) {
     call = call
   )
 }
-
 # Conventional Shiny app file names: app.R/ui.R/server.R, and the variants
 # Shiny's editor tooling recognizes: app-*.R/app_*.R and *-app.R/*_app.R.
 is_shiny_app_file <- function(name) {
@@ -134,7 +188,6 @@ is_shiny_app_file <- function(name) {
 
   grepl("^(app[_-].+|.+[_-]app)[.]R$", name)
 }
-
 file_url <- function(path) {
   path <- normalizePath(path, winslash = "/", mustWork = TRUE)
   segs <- strsplit(path, "/", fixed = TRUE)[[1]]
@@ -156,7 +209,6 @@ file_url <- function(path) {
   }
   paste0("file://", path)
 }
-
 wait_for_load <- function(page, timeout, call = caller_env()) {
   deadline <- Sys.time() + timeout
   pz_poll(
@@ -179,63 +231,4 @@ wait_for_load <- function(page, timeout, call = caller_env()) {
     call = call
   )
   invisible(page)
-}
-
-#' Close a page
-#'
-#' Closes the page's browser session. Idempotent; closing an already-closed
-#' page is a no-op.
-#'
-#' @param page A `PaparazziPage` from [pz_open()].
-#'
-#' @return `page`, invisibly.
-#'
-#' @export
-pz_close <- function(page) {
-  check_page(page)
-  page$close()
-  invisible(page)
-}
-
-#' Open a page that closes when a block or calling frame exits
-#'
-#' [pz_with_page()] evaluates `code` with the page open and closes it on exit,
-#' including on error. [pz_local_page()] opens a page and closes it when the
-#' calling frame (e.g. a test) exits, via [withr::defer()]. Both accept an
-#' already-open page or anything [pz_open()] accepts, and always close on
-#' exit: the block owns the resource.
-#'
-#' @param x An open page, or anything [pz_open()] accepts.
-#' @param code Code to run while the page is open. An expression (evaluated
-#'   as-is; useful when `x` is an already-open page the code can reference)
-#'   or a function, called with the page as its only argument. A braced
-#'   `{ }` block is always treated as an expression, even if it returns a
-#'   function.
-#' @param ... Passed to [pz_open()] when `x` is not already a page.
-#' @param .env The frame whose exit closes the page.
-#'
-#' @return [pz_with_page()] returns the page invisibly; [pz_local_page()]
-#'   returns it visibly.
-#'
-#' @export
-pz_with_page <- function(x, code, ...) {
-  page <- if (is_pz_page(x)) x else pz_open(x, ...)
-  withr::defer(pz_close(page))
-  # Decide expression-vs-function from the quoted form: a braced block is
-  # always an expression, even when its value happens to be a function.
-  expr <- substitute(code)
-  value <- eval(expr, envir = parent.frame())
-  is_block <- is.call(expr) && identical(expr[[1]], quote(`{`))
-  if (!is_block && is_function(value)) {
-    value <- value(page)
-  }
-  invisible(page)
-}
-
-#' @rdname pz_with_page
-#' @export
-pz_local_page <- function(x, ..., .env = caller_env()) {
-  page <- if (is_pz_page(x)) x else pz_open(x, ...)
-  withr::defer(pz_close(page), envir = .env)
-  page
 }

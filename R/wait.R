@@ -16,7 +16,6 @@ pz_wait <- function(ctx, seconds) {
   pump_loop(ctx$page$child_loop, seconds)
   invisible(ctx)
 }
-
 pump_loop <- function(loop, seconds, interval = 0.1) {
   deadline <- Sys.time() + seconds
   repeat {
@@ -28,7 +27,6 @@ pump_loop <- function(loop, seconds, interval = 0.1) {
   }
   invisible(TRUE)
 }
-
 #' Poll `fn()` until it returns `TRUE` or `timeout` seconds elapse
 #'
 #' Between checks, pumps `loop` (the page's child loop) instead of sleeping,

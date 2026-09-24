@@ -4,12 +4,174 @@
 # stack. Targets passed to later pz_*() calls resolve lazily INSIDE the
 # pinned scope; the pinned set itself is checked once per use and never
 # silently re-queried.
-
 # The pinned set at the top of the scope stack, after the detach check;
 # NULL at the root context. The single seam every consumer reads once
 # per pz_*() call: "before each use" is per operation that touches the
 # scope, not per CDP command (an action's scroll-rect-dispatch sequence
 # is one use).
+#' Find elements and push them as the current scope
+#'
+#' @description
+#' [pz_find()] resolves `target` (auto-waiting for at least one match),
+#' pins the matched set as the current scope, and returns a new context:
+#' later calls on it operate inside that scope. Explicit targets resolve
+#' lazily among the scope's descendants at use time -- re-renders within
+#' the scope are fine -- and `target = NULL` means the scope itself for
+#' the calls that accept one.
+#'
+#' The pinned set is eager: it is fixed at find time, and a later
+#' re-render that detaches any of its elements aborts with a classed
+#' error on the next use -- the scope is never silently re-queried (a
+#' lazy, reusable target is what [pz_loc()] is for). Multi-match targets
+#' pin the whole set.
+#'
+#' The stack is immutable: `pz_find*()` never mutate the context they
+#' are called on, and contexts derived from the same parent share its
+#' pinned sets.
+#'
+#' @inheritParams pz_click
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs and strings (a union matching any of them). Required: there
+#'   is nothing to find without a target, so `NULL` is an error. To
+#'   narrow an existing scope, use [pz_find_first()], [pz_find_last()],
+#'   or [pz_find_nth()] without a target.
+#' @param from_root Resolve the target from the page root instead of
+#'   the current scope? The new scope is still pushed on top of the
+#'   stack, so [pz_find_pop()] returns to the previous scope.
+#'
+#' @return A new context, invisibly.
+#'
+#' @seealso [pz_find_first()], [pz_find_pop()], [pz_find_reset()]
+#'
+#' @export
+pz_find <- function(ctx, target, ..., from_root = FALSE) {
+  check_context(ctx)
+  check_dots_empty()
+  check_bool(from_root)
+  if (missing(target) || is.null(target)) {
+    cli::cli_abort(
+      c(
+        "{.arg target} is needed: {.fn pz_find} pins the elements it finds.",
+        i = "To narrow the current scope, use {.fn pz_find_first}, {.fn pz_find_last}, or {.fn pz_find_nth} without a target."
+      ),
+      class = "paparazzi_error_target"
+    )
+  }
+  invisible(find_push(ctx, as_loc_list(target), from_root))
+}
+#' Find the first match and push it as the current scope
+#'
+#' [pz_find_first()] is [pz_find()] with `which = "first"`. With a
+#' `target`, it pins the spec's first match. Without a `target`, it
+#' narrows the current scope to its first element: one eager slice of
+#' the pinned set, with no re-query and no waiting.
+#'
+#' @inheritParams pz_click
+#' @param target A CSS selector string or a [pz_loc()] spec. `NULL`
+#'   narrows the current scope; a union can't pick one match by
+#'   position, and a spec that already carries `which` is an error.
+#' @param from_root Resolve the target from the page root instead of
+#'   the current scope? Requires a `target`.
+#'
+#' @return A new context, invisibly.
+#'
+#' @seealso [pz_find()], [pz_find_last()], [pz_find_nth()]
+#'
+#' @export
+pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
+  check_context(ctx)
+  check_dots_empty()
+  check_bool(from_root)
+  invisible(find_which(ctx, target, "first", from_root))
+}
+#' Find the last match and push it as the current scope
+#'
+#' [pz_find_last()] is [pz_find()] with `which = "last"`. With a
+#' `target`, it pins the spec's last match. Without a `target`, it
+#' narrows the current scope to its last element: one eager slice of
+#' the pinned set, with no re-query and no waiting.
+#'
+#' @inheritParams pz_find_first
+#'
+#' @return A new context, invisibly.
+#'
+#' @seealso [pz_find()], [pz_find_first()], [pz_find_nth()]
+#'
+#' @export
+pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
+  check_context(ctx)
+  check_dots_empty()
+  check_bool(from_root)
+  invisible(find_which(ctx, target, "last", from_root))
+}
+#' Find the nth match and push it as the current scope
+#'
+#' [pz_find_nth()] is [pz_find()] with `which = n`. With a `target`, it
+#' pins the spec's `n`th match; an out-of-range `n` means no match, so
+#' the call keeps auto-waiting like any [pz_loc()] resolution. Without
+#' a `target`, it narrows the current scope to its `n`th element: one
+#' eager slice of the pinned set, and an out-of-range `n` errors
+#' immediately -- the set was fixed at pin time, so there is nothing to
+#' wait for.
+#'
+#' @inheritParams pz_find_first
+#' @param n The match to pick, 1-based (`"first"`/`"last"` are the
+#'   [pz_find_first()]/[pz_find_last()] wrappers, not values here).
+#'
+#' @return A new context, invisibly.
+#'
+#' @seealso [pz_find()], [pz_find_first()], [pz_find_last()]
+#'
+#' @export
+pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
+  check_context(ctx)
+  check_dots_empty()
+  n <- check_which(n, strings = FALSE)
+  check_bool(from_root)
+  invisible(find_which(ctx, target, n, from_root))
+}
+#' Pop the current scope
+#'
+#' `pz_find_pop()` returns a context one scope level up the stack. The
+#' popped pinned set is NOT released -- a context derived before the
+#' pop may still hold it -- and popping never mutates the context it
+#' was called on. At the root it is a no-op returning `ctx` unchanged.
+#'
+#' @inheritParams pz_click
+#'
+#' @return A new context, invisibly.
+#'
+#' @seealso [pz_find()], [pz_find_reset()]
+#'
+#' @export
+pz_find_pop <- function(ctx) {
+  check_context(ctx)
+  if (length(ctx$scope) == 0) {
+    return(invisible(ctx))
+  }
+  invisible(PaparazziContext$new(ctx$page, scope = utils::head(ctx$scope, -1)))
+}
+#' Clear all scope, back to the root
+#'
+#' `pz_find_reset()` returns a context with an empty scope stack. No
+#' pinned set is released -- contexts derived before the reset may
+#' still hold them -- and resetting never mutates the context it was
+#' called on. At the root it is a no-op returning `ctx` unchanged.
+#'
+#' @inheritParams pz_click
+#'
+#' @return A new context, invisibly.
+#'
+#' @seealso [pz_find()], [pz_find_pop()]
+#'
+#' @export
+pz_find_reset <- function(ctx) {
+  check_context(ctx)
+  if (length(ctx$scope) == 0) {
+    return(invisible(ctx))
+  }
+  invisible(PaparazziContext$new(ctx$page, scope = list()))
+}
 scope_root <- function(ctx, call = caller_env()) {
   scoped <- scope_top(ctx)
   if (is.null(scoped)) {
@@ -18,7 +180,6 @@ scope_root <- function(ctx, call = caller_env()) {
     pinned_assert_connected(scoped, call = call)
   }
 }
-
 # Pushing never touches an existing context: derived contexts share the
 # parent's pinned sets, which is safe because the wrapper is immutable
 # and never released by consumers (cleanup is the finalizer plus group
@@ -26,7 +187,6 @@ scope_root <- function(ctx, call = caller_env()) {
 push_scope <- function(ctx, pinned) {
   PaparazziContext$new(ctx$page, scope = c(ctx$scope, list(pinned)))
 }
-
 # The pinned-set wrapper: a paparazzi_elements subclass, so
 # els_call()/els_values()/el_rects()/el_scroll_into_view() accept
 # pinned sets unchanged and action_elements()'s top-of-stack branch
@@ -60,7 +220,6 @@ new_pinned <- function(page, object_id, count, description, locs) {
   }
   els
 }
-
 # The detach check: one callFunctionOn, returnByValue. Any detached
 # element invalidates the set (pinned sets promise their whole set). A
 # CDP "Could not find object with given id" failure -- a context that
@@ -99,7 +258,6 @@ pinned_assert_connected <- function(pinned, call = caller_env()) {
   }
   invisible(pinned)
 }
-
 pinned_abort_detached <- function(pinned, call = caller_env()) {
   cli::cli_abort(
     c(
@@ -111,7 +269,6 @@ pinned_abort_detached <- function(pinned, call = caller_env()) {
     call = call
   )
 }
-
 # Eager narrowing of the current scope: one callFunctionOn on the
 # pinned array, tagged with the object group so the slice is released
 # with everything else. No re-query and no auto-wait -- the set was
@@ -128,7 +285,6 @@ scope_slice_js <- function(which) {
     paste0("function() { return [this[", which, " - 1]].filter((el) => el != null); }")
   }
 }
-
 # A narrowed scope's description: a single loc takes `which` directly
 # and re-formats with format_loc(); a union (or no locs at all) can't
 # carry a which, so its description is the parent's plus a match
@@ -148,7 +304,6 @@ narrow_description <- function(locs, description, which) {
     paste0(description, " (match: ", which, ")")
   }
 }
-
 narrow_locs <- function(locs, which) {
   if (length(locs) == 1) {
     loc <- locs[[1]]
@@ -161,7 +316,6 @@ narrow_locs <- function(locs, which) {
     locs
   }
 }
-
 # pz_find_first()/pz_find_last()/pz_find_nth() with a target: apply
 # `which` to the promoted loc and pin its match. Without a target:
 # narrow the current scope eagerly.
@@ -194,7 +348,6 @@ find_which <- function(ctx, target, which, from_root, call = caller_env()) {
   loc$which <- which
   find_push(ctx, list(loc), from_root, call)
 }
-
 # Narrow the current scope: slice the pinned set at the top, eager and
 # without re-query, and push the slice.
 find_narrow <- function(ctx, which, from_root, call) {
@@ -247,7 +400,6 @@ find_narrow <- function(ctx, which, from_root, call) {
   )
   push_scope(ctx, pinned)
 }
-
 # Resolve locs eagerly, pin the whole matched set, and push it.
 find_push <- function(ctx, locs, from_root, call = caller_env()) {
   els <- loc_resolve(
@@ -259,173 +411,4 @@ find_push <- function(ctx, locs, from_root, call = caller_env()) {
     call = call
   )
   push_scope(ctx, new_pinned(ctx$page, els$object_id, els$count, els$description, locs))
-}
-
-#' Find elements and push them as the current scope
-#'
-#' @description
-#' [pz_find()] resolves `target` (auto-waiting for at least one match),
-#' pins the matched set as the current scope, and returns a new context:
-#' later calls on it operate inside that scope. Explicit targets resolve
-#' lazily among the scope's descendants at use time -- re-renders within
-#' the scope are fine -- and `target = NULL` means the scope itself for
-#' the calls that accept one.
-#'
-#' The pinned set is eager: it is fixed at find time, and a later
-#' re-render that detaches any of its elements aborts with a classed
-#' error on the next use -- the scope is never silently re-queried (a
-#' lazy, reusable target is what [pz_loc()] is for). Multi-match targets
-#' pin the whole set.
-#'
-#' The stack is immutable: `pz_find*()` never mutate the context they
-#' are called on, and contexts derived from the same parent share its
-#' pinned sets.
-#'
-#' @inheritParams pz_click
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). Required: there
-#'   is nothing to find without a target, so `NULL` is an error. To
-#'   narrow an existing scope, use [pz_find_first()], [pz_find_last()],
-#'   or [pz_find_nth()] without a target.
-#' @param from_root Resolve the target from the page root instead of
-#'   the current scope? The new scope is still pushed on top of the
-#'   stack, so [pz_find_pop()] returns to the previous scope.
-#'
-#' @return A new context, invisibly.
-#'
-#' @seealso [pz_find_first()], [pz_find_pop()], [pz_find_reset()]
-#'
-#' @export
-pz_find <- function(ctx, target, ..., from_root = FALSE) {
-  check_context(ctx)
-  check_dots_empty()
-  check_bool(from_root)
-  if (missing(target) || is.null(target)) {
-    cli::cli_abort(
-      c(
-        "{.arg target} is needed: {.fn pz_find} pins the elements it finds.",
-        i = "To narrow the current scope, use {.fn pz_find_first}, {.fn pz_find_last}, or {.fn pz_find_nth} without a target."
-      ),
-      class = "paparazzi_error_target"
-    )
-  }
-  invisible(find_push(ctx, as_loc_list(target), from_root))
-}
-
-#' Find the first match and push it as the current scope
-#'
-#' [pz_find_first()] is [pz_find()] with `which = "first"`. With a
-#' `target`, it pins the spec's first match. Without a `target`, it
-#' narrows the current scope to its first element: one eager slice of
-#' the pinned set, with no re-query and no waiting.
-#'
-#' @inheritParams pz_click
-#' @param target A CSS selector string or a [pz_loc()] spec. `NULL`
-#'   narrows the current scope; a union can't pick one match by
-#'   position, and a spec that already carries `which` is an error.
-#' @param from_root Resolve the target from the page root instead of
-#'   the current scope? Requires a `target`.
-#'
-#' @return A new context, invisibly.
-#'
-#' @seealso [pz_find()], [pz_find_last()], [pz_find_nth()]
-#'
-#' @export
-pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
-  check_context(ctx)
-  check_dots_empty()
-  check_bool(from_root)
-  invisible(find_which(ctx, target, "first", from_root))
-}
-
-#' Find the last match and push it as the current scope
-#'
-#' [pz_find_last()] is [pz_find()] with `which = "last"`. With a
-#' `target`, it pins the spec's last match. Without a `target`, it
-#' narrows the current scope to its last element: one eager slice of
-#' the pinned set, with no re-query and no waiting.
-#'
-#' @inheritParams pz_find_first
-#'
-#' @return A new context, invisibly.
-#'
-#' @seealso [pz_find()], [pz_find_first()], [pz_find_nth()]
-#'
-#' @export
-pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
-  check_context(ctx)
-  check_dots_empty()
-  check_bool(from_root)
-  invisible(find_which(ctx, target, "last", from_root))
-}
-
-#' Find the nth match and push it as the current scope
-#'
-#' [pz_find_nth()] is [pz_find()] with `which = n`. With a `target`, it
-#' pins the spec's `n`th match; an out-of-range `n` means no match, so
-#' the call keeps auto-waiting like any [pz_loc()] resolution. Without
-#' a `target`, it narrows the current scope to its `n`th element: one
-#' eager slice of the pinned set, and an out-of-range `n` errors
-#' immediately -- the set was fixed at pin time, so there is nothing to
-#' wait for.
-#'
-#' @inheritParams pz_find_first
-#' @param n The match to pick, 1-based (`"first"`/`"last"` are the
-#'   [pz_find_first()]/[pz_find_last()] wrappers, not values here).
-#'
-#' @return A new context, invisibly.
-#'
-#' @seealso [pz_find()], [pz_find_first()], [pz_find_last()]
-#'
-#' @export
-pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
-  check_context(ctx)
-  check_dots_empty()
-  n <- check_which(n, strings = FALSE)
-  check_bool(from_root)
-  invisible(find_which(ctx, target, n, from_root))
-}
-
-#' Pop the current scope
-#'
-#' `pz_find_pop()` returns a context one scope level up the stack. The
-#' popped pinned set is NOT released -- a context derived before the
-#' pop may still hold it -- and popping never mutates the context it
-#' was called on. At the root it is a no-op returning `ctx` unchanged.
-#'
-#' @inheritParams pz_click
-#'
-#' @return A new context, invisibly.
-#'
-#' @seealso [pz_find()], [pz_find_reset()]
-#'
-#' @export
-pz_find_pop <- function(ctx) {
-  check_context(ctx)
-  if (length(ctx$scope) == 0) {
-    return(invisible(ctx))
-  }
-  invisible(PaparazziContext$new(ctx$page, scope = utils::head(ctx$scope, -1)))
-}
-
-#' Clear all scope, back to the root
-#'
-#' `pz_find_reset()` returns a context with an empty scope stack. No
-#' pinned set is released -- contexts derived before the reset may
-#' still hold them -- and resetting never mutates the context it was
-#' called on. At the root it is a no-op returning `ctx` unchanged.
-#'
-#' @inheritParams pz_click
-#'
-#' @return A new context, invisibly.
-#'
-#' @seealso [pz_find()], [pz_find_pop()]
-#'
-#' @export
-pz_find_reset <- function(ctx) {
-  check_context(ctx)
-  if (length(ctx$scope) == 0) {
-    return(invisible(ctx))
-  }
-  invisible(PaparazziContext$new(ctx$page, scope = list()))
 }

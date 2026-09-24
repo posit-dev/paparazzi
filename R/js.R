@@ -63,7 +63,19 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   }
   js_value(res$result)
 }
-
+#' Get the underlying ChromoteSession
+#'
+#' Escape hatch for raw Chrome DevTools Protocol calls.
+#'
+#' @inheritParams pz_click
+#'
+#' @return The `chromote::ChromoteSession` backing the page.
+#'
+#' @export
+pz_chromote <- function(ctx) {
+  check_context(ctx)
+  ctx$page$session
+}
 # CDP reports NaN/Infinity/-Infinity/-0/BigInt as unserializableValue
 # with no value field.
 js_value <- function(result) {
@@ -85,18 +97,4 @@ js_value <- function(result) {
       if (is.na(num)) uv else num
     }
   )
-}
-
-#' Get the underlying ChromoteSession
-#'
-#' Escape hatch for raw Chrome DevTools Protocol calls.
-#'
-#' @inheritParams pz_click
-#'
-#' @return The `chromote::ChromoteSession` backing the page.
-#'
-#' @export
-pz_chromote <- function(ctx) {
-  check_context(ctx)
-  ctx$page$session
 }
