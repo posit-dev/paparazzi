@@ -1,0 +1,156 @@
+#' Take a screenshot
+#'
+#' Captures a PNG of the page and writes it to `path`, returning the
+#' context invisibly so screenshots slot into `|>` chains.
+#'
+#' The captured region depends on `target`:
+#' * `NULL` from the root context (from [pz_open()]): the current
+#'   viewport.
+#' * `NULL` from a scoped context (from `pz_find*()`): the scope's
+#'   bounding box.
+#' * A CSS selector string, a [pz_loc()] spec, or a list of either: the
+#'   union of the bounding boxes of all matched elements. A selector
+#'   matching several elements is a union, not an error.
+#'
+#' Screenshots are captured at the page's current device pixel ratio: the
+#' PNG's pixel dimensions are the captured CSS size multiplied by the
+#' dpr. Framing a capture (padding, aspect ratio, bounds via
+#' `pz_frame()`) is not yet implemented.
+#'
+#' @param ctx A paparazzi context.
+#' @param path File path the PNG is written to; an existing file is
+#'   overwritten.
+#' @param ... Checked empty; reserved for future use.
+#' @param target What to capture: `NULL` for the viewport (root context)
+#'   or the scope's box (scoped context), or a CSS selector string,
+#'   `pz_loc()` spec, or list of either for the union of matched
+#'   elements' bounding boxes.
+#' @param frame Framing to apply to the capture. Only `NULL` (the
+#'   default) and `FALSE` are supported, both meaning "capture without
+#'   framing"; framing via `pz_frame()` is not yet implemented.
+#' @return `ctx`, invisibly.
+#' @export
+pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
+  check_context(ctx)
+  check_dots_empty()
+  check_string(path)
+  call <- current_env()
+
+  if (!is.null(frame) && !identical(frame, FALSE)) {
+    # NULL and FALSE both mean "no framing" today; the distinction matters
+    # once pz_stage_frame() exists. No pz_frame class exists yet, so the
+    # check is structural, not class-based.
+    cli::cli_abort(
+      c(
+        "Framing screenshots isn't implemented yet.",
+        i = "{.code frame = FALSE} captures without framing for now; framing via {.fn pz_frame} is coming."
+      ),
+      class = "paparazzi_error_unsupported",
+      call = call
+    )
+  }
+
+  clip <- if (is.null(target) && length(ctx$scope) == 0) {
+    clip_viewport(ctx, call = call)
+  } else if (is.null(target)) {
+    # Seam: pz_find*() (which fills ctx$scope) doesn't exist yet, so this
+    # branch is untestable for now. The clip is the union of the boxes of
+    # the innermost pinned scope set; revisit if scoping settles on
+    # intersect-instead-of-union.
+    clip_rects_union(ctx, el_rects(ctx$scope[[length(ctx$scope)]], call = call), call = call)
+  } else {
+    els <- loc_resolve(ctx, target, multiple = "all", call = call)
+    on.exit(release_elements(els), add = TRUE)
+    clip_rects_union(ctx, el_rects(els, call = call), call = call)
+  }
+
+  res <- screenshot_capture(ctx, clip, call = call)
+  writeBin(jsonlite::base64_dec(res$data), path)
+  invisible(ctx)
+}
+
+# The clip for a root-context capture: the viewport, in document
+# coordinates, read in one JS evaluation.
+clip_viewport <- function(ctx, call = caller_env()) {
+  v <- pz_js(
+    ctx,
+    "[window.scrollX, window.scrollY, window.innerWidth, window.innerHeight]"
+  )
+  if (!is.numeric(v) || length(v) != 4) {
+    cli::cli_abort(
+      "Internal error: the viewport read returned {.obj_type_friendly {v}}, not four numbers.",
+      class = "paparazzi_error_internal",
+      call = call
+    )
+  }
+  list(x = v[[1]], y = v[[2]], width = v[[3]], height = v[[4]])
+}
+
+# The clip for an element capture: the union of viewport-relative rects,
+# shifted into document coordinates. The four edges are pure reductions
+# over the tibble columns -- the prior-art bug (the blog's union_png())
+# updated x before computing width, so no rect is ever mutated
+# mid-computation.
+clip_rects_union <- function(ctx, rects, call = caller_env()) {
+  if (nrow(rects) == 0L) {
+    cli::cli_abort(
+      "Internal error: computing a clip for an empty element set.",
+      class = "paparazzi_error_internal",
+      call = call
+    )
+  }
+  x0 <- min(rects$x)
+  y0 <- min(rects$y)
+  x1 <- max(rects$x + rects$width)
+  y1 <- max(rects$y + rects$height)
+  clip <- list(x = x0, y = y0, width = x1 - x0, height = y1 - y0)
+  # el_rects() is viewport-relative; CDP clip coordinates (with
+  # captureBeyondViewport) are document-relative, so add the scroll
+  # offsets. Off-viewport targets need no scrollIntoView.
+  scroll <- pz_js(ctx, "[window.scrollX, window.scrollY]")
+  clip$x <- clip$x + scroll[[1]]
+  clip$y <- clip$y + scroll[[2]]
+  # CDP rejects negative clip offsets; clamping to the document bounds is
+  # the framing task's job, so only the origin is fixed.
+  clip$x <- max(clip$x, 0)
+  clip$y <- max(clip$y, 0)
+  clip
+}
+
+# One synchronous CDP call, like loc_resolve_once(): no promise chaining.
+# captureBeyondViewport = TRUE makes Chrome interpret the clip in page
+# (document) coordinates, and fromSurface = TRUE renders the surface at
+# the page's device pixel ratio, so clip$scale = 1 yields a PNG at
+# exactly the current dpr (chromote passes scale/pixel_ratio for the
+# same reason).
+screenshot_capture <- function(ctx, clip, call = caller_env()) {
+  timeout <- ctx$page$default_timeout
+  tryCatch(
+    ctx$page$session$Page$captureScreenshot(
+      format = "png",
+      clip = list(
+        x = clip$x,
+        y = clip$y,
+        width = clip$width,
+        height = clip$height,
+        scale = 1
+      ),
+      fromSurface = TRUE,
+      captureBeyondViewport = TRUE,
+      timeout_ = timeout
+    ),
+    error = function(e) {
+      # A chromote command timeout is a timeout of the capture, not a raw
+      # chromote error.
+      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+        cli::cli_abort(
+          "Timed out after {timeout}s capturing the screenshot.",
+          class = "paparazzi_error_timeout",
+          call = call,
+          parent = e
+        )
+      }
+      stop(e)
+    }
+  )
+}
