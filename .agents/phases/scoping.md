@@ -241,6 +241,36 @@ Four things to keep visible:
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close-out): landed the scoping task end to end on this
+  branch (72d42d8..): the pz_find*() stack (context scope stack, pinned
+  wrapper, object group, detach probe, eager narrowing, release seams),
+  scoped expectations (expect_impl() resolves the root once before its
+  retry loop and threads it into every per-attempt loc_resolve_once();
+  NULL on a scope is the pinned set itself), scoped getters
+  (get_impl()/pz_get_count() probe once per call; NULL on a scope
+  returns one row per pinned match, the count without a re-query;
+  detached scopes raise paparazzi_error_detached through the getters,
+  and pz_get_count()'s doc carries the 0-vs-error caveat), the element
+  list-column (one pinned single-element set per match, one context
+  per match via push_scope(), row-naming narrowed descriptions, union
+  match-suffix form), and the pillar machinery (pillar in Imports;
+  type_sum -> "pz_ctx" via @importFrom + @export so roxygen emits
+  S3method, pillar_shaft shows the top scope, "root" defensively).
+  786 tests green. Next: the navigation task (pz_wait_for_navigation()
+  calls release_object_group() -- the seam is wired -- then resets scope
+  to root); pz_get_style() joins the element column when its task lands.
+  Provisional: resolved as designed -- pop/reset at the root are
+  no-ops; per-match pinning costs n extra CDP calls per tibble getter;
+  the which-conflict class is paparazzi_error_input; an out-of-range
+  narrowing nth errors while a target which keeps waiting;
+  pz_get_count on a detached scope errors instead of returning 0.
+  Carried forward, unchanged: pz_find_nth()'s n-before-dots signature
+  stays SPEC-unreviewed; the detach message stays verbatim ("Scope
+  element" even for multi-element sets); root target = NULL keeps the
+  provisional document.body meaning (the element column describes it
+  as `body` (which: 1)); pz_get_text() at the root still includes
+  inline <script>/<style> text.
+
 - 2026-09-24 (design): landed this phase note; baseline is 737592b
   (green per the prior phase close-outs). Decisions above resolved
   before code. Next (implementer): fixture scopes.html + R/scope.R +
