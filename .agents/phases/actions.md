@@ -126,6 +126,18 @@ handoffs for this phase only. Builds on the resolution engine
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (5vak review close-out): garrick's manual review (two
+  plannotator batches) triaged -- every finding confirmed or intended
+  except three kept as-is by ruling: as_loc() stays strict on NULL,
+  pz_with_page()'s substitute/eval stays, the new_pinned() finalizer
+  stays (dispositions on the epic d84x). The one 5vak-introduced
+  finding (ragged doc wrap) fixed at a43bc20 + bce1749. The
+  pre-existing findings are eight issues under d84x: fqjj (structure),
+  1fqv (checkers), vpea (roxygen conventions), 35nb (call handling),
+  2bg1 (withr::defer), 6drg (raw strings + R >= 4.0), c5fz (which
+  helper), v56x (@examples, backlog until the post-grat docs epic).
+  Next: kata-5vak merged to main; those issues are the epic's new
+  queue. Provisional: none new.
 - 2026-09-24 (5vak close): landed the actionability wait (pointer
   actions poll for visible + non-empty box before dispatch) at
   b4f609a, with the actionability.html fixture and six tests; roborev
