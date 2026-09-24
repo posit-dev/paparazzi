@@ -168,7 +168,9 @@ pz_record_stop <- function(ctx) {
     cli::cli_abort(msg, class = "paparazzi_error_record")
   }
 
-  if (inherits(rec$frame, "paparazzi_frame") && identical(rec$frame$when, "stop")) {
+  if (
+    inherits(rec$frame, "paparazzi_frame") && identical(rec$frame$when, "stop")
+  ) {
     rec$crop <- record_crop_box(ctx, rec$frame)
   }
   record_encode(rec)
@@ -328,7 +330,11 @@ check_recording <- function(ctx, call = caller_env()) {
   }
   rec
 }
-check_record_hold <- function(hold, arg = caller_arg(hold), call = caller_env()) {
+check_record_hold <- function(
+  hold,
+  arg = caller_arg(hold),
+  call = caller_env()
+) {
   if (
     !is.numeric(hold) ||
       length(hold) != 2L ||
@@ -469,7 +475,10 @@ record_crop_box <- function(ctx, spec, call = caller_env()) {
   if (!is.null(spec$bounds)) {
     els <- loc_resolve(ctx, spec$bounds, multiple = "all", call = call)
     withr::defer(release_elements(els))
-    clamps[["frame bounds"]] <- box_union(el_rects(els, call = call), call = call)
+    clamps[["frame bounds"]] <- box_union(
+      el_rects(els, call = call),
+      call = call
+    )
   }
   clamps[["the viewport"]] <- c(
     0,

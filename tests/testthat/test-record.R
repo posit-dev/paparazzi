@@ -155,7 +155,9 @@ test_that("a frame crops the recording at encode time", {
 
   out <- withr::local_tempfile(fileext = ".mp4")
   page |>
-    pz_record(out, pz_wait(page, 0.3),
+    pz_record(
+      out,
+      pz_wait(page, 0.3),
       fps = 10,
       hold = c(0, 0),
       frame = pz_frame("#box", pad = 8)
@@ -176,7 +178,12 @@ test_that("frame when = start and stop measure at different times", {
 
   out_stop <- withr::local_tempfile(fileext = ".mp4")
   page |>
-    pz_record_start(out_stop, fps = 10, hold = c(0, 0), frame = pz_frame("#box", pad = 8))
+    pz_record_start(
+      out_stop,
+      fps = 10,
+      hold = c(0, 0),
+      frame = pz_frame("#box", pad = 8)
+    )
   pz_js(page, "growBox()")
   pz_wait(page, 0.3)
   page |> pz_record_stop()
@@ -187,7 +194,8 @@ test_that("frame when = start and stop measure at different times", {
   page$session$Page$reload()
   pz_wait(page, 0.3)
   page |>
-    pz_record_start(out_start,
+    pz_record_start(
+      out_start,
       fps = 10,
       hold = c(0, 0),
       frame = pz_frame("#box", pad = 8, when = "start")
@@ -225,7 +233,11 @@ test_that("recording input and lifecycle errors are classed", {
     class = "paparazzi_error_input"
   )
   expect_error(
-    pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), method = "screencast"),
+    pz_record_start(
+      page,
+      withr::local_tempfile(fileext = ".mp4"),
+      method = "screencast"
+    ),
     class = "paparazzi_error_unsupported"
   )
   expect_error(
