@@ -11,6 +11,8 @@ Description: Drive web pages from R with a pipeable interface built on
     cursor and typing animations for demos. Works with any page, including
     Shiny apps.
 License: MIT + file LICENSE
+Depends:
+    R (>= 4.0.0)
 Imports:
     chromote,
     cli,
