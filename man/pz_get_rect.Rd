@@ -13,13 +13,15 @@ pz_get_rect(ctx, ..., target = NULL)
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
-page body.}
+current context: the pinned set at a scoped context, or the page
+body at the root.}
 }
 \value{
 A tibble with columns \code{x}, \code{y}, \code{width}, \code{height} (doubles,
 CSS pixels, viewport-relative), one row per match, plus an
-\code{element} list-column. The \code{element} column is reserved for scoped
-contexts and is not yet populated.
+\code{element} list-column. Each \code{element} entry is a context scoped
+to that one match, pinned at get time, so a chain can continue
+from it: \code{rects$element[[2]] |> pz_hover()}.
 }
 \description{
 \code{pz_get_rect()} returns the bounding box of every element matching

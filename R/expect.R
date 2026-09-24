@@ -16,8 +16,9 @@
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: today only the root exists, where it stands for the
-#'   page body, so `pz_expect_exists(page)` trivially passes.
+#'   current context: the pinned set at a scoped context (so
+#'   `pz_expect_exists()` on one trivially passes while the scope is
+#'   live), the page body at the root.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
@@ -70,7 +71,8 @@ pz_expect_exists <- function(
 #'   unbounded).
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body.
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
@@ -162,7 +164,8 @@ pz_expect_count <- function(
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body.
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
@@ -233,7 +236,9 @@ pz_expect_hidden <- function(
 #'   `"exact"`, or `"regex"` (an R regex matched with [grepl()]).
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body, so `pz_expect_text(page, "Welcome")` checks the page text.
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root, so `pz_expect_text(page, "Welcome")` checks the
+#'   page text.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
@@ -310,12 +315,19 @@ expect_retry <- function(fn, timeout, loop, interval = 0.1) {
 #' the observed values to R first, so nothing pins across iterations.
 #' `check(els)` returns `list(pass, observed)`; comparison happens in R,
 #' not in a JS predicate, so the classed failure reports a real
-#' last-seen value. `target = NULL` means the current context: until
-#' scoped contexts exist, that's the root, where it resolves to a single
-#' implicit `document.body` element -- a one-element JS array, resolved
-#' with loc_resolve_once() but without the loc resolver expression.
-#' Passes and failures route through the testthat bridge when running
-#' inside testthat; outside, a failure is a `paparazzi_expectation_failure`.
+#' last-seen value. Every attempt re-queries lazily inside the pinned
+#' scope (re-renders within a scope are fine) behind a fresh detach
+#' probe: a scope detaching mid-expectation aborts with the classed
+#' error instead of degrading into a failing check on a stale set. At
+#' the root the probe is a pure NULL read, so each attempt is
+#' byte-identical to the unscoped path.
+#' `target = NULL` means the current context: at a scoped context that
+#' is the pinned set itself, used as-is and never released (its scope
+#' owns it); at the root it resolves to a single implicit
+#' `document.body` element -- a one-element JS array, resolved with
+#' loc_resolve_once() but without the loc resolver expression. Passes
+#' and failures route through the testthat bridge when running inside
+#' testthat; outside, a failure is a `paparazzi_expectation_failure`.
 #'
 #' @noRd
 expect_impl <- function(
@@ -332,19 +344,45 @@ expect_impl <- function(
   timeout <- resolve_timeout(timeout, ctx$page, call = call)
 
   target_expr <- target_resolver_expr(target, call = call)
-  expr <- target_expr$expr
+  expr <- target_expr$fn
   target_desc <- target_expr$description
 
+  # scope_top() is the raw stack read, for routing only: is this a
+  # scoped context? The detach probe itself runs inside the retry
+  # loop, once per attempt: a scope detaching mid-expectation aborts
+  # with the classed error instead of degrading into a failing check
+  # on a stale set. At the root scope_root() is a pure NULL read, so
+  # every attempt is byte-identical to the unscoped path.
+  scoped <- scope_top(ctx)
+
   start <- Sys.time()
-  result <- expect_retry(
-    fn = function() {
-      els <- loc_resolve_once(ctx, expr, target_desc, call)
-      on.exit(release_elements(els), add = TRUE)
-      check(els)
-    },
-    timeout = timeout,
-    loop = ctx$page$child_loop
-  )
+  if (is.null(target) && !is.null(scoped)) {
+    # target = NULL on a scoped context: the pinned set itself, no
+    # resolution and no re-query. check() re-reads the DOM through it
+    # on every attempt, so retries still follow re-renders.
+    target_desc <- scoped$description
+    result <- expect_retry(
+      fn = function() check(scope_root(ctx, call = call)),
+      timeout = timeout,
+      loop = ctx$page$child_loop
+    )
+  } else {
+    result <- expect_retry(
+      fn = function() {
+        els <- loc_resolve_once(
+          ctx,
+          expr,
+          target_desc,
+          call,
+          root = scope_root(ctx, call = call)
+        )
+        on.exit(release_elements(els), add = TRUE)
+        check(els)
+      },
+      timeout = timeout,
+      loop = ctx$page$child_loop
+    )
+  }
   waited <- round(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
 
   # The failure text carries page-derived content (observed) and

@@ -13,7 +13,8 @@ pz_get_html(ctx, ..., target = NULL)
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
-page body.}
+current context: the pinned set at a scoped context, or the page
+body at the root.}
 }
 \value{
 A character vector, one entry per match.

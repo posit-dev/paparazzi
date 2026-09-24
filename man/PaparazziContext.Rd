@@ -7,9 +7,12 @@
 \description{
 A \strong{context} is the first argument and invisible return value of every
 \verb{pz_*()} function, enabling \verb{|>} chains. A context is either the root (a
-\code{PaparazziPage}) or a scoped context created by \verb{pz_find*()} (not yet
-implemented). Session-level state -- the Chromote session, default timeout,
-staging settings, recorder state -- lives on the page.
+\code{PaparazziPage}) or a scoped context created by \verb{pz_find*()}: a context
+holding an immutable stack of pinned element sets. The stack is never
+mutated in place -- \verb{pz_find*()} derive a new context sharing the
+parent's pinned sets -- and \code{pz_find_pop()}/\code{pz_find_reset()} unwind it
+the same way. Session-level state -- the Chromote session, default
+timeout, staging settings, recorder state -- lives on the page.
 }
 \keyword{internal}
 \section{Public fields}{
@@ -25,6 +28,7 @@ staging settings, recorder state -- lives on the page.
 \subsection{Public methods}{
   \itemize{
     \item \href{#method-PaparazziContext-initialize}{\code{PaparazziContext$new()}}
+    \item \href{#method-PaparazziContext-print}{\code{PaparazziContext$print()}}
     \item \href{#method-PaparazziContext-clone}{\code{PaparazziContext$clone()}}
   }
 }
@@ -35,13 +39,34 @@ staging settings, recorder state -- lives on the page.
   Create a context attached to a page.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{PaparazziContext$new(page)}
+    \preformatted{PaparazziContext$new(page, scope = list())}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{page}}{A \code{PaparazziPage}.}
+      \item{\code{scope}}{Stack of pinned element sets; defaults to empty (the
+root context).}
+    }
+    \if{html}{\out{</div>}}
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PaparazziContext-print"></a>}}
+\if{latex}{\out{\hypertarget{method-PaparazziContext-print}{}}}
+\subsection{\code{PaparazziContext$print()}}{
+  Print the scope stack.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PaparazziContext$print(...)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{Unused; included for compatibility with the \code{print()} generic.}
     }
     \if{html}{\out{</div>}}
   }
@@ -79,6 +104,9 @@ staging settings, recorder state -- lives on the page.
 Waits must pump this loop so scheduled timers keep firing.}
 
     \item{\code{default_timeout}}{Session default timeout in seconds.}
+
+    \item{\code{object_group}}{The CDP object group holding every remote
+object a scope pinned (read-only; internal).}
   }
   \if{html}{\out{</div>}}
 }
@@ -87,6 +115,7 @@ Waits must pump this loop so scheduled timers keep firing.}
   \itemize{
     \item \href{#method-PaparazziPage-initialize}{\code{PaparazziPage$new()}}
     \item \href{#method-PaparazziPage-close}{\code{PaparazziPage$close()}}
+    \item \href{#method-PaparazziPage-release_object_group}{\code{PaparazziPage$release_object_group()}}
     \item \href{#method-PaparazziPage-view}{\code{PaparazziPage$view()}}
     \item \href{#method-PaparazziPage-is_closed}{\code{PaparazziPage$is_closed()}}
     \item \href{#method-PaparazziPage-print}{\code{PaparazziPage$print()}}
@@ -121,6 +150,22 @@ Waits must pump this loop so scheduled timers keep firing.}
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{PaparazziPage$close()}
+    \if{html}{\out{</div>}}
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PaparazziPage-release_object_group"></a>}}
+\if{latex}{\out{\hypertarget{method-PaparazziPage-release_object_group}{}}}
+\subsection{\code{PaparazziPage$release_object_group()}}{
+  Release every remote object a scope pinned.
+Internal: runs on close, and the navigation task calls it before
+a navigation resets scopes. (An \verb{@noRd} here would suppress the
+whole PaparazziPage topic, so it stays documented like its
+siblings on this internal-keyword topic.)
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PaparazziPage$release_object_group()}
     \if{html}{\out{</div>}}
   }
 }

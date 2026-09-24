@@ -17,6 +17,7 @@ Imports:
     cli,
     jsonlite,
     later,
+    pillar,
     R6,
     rlang (>= 1.2.0),
     tibble,

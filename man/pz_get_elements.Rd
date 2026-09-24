@@ -13,12 +13,13 @@ pz_get_elements(ctx, ..., target = NULL)
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
-page body.}
+current context: the pinned set at a scoped context, or the page
+body at the root.}
 }
 \value{
 A tibble with columns \code{tag}, \code{id}, \code{class}, \code{text}, one row
-per match, plus an \code{element} list-column. The \code{element} column is
-reserved for scoped contexts and is not yet populated.
+per match, plus an \code{element} list-column of contexts scoped to
+each match, pinned at get time (see \code{\link[=pz_get_rect]{pz_get_rect()}}).
 }
 \description{
 \code{pz_get_elements()} returns a summary of every element matching

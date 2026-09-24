@@ -13,7 +13,8 @@ pz_get_text(ctx, ..., target = NULL, raw = FALSE)
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
-page body.}
+current context: the pinned set at a scoped context, or the page
+body at the root.}
 
 \item{raw}{Return the text without collapsing whitespace?}
 }

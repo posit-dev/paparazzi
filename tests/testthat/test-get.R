@@ -100,7 +100,7 @@ test_that("pz_get_rect returns the exact CSS-pixel geometry of one match", {
   expect_equal(rect$height, 40)
 })
 
-test_that("pz_get_rect returns one row per match with a trailing element stub", {
+test_that("pz_get_rect returns one row per match with scoped element entries", {
   page <- local_getters_page()
   rects <- pz_get_rect(page, target = "div[id^='box']")
   expect_identical(nrow(rects), 2L)
@@ -110,10 +110,11 @@ test_that("pz_get_rect returns one row per match with a trailing element stub", 
   expect_equal(rects$y, c(20, 100))
   expect_equal(rects$width, c(100, 200))
   expect_equal(rects$height, c(40, 80))
-  # The element column is a list of NULLs, reserved for scoped contexts.
+  # One scoped context per match: the element column is live.
   expect_type(rects$element, "list")
   expect_identical(length(rects$element), nrow(rects))
-  expect_true(all(vapply(rects$element, is.null, logical(1))))
+  expect_true(all(vapply(rects$element, inherits, logical(1), "PaparazziContext"))
+  )
 })
 
 test_that("pz_get_elements summarizes every match", {
@@ -211,4 +212,146 @@ test_that("getters return values, not the context", {
   expect_type(pz_get_count(page, target = ".item"), "integer")
   expect_type(pz_get_url(page), "character")
   expect_s3_class(pz_get_rect(page, target = "#box1"), "tbl_df")
+})
+
+# Scoped getters and the element list-column run against scopes.html
+# (#scope-a/#scope-b with parallel repeated .sc-item classes), so
+# in-scope counts and match positions are unambiguous.
+
+test_that("target = NULL on a scope returns one row per pinned match", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-a .sc-item")
+
+  expect_identical(
+    pz_get_text(ctx),
+    c("A1", "A2", "A3", "nested-a", "shared target", "get_weather")
+  )
+  rects <- pz_get_rect(ctx)
+  expect_identical(nrow(rects), 6L)
+  expect_identical(pz_get_value(ctx), rep(NA_character_, 6L))
+})
+
+test_that("pz_get_count on a scope returns the pinned count immediately", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-a .sc-item")
+
+  # The scope's own count, without re-querying the pinned set.
+  expect_identical(pz_get_count(ctx), 6L)
+  # An explicit target counts lazily inside the scope: 0 without waiting.
+  expect_identical(pz_get_count(ctx, target = ".sc-label"), 1L)
+  expect_identical(pz_get_count(ctx, target = ".never"), 0L)
+  # A detached scope raises instead of returning 0: the pinned set
+  # promises a live set and is never silently re-queried.
+  pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[0].remove()")
+  expect_error(pz_get_count(ctx), class = "paparazzi_error_detached")
+})
+
+test_that("an explicit target resolves lazily inside the scope", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-b")
+
+  # .sc-label matches once inside #scope-b, twice at the root.
+  expect_identical(pz_get_text(ctx, target = ".sc-label"), "nested-b")
+  # Auto-wait still applies inside the scope.
+  pz_js(
+    page,
+    "setTimeout(function() {
+      const el = document.createElement('div');
+      el.className = 'late';
+      el.textContent = 'late B';
+      document.getElementById('scope-b').appendChild(el);
+    }, 300)"
+  )
+  expect_identical(pz_get_text(ctx, target = ".late"), "late B")
+})
+
+test_that("the element column holds one scoped context per match", {
+  page <- local_scopes_page()
+  rects <- pz_get_rect(page, target = "#scope-a .sc-item")
+
+  expect_identical(nrow(rects), 6L)
+  entries <- rects$element
+  expect_true(all(vapply(entries, inherits, logical(1), "PaparazziContext")))
+  expect_true(all(vapply(entries, function(ctx) length(ctx$scope), integer(1)) == 1L))
+  # One single-element pinned set per match, each its own array.
+  expect_identical(
+    vapply(entries, function(ctx) ctx$scope[[1]]$count, integer(1)),
+    rep(1L, 6)
+  )
+  # The per-match description names the row, so a later detach does.
+  expect_identical(
+    vapply(entries, function(ctx) ctx$scope[[1]]$description, character(1)),
+    paste0("`#scope-a .sc-item` (which: ", 1:6, ")")
+  )
+  ids <- vapply(entries, function(ctx) ctx$scope[[1]]$object_id, character(1))
+  expect_length(unique(ids), 6L)
+})
+
+test_that("the element column continues the chain from one match", {
+  page <- local_scopes_page()
+  rects <- pz_get_rect(page, target = "#scope-a .sc-item")
+
+  # The acceptance criterion: the pinned match drives a real action.
+  second <- rects$element[[2]]
+  expect_identical(pz_get_text(second), "A2")
+  expect_invisible(pz_hover(second))
+  expect_identical(
+    pz_js(page, "document.querySelector('#scope-a .sc-item:hover').textContent"),
+    "A2"
+  )
+})
+
+test_that("a union target's element entries take the match-suffix form", {
+  page <- local_scopes_page()
+  els <- pz_get_elements(page, target = list(".sc-target", "[data-task]"))
+  expect_identical(nrow(els), 4L)
+  expect_identical(
+    els$element[[3]]$scope[[1]]$description,
+    "`.sc-target` | `[data-task]` (match: 3)"
+  )
+})
+
+test_that("a detached element-column context names its row", {
+  page <- local_scopes_page()
+  els <- pz_get_elements(page, target = "#scope-a .sc-item")
+  ctx <- els$element[[3]]
+
+  # Drop the row's element; the pinned match is stale, never re-queried.
+  pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[2].remove()")
+  err <- expect_error(pz_click(ctx), class = "paparazzi_error_detached")
+  msg <- paste(conditionMessage(err), collapse = " ")
+  expect_match(msg, "Scope: `#scope-a \\.sc-item` \\(which: 3\\)")
+})
+
+test_that("a which-loc's element entry names its original match when detached", {
+  page <- local_scopes_page()
+  els <- pz_get_elements(page, target = pz_loc("#scope-a .sc-item", which = "last"))
+  ctx <- els$element[[1]]
+
+  # The target already picked its match, so the entry keeps that
+  # selection instead of being re-labeled match 1; a later detach
+  # names the real match, not the first one.
+  pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[5].remove()")
+  err <- expect_error(pz_click(ctx), class = "paparazzi_error_detached")
+  msg <- paste(conditionMessage(err), collapse = " ")
+  expect_match(msg, "Scope: `#scope-a \\.sc-item` \\(which: last\\)")
+})
+
+test_that("target = NULL on a scope narrows the scope's own locs", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-b .sc-item")
+  rects <- pz_get_rect(ctx)
+  # The entry's stack is the getter context's whole stack plus the
+  # match: the parent scope, then the per-match set.
+  entry <- rects$element[[2]]
+  expect_identical(length(entry$scope), 2L)
+  expect_identical(entry$scope[[1]]$description, "`#scope-b .sc-item`")
+  expect_identical(entry$scope[[2]]$description, "`#scope-b .sc-item` (which: 2)")
+})
+
+test_that("the element column renders its contexts through pillar", {
+  page <- local_scopes_page()
+  rects <- pz_get_rect(page, target = "#scope-a .sc-item")
+  out <- paste(capture.output(print(rects)), collapse = "\n")
+  expect_match(out, "<pz_ctx>", fixed = TRUE)
 })

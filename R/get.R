@@ -7,7 +7,19 @@
 
 # Driver for the target-based getters. `read(els)` pulls values into R;
 # it never sees an empty set, because loc_resolve() errors on timeout.
+# `target = NULL` means the current context: at a scoped context that is
+# the pinned set itself, used as-is, never released (its scope owns it),
+# and detach-checked here once; at the root, NULL keeps the implicit
+# document.body meaning through loc_resolve(). Explicit targets resolve
+# lazily inside the current scope -- loc_resolve() probes the scope once
+# per call.
 get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
+  if (is.null(target)) {
+    scoped <- scope_root(ctx, call = call)
+    if (!is.null(scoped)) {
+      return(read(scoped))
+    }
+  }
   els <- loc_resolve(
     ctx,
     target,
@@ -29,26 +41,108 @@ chr_or_na <- function(x) {
   )
 }
 
-# Tibble factory for the getters: the trailing `element` list-column is
-# reserved for the scoping task, which will pin one context per match.
-# Until then it holds NULLs and is documented as not yet populated.
-new_get_tibble <- function(..., n) {
+# Pin one single-element set off a matched array: the element column's
+# per-match scope. The slice is tagged with the page's object group, so
+# it outlives the getter's transient handle and is released with every
+# other pinned object; the array it was sliced from stays with its
+# caller. `i` is 1-based, so it always picks a live element.
+pin_match_id <- function(els, i, call = caller_env()) {
+  timeout <- els$page$default_timeout
+  res <- tryCatch(
+    els$page$session$Runtime$callFunctionOn(
+      paste0("function() { return [this[", i, " - 1]]; }"),
+      objectId = els$object_id,
+      returnByValue = FALSE,
+      objectGroup = els$page$object_group,
+      timeout_ = timeout
+    ),
+    error = function(e) {
+      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+        cli::cli_abort(
+          "Timed out after {timeout}s pinning match {i} of {els$description}.",
+          class = "paparazzi_error_timeout",
+          call = call,
+          parent = e
+        )
+      }
+      stop(e)
+    }
+  )
+  err <- res$exceptionDetails
+  if (!is.null(err)) {
+    cli::cli_abort(
+      "JavaScript error while pinning match {i} of {els$description}: {err$exception$description %||% err$text %||% 'unknown error'}.",
+      class = "paparazzi_error_js",
+      call = call
+    )
+  }
+  res$result$objectId
+}
+
+# Wrap one pinned match as the element column's entry: a context whose
+# stack is the getter context's whole stack plus that match. The
+# description narrows the getter's locs with `which = i`, so a later
+# detach names the row. One extra CDP round trip per match, accepted:
+# contexts sharing the getter's array handle would break the uniform
+# one-array-per-scope wrapper contract.
+pin_match <- function(ctx, els, locs, i, call = caller_env()) {
+  pinned <- new_pinned(
+    els$page,
+    pin_match_id(els, i, call = call),
+    1L,
+    narrow_description(locs, els$description, i),
+    locs = narrow_locs(locs, i)
+  )
+  push_scope(ctx, pinned)
+}
+
+# The locs the per-match element scopes narrow from: the promoted
+# target for an explicit target, and the scope's own locs for
+# target = NULL on a scoped context (the pinned set itself). At the
+# root, target = NULL is the provisional document.body match, whose
+# single element is the body.
+get_element_locs <- function(els, target, call = caller_env()) {
+  if (is.null(target)) {
+    if (inherits(els, "paparazzi_pinned")) {
+      els$locs
+    } else {
+      list(pz_loc("body"))
+    }
+  } else {
+    as_loc_list(target, call = call)
+  }
+}
+
+# Tibble factory for the getters: while the getter's transient handle
+# is still live (inside get_impl()'s read, before the on-exit release),
+# pin one single-element set per match off the matched array and store
+# one context per match in the trailing `element` list-column.
+new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
   out <- tibble::tibble(...)
-  out$element <- vector("list", n)
+  locs <- get_element_locs(els, target, call = call)
+  out$element <- lapply(
+    seq_len(els$count),
+    function(i) pin_match(ctx, els, locs, i, call = call)
+  )
   out
 }
 
 #' Count matching elements
 #'
-#' `pz_get_count()` returns the number of elements matching `target`.
-#' Unlike the other getters it doesn't wait for a match: `0` is a valid
-#' answer, so it resolves once and returns immediately.
+#' `pz_get_count()` returns the number of elements matching `target`,
+#' counted inside the current scope. Unlike the other getters it
+#' doesn't wait for a match: `0` is a valid answer, so it resolves once
+#' and returns immediately. One exception: on a scope whose pinned
+#' elements have left the page it raises `paparazzi_error_detached`
+#' instead of returning `0`, because the pinned set promises a live set
+#' and is never silently re-queried.
 #'
 #' @param ctx A paparazzi context.
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body.
+#'   current context: the pinned set at a scoped context, whose count
+#'   comes back without a re-query, or the page body at the root.
 #' @return An integer.
 #' @export
 pz_get_count <- function(ctx, ..., target = NULL) {
@@ -56,7 +150,21 @@ pz_get_count <- function(ctx, ..., target = NULL) {
   call <- current_env()
   check_context(ctx, call = call)
   resolved <- target_resolver_expr(target, call = call)
-  els <- loc_resolve_once(ctx, resolved$expr, resolved$description, call = call)
+  # One use, one check: the scope is probed once per call, so a
+  # detached scope raises its classed error through the count getter
+  # too instead of counting nothing.
+  root <- scope_root(ctx, call = call)
+  if (is.null(target) && !is.null(root)) {
+    # The scope's own count, without re-querying the pinned set.
+    return(root$count)
+  }
+  els <- loc_resolve_once(
+    ctx,
+    resolved$fn,
+    resolved$description,
+    call = call,
+    root = root
+  )
   on.exit(release_elements(els), add = TRUE)
   els$count
 }
@@ -72,7 +180,8 @@ pz_get_count <- function(ctx, ..., target = NULL) {
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body.
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @param raw Return the text without collapsing whitespace?
 #' @return A character vector, one entry per match.
 #' @export
@@ -102,7 +211,8 @@ pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body.
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @return A character vector, one entry per match.
 #' @export
 pz_get_value <- function(ctx, ..., target = NULL) {
@@ -127,7 +237,8 @@ pz_get_value <- function(ctx, ..., target = NULL) {
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body.
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @return A character vector, one entry per match.
 #' @export
 pz_get_attr <- function(ctx, name, ..., target = NULL) {
@@ -159,11 +270,13 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body.
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @return A tibble with columns `x`, `y`, `width`, `height` (doubles,
 #'   CSS pixels, viewport-relative), one row per match, plus an
-#'   `element` list-column. The `element` column is reserved for scoped
-#'   contexts and is not yet populated.
+#'   `element` list-column. Each `element` entry is a context scoped
+#'   to that one match, pinned at get time, so a chain can continue
+#'   from it: `rects$element[[2]] |> pz_hover()`.
 #' @export
 pz_get_rect <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -174,7 +287,7 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
     timeout = NULL,
     read = function(els) {
       rects <- el_rects(els, call = call)
-      new_get_tibble(!!!rects, n = els$count)
+      new_get_tibble(ctx, els, target, !!!rects, call = call)
     },
     call = call
   )
@@ -191,10 +304,11 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body.
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @return A tibble with columns `tag`, `id`, `class`, `text`, one row
-#'   per match, plus an `element` list-column. The `element` column is
-#'   reserved for scoped contexts and is not yet populated.
+#'   per match, plus an `element` list-column of contexts scoped to
+#'   each match, pinned at get time (see [pz_get_rect()]).
 #' @export
 pz_get_elements <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -207,11 +321,14 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
       vals <- els_values(els, get_elements_js, call = call)
       field <- function(name) chr_or_na(lapply(vals, `[[`, name))
       new_get_tibble(
+        ctx,
+        els,
+        target,
         tag = field("tag"),
         id = field("id"),
         class = field("class"),
         text = collapse_ws(field("text")),
-        n = els$count
+        call = call
       )
     },
     call = call
@@ -227,7 +344,8 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
-#'   page body.
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @return A character vector, one entry per match.
 #' @export
 pz_get_html <- function(ctx, ..., target = NULL) {

@@ -72,3 +72,11 @@ actions_fixture_file <- function() {
 local_actions_page <- function(.env = parent.frame()) {
   local_page(actions_fixture_file(), .env = .env)
 }
+
+scopes_fixture_file <- function() {
+  test_path("fixtures", "scopes.html")
+}
+
+local_scopes_page <- function(.env = parent.frame()) {
+  local_page(scopes_fixture_file(), .env = .env)
+}

@@ -3,10 +3,11 @@
 # sanctioned exception is element focus()/blur() in pz_focus()/pz_blur()
 # (element-state methods, not input events; Playwright does the same).
 
-# The pinned element set at the top of the scope stack, or NULL at the
-# root. The set is owned by the scope that pinned it: actions use it
-# but never release it. The stack is empty until pz_find*() lands; this
-# dormant branch is written against that documented shape.
+# The pinned element set at the top of the scope stack, or NULL at
+# the root. The set is owned by the scope that pinned it: actions use
+# it but never release it. scope_root() (scope.R) adds the detach
+# check every consumer runs once per call; scope_top() is the raw
+# stack read, for routing decisions that don't consume the scope.
 scope_top <- function(ctx) {
   if (length(ctx$scope) == 0) {
     NULL
@@ -15,14 +16,6 @@ scope_top <- function(ctx) {
   }
 }
 
-# The element set an element action operates on. Root: resolve the
-# target lazily via loc_resolve() (auto-waiting, erroring on multiple
-# matches); NULL needs a target. Scoped: the pinned set at the top of
-# the stack, erroring on multiple matches like loc_resolve() does. An
-# explicit target in a scoped context will resolve within the pinned
-# scope once the pz_find machinery lands; until then the actions see
-# the pinned set. Returns list(els, pinned): a pinned set must NOT be
-# released by the caller (its scope owns it).
 check_scope_single <- function(scoped, call = caller_env()) {
   if (scoped$count > 1) {
     cli::cli_abort(
@@ -36,21 +29,29 @@ check_scope_single <- function(scoped, call = caller_env()) {
   }
 }
 
+# The element set an element action operates on, detach-checked. NULL
+# means the current context: the pinned set itself at a scoped
+# context, used as-is and never released (its scope owns it), erroring
+# on multiple matches like loc_resolve() does; at the root, NULL needs
+# a target. An explicit target resolves lazily INSIDE the current
+# scope (auto-waiting, so re-renders within the scope are fine) and is
+# released after the action. Returns list(els, pinned): a pinned set
+# must NOT be released by the caller.
 action_elements <- function(ctx, target, call = caller_env()) {
-  scoped <- scope_top(ctx)
-  if (!is.null(scoped)) {
+  if (is.null(target)) {
+    scoped <- scope_root(ctx, call = call)
+    if (is.null(scoped)) {
+      cli::cli_abort(
+        c(
+          "{.arg target} is needed at the root context.",
+          i = "Pass a CSS selector or a {.fn pz_loc} spec."
+        ),
+        class = "paparazzi_error_target",
+        call = call
+      )
+    }
     check_scope_single(scoped, call = call)
     return(list(els = scoped, pinned = TRUE))
-  }
-  if (is.null(target)) {
-    cli::cli_abort(
-      c(
-        "{.arg target} is needed at the root context.",
-        i = "Pass a CSS selector or a {.fn pz_loc} spec."
-      ),
-      class = "paparazzi_error_target",
-      call = call
-    )
   }
   list(
     els = loc_resolve(ctx, target, multiple = "error", call = call),
@@ -385,7 +386,7 @@ pz_blur <- function(ctx, ...) {
   check_context(ctx)
   check_dots_empty()
   call <- current_env()
-  scoped <- scope_top(ctx)
+  scoped <- scope_root(ctx, call = call)
   if (!is.null(scoped)) {
     check_scope_single(scoped, call = call)
     els_call(

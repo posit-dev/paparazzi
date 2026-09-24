@@ -329,3 +329,93 @@ test_that("expect_retry pumps the page's event loop between checks", {
   )
   expect_true(result$pass)
 })
+
+# Scoped-context expectations run against scopes.html: two parallel
+# #scope-a/#scope-b sections, so in-scope counts are unambiguous.
+
+test_that("expectations resolve inside the current scope", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-b")
+
+  # An explicit target resolves lazily inside the scope: .sc-label
+  # matches once inside #scope-b, twice at the root.
+  expect_invisible(
+    ctx |> pz_expect_count(1, target = ".sc-label", timeout = 0)
+  )
+  expect_invisible(
+    ctx |> pz_expect_text("shared", target = ".sc-target", timeout = 0)
+  )
+  # NULL means the scope itself: the pinned #scope-b section.
+  expect_invisible(ctx |> pz_expect_count(1, timeout = 0))
+  expect_invisible(ctx |> pz_expect_text("B1", timeout = 0))
+  # A narrowed scope's own element.
+  item <- pz_find_nth(ctx, 1, target = ".sc-item")
+  expect_invisible(item |> pz_expect_text("B1", timeout = 0))
+})
+
+test_that("each attempt re-queries lazily inside the pinned scope", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-a")
+  pz_js(
+    page,
+    "setTimeout(function() {
+      const el = document.createElement('span');
+      el.className = 'sc-label';
+      el.textContent = 'late';
+      document.getElementById('scope-a').appendChild(el);
+    }, 300)"
+  )
+  # Inside the scope the count reaches 2 once the span lands; at the
+  # root it would be 3 (scope-b's sc-label included) and never pass.
+  expect_invisible(ctx |> pz_expect_count(2, target = ".sc-label", timeout = 3))
+})
+
+test_that("a detached scope aborts expectations before the retry loop", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-a .sc-item")
+
+  pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[0].remove()")
+  expect_error(
+    ctx |> pz_expect_count(3, target = ".sc-item", timeout = 0.3),
+    class = "paparazzi_error_detached"
+  )
+  expect_error(
+    ctx |> pz_expect_count(3, timeout = 0.3),
+    class = "paparazzi_error_detached"
+  )
+})
+
+test_that("a scope detaching mid-expectation raises the classed error", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-a .sc-item")
+
+  # The expectation fails and keeps retrying; the scope detaches
+  # mid-retry, and the next attempt's probe aborts instead of letting
+  # the checks degrade into failures on a stale set.
+  pz_js(
+    page,
+    "setTimeout(function() {
+      document.querySelectorAll('#scope-a .sc-item').forEach((el) => el.remove());
+    }, 300)"
+  )
+  expect_error(
+    ctx |> pz_expect_count(1, target = ".never", timeout = 3),
+    class = "paparazzi_error_detached"
+  )
+})
+
+test_that("a mid-expectation detach raises for target = NULL too", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-b .sc-item")
+
+  pz_js(
+    page,
+    "setTimeout(function() {
+      document.getElementById('scope-b').remove();
+    }, 300)"
+  )
+  expect_error(
+    ctx |> pz_expect_text("never appears", timeout = 3),
+    class = "paparazzi_error_detached"
+  )
+})
