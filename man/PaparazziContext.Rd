@@ -159,6 +159,13 @@ Waits must pump this loop so scheduled timers keep firing.}
     \preformatted{PaparazziPage$print(...)}
     \if{html}{\out{</div>}}
   }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{Unused; included for compatibility with the \code{print()} generic.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
 \if{html}{\out{<hr>}}

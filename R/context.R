@@ -61,6 +61,7 @@ PaparazziPage <- R6::R6Class(
     },
 
     #' @description Print a short summary.
+    #' @param ... Unused; included for compatibility with the `print()` generic.
     print = function(...) {
       state <- if (private$closed_) "closed" else "open"
       cli::cat_line("<PaparazziPage: ", state, ">")
