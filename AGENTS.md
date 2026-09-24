@@ -2,11 +2,14 @@
 
 **Kata is the system of record** (the `kata` CLI issue tracker; the session environment provides its usage conventions). One issue per work item; decisions and dispositions land on issues, never only in chat scrollback. See `kata quickstart --agent` for usage details.
 
+**roborev provides external review, requested manually.** Do NOT install the post-commit hook. Request one review per completed unit of work (a coherent feature slice, possibly several commits), never per commit: `roborev review <sha>`, then `roborev show <job_id> --job` for the result. Close reviews when the fix is committed (`roborev close`).
+
 ## Work Mechanics
 
 1. **One kata issue per work item**, parented appropriately; claim with
-   `work.attention ok`, stamp `work.branch`, keep the attention pair
-   truthful, close with evidence. Never end a session with the signal stale.
+   `kata claim <ref>`, keep status truthful, close with evidence
+   (`kata close <ref>`). Never end a session with a claimed issue left
+   hanging — comment with what remains.
 1. **Small conventional commits**, one logical change each, kata refs in the
    body.
 1. **Escalate early on these tripwires** — each is a known money pit:
