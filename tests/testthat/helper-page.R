@@ -31,3 +31,11 @@ geometry_fixture_file <- function() {
 local_geometry_page <- function(.env = parent.frame()) {
   local_page(geometry_fixture_file(), .env = .env)
 }
+
+getters_fixture_file <- function() {
+  test_path("fixtures", "getters.html")
+}
+
+local_getters_page <- function(.env = parent.frame()) {
+  local_page(getters_fixture_file(), .env = .env)
+}
