@@ -331,14 +331,9 @@ expect_impl <- function(
   check_context(ctx, call = call)
   timeout <- resolve_timeout(timeout, ctx$page, call = call)
 
-  if (is.null(target)) {
-    expr <- "[document.body]"
-    target_desc <- "document.body"
-  } else {
-    locs <- as_loc_list(target, call = call)
-    target_desc <- format_loc(locs)
-    expr <- loc_resolver_expr(locs)
-  }
+  target_expr <- target_resolver_expr(target, call = call)
+  expr <- target_expr$expr
+  target_desc <- target_expr$description
 
   start <- Sys.time()
   result <- expect_retry(
@@ -398,7 +393,9 @@ expect_bridge <- function(ok, msg) {
 # Read observed values off a resolved element array with one
 # callFunctionOn. The handle is released by the caller right after;
 # timeouts surface as paparazzi_error_timeout, like loc_resolve_once().
-els_call <- function(els, js, call = caller_env()) {
+# Returns the raw per-element result list: NULLs (JS null or undefined)
+# survive, so nullable reads can map them in R.
+els_values <- function(els, js, call = caller_env()) {
   timeout <- els$page$default_timeout
   res <- tryCatch(
     els$page$session$Runtime$callFunctionOn(
@@ -427,7 +424,12 @@ els_call <- function(els, js, call = caller_env()) {
       call = call
     )
   }
-  unlist(res$result$value)
+  res$result$value
+}
+
+# Non-nullable reads flatten the per-element result list to a vector.
+els_call <- function(els, js, call = caller_env()) {
+  unlist(els_values(els, js, call = call))
 }
 
 # Whitespace collapse for text comparison, both sides: runs collapse to a
