@@ -5,7 +5,8 @@
 # currentColor, a #primary button and an #rgb-box in hex, a #rem-box,
 # a #vw-box, a #third with a subpixel width, a #spaced shorthand, three
 # .card matches plus one .mixed odd one out, a #late element, and a
-# #custom element with a custom property.
+# #custom element with a custom property. style-empty.html is an
+# empty-body page for the DOM-untouched checks.
 
 # Same pattern as test-expect.R: test files can't rely on each other's
 # sourcing order, so each failure-path file carries its own copy.
@@ -40,6 +41,17 @@ test_that("pz_get_style with props = NULL returns every computed property", {
   expect_gt(ncol(styles), 400L)
   expect_true("width" %in% names(styles))
   expect_false("margin" %in% names(styles))
+})
+
+test_that("pz_get_style with props = NULL unions properties across matches", {
+  page <- local_style_page()
+  # Only #custom reports --bs-primary: the column set is the union
+  # across matches, so the column exists, and the #sizes row (no
+  # such custom property) reads as "".
+  styles <- pz_get_style(page, target = "#sizes, #custom")
+  expect_identical(nrow(styles), 2L)
+  expect_true("--bs-primary" %in% names(styles))
+  expect_identical(styles["--bs-primary"][[1]], c("", "#0d6efd"))
 })
 
 test_that("pz_get_style reads one row per match in order", {
@@ -220,6 +232,23 @@ test_that("invalid CSS errors immediately, without retrying", {
   )
 })
 
+test_that("invalid CSS errors immediately even with no matches", {
+  # The verdict is target-independent: with no matches a plain
+  # expectation would retry to the timeout and not = TRUE would pass,
+  # but invalid CSS still aborts on the first check.
+  page <- local_page(style_fixture_file(), timeout = 3)
+  start <- Sys.time()
+  expect_error(
+    pz_expect_style(page, color = "not-a-color", target = ".absent"),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_expect_style(page, color = "not-a-color", target = ".absent", not = TRUE),
+    class = "paparazzi_error_input"
+  )
+  expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
+})
+
 test_that("pz_expect_style rejects shorthands and suggests longhands", {
   page <- local_style_page()
   err <- expect_error(
@@ -231,6 +260,11 @@ test_that("pz_expect_style rejects shorthands and suggests longhands", {
     pz_expect_style(page, background = "#0d6efd", target = "#primary"),
     class = "paparazzi_error_input"
   )
+  err <- expect_error(
+    pz_expect_style(page, border_top = "1px solid red", target = "#spaced"),
+    class = "paparazzi_error_input"
+  )
+  expect_match(conditionMessage(err), "border-top-width", fixed = TRUE)
 })
 
 test_that("pz_expect_style retries until the style arrives", {
@@ -297,11 +331,32 @@ test_that("the probe never enters the app's DOM", {
   # documentElement children are head and body only, before any
   # normalization has run.
   expect_equal(pz_js(page, "document.documentElement.children.length"), 2)
-  before <- pz_get_count(page, target = "body div")
+  before <- pz_js(
+    page,
+    "document.documentElement.lastElementChild === document.body"
+  )
+  expect_true(before)
+  before_count <- pz_get_count(page, target = "body div")
   pz_expect_style(page, width = "50%", target = "#half")
   pz_expect_style(page, font_size = "1.5em", target = "#em-child")
-  # The one probe host hangs off the document root, outside the body,
-  # and repeated expectations reuse it instead of accumulating nodes.
-  expect_equal(pz_js(page, "document.documentElement.children.length"), 3)
-  expect_identical(pz_get_count(page, target = "body div"), before)
+  # The probe host lives only inside the synchronous JS call: once
+  # the expectations return, the DOM shows no trace -- no host anywhere
+  # to find, documentElement's last child unchanged, no extra nodes.
+  expect_true(pz_js(page, "document.querySelector('html > div') === null"))
+  expect_equal(pz_js(page, "document.documentElement.children.length"), 2)
+  expect_identical(
+    pz_js(page, "document.documentElement.lastElementChild === document.body"),
+    before
+  )
+  expect_identical(pz_get_count(page, target = "body div"), before_count)
+})
+
+test_that("the probe leaves body:empty matching unaffected", {
+  page <- local_page(style_empty_fixture_file())
+  expect_identical(pz_get_count(page, target = "body:empty"), 1L)
+  pz_expect_style(page, display = "block", target = "body")
+  # The body still matches :empty after normalization: the probe is
+  # created and removed within the one JS call, never appended to
+  # the body.
+  expect_identical(pz_get_count(page, target = "body:empty"), 1L)
 })

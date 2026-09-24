@@ -1,8 +1,9 @@
 # Computed-style reading and checking. Expected values are normalized
-# through a probe element inside a closed shadow root at the document
-# root, so the browser itself resolves em/%/currentColor against the
-# same context the target sees -- and the probe never touches the
-# app's DOM or paints. Vocabulary is "style", not "css": CSS already
+# through a probe element inside a closed shadow root, created and
+# removed within the one synchronous JS call that reads the target, so
+# the browser itself resolves em/%/currentColor against the same
+# context the target sees -- and the probe is never observable in the
+# app's DOM, and never paints. Vocabulary is "style", not "css": CSS already
 # means selectors here, and the values compared are the applied
 # (computed) styles, like Playwright's toHaveCSS() and jQuery's
 # .css().
@@ -22,7 +23,11 @@
 #'
 #' @param ctx A paparazzi context.
 #' @param props A character vector of CSS property names, or `NULL` for
-#'   all computed properties.
+#'   all computed properties. With `NULL` the columns are the union of
+#'   property names across matches, first-seen order (standard
+#'   computed properties are the same for every element, but custom
+#'   properties vary); a match that doesn't report a property reads as
+#'   `""` (empty string).
 #' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
@@ -51,10 +56,20 @@ pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
     timeout = NULL,
     read = function(els, call) {
       vals <- els_values(els, style_get_js(props), call = call)
-      out_props <- if (is.null(props)) names(vals[[1]]) else props
+      out_props <- if (is.null(props)) {
+        # Union across matches, first-seen order: standard computed
+        # properties are enumerated for every element, but a custom
+        # property appears only where it's set or inherited, so the
+        # first match's set can miss columns later matches have.
+        unique(unlist(lapply(vals, names)))
+      } else {
+        props
+      }
+      # Missing = "" (empty string), not NA: the property simply
+      # isn't in that match's computed style.
       cols <- lapply(
         out_props,
-        function(p) chr_or_na(lapply(vals, function(v) v[[p]]))
+        function(p) vapply(vals, function(v) v[[p]] %||% "", character(1))
       )
       names(cols) <- out_props
       new_get_tibble(ctx, els, target, !!!cols, call = call)
@@ -102,6 +117,10 @@ pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
 #' @param ... Property/value pairs, e.g. `color = "red"`. Dynamic
 #'   dots: a list spliced in with `!!!` works. Names are the CSS
 #'   property names, snake_case accepted.
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs and strings (a union matching any of them). `NULL` means the
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @inheritParams pz_expect_exists
 #' @param normalize Normalize expected values in the browser before
 #'   comparing? See Details.
@@ -162,17 +181,27 @@ style_check_shorthand <- function(props, call = caller_env()) {
   )
 }
 style_shorthand_props <- c(
-  "animation", "background", "border", "border-image", "columns",
-  "flex", "flex-flow", "font", "gap", "grid", "inset", "list-style",
-  "margin", "mask", "outline", "overscroll-behavior", "padding",
-  "place-content", "place-items", "place-self", "scroll-margin",
-  "scroll-padding", "text-decoration", "text-emphasis", "transition"
+  "animation", "background", "border", "border-block",
+  "border-block-color", "border-block-style", "border-block-width",
+  "border-bottom", "border-image", "border-inline",
+  "border-inline-color", "border-inline-style", "border-inline-width",
+  "border-left", "border-right", "border-top",
+  "column-rule", "columns", "flex", "flex-flow",
+  "font", "gap", "grid", "inset", "list-style", "margin", "mask",
+  "outline", "overscroll-behavior", "padding", "place-content",
+  "place-items", "place-self", "scroll-margin", "scroll-padding",
+  "text-decoration", "text-emphasis", "transition"
 )
 style_shorthand_longhands <- c(
   animation = "animation-name, animation-duration",
   background = "background-color, background-image",
   border = "border-width, border-style, border-color",
+  "border-bottom" = "border-bottom-width, border-bottom-style, border-bottom-color",
   "border-image" = "border-image-source, border-image-width",
+  "border-left" = "border-left-width, border-left-style, border-left-color",
+  "border-right" = "border-right-width, border-right-style, border-right-color",
+  "border-top" = "border-top-width, border-top-style, border-top-color",
+  "column-rule" = "column-rule-width, column-rule-style, column-rule-color",
   columns = "column-count, column-width",
   flex = "flex-grow, flex-shrink, flex-basis",
   "flex-flow" = "flex-direction, flex-wrap",
@@ -244,16 +273,28 @@ style_expect_pairs <- function(dots, call = caller_env()) {
 # One expectation check: reads the target's computed values and, when
 # normalizing, resolves the expected values through the probe, in one
 # synchronous JS call. Comparison happens in R (see the expectation
-# core note): the classed failure gets real last-seen values.
+# core note): the classed failure gets real last-seen values. With no
+# matches there is nothing to compare, but the invalid-CSS verdict
+# still runs: it needs no target, and without it a plain expectation
+# would retry a rejected declaration to the timeout and not = TRUE
+# would pass on invalid CSS.
 check_style <- function(pairs, not, normalize, call = caller_env()) {
   js <- style_expect_js(pairs, normalize)
   props <- names(pairs)
   function(els) {
     if (els$count == 0L) {
+      if (normalize) {
+        style_abort_invalid(
+          style_check_invalid(els$page, pairs, call = call),
+          pairs,
+          call = call
+        )
+      }
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
     vals <- els_values(els, js)
-    style_abort_invalid(vals, pairs, call = call)
+    accepted <- vapply(vals[[1]], function(v) isTRUE(v$accepted), logical(1))
+    style_abort_invalid(accepted, pairs, call = call)
     hits <- style_hits(vals, pairs, normalize)
     pass <- if (not) !all(hits) else all(hits)
     list(pass = pass, observed = style_observed(vals, props))
@@ -261,18 +302,52 @@ check_style <- function(pairs, not, normalize, call = caller_env()) {
 }
 # Invalid CSS aborts immediately, outside the retry loop: the browser's
 # verdict on a declaration never changes. Acceptance is a property of
-# the (property, value) pair, so the first match's answers decide.
-style_abort_invalid <- function(vals, pairs, call = caller_env()) {
-  for (p in seq_along(pairs)) {
-    if (identical(vals[[1]][[p]]$accepted, FALSE)) {
-      cli::cli_abort(
-        "Invalid CSS: the browser rejects {.val {pairs[[p]]}} for {.val {names(pairs)[[p]]}}.",
-        class = "paparazzi_error_input",
-        call = call
-      )
-    }
+# the (property, value) pair, so the verdict vector is per pair.
+style_abort_invalid <- function(accepted, pairs, call = caller_env()) {
+  if (any(!accepted)) {
+    p <- which(!accepted)[[1]]
+    cli::cli_abort(
+      "Invalid CSS: the browser rejects {.val {pairs[[p]]}} for {.val {names(pairs)[[p]]}}.",
+      class = "paparazzi_error_input",
+      call = call
+    )
   }
   invisible(NULL)
+}
+# The invalid-declaration verdict with no matches: there is no element
+# array to callFunctionOn, so the check runs on the page with one
+# Runtime$evaluate. The probe is a detached div: setProperty validity
+# holds regardless of attachment, so nothing needs to touch the DOM.
+style_check_invalid <- function(page, pairs, call = caller_env()) {
+  timeout <- page$default_timeout
+  res <- tryCatch(
+    page$session$Runtime$evaluate(
+      paste0("(", style_invalid_js(pairs), ")()"),
+      awaitPromise = FALSE,
+      returnByValue = TRUE,
+      timeout_ = timeout
+    ),
+    error = function(e) {
+      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+        cli::cli_abort(
+          "Timed out after {timeout}s validating CSS.",
+          class = "paparazzi_error_timeout",
+          call = call,
+          parent = e
+        )
+      }
+      stop(e)
+    }
+  )
+  err <- res$exceptionDetails
+  if (!is.null(err)) {
+    cli::cli_abort(
+      "JavaScript error validating CSS: {err$exception$description %||% err$text %||% 'unknown error'}.",
+      class = "paparazzi_error_js",
+      call = call
+    )
+  }
+  vapply(res$result$value, isTRUE, logical(1))
 }
 # Comparison matrix [match, pair]: identical strings pass; px values
 # compare numerically with a 0.5px tolerance; anything else is exact.
@@ -320,90 +395,111 @@ expect_headline_style <- function(pairs, not) {
 # One synchronous callFunctionOn on the matched element array: read the
 # targets, set the expected values inline on the probe, copy only the
 # context each value needs (SPEC table), read the probe back. Nothing
-# persists between calls except the probe nodes themselves, which are
-# cached on the document and die with it on navigation.
+# persists between calls: the probe host is created at the top of the
+# call and removed in a finally block, so the app's DOM is untouched
+# once the call returns.
 style_expect_js <- function(pairs, normalize) {
-  pairs_json <- jsonlite::toJSON(
+  paste0(
+    "function() {\n",
+    "const pairs = ", style_pairs_json(pairs), ";\n",
+    "const normalize = ", if (normalize) "true" else "false", ";\n",
+    style_probe_js,
+    "}"
+  )
+}
+# The invalid-declaration check alone, for the zero-match path: the
+# same setProperty-to-empty-readback verdict, on a detached div.
+style_invalid_js <- function(pairs) {
+  paste0(
+    "function() {
+      const pairs = ", style_pairs_json(pairs), ";
+      const probe = document.createElement('div');
+      return pairs.map((p) => {
+        probe.style.setProperty(p.prop, p.value);
+        // An empty inline style means the browser rejected the
+        // declaration (bad value or unknown property).
+        return probe.style.getPropertyValue(p.prop) !== '';
+      });
+    }"
+  )
+}
+style_pairs_json <- function(pairs) {
+  jsonlite::toJSON(
     lapply(
       seq_along(pairs),
       function(i) list(prop = names(pairs)[[i]], value = unname(pairs)[[i]])
     ),
     auto_unbox = TRUE
   )
-  paste0(
-    "function() {\n",
-    "const pairs = ", pairs_json, ";\n",
-    "const normalize = ", if (normalize) "true" else "false", ";\n",
-    style_probe_js,
-    "}"
-  )
 }
 style_probe_js <- "
   // The probe lives in a closed shadow root under a zero-size host at
-  // the document root: never inside the app's DOM (positional
-  // selectors, :empty, and body MutationObservers are untouched) and
-  // never painted (zero size, overflow hidden). visibility: hidden
-  // keeps the subtree laid out, which percentage resolution needs;
-  // display: none would leave raw percentages in the computed read.
-  const probe_ctx = document.__paparazzi_probe || (() => {
-    const host = document.createElement('div');
-    host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;visibility:hidden';
-    document.documentElement.appendChild(host);
-    const root = host.attachShadow({mode: 'closed'});
-    const container = document.createElement('div');
-    const probe = document.createElement('div');
-    container.appendChild(probe);
-    root.appendChild(container);
-    return (document.__paparazzi_probe = {container: container, probe: probe});
-  })();
-  return this.map((el) => {
-    const cs = getComputedStyle(el);
-    return pairs.map((p) => {
-      const actual = cs.getPropertyValue(p.prop);
-      if (!normalize) {
-        return {actual: actual, normalized: null, accepted: true};
-      }
-      const probe = probe_ctx.probe;
-      const container = probe_ctx.container;
-      probe.style.cssText = '';
-      container.style.cssText = '';
-      probe.style.setProperty(p.prop, p.value);
-      // An empty inline style means the browser rejected the
-      // declaration (bad value or unknown property).
-      if (probe.style.getPropertyValue(p.prop) === '') {
-        return {actual: actual, normalized: null, accepted: false};
-      }
-      // Context needs are independent, not exclusive: calc(50% - 1em)
-      // wants the parent's size and the element's font at once. The
-      // contexts touch different container styles, so they compose.
-      if (/currentcolor/i.test(p.value)) {
-        container.style.color = cs.color;
-      }
-      const fontUnits = /[0-9.](em|ex|ch)([^a-z]|$)/i.test(p.value);
-      const percent = p.value.indexOf('%') !== -1;
-      // Relative units on font-size and line-height resolve against
-      // fonts, not sizes: the parent's font for font-size (its em and
-      // % context), the element's own font for line-height and every
-      // other property.
-      if (fontUnits || (percent && (p.prop === 'font-size' || p.prop === 'line-height'))) {
-        const fcs = p.prop === 'font-size'
-          ? getComputedStyle(el.parentElement || document.documentElement)
-          : cs;
-        container.style.fontSize = fcs.fontSize;
-        container.style.fontFamily = fcs.fontFamily;
-      }
-      if (percent && p.prop !== 'font-size' && p.prop !== 'line-height') {
-        const pcs = getComputedStyle(el.parentElement || document.documentElement);
-        container.style.width = pcs.width;
-        container.style.height = pcs.height;
-      }
-      return {
-        actual: actual,
-        normalized: getComputedStyle(probe).getPropertyValue(p.prop),
-        accepted: true
-      };
+  // the document root, for the duration of this one synchronous call
+  // only: JS runs to completion, so no selector, :empty check, style
+  // recalc, screenshot, or recording frame can ever observe the host.
+  // The MutationObserver add/remove records are the accepted residual:
+  // a rendered, attached probe is required for percentage resolution.
+  // visibility: hidden keeps the subtree laid out (display: none would
+  // leave raw percentages in the computed read) and zero size plus
+  // overflow hidden means nothing ever paints.
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;visibility:hidden';
+  document.documentElement.appendChild(host);
+  const root = host.attachShadow({mode: 'closed'});
+  const container = document.createElement('div');
+  const probe = document.createElement('div');
+  container.appendChild(probe);
+  root.appendChild(container);
+  try {
+    return this.map((el) => {
+      const cs = getComputedStyle(el);
+      return pairs.map((p) => {
+        const actual = cs.getPropertyValue(p.prop);
+        if (!normalize) {
+          return {actual: actual, normalized: null, accepted: true};
+        }
+        probe.style.cssText = '';
+        container.style.cssText = '';
+        probe.style.setProperty(p.prop, p.value);
+        // An empty inline style means the browser rejected the
+        // declaration (bad value or unknown property).
+        if (probe.style.getPropertyValue(p.prop) === '') {
+          return {actual: actual, normalized: null, accepted: false};
+        }
+        // Context needs are independent, not exclusive: calc(50% - 1em)
+        // wants the parent's size and the element's font at once. The
+        // contexts touch different container styles, so they compose.
+        if (/currentcolor/i.test(p.value)) {
+          container.style.color = cs.color;
+        }
+        const fontUnits = /[0-9.](em|ex|ch)([^a-z]|$)/i.test(p.value);
+        const percent = p.value.indexOf('%') !== -1;
+        // Relative units on font-size and line-height resolve against
+        // fonts, not sizes: the parent's font for font-size (its em and
+        // % context), the element's own font for line-height and every
+        // other property.
+        if (fontUnits || (percent && (p.prop === 'font-size' || p.prop === 'line-height'))) {
+          const fcs = p.prop === 'font-size'
+            ? getComputedStyle(el.parentElement || document.documentElement)
+            : cs;
+          container.style.fontSize = fcs.fontSize;
+          container.style.fontFamily = fcs.fontFamily;
+        }
+        if (percent && p.prop !== 'font-size' && p.prop !== 'line-height') {
+          const pcs = getComputedStyle(el.parentElement || document.documentElement);
+          container.style.width = pcs.width;
+          container.style.height = pcs.height;
+        }
+        return {
+          actual: actual,
+          normalized: getComputedStyle(probe).getPropertyValue(p.prop),
+          accepted: true
+        };
+      });
     });
-  });
+  } finally {
+    host.remove();
+  }
 "
 style_get_js <- function(props) {
   props_json <- if (is.null(props)) "null" else jsonlite::toJSON(props)

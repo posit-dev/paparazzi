@@ -20,20 +20,24 @@ both functions: error listing the property and suggesting longhands
 whatever the browser enumerates untouched: Chrome's computed-style
 enumeration is longhand-only (verified: 477 properties, no
 `margin`/`border`/`background`), so there is nothing to reject there.
-- **Probe lifecycle.** Lazily created once per page, cached on the
-`document` object (`document.__paparazzi_probe = {host, container,
-probe}`), so a navigation destroys the cache naturally. The host is a
-zero-size (`position:fixed; width:0; height:0; overflow:hidden`),
-`visibility:hidden` div appended to `document.documentElement` with a
-**closed** shadow root: `documentElement > host > shadowRoot >
-container > probe`. `visibility:hidden` keeps the subtree laid out,
-which percentages need (a `display:none` probe would return raw
-percentages from `getComputedStyle()`); zero size + overflow hidden
-means nothing ever paints, so screenshots/recordings are unaffected
-either way. Being a `documentElement` child (not a body child), body
-positional selectors, `:empty`, and body-rooted MutationObservers are
-untouched; container and probe are reset and reused per pair, never
-re-appended, so the retry loop can't accumulate nodes.
+- **Probe lifecycle.** Created, used, and removed inside the single
+synchronous normalization call (`try`/`finally`: `host.remove()`):
+`documentElement > host > shadowRoot (closed) > container > probe`.
+Because JS runs to completion, no selector, `:empty` check, style
+recalc, screenshot, or recording frame can ever observe the host;
+MutationObserver add/remove records on `documentElement` are the
+accepted residual (an attached, laid-out probe is required:
+`visibility:hidden` keeps layout alive for percentage resolution,
+`display:none` or a detached probe would return raw percentages from
+`getComputedStyle()`). The host is zero-size (`position:fixed;
+width:0; height:0; overflow:hidden`) and `visibility:hidden`, so
+nothing ever paints. An earlier revision cached the probe on
+`document.__paparazzi_probe`; review found the persistent light-DOM
+child observable to html-level positional selectors, hence
+create-remove per call. The invalid-declaration check
+(`setProperty` leaves the style empty) is attachment-independent and
+also runs detached on the zero-match path, so invalid CSS errors
+immediately even with no matches.
 - **Single-JS-call protocol.** One `Runtime$callFunctionOn` on the
 resolved element array does everything, synchronously: read each
 target's computed value for every pair, classify each expected value,
@@ -90,6 +94,15 @@ fixture `tests/testthat/fixtures/style.html`, helpers in
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
+
+- 2026-09-24 (review fixes): landed roborev follow-ups: probe is now
+create-use-remove within the single synchronous call (no persistent
+light-DOM child), props = NULL unions property names across matches,
+zero-match runs invalid-CSS validation, border-side/logical shorthands
+reject with longhand suggestions, pz_expect_style target docs fixed.
+Next: none. Provisional: border-color/style/width stay OUT of the
+shorthand blocklist (single-property shorthands whose computed reads
+are reliable; the SPEC examples use border_color).
 
 - 2026-09-24 (close): landed the style engine (56740fa): R/style.R,
   style.html fixture, helper-style.R, test-style.R (82 tests; suite
