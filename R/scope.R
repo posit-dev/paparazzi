@@ -118,23 +118,31 @@ pinned_abort_detached <- function(pinned, call = caller_env()) {
 # fixed at pin time, so waiting is pointless. The null filters are
 # defensive: a live set always holds its pick.
 scope_slice_js <- function(which) {
-  switch(
-    which,
-    first = "function() { return this.slice(0, 1); }",
-    last = "function() { return [this[this.length - 1]].filter((el) => el != null); }",
+  # NOT switch(): a numeric which would select an alternative by
+  # position (2 -> "last", > 3 -> no match), not by value.
+  if (identical(which, "first")) {
+    "function() { return this.slice(0, 1); }"
+  } else if (identical(which, "last")) {
+    "function() { return [this[this.length - 1]].filter((el) => el != null); }"
+  } else {
     paste0("function() { return [this[", which, " - 1]].filter((el) => el != null); }")
-  )
+  }
 }
 
 # A narrowed scope's description: a single loc takes `which` directly
 # and re-formats with format_loc(); a union (or no locs at all) can't
 # carry a which, so its description is the parent's plus a match
-# suffix. Shared by scope narrowing (the parent is the pinned set) and
-# the element list-column (the parent is the getter's matched array).
+# suffix. A loc that already carries a which keeps it: it selected
+# exactly one match, so any narrowing of that set is the same element
+# and re-labeling it would name the wrong match. Shared by scope
+# narrowing (the parent is the pinned set) and the element list-column
+# (the parent is the getter's matched array).
 narrow_description <- function(locs, description, which) {
   if (length(locs) == 1) {
     loc <- locs[[1]]
-    loc$which <- which
+    if (is.null(loc$which)) {
+      loc$which <- which
+    }
     format_loc(loc)
   } else {
     paste0(description, " (match: ", which, ")")
@@ -144,7 +152,9 @@ narrow_description <- function(locs, description, which) {
 narrow_locs <- function(locs, which) {
   if (length(locs) == 1) {
     loc <- locs[[1]]
-    loc$which <- which
+    if (is.null(loc$which)) {
+      loc$which <- which
+    }
     list(loc)
   } else {
     # A union can't take a which; the description carries the match.

@@ -274,3 +274,37 @@ test_that("pillar renders contexts compactly", {
   expect_identical(shaft(page), "root")
   expect_identical(shaft(pz_find_reset(ctx)), "root")
 })
+
+test_that("numeric narrowing slices the pinned position", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-a .sc-item")
+
+  # switch() on a numeric which would pick by position: 2 -> "last",
+  # > 3 -> no function at all. Every position must slice its own match.
+  expect_identical(scope_texts(pz_find_first(ctx)$scope[[2]]), "A1")
+  expect_identical(scope_texts(pz_find_nth(ctx, 2)$scope[[2]]), "A2")
+  expect_identical(scope_texts(pz_find_nth(ctx, 4)$scope[[2]]), "nested-a")
+  expect_identical(scope_texts(pz_find_nth(ctx, 6)$scope[[2]]), "get_weather")
+  expect_identical(scope_texts(pz_find_last(ctx)$scope[[2]]), "get_weather")
+})
+
+test_that("narrowing keeps a loc's original which", {
+  page <- local_scopes_page()
+
+  # An element-column entry from a which-loc names its original match,
+  # not match 1 of the array.
+  rects <- pz_get_rect(page, target = pz_loc("#scope-a .sc-item", which = "last"))
+  expect_identical(
+    rects$element[[1]]$scope[[1]]$description,
+    "`#scope-a .sc-item` (which: last)"
+  )
+  expect_identical(pz_get_text(rects$element[[1]]), "get_weather")
+
+  # Narrowing a narrowed scope keeps the original selection too: the
+  # narrowed set is that same element, not match 1 of the raw css.
+  scoped <- pz_find_nth(page, 2, target = "#scope-a .sc-item")
+  narrowed <- pz_find_first(scoped)
+  expect_identical(narrowed$scope[[2]]$count, 1L)
+  expect_identical(narrowed$scope[[2]]$description, "`#scope-a .sc-item` (which: 2)")
+  expect_identical(scope_texts(narrowed$scope[[2]]), "A2")
+})

@@ -323,6 +323,20 @@ test_that("a detached element-column context names its row", {
   expect_match(msg, "Scope: `#scope-a \\.sc-item` \\(which: 3\\)")
 })
 
+test_that("a which-loc's element entry names its original match when detached", {
+  page <- local_scopes_page()
+  els <- pz_get_elements(page, target = pz_loc("#scope-a .sc-item", which = "last"))
+  ctx <- els$element[[1]]
+
+  # The target already picked its match, so the entry keeps that
+  # selection instead of being re-labeled match 1; a later detach
+  # names the real match, not the first one.
+  pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[5].remove()")
+  err <- expect_error(pz_click(ctx), class = "paparazzi_error_detached")
+  msg <- paste(conditionMessage(err), collapse = " ")
+  expect_match(msg, "Scope: `#scope-a \\.sc-item` \\(which: last\\)")
+})
+
 test_that("target = NULL on a scope narrows the scope's own locs", {
   page <- local_scopes_page()
   ctx <- pz_find(page, "#scope-b .sc-item")
