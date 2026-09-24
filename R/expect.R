@@ -63,9 +63,10 @@ pz_expect_exists <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @inheritParams pz_click
-#' @inheritParams pz_get_text
 #' @inheritParams pz_expect_exists
+#' @param n Exact expected count. Exclusive with `min` and `max`.
+#' @param min Minimum count; with `max`, an inclusive range check.
+#' @param max Maximum count; with `min`, an inclusive range check.
 #'
 #' @return `ctx`, invisibly.
 #' @examples
@@ -147,8 +148,6 @@ pz_expect_count <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @inheritParams pz_click
-#' @inheritParams pz_get_text
 #' @inheritParams pz_expect_exists
 #'
 #' @return `ctx`, invisibly.
@@ -218,7 +217,7 @@ pz_expect_hidden <- function(
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
-#'   body at the root, so [pz_expect_text(page, "Welcome")] checks the
+#'   body at the root, so `pz_expect_text(page, "Welcome")` checks the
 #'   page text.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`

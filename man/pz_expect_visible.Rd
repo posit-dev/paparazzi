@@ -15,8 +15,10 @@ pz_expect_hidden(ctx, ..., target = NULL, not = FALSE, timeout = NULL)
 \item{...}{Checked empty; reserved for future use.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs (a union matching any of them). \code{NULL} uses the current
-scope; at the root context a target is required.}
+specs and strings (a union matching any of them). \code{NULL} means the
+current context: the pinned set at a scoped context (so
+\code{\link[=pz_expect_exists]{pz_expect_exists()}} on one trivially passes while the scope is
+live), the page body at the root.}
 
 \item{not}{Invert the check.}
 
