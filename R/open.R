@@ -30,9 +30,7 @@ pz_open <- function(
   envvars = NULL
 ) {
   check_dots_empty()
-  if (!is.null(timeout)) {
-    check_number_decimal(timeout, min = 0)
-  }
+  check_number_decimal(timeout, min = 0, allow_null = TRUE)
   wait <- arg_match(wait)
   if (identical(wait, "shiny")) {
     cli::cli_abort(
@@ -190,12 +188,7 @@ wait_for_load <- function(page, timeout, call = caller_env()) {
 #' @return `page`, invisibly.
 #' @export
 pz_close <- function(page) {
-  if (!inherits(page, "PaparazziPage")) {
-    cli::cli_abort(
-      "{.arg page} must be a page from {.fn pz_open}.",
-      class = "paparazzi_error_input"
-    )
-  }
+  check_page(page)
   page$close()
   invisible(page)
 }
@@ -220,7 +213,7 @@ pz_close <- function(page) {
 #'   returns it visibly.
 #' @export
 pz_with_page <- function(x, code, ...) {
-  page <- if (inherits(x, "PaparazziPage")) x else pz_open(x, ...)
+  page <- if (is_pz_page(x)) x else pz_open(x, ...)
   on.exit(pz_close(page), add = TRUE)
   # Decide expression-vs-function from the quoted form: a braced block is
   # always an expression, even when its value happens to be a function.
@@ -236,7 +229,7 @@ pz_with_page <- function(x, code, ...) {
 #' @rdname pz_with_page
 #' @export
 pz_local_page <- function(x, ..., .env = caller_env()) {
-  page <- if (inherits(x, "PaparazziPage")) x else pz_open(x, ...)
+  page <- if (is_pz_page(x)) x else pz_open(x, ...)
   withr::defer(pz_close(page), envir = .env)
   page
 }

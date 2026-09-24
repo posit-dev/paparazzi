@@ -261,17 +261,7 @@ pz_expect_text <- function(
   timeout = NULL
 ) {
   check_dots_empty()
-  # rlang exports no check_character(); the hand-rolled equivalent
-  # (type + at least one element) uses its conventions.
-  if (!is.character(text)) {
-    stop_input_type(text, "a character vector")
-  }
-  if (!length(text)) {
-    cli::cli_abort(
-      "{.arg text} must have at least one element.",
-      class = "paparazzi_error_input"
-    )
-  }
+  check_character(text)
   match <- arg_match(match)
   expect_impl(
     ctx = ctx,

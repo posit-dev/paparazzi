@@ -245,7 +245,7 @@ test_that("pz_type and pz_press validate their inputs", {
   expect_error(pz_type(page, c("a", "b")), class = "rlang_error")
   expect_error(pz_press(page, ""), class = "paparazzi_error_key")
   expect_error(pz_press(page, "Control+Foo"), class = "paparazzi_error_key")
-  expect_error(pz_press(page, character(0)), "at least one")
+  expect_error(pz_press(page, character(0)), "at least 1 element")
   expect_error(pz_press(page, NA_character_), "NA")
 })
 

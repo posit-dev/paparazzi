@@ -367,23 +367,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 pz_press <- function(ctx, key, ...) {
   check_context(ctx)
   check_dots_empty()
-  # rlang exports no check_character(); the hand-rolled equivalent
-  # (type + at least one element, no NAs) follows its conventions.
-  if (!is.character(key)) {
-    stop_input_type(key, "a character vector")
-  }
-  if (length(key) == 0) {
-    cli::cli_abort(
-      "{.arg key} must have at least one element.",
-      class = "paparazzi_error_input"
-    )
-  }
-  if (anyNA(key)) {
-    cli::cli_abort(
-      "{.arg key} can't be `NA`.",
-      class = "paparazzi_error_input"
-    )
-  }
+  check_character(key)
 
   call <- current_env()
   session <- ctx$page$session
