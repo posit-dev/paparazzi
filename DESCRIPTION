@@ -1,7 +1,7 @@
 Package: paparazzi
 Title: Pipeable Browser Automation with 'chromote'
 Version: 0.0.0.9000
-Authors@R: 
+Authors@R:
     person("Garrick", "Aden-Buie", , "garrick@adenbuie.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7111-0077"))
 Description: Drive web pages from R with a pipeable interface built on
@@ -12,7 +12,7 @@ Description: Drive web pages from R with a pipeable interface built on
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-Imports: 
+Imports:
     chromote,
     cli,
     jsonlite,
@@ -22,11 +22,13 @@ Imports:
     rlang (>= 1.2.0),
     tibble,
     withr
-Suggests: 
+Suggests:
     av,
     gifski,
     httpuv,
     shiny,
     testthat (>= 3.2.0)
 Config/testthat/edition: 3
+Config/testthat/parallel: true
+Config/testthat/start-first: scope, actions, expect, get
 Config/roxygen2/version: 8.1.0
