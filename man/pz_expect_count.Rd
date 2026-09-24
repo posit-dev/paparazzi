@@ -47,8 +47,7 @@ body at the root.}
 \code{max} give an inclusive range (either may be \code{NULL}, meaning
 unbounded). With \code{not = TRUE} it passes when the count does anything
 else. Specify exactly one of \code{n} or \code{min}/\code{max}.
-}
-\details{
+
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
 reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect_exists()}} for the

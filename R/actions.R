@@ -293,6 +293,7 @@ pz_hover <- function(ctx, target = NULL, ...) {
 
 #' Type text into an element
 #'
+#' @description
 #' With a `target`, auto-waits for the element to be actionable --
 #' visible with a non-empty box -- then scrolls it into view, clicks
 #' the center of it (real mouse events, so the element genuinely gains
@@ -345,6 +346,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 
 #' Press key combinations
 #'
+#' @description
 #' Presses one or more key combinations against whatever the page
 #' currently has focused, e.g. `"Enter"`, `"Control+A"`,
 #' `c("Shift+Tab", "Escape")`. A vector presses each combination fully

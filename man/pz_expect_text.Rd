@@ -44,8 +44,7 @@ page text.}
 text of every match satisfies \code{text}. Whitespace collapses on both
 sides before comparing, so \code{"Save   now"} matches text reading
 "Save now".
-}
-\details{
+
 A length-1 \code{text} applies to every match. A length-\code{n} \code{text} requires
 exactly \code{n} matches and compares pairwise, in order. With
 \code{not = TRUE}, the expectation passes when no match satisfies \code{text},

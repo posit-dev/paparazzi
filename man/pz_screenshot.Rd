@@ -29,8 +29,7 @@ framing"; framing via \code{pz_frame()} is not yet implemented.}
 \description{
 Captures a PNG of the page and writes it to \code{path}, returning the
 context invisibly so screenshots slot into \verb{|>} chains.
-}
-\details{
+
 The captured region depends on \code{target}:
 \itemize{
 \item \code{NULL} from the root context (from \code{\link[=pz_open]{pz_open()}}): the current

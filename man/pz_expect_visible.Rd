@@ -32,8 +32,7 @@ body at the root.}
 every match is visible. \code{pz_expect_hidden()} is exactly
 \code{pz_expect_visible(not = TRUE)}: it passes when no match is visible,
 including when nothing matches.
-}
-\details{
+
 Visibility follows the browser's own
 \href{https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility}{checkVisibility()}
 with CSS checks, so \code{display: none} and \code{visibility: hidden} anywhere

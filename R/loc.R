@@ -1,5 +1,6 @@
 #' Locate elements by CSS, with text, position, and scope qualifiers
 #'
+#' @description
 #' `pz_loc()` builds a page-independent element spec: a CSS selector,
 #' optionally narrowed by required text content (`has_text`), a match
 #' position (`which`), and an ancestor scope (`within`). Specs are lazy --

@@ -1,5 +1,6 @@
 #' Expect at least one element to match
 #'
+#' @description
 #' `pz_expect_exists()` passes when at least one element matching `target`
 #' is in the DOM, visible or not. It's the one expectation where multiple
 #' matches don't all have to satisfy the check: existence needs only one.
@@ -51,6 +52,7 @@ pz_expect_exists <- function(
 
 #' Expect a number of matching elements
 #'
+#' @description
 #' `pz_expect_count()` passes when the number of elements matching
 #' `target` satisfies the requirement: `n` is exact, or `min` and/or
 #' `max` give an inclusive range (either may be `NULL`, meaning
@@ -143,6 +145,7 @@ pz_expect_count <- function(
 
 #' Expect elements to be visible
 #'
+#' @description
 #' `pz_expect_visible()` passes when at least one element matches and
 #' every match is visible. `pz_expect_hidden()` is exactly
 #' `pz_expect_visible(not = TRUE)`: it passes when no match is visible,
@@ -213,6 +216,7 @@ pz_expect_hidden <- function(
 
 #' Expect element text content
 #'
+#' @description
 #' `pz_expect_text()` passes when at least one element matches and the
 #' text of every match satisfies `text`. Whitespace collapses on both
 #' sides before comparing, so `"Save   now"` matches text reading

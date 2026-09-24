@@ -1,5 +1,6 @@
 #' Take a screenshot
 #'
+#' @description
 #' Captures a PNG of the page and writes it to `path`, returning the
 #' context invisibly so screenshots slot into `|>` chains.
 #'

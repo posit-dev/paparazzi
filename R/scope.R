@@ -263,6 +263,7 @@ find_push <- function(ctx, locs, from_root, call) {
 
 #' Find elements and push them as the current scope
 #'
+#' @description
 #' `pz_find()` resolves `target` (auto-waiting for at least one match),
 #' pins the matched set as the current scope, and returns a new context:
 #' later calls on it operate inside that scope. Explicit targets resolve

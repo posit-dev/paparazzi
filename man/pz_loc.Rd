@@ -32,8 +32,7 @@ optionally narrowed by required text content (\code{has_text}), a match
 position (\code{which}), and an ancestor scope (\code{within}). Specs are lazy --
 they resolve at use time, so they follow DOM changes between uses --
 and can be defined once and reused across sessions.
-}
-\details{
+
 Wherever a spec is accepted, a bare string is promoted to
 \code{pz_loc(string)}, and a list of specs and strings is a union that
 matches the elements of any member.

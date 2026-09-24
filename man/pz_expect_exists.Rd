@@ -30,8 +30,7 @@ live), the page body at the root.}
 is in the DOM, visible or not. It's the one expectation where multiple
 matches don't all have to satisfy the check: existence needs only one.
 With \code{not = TRUE} it passes when nothing matches.
-}
-\details{
+
 Expectations retry until they pass or \code{timeout} elapses, then return
 \code{ctx} invisibly. Outside of testthat, a failure aborts with a classed
 error of class \code{"paparazzi_expectation_failure"} showing the target,

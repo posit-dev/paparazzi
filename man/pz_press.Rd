@@ -26,8 +26,7 @@ and a named key (Enter, Tab, Escape, Backspace, arrows, F1-F12, ...) or
 a single printable character. Following Playwright, an uppercase
 letter or shifted symbol implies Shift: \code{"Control+A"} sends
 Control+Shift+A.
-}
-\details{
+
 Keys only reach focused elements; call \code{\link[=pz_click]{pz_click()}} or \code{\link[=pz_focus]{pz_focus()}}
 first to focus the element you're typing into.
 }
