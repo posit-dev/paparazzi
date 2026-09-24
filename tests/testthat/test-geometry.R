@@ -47,6 +47,22 @@ test_that("el_scroll_into_view brings an off-screen element into the viewport", 
   expect_lt(y, inner_height)
 })
 
+test_that("el_scroll_into_view scrolls the FIRST element, instantly", {
+  page <- local_geometry_page()
+  # The fixture sets scroll-behavior: smooth; the helper must still
+  # land immediately (no animation), on the first match in DOM order.
+  els <- loc_resolve(page, "[id^='below-fold']", multiple = "all")
+  withr::defer(release_elements(els))
+  expect_identical(els$count, 2L)
+
+  inner_height <- pz_js(page, "window.innerHeight")
+  el_scroll_into_view(els)
+  y <- el_rects(els)$y
+  # First match is in the viewport right away; the second may not be.
+  expect_gte(y[1], 0)
+  expect_lt(y[1], inner_height)
+})
+
 test_that("el_scroll_into_view on a zero-count set is a no-op", {
   page <- local_geometry_page()
   expect_invisible(el_scroll_into_view(new_elements(page, NULL, 0L, "empty")))

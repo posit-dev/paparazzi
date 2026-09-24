@@ -46,10 +46,14 @@ el_scroll_into_view <- function(els, call = caller_env()) {
   if (els$count == 0L || is.null(els$object_id)) {
     return(invisible(els))
   }
-  # Only the FIRST element of the set is scrolled into view.
+  # Only the FIRST element of the set is scrolled into view. The
+  # scroll is instant: CSS scroll-behavior: smooth would animate it,
+  # and a geometry read right after would observe a mid-scroll
+  # position. An animated scroll is a deliberate variant for recording,
+  # not a default.
   els_call(
     els,
-    "function() { if (this.length) this[0].scrollIntoView({ block: 'nearest', inline: 'nearest' }); }",
+    "function() { if (this.length) this[0].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' }); }",
     call = call
   )
   invisible(els)
