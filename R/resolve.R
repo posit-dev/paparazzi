@@ -7,64 +7,62 @@
 # callers never see an expression, only the function.
 loc_resolver_js <- function(locs) {
   specs <- jsonlite::toJSON(lapply(locs, loc_spec_fields), auto_unbox = TRUE)
-  paste0(
-    "function() {\n",
-    "const specs = ", specs, ";\n",
-    "const collapse = (s) => s.replace(/\\s+/g, ' ');\n",
-    "const matchesText = (el, text) =>\n",
-    "  text == null || collapse(el.textContent).indexOf(collapse(text)) !== -1;\n",
-    "\n",
-    "// Resolve one spec to a deduped array of elements, in DOM order.\n",
-    "// Without `within`, roots come from `this`; a spec's own `within`\n",
-    "// resolves inside the same invocation, so a `within` chain bottoms\n",
-    "// out in the current scope, not the document.\n",
-    "const resolveSpec = (spec) => {\n",
-    "  let roots;\n",
-    "  if (spec.within) {\n",
-    "    roots = resolveSpec(spec.within);\n",
-    "    if (roots.length === 0) return [];\n",
-    "  } else {\n",
-    "    roots = this && this.length ? this : [document];\n",
-    "  }\n",
-    "  const seen = new Set();\n",
-    "  let els = [];\n",
-    "  for (const root of roots) {\n",
-    "    for (const el of root.querySelectorAll(spec.css)) {\n",
-    "      if (!seen.has(el)) { seen.add(el); els.push(el); }\n",
-    "    }\n",
-    "  }\n",
-    "  // The recording overlay lives under this host; it is never page content.\n",
-    "  els = els.filter((el) => el.closest('#paparazzi-overlay-root') === null);\n",
-    "  if (spec.has_text != null) {\n",
-    "    els = els.filter((el) => matchesText(el, spec.has_text));\n",
-    "  }\n",
-    "  if (spec.which != null) {\n",
-    "    if (spec.which === 'first') {\n",
-    "      els = els.slice(0, 1);\n",
-    "    } else if (spec.which === 'last') {\n",
-    "      els = els.slice(-1);\n",
-    "    } else if (spec.which >= 1 && spec.which <= els.length) {\n",
-    "      els = [els[spec.which - 1]];\n",
-    "    } else {\n",
-    "      els = [];\n",
-    "    }\n",
-    "  }\n",
-    "  return els;\n",
-    "};\n",
-    "\n",
-    "// Union: concatenate per-spec matches, deduped across specs.\n",
-    "const seen = new Set();\n",
-    "const out = [];\n",
-    "for (const spec of specs) {\n",
-    "  for (const el of resolveSpec(spec)) {\n",
-    "    if (!seen.has(el)) { seen.add(el); out.push(el); }\n",
-    "  }\n",
-    "}\n",
-    "// Null (not an empty array) on no match, so the caller can skip the\n",
-    "// count read entirely and never holds an empty remote object.\n",
-    "return out.length ? out : null;\n",
-    "}"
-  )
+  sprintf(r"(function() {
+const specs = %s;
+const collapse = (s) => s.replace(/\s+/g, ' ');
+const matchesText = (el, text) =>
+  text == null || collapse(el.textContent).indexOf(collapse(text)) !== -1;
+
+// Resolve one spec to a deduped array of elements, in DOM order.
+// Without `within`, roots come from `this`; a spec's own `within`
+// resolves inside the same invocation, so a `within` chain bottoms
+// out in the current scope, not the document.
+const resolveSpec = (spec) => {
+  let roots;
+  if (spec.within) {
+    roots = resolveSpec(spec.within);
+    if (roots.length === 0) return [];
+  } else {
+    roots = this && this.length ? this : [document];
+  }
+  const seen = new Set();
+  let els = [];
+  for (const root of roots) {
+    for (const el of root.querySelectorAll(spec.css)) {
+      if (!seen.has(el)) { seen.add(el); els.push(el); }
+    }
+  }
+  // The recording overlay lives under this host; it is never page content.
+  els = els.filter((el) => el.closest('#paparazzi-overlay-root') === null);
+  if (spec.has_text != null) {
+    els = els.filter((el) => matchesText(el, spec.has_text));
+  }
+  if (spec.which != null) {
+    if (spec.which === 'first') {
+      els = els.slice(0, 1);
+    } else if (spec.which === 'last') {
+      els = els.slice(-1);
+    } else if (spec.which >= 1 && spec.which <= els.length) {
+      els = [els[spec.which - 1]];
+    } else {
+      els = [];
+    }
+  }
+  return els;
+};
+
+// Union: concatenate per-spec matches, deduped across specs.
+const seen = new Set();
+const out = [];
+for (const spec of specs) {
+  for (const el of resolveSpec(spec)) {
+    if (!seen.has(el)) { seen.add(el); out.push(el); }
+  }
+}
+// Null (not an empty array) on no match, so the caller can skip the
+// count read entirely and never holds an empty remote object.
+return out.length ? out : null;
+})", specs)
 }
 
 # The target = NULL seam, shared by expect_impl() and get_impl(): NULL
