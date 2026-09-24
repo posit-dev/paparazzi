@@ -37,8 +37,16 @@ pump_loop <- function(loop, seconds, interval = 0.1) {
 #' @param interval Seconds between checks.
 #' @param loop A `later` event loop.
 #' @param what Description of the condition, used in the timeout error.
+#' @param call Reported as the source of the timeout error.
 #' @noRd
-pz_poll <- function(fn, timeout, interval = 0.1, loop, what = "condition") {
+pz_poll <- function(
+  fn,
+  timeout,
+  interval = 0.1,
+  loop,
+  what = "condition",
+  call = caller_env()
+) {
   deadline <- Sys.time() + timeout
   repeat {
     if (isTRUE(fn())) {
@@ -48,7 +56,8 @@ pz_poll <- function(fn, timeout, interval = 0.1, loop, what = "condition") {
     if (remaining <= 0) {
       cli::cli_abort(
         "Timed out after {timeout}s waiting for {.val {what}}.",
-        class = "paparazzi_error_timeout"
+        class = "paparazzi_error_timeout",
+        call = call
       )
     }
     later::run_now(timeoutSecs = min(remaining, interval), loop = loop)

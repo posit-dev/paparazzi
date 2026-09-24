@@ -69,7 +69,7 @@ PaparazziPage <- R6::R6Class(
           private$chromote_$Runtime$evaluate("location.href")$result$value,
           error = function(e) NULL
         )
-        if (!is.null(url)) cat_line("  URL: ", url)
+        if (!is.null(url)) cli::cat_line("  URL: ", url)
       }
       invisible(self)
     }

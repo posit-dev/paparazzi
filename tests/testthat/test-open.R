@@ -130,8 +130,9 @@ test_that("is_shiny_app_file recognizes Shiny app file names", {
     "app-main.R",
     "app_ui.R",
     "app-old-server.R",
-    "foo_.R",
-    "foo-.R"
+    "my-app.R",
+    "my_app.R",
+    "my-shiny-app.R"
   )
   for (f in shiny_files) {
     expect_true(is_shiny_app_file(f), info = f)
@@ -145,7 +146,10 @@ test_that("is_shiny_app_file recognizes Shiny app file names", {
     "screenshot.R",
     "app.Rmd",
     "appR.R",
-    "ui.R.bak"
+    "ui.R.bak",
+    "foo_.R",
+    "foo-.R",
+    "application.R"
   )
   for (f in plain_files) {
     expect_false(is_shiny_app_file(f), info = f)
@@ -189,6 +193,28 @@ test_that("file_url percent-encodes special characters", {
   page <- pz_open(weird)
   withr::defer(pz_close(page))
   expect_match(pz_js(page, "location.protocol"), "file:")
+})
+
+test_that("file_url encodes literal percent signs in file names", {
+  dir <- withr::local_tempdir()
+  pct <- file.path(dir, "a%20b #1.html")
+  file.create(pct)
+  url <- file_url(pct)
+  expect_match(url, "a%2520b%20%231.html", fixed = TRUE)
+
+  skip_if_no_chrome()
+  page <- pz_open(pct)
+  withr::defer(pz_close(page))
+  expect_match(pz_js(page, "location.pathname"), "a%2520b", fixed = TRUE)
+})
+
+test_that("print() works on open and closed pages", {
+  skip_if_no_chrome()
+  page <- pz_open(fixture_file())
+  expect_output(print(page), "PaparazziPage: open")
+  expect_output(print(page), "URL: file:")
+  pz_close(page)
+  expect_output(print(page), "PaparazziPage: closed")
 })
 
 test_that("Windows drive paths are not mistaken for URL schemes", {

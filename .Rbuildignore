@@ -10,3 +10,4 @@
 ^\.pi-loop\.json\.lock$
 ^paparazzi\.Rcheck$
 ^paparazzi_.*\.tar\.gz$
+^\.roborev\.toml$

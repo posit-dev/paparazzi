@@ -20,6 +20,9 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   check_bool(await)
   timeout <- resolve_timeout(timeout, ctx$page)
 
+  # Captured outside the handler so the error is attributed to pz_js(),
+  # not to the tryCatch callback.
+  call <- current_env()
   res <- tryCatch(
     ctx$page$session$Runtime$evaluate(
       expr,
@@ -31,7 +34,9 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
       if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
         cli::cli_abort(
           "Timed out after {timeout}s evaluating JavaScript.",
-          class = "paparazzi_error_timeout"
+          class = "paparazzi_error_timeout",
+          call = call,
+          parent = e
         )
       }
       stop(e)
@@ -39,13 +44,46 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   )
   err <- res$exceptionDetails
   if (!is.null(err)) {
+    # Non-Error throws (throw "x", Promise.reject("x")) have no
+    # description; the thrown value is all there is.
     msg <- err$exception$description %||% err$text %||% "unknown error"
+    thrown <- err$exception$value
+    if (
+      is.null(err$exception$description) &&
+        is.atomic(thrown) &&
+        length(thrown) == 1
+    ) {
+      msg <- as.character(thrown)
+    }
     cli::cli_abort(
       "JavaScript error: {msg}",
       class = "paparazzi_error_js"
     )
   }
-  res$result$value
+  js_value(res$result)
+}
+
+# CDP reports NaN/Infinity/-Infinity/-0/BigInt as unserializableValue
+# with no value field.
+js_value <- function(result) {
+  if (!is.null(result$value)) {
+    return(result$value)
+  }
+  uv <- result$unserializableValue
+  if (is.null(uv)) {
+    return(NULL)
+  }
+  switch(
+    uv,
+    "NaN" = NaN,
+    "Infinity" = Inf,
+    "-Infinity" = -Inf,
+    "-0" = 0,
+    {
+      num <- suppressWarnings(as.numeric(sub("n$", "", uv)))
+      if (is.na(num)) uv else num
+    }
+  )
 }
 
 #' Get the underlying ChromoteSession

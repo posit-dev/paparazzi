@@ -71,7 +71,7 @@ pz_open <- function(
     )
   }
   if (identical(wait, "load")) {
-    wait_for_load(page, timeout = page$default_timeout)
+    wait_for_load(page, timeout = page$default_timeout, call = current_env())
   }
 
   ok <- TRUE
@@ -125,13 +125,13 @@ open_target_url <- function(x, call = caller_env()) {
   )
 }
 
-# Conventional Shiny app file names: app.R/ui.R/server.R, app-*.R variants,
-# and names ending in a separator before the extension (foo_.R, foo-.R).
+# Conventional Shiny app file names: app.R/ui.R/server.R, and the variants
+# Shiny's editor tooling recognizes: app-*.R/app_*.R and *-app.R/*_app.R.
 is_shiny_app_file <- function(name) {
   name %in%
     c("app.R", "app.r", "ui.R", "server.R") ||
     grepl("^app[_-].+[.]R$", name) ||
-    grepl("^.+[_-][.]R$", name)
+    grepl("^.+[_-]app[.]R$", name)
 }
 
 file_url <- function(path) {
@@ -144,7 +144,7 @@ file_url <- function(path) {
       if (grepl("^[A-Za-z]:$", seg)) {
         seg
       } else {
-        utils::URLencode(seg, reserved = TRUE)
+        utils::URLencode(seg, reserved = TRUE, repeated = TRUE)
       }
     },
     character(1)
@@ -156,17 +156,26 @@ file_url <- function(path) {
   paste0("file://", path)
 }
 
-wait_for_load <- function(page, timeout) {
+wait_for_load <- function(page, timeout, call = caller_env()) {
+  deadline <- Sys.time() + timeout
   pz_poll(
     fn = function() {
+      # Give each readyState check only the remaining budget, so a stalled
+      # renderer can't stretch the load wait beyond its own timeout.
+      remaining <- as.numeric(difftime(deadline, Sys.time(), units = "secs"))
       isTRUE(tryCatch(
-        pz_js(page, "document.readyState === 'complete'"),
+        pz_js(
+          page,
+          "document.readyState === 'complete'",
+          timeout = max(remaining, 0.1)
+        ),
         error = function(e) FALSE
       ))
     },
     timeout = timeout,
     loop = page$child_loop,
-    what = "page load"
+    what = "page load",
+    call = call
   )
   invisible(page)
 }
