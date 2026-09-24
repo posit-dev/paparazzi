@@ -384,7 +384,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
   check_context(ctx)
   check_dots_empty()
-  check_number_whole(n, min = 1)
+  n <- check_which(n, strings = FALSE)
   check_bool(from_root)
   invisible(find_which(ctx, target, n, from_root, call = current_env()))
 }

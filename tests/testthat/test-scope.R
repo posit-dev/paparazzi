@@ -153,8 +153,10 @@ test_that("the find family validates its inputs", {
   )
 
   # n is a whole number; "first"/"last" are the wrappers, not values.
-  expect_error(pz_find_nth(page, "first"), class = "rlang_error")
+  expect_error(pz_find_nth(page, "first"), class = "paparazzi_error_input")
+  expect_error(pz_find_nth(page, "first"), "pz_find_first")
   expect_error(pz_find_nth(page, 0), class = "rlang_error")
+  expect_error(pz_find_nth(page, 1.5), class = "rlang_error")
 
   expect_error(pz_find("not a context", ".btn"), class = "paparazzi_error_context")
 })

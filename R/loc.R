@@ -39,11 +39,7 @@ pz_loc <- function(css, ..., has_text = NULL, which = NULL, within = NULL) {
     check_string(has_text)
   }
   if (!is.null(which)) {
-    if (is_string(which)) {
-      which <- arg_match(which, values = c("first", "last"))
-    } else {
-      check_number_whole(which, min = 1)
-    }
+    which <- check_which(which)
   }
   if (!is.null(within)) {
     within <- as_loc(within, arg = "within", call = current_env())
