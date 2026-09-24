@@ -15,8 +15,12 @@ test_that("pz_loc validates css and has_text", {
 
 test_that("pz_loc validates which", {
   expect_error(pz_loc(".btn", which = "third"), "first")
+  expect_error(pz_loc(".btn", which = "third"), class = "rlang_error")
   expect_error(pz_loc(".btn", which = 0), class = "rlang_error")
   expect_error(pz_loc(".btn", which = 1.5), class = "rlang_error")
+  # Errors name the argument and point at the caller.
+  err <- expect_error(pz_loc(".btn", which = "third"), "`which`")
+  expect_identical(err$call, quote(pz_loc(".btn", which = "third")))
   expect_s3_class(pz_loc(".btn", which = "first"), "paparazzi_loc")
   expect_s3_class(pz_loc(".btn", which = "last"), "paparazzi_loc")
   expect_s3_class(pz_loc(".btn", which = 2), "paparazzi_loc")
