@@ -86,7 +86,13 @@ clip_viewport <- function(ctx, call = caller_env()) {
       call = call
     )
   }
-  list(x = v[[1]], y = v[[2]], width = v[[3]], height = v[[4]])
+  clip <- list(x = v[[1]], y = v[[2]], width = v[[3]], height = v[[4]])
+  # scrollX goes negative on horizontally-scrolled RTL pages, and CDP
+  # rejects a negative clip origin; clamp it (the region shifts by the
+  # clamped amount). Bounds-aware capture is the framing task's job.
+  clip$x <- max(clip$x, 0)
+  clip$y <- max(clip$y, 0)
+  clip
 }
 
 # The clip for an element capture: the union of viewport-relative rects,
