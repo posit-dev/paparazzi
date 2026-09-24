@@ -75,6 +75,17 @@ test_that("pz_open errors on bad input", {
   )
 })
 
+test_that("pz_open validates shiny_options and envvars types", {
+  expect_error(
+    pz_open(fixture_file(), shiny_options = "nope"),
+    "must be a list"
+  )
+  expect_error(
+    pz_open(fixture_file(), envvars = 42),
+    "must be a character vector"
+  )
+})
+
 test_that("pz_open checks dots empty", {
   skip_if_no_chrome()
   expect_error(pz_open(fixture_file(), width = 100), "empty")

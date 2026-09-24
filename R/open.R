@@ -44,16 +44,10 @@ pz_open <- function(
     wait <- "load"
   }
   if (!is.list(shiny_options)) {
-    cli::cli_abort(
-      "{.arg shiny_options} must be a list.",
-      class = "paparazzi_error_input"
-    )
+    stop_input_type(shiny_options, "a list")
   }
   if (!is.null(envvars) && !is.character(envvars)) {
-    cli::cli_abort(
-      "{.arg envvars} must be a character vector or {.code NULL}.",
-      class = "paparazzi_error_input"
-    )
+    stop_input_type(envvars, "a character vector")
   }
 
   if (inherits(x, "ChromoteSession")) {

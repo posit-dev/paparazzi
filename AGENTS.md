@@ -17,6 +17,12 @@
    via `cli::cli_inform()`/`cli::cat_line()`. Prefer cli inline markup
    (`{.arg}`, `{.val}`, `{.fn}`) over `sprintf()`. rlang's argument checkers
    (`check_dots_empty()`, `check_string()`, etc.) are fine and stay.
+1. **Validate user input with rlang's `check_*()` functions** (`check_bool()`,
+   `check_string()`, `check_number_decimal()`, `check_number_whole()`,
+   `check_data_frame()`; DESCRIPTION pins rlang >= 1.2.0 for these). Where no
+   `check_*()` exists for the type, use `stop_input_type()`. Hand-rolled
+   `cli::cli_abort(class = ...)` checks are reserved for conditions that need
+   a `paparazzi_error_*` class (e.g. because tests match on it).
 
 ## Work Mechanics
 

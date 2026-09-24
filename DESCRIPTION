@@ -17,7 +17,7 @@ Imports:
     cli,
     later,
     R6,
-    rlang,
+    rlang (>= 1.2.0),
     tibble,
     withr
 Suggests: 
