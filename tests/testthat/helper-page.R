@@ -64,3 +64,11 @@ png_dimensions <- function(path) {
   height <- readBin(png[21:24], "integer", size = 4, endian = "big")
   c(as.integer(width), as.integer(height))
 }
+
+actions_fixture_file <- function() {
+  test_path("fixtures", "actions.html")
+}
+
+local_actions_page <- function(.env = parent.frame()) {
+  local_page(actions_fixture_file(), .env = .env)
+}
