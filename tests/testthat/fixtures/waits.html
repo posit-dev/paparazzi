@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"><title>paparazzi waits fixture</title>
+  <style>
+    @keyframes bounce {
+      from { top: 0; }
+      to { top: 200px; }
+    }
+    @keyframes drift {
+      from { left: 0; }
+      to { left: 300px; }
+    }
+    #bouncer {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: rebeccapurple;
+      animation: bounce 300ms 4;
+    }
+    #endless {
+      position: absolute;
+      top: 500px;
+      width: 20px;
+      height: 20px;
+      background: firebrick;
+      animation: drift 200ms infinite;
+    }
+  </style>
+</head>
+<body>
+  <!-- Text stability: #ticker changes every 50 ms for 1 s, then
+       settles. #never-still never settles. -->
+  <p id="ticker"></p>
+  <p id="never-still"></p>
+
+  <!-- Layout stability: #bouncer animates for 1.2 s then stops;
+       #endless animates forever. -->
+  <div id="bouncer"></div>
+  <div id="endless"></div>
+
+  <a id="nav-link" href="nav-target.html">Go to the target page</a>
+
+  <script>
+    let n = 0;
+    const ticker = setInterval(function () {
+      n++;
+      document.getElementById('ticker').textContent = 'tick ' + n;
+      if (n >= 20) {
+        clearInterval(ticker);
+        document.getElementById('ticker').textContent = 'settled';
+      }
+    }, 50);
+    setInterval(function () {
+      document.getElementById('never-still').textContent = String(Math.random());
+    }, 30);
+  </script>
+</body>
+</html>

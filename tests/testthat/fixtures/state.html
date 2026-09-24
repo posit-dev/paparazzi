@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi state fixture</title>
+  <style>
+    #off-viewport, #late-in-viewport { position: absolute; }
+    #off-viewport { top: 3000px; }
+    #late-in-viewport { top: 2500px; }
+    #scroll-box { height: 100px; overflow: auto; }
+    #scroll-inner { height: 600px; }
+  </style>
+</head>
+<body>
+  <!-- Enabled/disabled: .ctl spans the mix (2 of 5 enabled), .on the
+       enabled pair. #inherited is disabled through its fieldset. -->
+  <button class="ctl on" id="btn-enabled">Enabled</button>
+  <button class="ctl" id="btn-disabled" disabled>Disabled</button>
+  <input class="ctl on" id="text-enabled" type="text" value="editable">
+  <input class="ctl" id="text-disabled" type="text" value="locked" disabled>
+  <fieldset id="grp" disabled>
+    <input class="ctl" id="inherited" type="text" value="inherited">
+  </fieldset>
+
+  <!-- Focus: #focus-target is the element tests focus. -->
+  <input id="focus-target" type="text" value="focus me">
+
+  <!-- Checked: .check spans the mix (2 of 4), .checked-on the pair. -->
+  <input type="checkbox" class="check checked-on" id="cb-on" checked>
+  <input type="checkbox" class="check" id="cb-off">
+  <input type="radio" name="r" class="check checked-on" id="r-on" checked>
+  <input type="radio" name="r" class="check" id="r-off">
+
+  <!-- Viewport: .vp spans the mix (1 of 2 inside). #late-in-viewport
+       moves inside after 300 ms, for the retry path. -->
+  <div id="viewport-wrap" style="height: 1200px">
+    <p class="vp" id="in-viewport">I am in view</p>
+  </div>
+  <p class="vp" id="off-viewport">Far below the fold</p>
+  <p id="late-in-viewport">Late to the viewport</p>
+
+  <!-- Values: text, textarea, select, checkbox, and a p with no value
+       property (NA). .val-line carries the pairwise vector. -->
+  <input id="val-text" value="hello world">
+  <textarea id="val-area">line one
+line two</textarea>
+  <select id="val-select">
+    <option value="a">A</option>
+    <option value="b" selected>B</option>
+  </select>
+  <input type="checkbox" id="val-check" checked value="cb-custom">
+  <p id="val-none">no value property here</p>
+  <input class="val-line" id="val-line-1" value="alpha">
+  <input class="val-line" id="val-line-2" value="beta">
+  <input class="val-line" id="val-line-3" value="gamma">
+
+  <!-- Attributes: #no-href has no href (NA). .attr-line carries the
+       pairwise vector. -->
+  <a class="attr" id="link-one" href="https://example.com/page" target="_blank">A link</a>
+  <a class="attr" id="link-two" href="/relative/path">Another</a>
+  <span class="attr" id="no-href">no href</span>
+  <a class="attr-line" id="attr-line-1" href="one.html">One</a>
+  <a class="attr-line" id="attr-line-2" href="two.html">Two</a>
+  <a class="attr-line" id="attr-line-3" href="three.html">Three</a>
+
+  <!-- Classes: .cls spans the mix (2 of 3 have btn). -->
+  <button class="cls btn btn-primary" id="btn-one">One</button>
+  <button class="cls btn" id="btn-two">Two</button>
+  <span class="cls" id="bare">bare</span>
+
+  <!-- pz_expect_js: a scrollable box (scrollTop starts at 0) and an
+       element whose dataset is set after 300 ms, for the retry path. -->
+  <div id="scroll-box">
+    <div id="scroll-inner">tall enough to scroll</div>
+  </div>
+  <p id="late-flag">waiting for a flag</p>
+
+  <script>
+    setTimeout(function () {
+      document.getElementById('late-in-viewport').style.top = '10px';
+    }, 300);
+    setTimeout(function () {
+      document.getElementById('late-flag').dataset.ready = 'yes';
+    }, 300);
+  </script>
+</body>
+</html>
