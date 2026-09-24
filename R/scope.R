@@ -165,7 +165,7 @@ narrow_locs <- function(locs, which) {
 # pz_find_first()/pz_find_last()/pz_find_nth() with a target: apply
 # `which` to the promoted loc and pin its match. Without a target:
 # narrow the current scope eagerly.
-find_which <- function(ctx, target, which, from_root, call) {
+find_which <- function(ctx, target, which, from_root, call = caller_env()) {
   if (is.null(target)) {
     return(find_narrow(ctx, which, from_root, call))
   }
@@ -249,7 +249,7 @@ find_narrow <- function(ctx, which, from_root, call) {
 }
 
 # Resolve locs eagerly, pin the whole matched set, and push it.
-find_push <- function(ctx, locs, from_root, call) {
+find_push <- function(ctx, locs, from_root, call = caller_env()) {
   els <- loc_resolve(
     ctx,
     locs,
@@ -297,18 +297,16 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
   check_context(ctx)
   check_dots_empty()
   check_bool(from_root)
-  call <- current_env()
   if (missing(target) || is.null(target)) {
     cli::cli_abort(
       c(
         "{.arg target} is needed: {.fn pz_find} pins the elements it finds.",
         i = "To narrow the current scope, use {.fn pz_find_first}, {.fn pz_find_last}, or {.fn pz_find_nth} without a target."
       ),
-      class = "paparazzi_error_target",
-      call = call
+      class = "paparazzi_error_target"
     )
   }
-  invisible(find_push(ctx, as_loc_list(target, call = call), from_root, call))
+  invisible(find_push(ctx, as_loc_list(target), from_root))
 }
 
 #' Find the first match and push it as the current scope
@@ -332,7 +330,7 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
   check_dots_empty()
   check_bool(from_root)
-  invisible(find_which(ctx, target, "first", from_root, call = current_env()))
+  invisible(find_which(ctx, target, "first", from_root))
 }
 
 #' Find the last match and push it as the current scope
@@ -356,7 +354,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
   check_dots_empty()
   check_bool(from_root)
-  invisible(find_which(ctx, target, "last", from_root, call = current_env()))
+  invisible(find_which(ctx, target, "last", from_root))
 }
 
 #' Find the nth match and push it as the current scope
@@ -386,7 +384,7 @@ pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
   check_dots_empty()
   n <- check_which(n, strings = FALSE)
   check_bool(from_root)
-  invisible(find_which(ctx, target, n, from_root, call = current_env()))
+  invisible(find_which(ctx, target, n, from_root))
 }
 
 #' Pop the current scope

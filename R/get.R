@@ -5,7 +5,7 @@
 # confirmed signatures they take no `timeout` argument: the auto-wait
 # runs on the session default timeout.
 
-# Driver for the target-based getters. `read(els)` pulls values into R;
+# Driver for the target-based getters. `read(els, call)` pulls values into R;
 # it never sees an empty set, because loc_resolve() errors on timeout.
 # `target = NULL` means the current context: at a scoped context that is
 # the pinned set itself, used as-is, never released (its scope owns it),
@@ -17,7 +17,7 @@ get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
   if (is.null(target)) {
     scoped <- scope_root(ctx, call = call)
     if (!is.null(scoped)) {
-      return(read(scoped))
+      return(read(scoped, call))
     }
   }
   els <- loc_resolve(
@@ -28,7 +28,7 @@ get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
     call = call
   )
   on.exit(release_elements(els), add = TRUE)
-  read(els)
+  read(els, call)
 }
 
 # JS null/undefined reads become NA_character_, preserving positions:
@@ -147,13 +147,12 @@ new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
 #' @export
 pz_get_count <- function(ctx, ..., target = NULL) {
   check_dots_empty()
-  call <- current_env()
-  check_context(ctx, call = call)
-  resolved <- target_resolver_expr(target, call = call)
+  check_context(ctx)
+  resolved <- target_resolver_expr(target)
   # One use, one check: the scope is probed once per call, so a
   # detached scope raises its classed error through the count getter
   # too instead of counting nothing.
-  root <- scope_root(ctx, call = call)
+  root <- scope_root(ctx)
   if (is.null(target) && !is.null(root)) {
     # The scope's own count, without re-querying the pinned set.
     return(root$count)
@@ -162,7 +161,6 @@ pz_get_count <- function(ctx, ..., target = NULL) {
     ctx,
     resolved$fn,
     resolved$description,
-    call = call,
     root = root
   )
   on.exit(release_elements(els), add = TRUE)
@@ -188,16 +186,14 @@ pz_get_count <- function(ctx, ..., target = NULL) {
 pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
   check_dots_empty()
   check_bool(raw)
-  call <- current_env()
   get_impl(
     ctx = ctx,
     target = target,
     timeout = NULL,
-    read = function(els) {
+    read = function(els, call) {
       texts <- els_call(els, expect_text_js, call = call)
       if (raw) texts else collapse_ws(texts)
-    },
-    call = call
+    }
   )
 }
 
@@ -217,13 +213,11 @@ pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
 #' @export
 pz_get_value <- function(ctx, ..., target = NULL) {
   check_dots_empty()
-  call <- current_env()
   get_impl(
     ctx = ctx,
     target = target,
     timeout = NULL,
-    read = function(els) chr_or_na(els_values(els, get_value_js, call = call)),
-    call = call
+    read = function(els, call) chr_or_na(els_values(els, get_value_js, call = call))
   )
 }
 
@@ -244,7 +238,6 @@ pz_get_value <- function(ctx, ..., target = NULL) {
 pz_get_attr <- function(ctx, name, ..., target = NULL) {
   check_dots_empty()
   check_string(name)
-  call <- current_env()
   # The name reaches JS JSON-encoded, so quotes and specials can't break
   # out of the function string.
   js <- paste0(
@@ -256,8 +249,7 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
     ctx = ctx,
     target = target,
     timeout = NULL,
-    read = function(els) chr_or_na(els_values(els, js, call = call)),
-    call = call
+    read = function(els, call) chr_or_na(els_values(els, js, call = call))
   )
 }
 
@@ -280,16 +272,14 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
 #' @export
 pz_get_rect <- function(ctx, ..., target = NULL) {
   check_dots_empty()
-  call <- current_env()
   get_impl(
     ctx = ctx,
     target = target,
     timeout = NULL,
-    read = function(els) {
+    read = function(els, call) {
       rects <- el_rects(els, call = call)
       new_get_tibble(ctx, els, target, !!!rects, call = call)
-    },
-    call = call
+    }
   )
 }
 
@@ -312,12 +302,11 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
 #' @export
 pz_get_elements <- function(ctx, ..., target = NULL) {
   check_dots_empty()
-  call <- current_env()
   get_impl(
     ctx = ctx,
     target = target,
     timeout = NULL,
-    read = function(els) {
+    read = function(els, call) {
       vals <- els_values(els, get_elements_js, call = call)
       field <- function(name) chr_or_na(lapply(vals, `[[`, name))
       new_get_tibble(
@@ -327,11 +316,9 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
         tag = field("tag"),
         id = field("id"),
         class = field("class"),
-        text = collapse_ws(field("text")),
-        call = call
+        text = collapse_ws(field("text"))
       )
-    },
-    call = call
+    }
   )
 }
 
@@ -350,13 +337,11 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
 #' @export
 pz_get_html <- function(ctx, ..., target = NULL) {
   check_dots_empty()
-  call <- current_env()
   get_impl(
     ctx = ctx,
     target = target,
     timeout = NULL,
-    read = function(els) els_call(els, get_html_js, call = call),
-    call = call
+    read = function(els, call) els_call(els, get_html_js, call = call)
   )
 }
 

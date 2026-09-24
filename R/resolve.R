@@ -199,7 +199,7 @@ loc_resolve_once <- function(
   ctx,
   fn,
   description,
-  call,
+  call = caller_env(),
   root = NULL,
   object_group = NULL
 ) {

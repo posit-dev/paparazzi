@@ -34,7 +34,6 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   check_context(ctx)
   check_dots_empty()
   check_string(path)
-  call <- current_env()
 
   if (!is.null(frame) && !identical(frame, FALSE)) {
     # NULL and FALSE both mean "no framing" today; the distinction matters
@@ -45,28 +44,27 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
         "Framing screenshots isn't implemented yet.",
         i = "{.code frame = FALSE} captures without framing for now; framing via {.fn pz_frame} is coming."
       ),
-      class = "paparazzi_error_unsupported",
-      call = call
+      class = "paparazzi_error_unsupported"
     )
   }
 
   clip <- if (is.null(target) && length(ctx$scope) == 0) {
-    clip_viewport(ctx, call = call)
+    clip_viewport(ctx)
   } else if (is.null(target)) {
     # The clip is the union of the boxes of the current scope's pinned
     # set, detach-checked once per call (one use, one check): a scope
     # that left the page raises the classed error instead of clipping
     # to stale zero boxes. Revisit if scoping settles on
     # intersect-instead-of-union.
-    scoped <- scope_root(ctx, call = call)
-    clip_rects_union(ctx, el_rects(scoped, call = call), call = call)
+    scoped <- scope_root(ctx)
+    clip_rects_union(ctx, el_rects(scoped))
   } else {
-    els <- loc_resolve(ctx, target, multiple = "all", call = call)
+    els <- loc_resolve(ctx, target, multiple = "all")
     on.exit(release_elements(els), add = TRUE)
-    clip_rects_union(ctx, el_rects(els, call = call), call = call)
+    clip_rects_union(ctx, el_rects(els))
   }
 
-  res <- screenshot_capture(ctx, clip, call = call)
+  res <- screenshot_capture(ctx, clip)
   writeBin(jsonlite::base64_dec(res$data), path)
   invisible(ctx)
 }

@@ -42,7 +42,7 @@ pz_loc <- function(css, ..., has_text = NULL, which = NULL, within = NULL) {
     which <- check_which(which)
   }
   if (!is.null(within)) {
-    within <- as_loc(within, arg = "within", call = current_env())
+    within <- as_loc(within, arg = "within")
   }
   structure(
     list(css = css, has_text = has_text, which = which, within = within),
