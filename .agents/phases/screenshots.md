@@ -77,6 +77,17 @@ session handoffs for this phase only. Framing itself is r0zd; here
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close): landed the fixture (4edc6e0), pz_screenshot()
+  (ec0d92e), a pz_js list-flattening fix for the viewport clip
+  (2f0c9f2), tests with exact IHDR dimension assertions (da8a72a), and
+  roborev 1225 fixes (f590a41: viewport clip origin clamped for
+  negative RTL scrollX; pixel-content assertions via a chromote-side
+  canvas decode). 325 expectations green, 0 failures; R CMD check
+  0/0/4 (all notes pre-existing/environmental). roborev 1225 (codex)
+  closed. Next: r0zd (framing) consumes the frame= seam; 5cqf/2fc0
+  rebase note still stands. Provisional: scoped-context target = NULL
+  (union of innermost scope) remains untestable until pz_find*().
+
 - 2026-09-24 (start): claimed 18j6; blockers a3vj (resolution) and
   gayb (geometry) closed, baseline 302 tests. Parallel worktree effort
   with 5cqf (getters) and 2fc0 (actions); 5cqf merges first, expect a
