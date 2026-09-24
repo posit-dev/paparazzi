@@ -64,6 +64,18 @@ loc_resolver_expr <- function(locs) {
   paste0("(", loc_resolver_js, ")(\n", specs, "\n)")
 }
 
+# The target = NULL seam, shared by expect_impl() and get_impl(): NULL
+# means the current context, which today is the root, where it stands
+# for the implicit document.body element -- a one-element JS array that
+# resolves without the loc resolver. The scoping task revisits this.
+target_resolver_expr <- function(target, call = caller_env()) {
+  if (is.null(target)) {
+    return(list(expr = "[document.body]", description = "document.body"))
+  }
+  locs <- as_loc_list(target, call = call)
+  list(expr = loc_resolver_expr(locs), description = format_loc(locs))
+}
+
 # A spec as a plain nested list (jsonlite won't serialize classed lists);
 # NULL qualifiers are dropped so they never reach the JSON.
 loc_spec_fields <- function(loc) {
@@ -86,7 +98,9 @@ loc_spec_fields <- function(loc) {
 #' single `Runtime$evaluate` (with `returnByValue = FALSE`), and the
 #' `callFunctionOn` count read happens only once a match exists -- an
 #' empty set comes back as JS `null`, so there is no empty remote object
-#' to read or release. Per-command timeouts are the page's
+#' to read or release. `target = NULL` follows the target seam
+#' (target_resolver_expr()): the current context is the root, which
+#' resolves to document.body. Per-command timeouts are the page's
 #' `default_timeout`, separate from the wait budget. The result holds the
 #' objectId of the remote element array; free it with release_elements().
 #'
@@ -102,10 +116,10 @@ loc_resolve <- function(
   check_context(ctx, call = call)
   check_dots_empty()
   multiple <- arg_match(multiple)
-  locs <- as_loc_list(target, call = call)
-  description <- format_loc(locs)
+  target_expr <- target_resolver_expr(target, call = call)
+  expr <- target_expr$expr
+  description <- target_expr$description
   timeout <- resolve_timeout(timeout, ctx$page, call = call)
-  expr <- loc_resolver_expr(locs)
 
   resolved <- NULL
   pz_poll(
