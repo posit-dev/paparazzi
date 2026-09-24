@@ -2,11 +2,6 @@
 # domain -- real trusted events, never JS .click() substitutes. The one
 # sanctioned exception is element focus()/blur() in pz_focus()/pz_blur()
 # (element-state methods, not input events; Playwright does the same).
-# The pinned element set at the top of the scope stack, or NULL at
-# the root. The set is owned by the scope that pinned it: actions use
-# it but never release it. scope_root() (scope.R) adds the detach
-# check every consumer runs once per call; scope_top() is the raw
-# stack read, for routing decisions that don't consume the scope.
 #' Click an element
 #'
 #' Auto-waits for the element to be actionable -- visible with a

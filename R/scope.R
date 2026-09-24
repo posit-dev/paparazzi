@@ -172,6 +172,9 @@ pz_find_reset <- function(ctx) {
   }
   invisible(PaparazziContext$new(ctx$page, scope = list()))
 }
+# The pinned set at the top of the scope stack, or NULL at the root:
+# the raw stack read, without the detach check scope_root() adds. For
+# routing decisions that don't consume the scope.
 scope_top <- function(ctx) {
   if (length(ctx$scope) == 0) {
     NULL

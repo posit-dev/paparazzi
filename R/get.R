@@ -1,9 +1,4 @@
-# Getters end the chain: they return values, not the context. The
-# target-based ones share get_impl(), which auto-waits for at least one
-# match via loc_resolve(), reads values through a `read` callback that
-# may assume a live handle, and releases the handle on exit. Per the
-# confirmed signatures they take no `timeout` argument: the auto-wait
-# runs on the session default timeout.
+# Getters end the chain: they return values, not the context.
 # Driver for the target-based getters. `read(els, call)` pulls values into R;
 # it never sees an empty set, because loc_resolve() errors on timeout.
 # `target = NULL` means the current context: at a scoped context that is
