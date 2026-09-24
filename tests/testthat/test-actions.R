@@ -216,13 +216,13 @@ test_that("pz_blur on a scoped context", {
   page <- local_actions_page()
 
   els <- loc_resolve(page, ".dup", multiple = "all")
-  on.exit(release_elements(els), add = TRUE)
+  withr::defer(release_elements(els))
   ctx <- PaparazziContext$new(page)
   ctx$scope <- list(els)
   expect_error(pz_blur(ctx), class = "paparazzi_error_multiple")
 
   els1 <- loc_resolve(page, "#name", multiple = "error")
-  on.exit(release_elements(els1), add = TRUE)
+  withr::defer(release_elements(els1))
   ctx <- PaparazziContext$new(page)
   ctx$scope <- list(els1)
   pz_focus(page, "#name")
