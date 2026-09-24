@@ -245,7 +245,7 @@ pz_click <- function(ctx, target = NULL, ...) {
   call <- current_env()
   found <- action_elements(ctx, target, call = call)
   if (!found$pinned) {
-    on.exit(release_elements(found$els), add = TRUE)
+    withr::defer(release_elements(found$els))
   }
   point <- el_pointer_point(ctx, found$els, call = call)
   dispatch_click(ctx, "clicking", found$els$description, point, call = call)
@@ -274,7 +274,7 @@ pz_hover <- function(ctx, target = NULL, ...) {
   call <- current_env()
   found <- action_elements(ctx, target, call = call)
   if (!found$pinned) {
-    on.exit(release_elements(found$els), add = TRUE)
+    withr::defer(release_elements(found$els))
   }
   point <- el_pointer_point(ctx, found$els, call = call)
   dispatch_mouse(
@@ -333,7 +333,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 
   found <- action_elements(ctx, target, call = call)
   if (!found$pinned) {
-    on.exit(release_elements(found$els), add = TRUE)
+    withr::defer(release_elements(found$els))
   }
   point <- el_pointer_point(ctx, found$els, call = call)
   # Focus comes from the real click pipeline (not JS .focus()) so
@@ -411,7 +411,7 @@ pz_focus <- function(ctx, target = NULL, ...) {
   call <- current_env()
   found <- action_elements(ctx, target, call = call)
   if (!found$pinned) {
-    on.exit(release_elements(found$els), add = TRUE)
+    withr::defer(release_elements(found$els))
   }
   el_scroll_into_view(found$els, call = call)
   els_call(

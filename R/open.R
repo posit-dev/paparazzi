@@ -58,7 +58,7 @@ pz_open <- function(
 
   # If navigation or the load wait fails, don't leak the browser.
   ok <- FALSE
-  on.exit(if (!ok) try(page$close(), silent = TRUE), add = TRUE)
+  withr::defer(if (!ok) try(page$close(), silent = TRUE))
 
   # CDP reports navigation failures as `errorText`, not as errors.
   nav <- session$Page$navigate(url)
@@ -214,7 +214,7 @@ pz_close <- function(page) {
 #' @export
 pz_with_page <- function(x, code, ...) {
   page <- if (is_pz_page(x)) x else pz_open(x, ...)
-  on.exit(pz_close(page), add = TRUE)
+  withr::defer(pz_close(page))
   # Decide expression-vs-function from the quoted form: a braced block is
   # always an expression, even when its value happens to be a function.
   expr <- substitute(code)

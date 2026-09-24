@@ -62,7 +62,7 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
     clip_rects_union(ctx, el_rects(scoped, call = call), call = call)
   } else {
     els <- loc_resolve(ctx, target, multiple = "all", call = call)
-    on.exit(release_elements(els), add = TRUE)
+    withr::defer(release_elements(els))
     clip_rects_union(ctx, el_rects(els, call = call), call = call)
   }
 

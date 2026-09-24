@@ -366,7 +366,7 @@ expect_impl <- function(
           call,
           root = scope_root(ctx, call = call)
         )
-        on.exit(release_elements(els), add = TRUE)
+        withr::defer(release_elements(els))
         check(els)
       },
       timeout = timeout,

@@ -27,7 +27,7 @@ get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
     multiple = "all",
     call = call
   )
-  on.exit(release_elements(els), add = TRUE)
+  withr::defer(release_elements(els))
   read(els)
 }
 
@@ -165,7 +165,7 @@ pz_get_count <- function(ctx, ..., target = NULL) {
     call = call,
     root = root
   )
-  on.exit(release_elements(els), add = TRUE)
+  withr::defer(release_elements(els))
   els$count
 }
 
