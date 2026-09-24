@@ -91,6 +91,14 @@ fixture `tests/testthat/fixtures/style.html`, helpers in
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close): landed the style engine (56740fa): R/style.R,
+  style.html fixture, helper-style.R, test-style.R (82 tests; suite
+  920 green). One deviation: bad ctx + target = NULL on getters crashes
+  in scope_top() before check_context -- pre-existing, pz_get_text(1)
+  has it too; tests route around it, fix belongs to the getters/scoping
+  owners. Next: roborev on 56740fa, then kata comment.
+  Provisional carried: the font-size-em parent-context adjustment is the
+  one deliberate refinement of the SPEC table's font row.
 - 2026-09-24 (start): claimed 2rwr; baseline green at c8d889b (838
   tests). Probe mechanics verified in Chrome (percent/em/currentColor/
   hex all normalize; enumeration is longhand-only; `visibility:hidden`
