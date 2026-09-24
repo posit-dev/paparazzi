@@ -31,7 +31,13 @@ resolve primitive).
   comparison happens in R. `exists`/`count` need only the count — no
   second round trip.
 - **Failure error.** `cli::cli_abort(class =
-  "paparazzi_expectation_failure")` matching the SPEC's format:
+  "paparazzi_expectation_failure")` matching the SPEC's format.
+  Message lines are FIXED cli templates; all dynamic parts (headline,
+  target, observed, waited) interpolate as cli values, never pasted
+  into templates — observed page text or a bracey regex must stay
+  literal (roborev 1222 found the injection; same rule applies
+  everywhere page-derived text reaches cli). The testthat bridge gets
+  the same lines via `cli::format_message()`. Format:
   headline ("Expected text to contain \"otters\""), `Target:` line with
   `format_loc()` output, `Last seen:` line with the observed value
   (quoted, truncated to ~80 chars), `Waited {n}s.` Negation folds into
@@ -54,7 +60,10 @@ resolve primitive).
     comparing (same rule as `has_text`). `text` length 1 applies to
     every match; length n requires exactly n matches and compares
     pairwise in order. `regex` matches against the collapsed element
-    text (R `grepl`).
+    text (R `grepl`). Negated vector text passes only when NO element
+    satisfies its pairwise expectation (the SPEC's "no match
+    satisfies" applied per pair); a count != length(text) mismatch
+    passes the negation vacuously.
 - **Multi-match semantics** (SPEC table, pinned by tests):
   - exists: pass if count >= 1; `not`: pass if count == 0.
   - count: pass if count satisfies n/min/max; `not`: inverse.
@@ -95,6 +104,15 @@ resolve primitive).
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close): landed the phase note (bd5416b), the core +
+  catalog (cd8937a), and review fixes (facda43: cli-value
+  interpolation, vector-not zero-hits, hidden's check_bool).
+  288 tests green; roborev 1222 closed, dispositions on the issue.
+  Next: 18j6 (getters) or 2fc0 (pz_find pinning) per kata next.
+  Note for getters: collapse_ws() in R/expect.R trims while the
+  resolver's has_text collapse does not — unify when pz_get_text
+  lands (raw = FALSE path). Provisional carried: has_text
+  case-sensitivity.
 - 2026-09-24 (start): claimed 8kxx; harness green at f622f5f (201
   tests). Blocker a3vj closed; loc_resolve_once() delivered as
   promised. Decisions above resolved before code. Next: implement
