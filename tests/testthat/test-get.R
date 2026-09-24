@@ -3,7 +3,9 @@
 # shape is pinned in .agents/phases/getters.md: three p.item (with
 # whitespace wrinkles), three .field controls covering value/""/NA,
 # two a.link (one missing data-role), two absolutely-positioned
-# #box* divs, #rich, and a p.late appended 300 ms after load.
+# #box* divs, #rich, and a p.padded with leading/trailing whitespace.
+# (The auto-wait test schedules its own late element via pz_js(); the
+# fixture itself stays static.)
 
 test_that("pz_get_count returns the number of matches as an integer", {
   page <- local_getters_page()
@@ -17,14 +19,10 @@ test_that("pz_get_count at the root counts the body", {
 })
 
 test_that("pz_get_count returns 0 for a missing target without waiting", {
-  page <- local_getters_page()
-  elapsed <- as.numeric(
-    system.time(count <- pz_get_count(page, target = ".never"))[["elapsed"]]
-  )
-  expect_identical(count, 0L)
-  # 0 is a valid answer: the getter resolves once, so it must come
-  # back well before the session default timeout could elapse.
-  expect_lt(elapsed, 1)
+  # A waiting implementation would burn the session default timeout
+  # and raise paparazzi_error_timeout; 0 comes back immediately.
+  page <- local_page(getters_fixture_file(), timeout = 0.3)
+  expect_identical(pz_get_count(page, target = ".never"), 0L)
 })
 
 test_that("pz_get_count validates its inputs", {
@@ -149,6 +147,15 @@ test_that("pz_get_html returns the exact outerHTML of matches", {
   )
 })
 
+test_that("pz_get_html returns every match in document order", {
+  page <- local_getters_page()
+  html <- pz_get_html(page, target = ".item")
+  expect_length(html, 3)
+  expect_match(html[[1]], '<p class="item">first   item</p>', fixed = TRUE)
+  expect_match(html[[2]], "second\n", fixed = TRUE)
+  expect_identical(html[[3]], '<p class="item">third item</p>')
+})
+
 test_that("pz_get_url returns the current page URL", {
   page <- local_getters_page()
   url <- pz_get_url(page)
@@ -164,14 +171,28 @@ test_that("pz_get_title returns the document title", {
 
 test_that("target-based getters auto-wait for elements to appear", {
   page <- local_getters_page()
-  # The fixture appends p.late 300 ms after load; no pre-wait here.
-  elapsed <- as.numeric(
-    system.time(text <- pz_get_text(page, target = ".late"))[["elapsed"]]
+  # Scheduled after the page is open, so the element provably does
+  # not exist when the getter is called.
+  pz_js(
+    page,
+    "setTimeout(function() {
+      const el = document.createElement('p');
+      el.className = 'later';
+      el.textContent = 'arrived even later';
+      document.body.appendChild(el);
+    }, 300)"
   )
-  expect_identical(text, "arrived late")
-  # A non-waiting implementation would error on the missing target, so
-  # a non-trivial elapsed time proves the auto-wait did the work.
-  expect_gte(elapsed, 0.2)
+  expect_identical(pz_get_count(page, target = ".later"), 0L)
+  expect_identical(pz_get_text(page, target = ".later"), "arrived even later")
+})
+
+test_that("pz_get_text trims leading and trailing whitespace by default", {
+  page <- local_getters_page()
+  expect_identical(pz_get_text(page, target = ".padded"), "padded text")
+  expect_match(
+    pz_get_text(page, target = ".padded", raw = TRUE),
+    "^\\s+padded text\\s+$"
+  )
 })
 
 test_that("target-based getters time out with a classed error", {

@@ -76,8 +76,9 @@ phase only. Builds on the resolution engine
     left 50 / top 100 / 200x80 (exact rect rows).
   - `div#rich` containing `<b>bold</b> and <i>italic</i>` (outerHTML
     and collapsed-text tests).
-  - Script appends `p.late` ("arrived late") after ~300ms (auto-wait
-    test).
+  - `p.padded` with leading/trailing whitespace inside the tags (trim
+    tests); the auto-wait test schedules its own late element via
+    pz_js(), so the fixture stays static.
 
 ## Handoff log
 
@@ -90,7 +91,10 @@ phase only. Builds on the resolution engine
   itself routes through target_resolver_expr(), so target = NULL works
   for getters too (it had no other callers). Next: roborev review,
   close 5cqf. Provisional carried: has_text collapse doesn't trim;
-  element column is a NULL stub until scoping. New provisional:
+  element column is a NULL stub until scoping. Roborev 1226 review
+  fixes landed: deterministic auto-wait/count tests (no wall-clock
+  assertions), p.padded trim coverage, multi-match pz_get_html() test.
+  Next: close 5cqf. New provisional:
   pz_get_text() at the root includes inline <script> text (spec-correct
   textContent, but if "visible page text" is ever wanted, the scoping
   task should skip script/style subtrees).
