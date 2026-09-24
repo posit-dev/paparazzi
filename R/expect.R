@@ -587,6 +587,147 @@ pz_expect_class <- function(
     }
   )
 }
+#' Expect a JavaScript predicate to hold
+#'
+#' @description
+#' [pz_expect_js()] passes when at least one element matches and the
+#' predicate holds for every match: `expr` is evaluated as a function
+#' receiving the element, e.g. `"el => el.scrollTop > 0"`. It's the
+#' escape hatch for conditions the catalog doesn't cover. A predicate
+#' that throws is a JavaScript error, not a failed check.
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_expect_exists
+#' @param expr A JavaScript function receiving the element, as a string,
+#'   e.g. `"el => el.scrollTop > 0"`.
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_js("el => el.scrollTop > 0", target = "#feed")
+#' page |> pz_expect_js("el => !el.disabled", target = "#submit")
+#' }
+#'
+#' @export
+pz_expect_js <- function(
+  ctx,
+  expr,
+  ...,
+  target = NULL,
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  check_string(expr)
+  expect_impl(
+    ctx = ctx,
+    target = target,
+    not = not,
+    timeout = timeout,
+    check = check_state(expect_js_predicate(expr), not, "satisfied"),
+    description = expect_headline_js(expr, not)
+  )
+}
+#' Expect the page URL
+#'
+#' @description
+#' [pz_expect_url()] passes when the page's URL satisfies `url`. It works
+#' from any context, scoped or root: the URL belongs to the page, not to
+#' an element.
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_click
+#' @param url The expected URL, a single string.
+#' @param match How to compare `url`: `"contains"` (substring),
+#'   `"exact"`, or `"regex"` (an R regex matched with [grepl()]).
+#' @param not Invert the check.
+#' @param timeout Seconds to wait for the expectation to pass; `NULL`
+#'   (default) uses the session default, `0` checks once.
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_url("example.com")
+#' page |> pz_expect_url("https://example.com/", match = "exact")
+#' }
+#'
+#' @export
+pz_expect_url <- function(
+  ctx,
+  url,
+  ...,
+  match = c("contains", "exact", "regex"),
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  check_string(url)
+  match <- arg_match(match)
+  expect_page_impl(
+    ctx = ctx,
+    values = url,
+    match = match,
+    not = not,
+    timeout = timeout,
+    read = function() pz_js(ctx, "location.href"),
+    description = expect_headline_text(url, match, not, label = "URL")
+  )
+}
+#' Expect the page title
+#'
+#' @description
+#' [pz_expect_title()] passes when the page's `<title>` satisfies
+#' `title`. It works from any context, scoped or root: the title belongs
+#' to the page, not to an element.
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_expect_url
+#' @param title The expected page title, a single string.
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_title("Example Domain")
+#' page |> pz_expect_title("Example", match = "exact")
+#' }
+#'
+#' @export
+pz_expect_title <- function(
+  ctx,
+  title,
+  ...,
+  match = c("contains", "exact", "regex"),
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  check_string(title)
+  match <- arg_match(match)
+  expect_page_impl(
+    ctx = ctx,
+    values = title,
+    match = match,
+    not = not,
+    timeout = timeout,
+    read = function() pz_js(ctx, "document.title"),
+    description = expect_headline_text(title, match, not, label = "title")
+  )
+}
 #' Retry an expectation check
 #'
 #' Like `pz_poll()`, but instead of aborting on the deadline it returns
@@ -720,6 +861,38 @@ expect_report <- function(ctx, result, description, target, waited, call = calle
     call = call
   )
 }
+# Page-level expectations (url, title) have no target to resolve: read
+# the page once per attempt, compare in R, then reuse the shared report
+# and bridge. Works from any context -- scoped or root -- and never
+# probes the scope: a detached scope doesn't change the page's URL.
+expect_page_impl <- function(
+  ctx,
+  values,
+  match,
+  not,
+  timeout,
+  read,
+  description,
+  call = caller_env()
+) {
+  check_bool(not, call = call)
+  check_context(ctx, call = call)
+  timeout <- resolve_timeout(timeout, ctx$page, call = call)
+  expected <- collapse_ws(values)
+  start <- Sys.time()
+  result <- expect_retry(
+    fn = function() {
+      observed <- read()
+      hit <- expect_text_hit(collapse_ws(observed), expected, match)
+      # Quoted to match the SPEC's failure format ("Last seen: ...").
+      list(pass = if (not) !hit else hit, observed = paste0('"', observed, '"'))
+    },
+    timeout = timeout,
+    loop = ctx$page$child_loop
+  )
+  waited <- round(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
+  expect_report(ctx, result, description, "the page", waited, call = call)
+}
 # testthat is in Suggests: inside tests, passes count and failures are
 # reported through testthat::expect(); anywhere else, the caller gets the
 # classed error instead. Returns FALSE when the bridge is inactive.
@@ -811,6 +984,16 @@ expect_class_js <- function(class) {
     "function() { return this.map((el) => el.classList.contains(",
     jsonlite::toJSON(class, auto_unbox = TRUE),
     ")); }"
+  )
+}
+# The user's expr is code by design (like pz_js), embedded as the
+# predicate every match is mapped through.
+expect_js_predicate <- function(expr) {
+  paste0(
+    "function() {\n",
+    "  const predicate = ", expr, ";\n",
+    "  return this.map((el) => !!predicate(el));\n",
+    "}"
   )
 }
 expect_seen_count <- function(count) {
@@ -917,6 +1100,14 @@ expect_text_matches <- function(x, pattern, match) {
 # NA, and grepl() on NA would leak NA into the pass result.
 expect_text_hit <- function(x, pattern, match) {
   isTRUE(expect_text_matches(x, pattern, match))
+}
+expect_headline_js <- function(expr, not) {
+  paste0(
+    "Expected JS predicate (",
+    expect_truncate(expr, 60),
+    ") to hold for ",
+    if (not) "no match" else "every match"
+  )
 }
 expect_headline_count <- function(n, min, max, not) {
   what <- if (!is.null(n)) {

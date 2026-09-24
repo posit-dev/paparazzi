@@ -655,3 +655,128 @@ test_that("pz_expect_class validates its input", {
   expect_error(pz_expect_class(page, "btn btn", target = ".cls"), "single class name")
   expect_error(pz_expect_class(page, 1, target = ".cls"), "string")
 })
+
+# pz_expect_js and the page-level expectations (url, title). The state
+# fixture carries #scroll-box (scrollTop starts at 0) and #late-flag,
+# whose dataset is set after 300 ms.
+
+test_that("pz_expect_js maps the predicate over every match", {
+  page <- local_state_page()
+  pz_expect_js(page, "el => el.scrollTop === 0", target = "#scroll-box")
+  pz_expect_js(page, "el => el.tagName === 'BODY'") # target = NULL: the body
+  pz_expect_js(page, "el => el.disabled", target = "#btn-disabled")
+  pz_expect_js(page, "el => el.disabled", target = "#btn-enabled", not = TRUE)
+
+  pz_js(page, "document.getElementById('scroll-box').scrollTop = 50")
+  pz_expect_js(page, "el => el.scrollTop > 0", target = "#scroll-box")
+  pz_expect_js(page, "el => el.scrollTop === 0", target = "#scroll-box", not = TRUE)
+})
+
+test_that("pz_expect_js failure shows the predicate and the count", {
+  page <- local_state_page()
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_js(page, "el => el.scrollTop > 0", target = "#scroll-box", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  msg <- conditionMessage(err)
+  expect_match(
+    msg,
+    "Expected JS predicate (el => el.scrollTop > 0) to hold for every match",
+    fixed = TRUE
+  )
+  expect_match(msg, "0 of 1 satisfied", fixed = TRUE)
+  # Zero matches satisfies only the negated form.
+  err <- expect_error(
+    pz_expect_js(page, "el => true", target = ".never", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  expect_match(conditionMessage(err), "Last seen: 0 matches", fixed = TRUE)
+})
+
+test_that("pz_expect_js retries until the predicate holds", {
+  page <- local_state_page()
+  # The fixture sets #late-flag's dataset after 300 ms.
+  pz_expect_js(page, "el => el.dataset.ready === 'yes'", target = "#late-flag", timeout = 5)
+})
+
+test_that("pz_expect_js surfaces a throwing predicate as a JS error", {
+  page <- local_state_page()
+  local_outside_testthat()
+  # A bare expression (not a function receiving el) throws at definition.
+  expect_error(
+    pz_expect_js(page, "el.scrollTop > 0", target = "#scroll-box", timeout = 0),
+    class = "paparazzi_error_js"
+  )
+})
+
+test_that("pz_expect_js works from a scoped context", {
+  page <- local_state_page()
+  pz_js(page, "document.getElementById('scroll-box').scrollTop = 50")
+  ctx <- pz_find(page, "#scroll-box")
+  # target = NULL is the pinned set: the predicate sees #scroll-box.
+  ctx |> pz_expect_js("el => el.scrollTop > 0")
+})
+
+test_that("pz_expect_title matches contains, exact, and regex", {
+  page <- local_state_page()
+  pz_expect_title(page, "state fixture")
+  pz_expect_title(page, "paparazzi state fixture", match = "exact")
+  pz_expect_title(page, "state|unit", match = "regex")
+  pz_expect_title(page, "renamed", not = TRUE)
+})
+
+test_that("pz_expect_title failure uses the classed format", {
+  page <- local_state_page()
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_title(page, "nope", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  msg <- conditionMessage(err)
+  expect_match(msg, 'Expected title to contain "nope"', fixed = TRUE)
+  expect_match(msg, "Target: the page", fixed = TRUE)
+  expect_match(msg, 'Last seen: "paparazzi state fixture"', fixed = TRUE)
+  expect_match(msg, "Waited", fixed = TRUE)
+})
+
+test_that("pz_expect_title retries until the title changes", {
+  page <- local_state_page()
+  pz_js(page, "setTimeout(function () { document.title = 'renamed title'; }, 300)", await = FALSE)
+  pz_expect_title(page, "renamed title", timeout = 5)
+})
+
+test_that("pz_expect_url matches contains, exact, and regex", {
+  page <- local_state_page()
+  pz_expect_url(page, "state.html")
+  pz_expect_url(page, pz_get_url(page), match = "exact")
+  pz_expect_url(page, "^file://", match = "regex")
+  # file:// URLs contain no http://.
+  pz_expect_url(page, "http://", not = TRUE)
+})
+
+test_that("pz_expect_url failure uses the classed format", {
+  page <- local_state_page()
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_url(page, "https://example.com", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  msg <- conditionMessage(err)
+  expect_match(msg, 'Expected URL to contain "https://example.com"', fixed = TRUE)
+  expect_match(msg, "Target: the page", fixed = TRUE)
+  expect_match(msg, "Last seen: ", fixed = TRUE)
+})
+
+test_that("pz_expect_url retries until the hash lands", {
+  page <- local_state_page()
+  pz_js(page, "setTimeout(function () { location.hash = 'later'; }, 300)", await = FALSE)
+  pz_expect_url(page, "#later", timeout = 5)
+})
+
+test_that("page-level expectations work from a scoped context", {
+  page <- local_state_page()
+  ctx <- pz_find(page, "#btn-one")
+  ctx |> pz_expect_title("state fixture")
+  ctx |> pz_expect_url("state.html")
+})
