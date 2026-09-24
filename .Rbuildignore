@@ -3,3 +3,6 @@
 ^\.pi*\.lock$
 ^\.agents$
 ^LICENSE\.md$
+^[.]?air[.]toml$
+^\.vscode$
+^\.github$
