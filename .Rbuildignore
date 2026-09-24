@@ -6,3 +6,7 @@
 ^[.]?air[.]toml$
 ^\.vscode$
 ^\.github$
+^\.kata\.toml$
+^\.pi-loop\.json\.lock$
+^paparazzi\.Rcheck$
+^paparazzi_.*\.tar\.gz$

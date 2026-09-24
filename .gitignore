@@ -1,2 +1,4 @@
 .Rproj.user
 .kata.local.toml
+paparazzi.Rcheck/
+paparazzi_*.tar.gz
