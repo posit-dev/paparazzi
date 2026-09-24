@@ -69,7 +69,9 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
 #' of a property, rounded to whole pixels.
 #'
 #' The wait first waits (up to `timeout`) for `target` to match, then
-#' samples within its own `timeout` budget.
+#' samples within a second, separate `timeout` budget of its own: a
+#' target that appears near the locator deadline still gets its full
+#' `for_ms` window.
 #'
 #' There is deliberately no element-state wait: [pz_expect_visible()],
 #' [pz_expect_hidden()], and [pz_expect_exists()] with `not = TRUE` already
@@ -116,15 +118,20 @@ pz_wait_for_stable <- function(
   sample_js <- stable_sample_js(prop)
   scoped <- scope_top(ctx)
   target_expr <- target_resolver_expr(target)
-  first <- TRUE
+  if (!is.null(target) || is.null(scoped)) {
+    # Stability of a set that doesn't exist yet is meaningless, so
+    # the wait first waits (up to `timeout`) for a match -- BEFORE the
+    # stability poll starts. The sampling loop then owns its own full
+    # budget: a target appearing near the locator deadline still
+    # gets its whole `for_ms` window.
+    release_elements(
+      loc_resolve(ctx, target, timeout = timeout, multiple = "all")
+    )
+  }
   sample <- function() {
     els <- if (is.null(target) && !is.null(scoped)) {
       # The pinned set itself, detach-probed per sample.
       scope_root(ctx)
-    } else if (first) {
-      # Stability of a set that doesn't exist yet is meaningless, so
-      # the first sample auto-waits for a match.
-      loc_resolve(ctx, target, timeout = timeout, multiple = "all")
     } else {
       loc_resolve_once(
         ctx,
@@ -133,7 +140,6 @@ pz_wait_for_stable <- function(
         root = scope_root(ctx)
       )
     }
-    first <<- FALSE
     if (!inherits(els, "paparazzi_pinned")) {
       withr::defer(release_elements(els))
     }

@@ -172,6 +172,35 @@ test_that("pz_wait_for_stable passes immediately on a static page and for_ms = 0
   expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 2)
 })
 
+test_that("pz_wait_for_stable keeps the locator and stability budgets separate", {
+  page <- local_waits_page()
+  # The target appears 0.6s into the 1s locator timeout. With the
+  # budgets shared, only 0.4s would remain -- less than the 500ms
+  # window -- and the wait would false-timeout; the stability loop
+  # gets its own full budget, so the window completes.
+  pz_js(
+    page,
+    paste0(
+      "setTimeout(function () {",
+      "const el = document.createElement('p');",
+      "el.id = 'late-stable';",
+      "el.textContent = 'steady text';",
+      "document.body.appendChild(el);",
+      "}, 600)"
+    ),
+    await = FALSE
+  )
+  start <- Sys.time()
+  expect_no_error(
+    pz_wait_for_stable(page, target = "#late-stable", for_ms = 500, timeout = 1)
+  )
+  # The resolve (~0.6s) plus the full 500ms window, both inside the
+  # 1s stability budget.
+  elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
+  expect_gte(elapsed, 1)
+  expect_lt(elapsed, 3)
+})
+
 test_that("pz_wait_for_stable validates its inputs", {
   page <- local_waits_page()
   expect_error(pz_wait_for_stable(page, prop = "getBoundingClientRect()"), "single JavaScript property name")
