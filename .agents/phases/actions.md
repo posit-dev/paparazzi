@@ -126,14 +126,17 @@ handoffs for this phase only. Builds on the resolution engine
 
 (newest first; three lines per session: landed / next / provisional)
 
-- 2026-09-24 (5vak landed, review pending): landed the actionability
-  wait (pointer actions poll for visible + non-empty box before
-  dispatch) at b4f609a, with the actionability.html fixture and six
-  tests; full suite 818 green, air clean. Next: garrick's manual code
-  review of the unit, then address findings, then close 5vak (which
-  empties the epic d84x child list) and the epic. Provisional: the
-  wait budget is additive with resolution (2x default_timeout worst
-  case); revisit only if a real use needs a shared budget.
+- 2026-09-24 (5vak close): landed the actionability wait (pointer
+  actions poll for visible + non-empty box before dispatch) at
+  b4f609a, with the actionability.html fixture and six tests; roborev
+  1231 (codex) findings fixed at 58c3c89 (regenerated .Rd pages) and
+  d699376 (fixture reveal armed on demand, hidden-before assertions),
+  review closed; 5vak closed with evidence. Suite 818 green, air
+  clean. The epic d84x child list is now empty but the epic stays
+  open for garrick's manual review before close; branch kata-5vak
+  unmerged pending that review. Provisional: the wait budget is
+  additive with resolution (2x default_timeout worst case); revisit
+  only if a real use needs a shared budget.
 - 2026-09-24 (close): landed the phase note (8bceb54), keys.R
   parser (7701f68), fixture (076d2dc), the six actions (31d659e),
   and review fixes (Shift shifts the character, modifier keyUp drops
