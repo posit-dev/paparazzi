@@ -118,6 +118,13 @@ choices and session handoffs for recording only.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close): landed the phase note (b3fb55f), R/record.R
+  lifecycle + poll timer + resample + av/gifski encode (06e6b1f), and
+  fixture/helper/tests (8d42eef). 1163 expectations green twice, 0
+  failures/skips. Next: the cursor/staging task consumes
+  `page_recorder()`-style state and `pz_record_hold()`'s no-op pattern;
+  `method = "screencast"` remains the reserved seam (ack each frame,
+  feed the same ingestion).
 - 2026-09-24 (start): claimed fx4z; blockers 18j6 (capture) and r0zd
   (framing) closed, baseline 1108 tests. Installed av 0.9.6 + gifski
   1.32.0 (both already in Suggests); libx264/libvpx-vp9/gif encoders
