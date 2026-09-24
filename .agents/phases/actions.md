@@ -106,6 +106,17 @@ handoffs for this phase only. Builds on the resolution engine
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close): landed the phase note (8bceb54), keys.R
+  parser (7701f68), fixture (076d2dc), the six actions (31d659e),
+  and review fixes (Shift shifts the character, modifier keyUp drops
+  its own bit, trailing-"+" rejected, scoped blur multi-match check).
+  574 tests green; roborev 1227 (codex) closed, dispositions on the
+  issue. Declined: per-call timeout arg (SPEC's confirmed signatures
+  give actions none -- session default_timeout is the knob).
+  Backlogged as 5vak: actionability waiting (no click on hidden/
+  zero-sized elements). Note for the pz_find task: an explicit target
+  on a scoped context currently acts on the pinned set (dormant
+  branch) -- resolve-within-scope lands with pz_find.
 - 2026-09-24 (start): claimed 2fc0, stamped work.branch=kata-2fc0;
   harness green at 3f392e7 (305 tests). Blockers a3vj + gayb closed;
   loc_resolve()/el_rects()/el_scroll_into_view() delivered as promised.
