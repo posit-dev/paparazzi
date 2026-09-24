@@ -373,28 +373,29 @@ style_probe_js <- "
       if (probe.style.getPropertyValue(p.prop) === '') {
         return {actual: actual, normalized: null, accepted: false};
       }
-      let kind = 'none';
+      // Context needs are independent, not exclusive: calc(50% - 1em)
+      // wants the parent's size and the element's font at once. The
+      // contexts touch different container styles, so they compose.
       if (/currentcolor/i.test(p.value)) {
-        kind = 'color';
-      } else if (p.value.indexOf('%') !== -1) {
-        kind = 'percent';
-      } else if (/[0-9.](em|ex|ch)([^a-z]|$)/i.test(p.value)) {
-        kind = 'font';
+        container.style.color = cs.color;
       }
-      if (kind === 'font') {
-        // font-size itself resolves em against the parent's font; every
-        // other property resolves it against the element's own.
+      const fontUnits = /[0-9.](em|ex|ch)([^a-z]|$)/i.test(p.value);
+      const percent = p.value.indexOf('%') !== -1;
+      // Relative units on font-size and line-height resolve against
+      // fonts, not sizes: the parent's font for font-size (its em and
+      // % context), the element's own font for line-height and every
+      // other property.
+      if (fontUnits || (percent && (p.prop === 'font-size' || p.prop === 'line-height'))) {
         const fcs = p.prop === 'font-size'
           ? getComputedStyle(el.parentElement || document.documentElement)
           : cs;
         container.style.fontSize = fcs.fontSize;
         container.style.fontFamily = fcs.fontFamily;
-      } else if (kind === 'percent') {
+      }
+      if (percent && p.prop !== 'font-size' && p.prop !== 'line-height') {
         const pcs = getComputedStyle(el.parentElement || document.documentElement);
         container.style.width = pcs.width;
         container.style.height = pcs.height;
-      } else if (kind === 'color') {
-        container.style.color = cs.color;
       }
       return {
         actual: actual,
