@@ -83,6 +83,15 @@ as_loc_list <- function(target, arg = caller_arg(target), call = caller_env()) {
     return(list(target))
   }
   if (is_list(target)) {
+    if (length(target) == 0) {
+      # An empty union matches nothing, so auto-waiting on it would never
+      # resolve -- fail fast instead.
+      cli::cli_abort(
+        "{.arg {arg}} can't be an empty list of targets; it matches nothing, so there would be nothing to wait for.",
+        class = "paparazzi_error_target",
+        call = call
+      )
+    }
     return(unname(lapply(target, as_loc, arg = arg, call = call)))
   }
   list(as_loc(target, arg = arg, call = call))
@@ -94,9 +103,17 @@ as_loc_list <- function(target, arg = caller_arg(target), call = caller_env()) {
 # resolver errors, the print method, and (later) expectation failures and
 # the detached-scope error.
 format_loc <- function(loc) {
-  if (!inherits(loc, "paparazzi_loc")) {
+  if (is_list(loc) && !inherits(loc, "paparazzi_loc")) {
     # Union target: one description per spec, in order.
     return(paste(vapply(loc, format_loc, character(1)), collapse = " | "))
+  }
+  if (!inherits(loc, "paparazzi_loc")) {
+    # Only promoted targets reach here; a bare string would otherwise be
+    # treated as a union and recursed on forever.
+    cli::cli_abort(
+      "Internal error: the target must be a {.fn pz_loc} spec or a list of specs, not {.obj_type_friendly {loc}}. Promote it with {.fn as_loc_list} first.",
+      class = "paparazzi_error_internal"
+    )
   }
   out <- paste0("`", loc$css, "`")
   quals <- character()

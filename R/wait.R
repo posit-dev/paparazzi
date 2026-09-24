@@ -55,7 +55,9 @@ pz_poll <- function(
     remaining <- as.numeric(difftime(deadline, Sys.time(), units = "secs"))
     if (remaining <= 0) {
       cli::cli_abort(
-        "Timed out after {timeout}s waiting for {.val {what}}.",
+        # Plain interpolation: descriptions may carry their own quotes
+        # (has_text: "..."), and {.val} would escape them.
+        "Timed out after {timeout}s waiting for {what}.",
         class = "paparazzi_error_timeout",
         call = call
       )

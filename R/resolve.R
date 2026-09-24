@@ -49,12 +49,16 @@ loc_resolver_js <- "(function(specs) {
       if (!seen.has(el)) { seen.add(el); out.push(el); }
     }
   }
-  return out;
+  // Null (not an empty array) on no match, so the caller can skip the
+  // count read entirely and never holds an empty remote object.
+  return out.length ? out : null;
 })"
 
-# The scope seam: the resolver expression is built in exactly one place.
-# Scoped contexts (the pz_find*() task) will root the resolver at pinned
-# handles instead of `document`; that change happens here alone.
+# The scope seam: the resolver JS takes its roots as an argument, so the
+# same function object covers every rooting. Today the only root is
+# `document`, reached via `Runtime$evaluate`; scoped contexts will
+# instead invoke the same JS through `Runtime$callFunctionOn`, passing
+# pinned element handles as the root argument.
 loc_resolver_expr <- function(locs) {
   specs <- jsonlite::toJSON(lapply(locs, loc_spec_fields), auto_unbox = TRUE)
   paste0("(", loc_resolver_js, ")(\n", specs, "\n)")
@@ -78,12 +82,13 @@ loc_spec_fields <- function(loc) {
 
 #' Resolve a target to a remote element array, auto-waiting for a match
 #'
-#' Each poll iteration is one `Runtime$evaluate` (with
-#' `returnByValue = FALSE`) plus one `callFunctionOn` to read the match
-#' count. Per-command timeouts are the session default, not the remaining
-#' wait budget. Empty handles are released before the next iteration so
-#' auto-wait doesn't accumulate them. The result holds the objectId of
-#' the remote element array; free it with release_elements().
+#' The resolver expression is built once; each poll iteration is then a
+#' single `Runtime$evaluate` (with `returnByValue = FALSE`), and the
+#' `callFunctionOn` count read happens only once a match exists -- an
+#' empty set comes back as JS `null`, so there is no empty remote object
+#' to read or release. Per-command timeouts are the page's
+#' `default_timeout`, separate from the wait budget. The result holds the
+#' objectId of the remote element array; free it with release_elements().
 #'
 #' @noRd
 loc_resolve <- function(
@@ -94,7 +99,7 @@ loc_resolve <- function(
   multiple = c("error", "all"),
   call = caller_env()
 ) {
-  check_context(ctx)
+  check_context(ctx, call = call)
   check_dots_empty()
   multiple <- arg_match(multiple)
   locs <- as_loc_list(target, call = call)
@@ -105,31 +110,11 @@ loc_resolve <- function(
   resolved <- NULL
   pz_poll(
     fn = function() {
-      res <- ctx$page$session$Runtime$evaluate(
-        expr,
-        awaitPromise = FALSE,
-        returnByValue = FALSE
-      )
-      err <- res$exceptionDetails
-      if (!is.null(err)) {
-        cli::cli_abort(
-          "JavaScript error while resolving {description}: {err$exception$description %||% err$text %||% 'unknown error'}.",
-          class = "paparazzi_error_js",
-          call = call
-        )
-      }
-      object_id <- res$result$objectId
-      count <- ctx$page$session$Runtime$callFunctionOn(
-        "function() { return this.length; }",
-        objectId = object_id,
-        returnByValue = TRUE
-      )$result$value
-      if (count == 0) {
-        # Release the empty handle so auto-waiting doesn't accumulate them.
-        ctx$page$session$Runtime$releaseObject(object_id)
+      res <- loc_resolve_once(ctx, expr, description, call)
+      if (res$count == 0) {
         FALSE
       } else {
-        resolved <<- new_elements(ctx$page, object_id, count, description)
+        resolved <<- res
         TRUE
       }
     },
@@ -153,6 +138,66 @@ loc_resolve <- function(
   }
 
   resolved
+}
+
+#' One resolution attempt
+#'
+#' Evaluates the resolver expression once. JS `null` (empty match set,
+#' no objectId) becomes a zero-count elements object with no handle; a
+#' match runs one `callFunctionOn` length read and returns the live
+#' handle. Each CDP command gets the page's `default_timeout`; a chromote
+#' command timeout is re-raised as a `paparazzi_error_timeout` naming the
+#' description, with the original error as its parent.
+#'
+#' @noRd
+loc_resolve_once <- function(ctx, expr, description, call) {
+  timeout <- ctx$page$default_timeout
+
+  # A chromote command timeout (slow or hung renderer) is a timeout
+  # condition of the resolve, not a raw chromote error.
+  run_cdp <- function(cmd) {
+    tryCatch(
+      cmd,
+      error = function(e) {
+        if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+          cli::cli_abort(
+            "Timed out after {timeout}s resolving {description}.",
+            class = "paparazzi_error_timeout",
+            call = call,
+            parent = e
+          )
+        }
+        stop(e)
+      }
+    )
+  }
+
+  res <- run_cdp(ctx$page$session$Runtime$evaluate(
+    expr,
+    awaitPromise = FALSE,
+    returnByValue = FALSE,
+    timeout_ = timeout
+  ))
+  err <- res$exceptionDetails
+  if (!is.null(err)) {
+    cli::cli_abort(
+      "JavaScript error while resolving {description}: {err$exception$description %||% err$text %||% 'unknown error'}.",
+      class = "paparazzi_error_js",
+      call = call
+    )
+  }
+  object_id <- res$result$objectId
+  if (is.null(object_id)) {
+    # The resolver returns `null` for an empty set, so no handle exists.
+    return(new_elements(ctx$page, NULL, 0L, description))
+  }
+  count <- run_cdp(ctx$page$session$Runtime$callFunctionOn(
+    "function() { return this.length; }",
+    objectId = object_id,
+    returnByValue = TRUE,
+    timeout_ = timeout
+  ))$result$value
+  new_elements(ctx$page, object_id, count, description)
 }
 
 new_elements <- function(page, object_id, count, description) {

@@ -19,15 +19,20 @@ test_that("pz_wait pumps the child loop so timers fire during waits", {
 
 test_that("pz_poll times out with a classed error", {
   page <- local_page()
-  expect_error(
+  err <- expect_error(
     pz_poll(
       function() FALSE,
       timeout = 0.2,
       loop = page$child_loop,
       what = "never"
     ),
-    regexp = "never",
     class = "paparazzi_error_timeout"
+  )
+  # `what` is interpolated as plain text, not wrapped in {.val}.
+  expect_match(
+    conditionMessage(err),
+    "Timed out after 0.2s waiting for never.",
+    fixed = TRUE
   )
 })
 

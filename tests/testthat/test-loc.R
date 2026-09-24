@@ -63,6 +63,17 @@ test_that("as_loc_list builds a union from specs, strings, and mixed lists", {
   expect_error(as_loc_list(list(".b", 1)), "CSS selector")
 })
 
+test_that("as_loc_list rejects an empty list", {
+  # An empty union matches nothing, so waiting on it would never resolve.
+  expect_error(as_loc_list(list()), class = "paparazzi_error_target")
+})
+
+test_that("format_loc rejects an unpromoted target", {
+  # Anything that isn't a spec or a list of specs is an internal error;
+  # a bare string used to recurse forever as a bogus union.
+  expect_error(format_loc("not promoted"), class = "paparazzi_error_internal")
+})
+
 test_that("format_loc renders css and qualifiers in fixed order", {
   expect_identical(format_loc(pz_loc(".btn")), "`.btn`")
   expect_identical(

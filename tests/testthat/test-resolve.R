@@ -55,18 +55,32 @@ test_that("loc_resolve resolves has_text, collapsed and case-sensitive", {
 
 test_that("loc_resolve applies which after filtering", {
   page <- local_elements_page()
-  first <- loc_resolve(page, pz_loc(".btn", which = "first"))
+  # .message makes first and last distinguishable: first is the user's
+  # question, last is the final assistant reply.
+  first <- loc_resolve(page, pz_loc(".message", which = "first"))
   withr::defer(release_elements(first))
   expect_identical(first$count, 1L)
-  expect_identical(elements_text(first), "Save")
+  expect_identical(elements_text(first), "What's the weather?")
 
-  last <- loc_resolve(page, pz_loc(".btn", which = "last"))
+  last <- loc_resolve(page, pz_loc(".message", which = "last"))
   withr::defer(release_elements(last))
-  expect_identical(elements_text(last), "Save")
+  expect_identical(last$count, 1L)
+  expect_identical(elements_text(last), "Bring a hat.")
 
   nth <- loc_resolve(page, pz_loc(".btn", which = 2))
   withr::defer(release_elements(nth))
+  expect_identical(nth$count, 1L)
   expect_identical(elements_text(nth), "Cancel")
+})
+
+test_that("which applies after has_text filtering", {
+  page <- local_elements_page()
+  # Matching .btn[has_text = Save] is "Save", "Save   now", "Save"; which = 2
+  # picks the second *filtered* match, not the second .btn overall.
+  els <- loc_resolve(page, pz_loc(".btn", has_text = "Save", which = 2))
+  withr::defer(release_elements(els))
+  expect_identical(els$count, 1L)
+  expect_identical(elements_text(els), "Save   now")
 })
 
 test_that("an out-of-range which means no match, checked once", {
@@ -177,16 +191,47 @@ test_that("multiple = 'all' returns the whole set", {
 
 test_that("loc_resolve times out with a classed error showing the description", {
   page <- local_elements_page()
-  # A quote-free description: pz_poll wraps `what` in {.val}, which would
-  # escape the quotes has_text adds.
-  target <- pz_loc(".never", which = 1)
+  target <- pz_loc(".never", has_text = "get_weather")
   err <- expect_error(
-    loc_resolve(page, target, timeout = 0.2),
+    loc_resolve(page, target, timeout = 0.1),
     class = "paparazzi_error_timeout"
   )
   msg <- conditionMessage(err)
-  expect_match(msg, "Timed out after 0.2s", fixed = TRUE)
-  expect_match(msg, format_loc(target), fixed = TRUE)
+  expect_match(msg, "Timed out after 0.1s", fixed = TRUE)
+  # `what` is interpolated as plain text, so the quotes has_text adds
+  # reach the message verbatim.
+  expect_match(
+    msg,
+    '`.never` (has_text: "get_weather")',
+    fixed = TRUE
+  )
+})
+
+test_that("loc_resolve auto-waits for a late insert", {
+  page <- local_elements_page()
+  pz_js(
+    page,
+    "setTimeout(() => document.body.insertAdjacentHTML('beforeend', '<p class=\"late\">x</p>'), 300)",
+    await = FALSE
+  )
+  els <- loc_resolve(page, ".late", timeout = 5)
+  withr::defer(release_elements(els))
+  expect_identical(els$count, 1L)
+})
+
+test_that("re-resolving the same spec follows DOM changes", {
+  page <- local_elements_page()
+  spec <- pz_loc(".message")
+  before <- loc_resolve(page, spec, multiple = "all")
+  withr::defer(release_elements(before))
+  expect_identical(before$count, 3L)
+
+  pz_js(page, "document.querySelector('.message').remove()")
+
+  # Specs are lazy: the same object resolves against the current DOM.
+  after <- loc_resolve(page, spec, multiple = "all")
+  withr::defer(release_elements(after))
+  expect_identical(after$count, 2L)
 })
 
 test_that("release_elements frees the remote handle", {
