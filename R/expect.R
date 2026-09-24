@@ -353,15 +353,17 @@ expect_impl <- function(
     )
   }
   waited <- round(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
-
-  # The failure text carries page-derived content (observed) and
-  # user-derived content (the headline holds the expected text, which
-  # may be a regex containing braces). Both are interpolated as cli
-  # VALUES, never pasted into templates: cli only evaluates the
-  # template, so braces inside a value stay literal and can't inject
-  # markup or code.
+  expect_report(ctx, result, description, target_desc, waited, call = call)
+}
+# The shared tail of every expectation: the fixed failure format and the
+# testthat bridge. The failure text carries page-derived content
+# (observed) and user-derived content (the headline holds the expected
+# text, which may be a regex containing braces). Both are interpolated as
+# cli VALUES, never pasted into templates: cli only evaluates the
+# template, so braces inside a value stay literal and can't inject markup
+# or code.
+expect_report <- function(ctx, result, description, target, waited, call = caller_env()) {
   headline <- description
-  target <- target_desc
   observed <- result$observed
   msg_template <- c(
     "{headline}",
