@@ -18,20 +18,11 @@ pz_expect_count(
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{n}{Exact number of matching elements.}
-
 \item{...}{Checked empty; reserved for future use.}
 
-\item{min}{Inclusive lower bound on the number of matches (\code{NULL} =
-unbounded).}
-
-\item{max}{Inclusive upper bound on the number of matches (\code{NULL} =
-unbounded).}
-
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs and strings (a union matching any of them). \code{NULL} means the
-current context: the pinned set at a scoped context, or the page
-body at the root.}
+specs (a union matching any of them). \code{NULL} uses the current
+scope; at the root context a target is required.}
 
 \item{not}{Invert the check.}
 

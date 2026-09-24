@@ -18,10 +18,9 @@
 #' dpr. Framing a capture (padding, aspect ratio, bounds via
 #' `pz_frame()`) is not yet implemented.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #' @param path File path the PNG is written to; an existing file is
 #'   overwritten.
-#' @param ... Checked empty; reserved for future use.
 #' @param target What to capture: `NULL` for the viewport (root context)
 #'   or the scope's box (scoped context), or a CSS selector string,
 #'   `pz_loc()` spec, or list of either for the union of matched

@@ -13,8 +13,7 @@
 #' failure is instead reported as a test failure, and a pass counts as a
 #' successful testthat expectation.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context (so
@@ -66,20 +65,9 @@ pz_expect_exists <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @param ctx A paparazzi context.
-#' @param n Exact number of matching elements.
-#' @param ... Checked empty; reserved for future use.
-#' @param min Inclusive lower bound on the number of matches (`NULL` =
-#'   unbounded).
-#' @param max Inclusive upper bound on the number of matches (`NULL` =
-#'   unbounded).
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
-#' @param not Invert the check.
-#' @param timeout Seconds to wait for the expectation to pass; `NULL`
-#'   (default) uses the session default, `0` checks once.
+#' @inheritParams pz_click
+#' @inheritParams pz_get_text
+#' @inheritParams pz_expect_exists
 #'
 #' @return `ctx`, invisibly.
 #' @examples
@@ -167,15 +155,9 @@ pz_expect_count <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
-#' @param not Invert the check.
-#' @param timeout Seconds to wait for the expectation to pass; `NULL`
-#'   (default) uses the session default, `0` checks once.
+#' @inheritParams pz_click
+#' @inheritParams pz_get_text
+#' @inheritParams pz_expect_exists
 #'
 #' @return `ctx`, invisibly.
 #' @examples
@@ -238,10 +220,10 @@ pz_expect_hidden <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #' @param text A character vector of expected text: length 1 applies to
 #'   every match, length `n` is compared pairwise in order.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_expect_exists
 #' @param match How to compare `text`: `"contains"` (substring),
 #'   `"exact"`, or `"regex"` (an R regex matched with [grepl()]).
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of

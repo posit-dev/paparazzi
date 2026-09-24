@@ -137,8 +137,7 @@ new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
 #' instead of returning `0`, because the pinned set promises a live set
 #' and is never silently re-queried.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, whose count
@@ -211,12 +210,7 @@ pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
 #' matching `target`, one entry per match. Elements without a value
 #' property (non-form elements) give `NA`.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
+#' @inheritParams pz_get_text
 #'
 #' @return A character vector, one entry per match.
 #'
@@ -238,13 +232,8 @@ pz_get_value <- function(ctx, ..., target = NULL) {
 #' `pz_get_attr()` returns the named attribute of every element matching
 #' `target`, one entry per match. Missing attributes give `NA`.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_get_text
 #' @param name The attribute name.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
 #'
 #' @return A character vector, one entry per match.
 #'
@@ -274,12 +263,7 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
 #' `pz_get_rect()` returns the bounding box of every element matching
 #' `target`, one row per match in match order.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
+#' @inheritParams pz_get_text
 #'
 #' @return A tibble with columns `x`, `y`, `width`, `height` (doubles,
 #'   CSS pixels, viewport-relative), one row per match, plus an
@@ -310,12 +294,7 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
 #' the `id` and `class` attributes, and the whitespace-collapsed text.
 #' `id` and `class` are `NA` when the attribute is absent.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
+#' @inheritParams pz_get_text
 #'
 #' @return A tibble with columns `tag`, `id`, `class`, `text`, one row
 #'   per match, plus an `element` list-column of contexts scoped to
@@ -352,12 +331,7 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
 #' `pz_get_html()` returns the outer HTML of every element matching
 #' `target`, one entry per match.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root.
+#' @inheritParams pz_get_text
 #'
 #' @return A character vector, one entry per match.
 #'
@@ -378,7 +352,7 @@ pz_get_html <- function(ctx, ..., target = NULL) {
 #'
 #' `pz_get_url()` returns the page's current URL.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #'
 #' @return A character vector of length one.
 #'
@@ -392,7 +366,7 @@ pz_get_url <- function(ctx) {
 #'
 #' `pz_get_title()` returns the page's current title.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #'
 #' @return A character vector of length one.
 #'

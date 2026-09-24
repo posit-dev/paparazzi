@@ -263,11 +263,7 @@ pz_click <- function(ctx, target = NULL, ...) {
 #' pressing any button. This is what drives `:hover` styles and
 #' `mouseenter`/`mouseover` handlers.
 #'
-#' @param ctx A paparazzi context.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs (a union matching any of them). `NULL` uses the current
-#'   scope; at the root context a target is required.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_click
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -314,9 +310,8 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #' that works on selects, checkboxes, and range inputs, see
 #' `pz_set_value()` (a later task).
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #' @param text A string to type.
-#' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs (a union matching any of them). `NULL` uses the current
 #'   scope or, at the root context, the focused element.
@@ -369,9 +364,8 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #' Keys only reach focused elements; call [pz_click()] or [pz_focus()]
 #' first to focus the element you're typing into.
 #'
-#' @param ctx A paparazzi context.
+#' @inheritParams pz_click
 #' @param key A character vector of key specs.
-#' @param ... Checked empty; reserved for future use.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -411,11 +405,7 @@ pz_press <- function(ctx, key, ...) {
 #' element-state change, not an input event, so the direct method call
 #' is the faithful implementation (Playwright does the same).
 #'
-#' @param ctx A paparazzi context.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs (a union matching any of them). `NULL` uses the current
-#'   scope; at the root context a target is required.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_click
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -446,8 +436,7 @@ pz_focus <- function(ctx, target = NULL, ...) {
 #' .activeElement`). A no-op when the body is focused. Useful to clear
 #' focus rings before a screenshot.
 #'
-#' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
+#' @inheritParams pz_click
 #'
 #' @return `ctx`, invisibly.
 #'
