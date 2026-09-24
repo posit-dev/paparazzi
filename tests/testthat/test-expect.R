@@ -521,3 +521,137 @@ test_that("state expectations work from a scoped context", {
   grp <- pz_find(page, "#grp")
   grp |> pz_expect_enabled(target = "#inherited", not = TRUE, timeout = 0)
 })
+
+# Content expectations run against state.html's value/attr/class block:
+# inputs, a textarea, a select, a checkbox, an element with no value
+# property, links with and without href, and a .cls class mix.
+
+test_that("pz_expect_value compares the value property", {
+  page <- local_state_page()
+  pz_expect_value(page, "hello", target = "#val-text")
+  pz_expect_value(page, "hello world", target = "#val-text", match = "exact")
+  pz_expect_value(page, "^h", target = "#val-text", match = "regex")
+  # A select's value is its selected option.
+  pz_expect_value(page, "b", target = "#val-select", match = "exact")
+  # A checkbox's value is its value attribute, checked or not.
+  pz_expect_value(page, "cb-custom", target = "#val-check", match = "exact")
+})
+
+test_that("pz_expect_value collapses whitespace on both sides", {
+  page <- local_state_page()
+  # The textarea holds "line one\nline two"; both sides collapse.
+  pz_expect_value(page, "line one line two", target = "#val-area", match = "exact")
+  pz_expect_value(page, "line   one", target = "#val-area")
+})
+
+test_that("pz_expect_value compares vectors pairwise in order", {
+  page <- local_state_page()
+  values <- c("alpha", "beta", "gamma")
+  pz_expect_value(page, values, target = ".val-line", match = "exact")
+
+  local_outside_testthat()
+  expect_error(
+    pz_expect_value(page, rev(values), target = ".val-line", match = "exact", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  # Length n requires exactly n matches.
+  expect_error(
+    pz_expect_value(page, values[1:2], target = ".val-line", match = "exact", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+})
+
+test_that("pz_expect_value treats a missing value property as unsatisfied", {
+  page <- local_state_page()
+  # #val-none is a <p>: no value property, reads as NA.
+  pz_expect_value(page, "anything", target = "#val-none", not = TRUE, timeout = 0)
+  # NA never satisfies the positive form.
+  testthat::expect_failure(
+    pz_expect_value(page, "anything", target = "#val-none", timeout = 0)
+  )
+
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_value(page, "anything", target = "#val-none", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  expect_match(conditionMessage(err), 'Expected value to contain "anything"', fixed = TRUE)
+  expect_match(conditionMessage(err), 'Last seen: "NA"', fixed = TRUE)
+})
+
+test_that("pz_expect_value follows a typed value", {
+  page <- local_state_page()
+  pz_js(page, "document.getElementById('val-text').value = 'typed otters'")
+  pz_expect_value(page, "typed otters", target = "#val-text", match = "exact")
+  # And it retries: the input only carries the text after a timer.
+  pz_js(page, "setTimeout(function () {
+    document.getElementById('val-line-1').value = 'later';
+  }, 300)", await = FALSE)
+  pz_expect_value(page, "later", target = "#val-line-1", match = "exact", timeout = 5)
+})
+
+test_that("pz_expect_attr defaults to an exact comparison", {
+  page <- local_state_page()
+  pz_expect_attr(page, "href", "https://example.com/page", target = "#link-one")
+  # Non-default modes are still available.
+  pz_expect_attr(page, "href", "example.com", target = "#link-one", match = "contains")
+  pz_expect_attr(page, "href", "^https://", target = "#link-one", match = "regex")
+  # A missing attribute satisfies nothing, so not covers absence.
+  pz_expect_attr(page, "href", "whatever", target = "#no-href", not = TRUE, timeout = 0)
+  pz_expect_attr(page, "target", "_blank", target = "#link-two", not = TRUE, timeout = 0)
+})
+
+test_that("pz_expect_attr compares vectors pairwise in order", {
+  page <- local_state_page()
+  hrefs <- c("one.html", "two.html", "three.html")
+  pz_expect_attr(page, "href", hrefs, target = ".attr-line")
+
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_attr(page, "href", rev(hrefs), target = ".attr-line", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  expect_match(
+    conditionMessage(err),
+    'Expected attributes "href" to be "three.html", "two.html", "one.html"',
+    fixed = TRUE
+  )
+  expect_match(
+    conditionMessage(err),
+    'Last seen: "one.html", "two.html", "three.html"',
+    fixed = TRUE
+  )
+})
+
+test_that("pz_expect_attr retries until the attribute lands", {
+  page <- local_state_page()
+  pz_js(page, "setTimeout(function () {
+    document.getElementById('btn-one').setAttribute('data-state', 'ready');
+  }, 300)", await = FALSE)
+  pz_expect_attr(page, "data-state", "ready", target = "#btn-one", timeout = 5)
+})
+
+test_that("pz_expect_class checks class membership", {
+  page <- local_state_page()
+  pz_expect_class(page, "btn", target = "#btn-one")
+  pz_expect_class(page, "btn-primary", target = "#btn-one")
+  # no match carries "missing", including the bare span.
+  pz_expect_class(page, "missing", target = ".cls", not = TRUE, timeout = 0)
+  # Zero matches satisfies only the negated form.
+  pz_expect_class(page, "missing", target = ".never", not = TRUE, timeout = 0)
+
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_class(page, "btn", target = ".cls", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  msg <- conditionMessage(err)
+  expect_match(msg, 'Expected all elements to have class "btn"', fixed = TRUE)
+  expect_match(msg, "2 of 3 with class \"btn\"", fixed = TRUE)
+})
+
+test_that("pz_expect_class validates its input", {
+  page <- local_state_page()
+  expect_error(pz_expect_class(page, "btn btn", target = ".cls"), "single class name")
+  expect_error(pz_expect_class(page, 1, target = ".cls"), "string")
+})

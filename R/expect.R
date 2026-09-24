@@ -416,6 +416,177 @@ pz_expect_in_viewport <- function(
     description = if (not) "Expected no element to be in the viewport" else "Expected all elements to be in the viewport"
   )
 }
+#' Expect element values
+#'
+#' @description
+#' [pz_expect_value()] passes when at least one element matches and the
+#' `value` property of every match satisfies `value`. Elements without a
+#' value property (paragraphs, divs) read as missing and satisfy no
+#' `value`. Checkbox and radio values come from their `value` attribute
+#' (the default is `"on"`), whatever their checked state.
+#'
+#' A length-1 `value` applies to every match. A length-`n` `value`
+#' requires exactly `n` matches and compares pairwise, in order. With
+#' `not = TRUE`, the expectation passes when no match satisfies `value`,
+#' including when nothing matches.
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_expect_text
+#' @param value A character vector of expected values: length 1 applies
+#'   to every match, length `n` is compared pairwise in order.
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_value("otters", target = "#chat_user_input")
+#' page |> pz_expect_value("", target = "#chat_user_input")
+#' }
+#'
+#' @export
+pz_expect_value <- function(
+  ctx,
+  value,
+  ...,
+  match = c("contains", "exact", "regex"),
+  target = NULL,
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  check_character(value)
+  match <- arg_match(match)
+  expect_impl(
+    ctx = ctx,
+    target = target,
+    not = not,
+    timeout = timeout,
+    check = check_text_like(get_value_js, collapse_ws(value), match, not),
+    description = expect_headline_text(value, match, not, label = "value")
+  )
+}
+#' Expect an attribute
+#'
+#' @description
+#' [pz_expect_attr()] passes when at least one element matches and the
+#' named attribute of every match satisfies `value`. A missing attribute
+#' satisfies nothing, so `not = TRUE` is how to expect its absence. By
+#' default the comparison is `match = "exact"`, unlike the text-like
+#' expectations that default to `"contains"`.
+#'
+#' A length-1 `value` applies to every match. A length-`n` `value`
+#' requires exactly `n` matches and compares pairwise, in order. With
+#' `not = TRUE`, the expectation passes when no match satisfies `value`,
+#' including when nothing matches.
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_expect_text
+#' @param name The attribute name.
+#' @param value A character vector of expected attribute values: length 1
+#'   applies to every match, length `n` is compared pairwise in order.
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_attr("href", "https://example.com/", target = "a")
+#' page |> pz_expect_attr("aria-expanded", "true", target = "#menu")
+#' }
+#'
+#' @export
+pz_expect_attr <- function(
+  ctx,
+  name,
+  value,
+  ...,
+  match = c("exact", "contains", "regex"),
+  target = NULL,
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  check_string(name)
+  check_character(value)
+  match <- arg_match(match)
+  expect_impl(
+    ctx = ctx,
+    target = target,
+    not = not,
+    timeout = timeout,
+    check = check_text_like(expect_attr_js(name), collapse_ws(value), match, not),
+    description = expect_headline_text(
+      value,
+      match,
+      not,
+      label = paste0("attribute \"", name, "\""),
+      plural = paste0("attributes \"", name, "\"")
+    )
+  )
+}
+#' Expect a class
+#'
+#' @description
+#' [pz_expect_class()] passes when at least one element matches and every
+#' match carries `class`. With `not = TRUE` it passes when no match does,
+#' including when nothing matches. `class` is one class name, not a
+#' space-separated list: expect each class with its own call.
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_expect_exists
+#' @param class A single class name to expect on every match.
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_class("showing", target = ".modal")
+#' }
+#'
+#' @export
+pz_expect_class <- function(
+  ctx,
+  class,
+  ...,
+  target = NULL,
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  check_string(class)
+  if (grepl("\\s", class)) {
+    cli::cli_abort(
+      c(
+        "{.arg class} must be a single class name, not {.str {class}}.",
+        i = "Expect each class with its own {.fn pz_expect_class} call."
+      ),
+      class = "paparazzi_error_input"
+    )
+  }
+  expect_impl(
+    ctx = ctx,
+    target = target,
+    not = not,
+    timeout = timeout,
+    check = check_state(expect_class_js(class), not, paste0("with class \"", class, "\"")),
+    description = if (not) {
+      paste0("Expected no element to have class \"", class, "\"")
+    } else {
+      paste0("Expected all elements to have class \"", class, "\"")
+    }
+  )
+}
 #' Retry an expectation check
 #'
 #' Like `pz_poll()`, but instead of aborting on the deadline it returns
@@ -626,10 +797,27 @@ expect_viewport_js <- "function() {
 expect_text_js <- "function() {
   return this.map((el) => el.textContent);
 }"
+# Name/class reach JS JSON-encoded, so quotes and specials can't break
+# out of the function string (same as pz_get_attr()).
+expect_attr_js <- function(name) {
+  paste0(
+    "function() { return this.map((el) => el.getAttribute(",
+    jsonlite::toJSON(name, auto_unbox = TRUE),
+    ")); }"
+  )
+}
+expect_class_js <- function(class) {
+  paste0(
+    "function() { return this.map((el) => el.classList.contains(",
+    jsonlite::toJSON(class, auto_unbox = TRUE),
+    ")); }"
+  )
+}
 expect_seen_count <- function(count) {
   paste0(count, if (count == 1L) " match" else " matches")
 }
 expect_seen_texts <- function(texts) {
+  texts <- ifelse(is.na(texts), "NA", texts)
   expect_truncate(paste0('"', texts, '"', collapse = ", "))
 }
 expect_truncate <- function(x, width = 80) {
@@ -678,15 +866,19 @@ check_state <- function(js, not, seen) {
 check_visible <- function(not) {
   check_state(expect_visible_js, not, "visible")
 }
-check_text <- function(text, match, not) {
+# Text-like content checks (text, value, attr) share one shape: read one
+# JS expression per match, collapse whitespace, then compare. NA reads
+# (a missing value or attribute) satisfy nothing, so they only pass
+# through not, via "no match satisfies".
+check_text_like <- function(js, values, match, not) {
   function(els) {
     if (els$count == 0L) {
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
-    texts <- collapse_ws(els_call(els, expect_text_js))
-    if (length(text) == 1L) {
+    vals <- collapse_ws(chr_or_na(els_values(els, js)))
+    if (length(values) == 1L) {
       # A single value applies to every match; at least one is required.
-      hits <- vapply(texts, expect_text_matches, logical(1), pattern = text, match = match)
+      hits <- vapply(vals, expect_text_hit, logical(1), pattern = values, match = match)
       # Negated passes only when NO match satisfies (SPEC), which is
       # stronger than "not all": partial satisfaction fails both forms.
       pass <- if (not) !any(hits) else all(hits)
@@ -696,10 +888,10 @@ check_text <- function(text, match, not) {
       # expectation (SPEC's "no match satisfies"); when the count
       # differs from the vector length there is no pairwise
       # correspondence at all, so the negation passes vacuously.
-      hits <- if (els$count == length(text)) {
+      hits <- if (els$count == length(values)) {
         vapply(
-          seq_along(text),
-          function(i) expect_text_matches(texts[[i]], text[[i]], match),
+          seq_along(values),
+          function(i) expect_text_hit(vals[[i]], values[[i]], match),
           logical(1)
         )
       } else {
@@ -707,8 +899,11 @@ check_text <- function(text, match, not) {
       }
       pass <- if (not) !any(hits) else all(hits)
     }
-    list(pass = pass, observed = expect_seen_texts(texts))
+    list(pass = pass, observed = expect_seen_texts(vals))
   }
+}
+check_text <- function(text, match, not) {
+  check_text_like(expect_text_js, text, match, not)
 }
 expect_text_matches <- function(x, pattern, match) {
   switch(
@@ -717,6 +912,11 @@ expect_text_matches <- function(x, pattern, match) {
     exact = identical(x, pattern),
     regex = grepl(pattern, x)
   )
+}
+# NA-tolerant single comparison: a missing value or attribute reads as
+# NA, and grepl() on NA would leak NA into the pass result.
+expect_text_hit <- function(x, pattern, match) {
+  isTRUE(expect_text_matches(x, pattern, match))
 }
 expect_headline_count <- function(n, min, max, not) {
   what <- if (!is.null(n)) {
@@ -730,7 +930,7 @@ expect_headline_count <- function(n, min, max, not) {
   }
   paste0("Expected count ", if (not) "not " else "", "to be ", what)
 }
-expect_headline_text <- function(text, match, not) {
+expect_headline_text <- function(text, match, not, label = "text", plural = paste0(label, "s")) {
   what <- switch(
     match,
     contains = paste0('"', text, '"', collapse = ", "),
@@ -738,6 +938,6 @@ expect_headline_text <- function(text, match, not) {
     regex = paste0("/", text, "/", collapse = ", ")
   )
   verb <- switch(match, contains = "contain", exact = "be", regex = "match")
-  label <- if (length(text) == 1L) "text" else "texts"
+  label <- if (length(text) == 1L) label else plural
   paste0("Expected ", label, if (not) " not", " to ", verb, " ", what)
 }
