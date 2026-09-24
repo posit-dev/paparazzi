@@ -291,8 +291,11 @@ find_push <- function(ctx, locs, from_root, call) {
 #' @param from_root Resolve the target from the page root instead of
 #'   the current scope? The new scope is still pushed on top of the
 #'   stack, so [pz_find_pop()] returns to the previous scope.
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find_first()], [pz_find_pop()], [pz_find_reset()]
+#'
 #' @export
 pz_find <- function(ctx, target, ..., from_root = FALSE) {
   check_context(ctx)
@@ -326,8 +329,11 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
 #'   position, and a spec that already carries `which` is an error.
 #' @param from_root Resolve the target from the page root instead of
 #'   the current scope? Requires a `target`.
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_last()], [pz_find_nth()]
+#'
 #' @export
 pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
@@ -350,8 +356,11 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #'   position, and a spec that already carries `which` is an error.
 #' @param from_root Resolve the target from the page root instead of
 #'   the current scope? Requires a `target`.
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_nth()]
+#'
 #' @export
 pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
@@ -379,8 +388,11 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #'   position, and a spec that already carries `which` is an error.
 #' @param from_root Resolve the target from the page root instead of
 #'   the current scope? Requires a `target`.
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_last()]
+#'
 #' @export
 pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
   check_context(ctx)
@@ -398,8 +410,11 @@ pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
 #' was called on. At the root it is a no-op returning `ctx` unchanged.
 #'
 #' @param ctx A paparazzi context.
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_reset()]
+#'
 #' @export
 pz_find_pop <- function(ctx) {
   check_context(ctx)
@@ -417,8 +432,11 @@ pz_find_pop <- function(ctx) {
 #' called on. At the root it is a no-op returning `ctx` unchanged.
 #'
 #' @param ctx A paparazzi context.
+#'
 #' @return A new context, invisibly.
+#'
 #' @seealso [pz_find()], [pz_find_pop()]
+#'
 #' @export
 pz_find_reset <- function(ctx) {
   check_context(ctx)

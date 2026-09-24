@@ -29,7 +29,9 @@
 #' @param frame Framing to apply to the capture. Only `NULL` (the
 #'   default) and `FALSE` are supported, both meaning "capture without
 #'   framing"; framing via `pz_frame()` is not yet implemented.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @export
 pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   check_context(ctx)

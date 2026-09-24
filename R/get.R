@@ -143,7 +143,9 @@ new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, whose count
 #'   comes back without a re-query, or the page body at the root.
+#'
 #' @return An integer.
+#'
 #' @export
 pz_get_count <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -183,7 +185,9 @@ pz_get_count <- function(ctx, ..., target = NULL) {
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
 #' @param raw Return the text without collapsing whitespace?
+#'
 #' @return A character vector, one entry per match.
+#'
 #' @export
 pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
   check_dots_empty()
@@ -213,7 +217,9 @@ pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
+#'
 #' @return A character vector, one entry per match.
+#'
 #' @export
 pz_get_value <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -239,7 +245,9 @@ pz_get_value <- function(ctx, ..., target = NULL) {
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
+#'
 #' @return A character vector, one entry per match.
+#'
 #' @export
 pz_get_attr <- function(ctx, name, ..., target = NULL) {
   check_dots_empty()
@@ -272,11 +280,13 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
+#'
 #' @return A tibble with columns `x`, `y`, `width`, `height` (doubles,
 #'   CSS pixels, viewport-relative), one row per match, plus an
 #'   `element` list-column. Each `element` entry is a context scoped
 #'   to that one match, pinned at get time, so a chain can continue
 #'   from it: `rects$element[[2]] |> pz_hover()`.
+#'
 #' @export
 pz_get_rect <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -306,9 +316,11 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
+#'
 #' @return A tibble with columns `tag`, `id`, `class`, `text`, one row
 #'   per match, plus an `element` list-column of contexts scoped to
 #'   each match, pinned at get time (see [pz_get_rect()]).
+#'
 #' @export
 pz_get_elements <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -346,7 +358,9 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
+#'
 #' @return A character vector, one entry per match.
+#'
 #' @export
 pz_get_html <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -365,7 +379,9 @@ pz_get_html <- function(ctx, ..., target = NULL) {
 #' `pz_get_url()` returns the page's current URL.
 #'
 #' @param ctx A paparazzi context.
+#'
 #' @return A character vector of length one.
+#'
 #' @export
 pz_get_url <- function(ctx) {
   check_context(ctx)
@@ -377,7 +393,9 @@ pz_get_url <- function(ctx) {
 #' `pz_get_title()` returns the page's current title.
 #'
 #' @param ctx A paparazzi context.
+#'
 #' @return A character vector of length one.
+#'
 #' @export
 pz_get_title <- function(ctx) {
   check_context(ctx)

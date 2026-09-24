@@ -23,6 +23,7 @@
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
+#'
 #' @return `ctx`, invisibly.
 #' @examples
 #' \dontrun{
@@ -30,6 +31,7 @@
 #' page |> pz_expect_exists(target = "a")
 #' page |> pz_expect_exists(target = ".modal", not = TRUE)
 #' }
+#'
 #' @export
 pz_expect_exists <- function(
   ctx,
@@ -78,6 +80,7 @@ pz_expect_exists <- function(
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
+#'
 #' @return `ctx`, invisibly.
 #' @examples
 #' \dontrun{
@@ -86,6 +89,7 @@ pz_expect_exists <- function(
 #' page |> pz_expect_count(min = 1, target = "a")
 #' page |> pz_expect_count(0, target = ".modal", not = TRUE)
 #' }
+#'
 #' @export
 pz_expect_count <- function(
   ctx,
@@ -172,6 +176,7 @@ pz_expect_count <- function(
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
+#'
 #' @return `ctx`, invisibly.
 #' @examples
 #' \dontrun{
@@ -179,6 +184,7 @@ pz_expect_count <- function(
 #' page |> pz_expect_visible(target = "h1")
 #' page |> pz_expect_hidden(target = ".modal")
 #' }
+#'
 #' @export
 pz_expect_visible <- function(
   ctx,
@@ -246,6 +252,7 @@ pz_expect_hidden <- function(
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
+#'
 #' @return `ctx`, invisibly.
 #' @examples
 #' \dontrun{
@@ -254,6 +261,7 @@ pz_expect_hidden <- function(
 #' page |> pz_expect_text("Example", target = "h1", match = "exact")
 #' page |> pz_expect_text("example", target = "h1", not = TRUE)
 #' }
+#'
 #' @export
 pz_expect_text <- function(
   ctx,

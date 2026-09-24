@@ -236,8 +236,11 @@ insert_text <- function(ctx, target, text, call = caller_env()) {
 #'   specs (a union matching any of them). `NULL` uses the current
 #'   scope; at the root context a target is required.
 #' @param ... Checked empty; reserved for future use.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @seealso [pz_hover()], [pz_type()], [pz_press()]
+#'
 #' @export
 pz_click <- function(ctx, target = NULL, ...) {
   check_context(ctx)
@@ -265,8 +268,11 @@ pz_click <- function(ctx, target = NULL, ...) {
 #'   specs (a union matching any of them). `NULL` uses the current
 #'   scope; at the root context a target is required.
 #' @param ... Checked empty; reserved for future use.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @seealso [pz_click()]
+#'
 #' @export
 pz_hover <- function(ctx, target = NULL, ...) {
   check_context(ctx)
@@ -314,9 +320,12 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs (a union matching any of them). `NULL` uses the current
 #'   scope or, at the root context, the focused element.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @seealso [pz_press()] for key combos (Enter, Control+A, ...) and
 #'   [pz_click()].
+#'
 #' @export
 pz_type <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
@@ -363,8 +372,11 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #' @param ctx A paparazzi context.
 #' @param key A character vector of key specs.
 #' @param ... Checked empty; reserved for future use.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @seealso [pz_type()] to insert text.
+#'
 #' @export
 pz_press <- function(ctx, key, ...) {
   check_context(ctx)
@@ -404,8 +416,11 @@ pz_press <- function(ctx, key, ...) {
 #'   specs (a union matching any of them). `NULL` uses the current
 #'   scope; at the root context a target is required.
 #' @param ... Checked empty; reserved for future use.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @seealso [pz_blur()], [pz_type()]
+#'
 #' @export
 pz_focus <- function(ctx, target = NULL, ...) {
   check_context(ctx)
@@ -433,8 +448,11 @@ pz_focus <- function(ctx, target = NULL, ...) {
 #'
 #' @param ctx A paparazzi context.
 #' @param ... Checked empty; reserved for future use.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @seealso [pz_focus()]
+#'
 #' @export
 pz_blur <- function(ctx, ...) {
   check_context(ctx)

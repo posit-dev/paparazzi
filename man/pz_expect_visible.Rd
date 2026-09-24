@@ -51,4 +51,5 @@ page <- pz_open("https://example.com")
 page |> pz_expect_visible(target = "h1")
 page |> pz_expect_hidden(target = ".modal")
 }
+
 }

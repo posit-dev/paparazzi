@@ -22,6 +22,7 @@
 #' @param within Only match descendants of elements matching this spec
 #'   (a string or `pz_loc()`, itself fully qualified). If `within`
 #'   matches nothing, the whole spec matches nothing.
+#'
 #' @return An S3 object of class `paparazzi_loc`.
 #' @examples
 #' pz_loc("#chat_user_input .ProseMirror")
@@ -32,6 +33,7 @@
 #'   which = "last",
 #'   within = ".chat"
 #' )
+#'
 #' @export
 pz_loc <- function(css, ..., has_text = NULL, which = NULL, within = NULL) {
   check_dots_empty()

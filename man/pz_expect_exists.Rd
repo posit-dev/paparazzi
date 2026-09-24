@@ -44,4 +44,5 @@ page <- pz_open("https://example.com")
 page |> pz_expect_exists(target = "a")
 page |> pz_expect_exists(target = ".modal", not = TRUE)
 }
+
 }

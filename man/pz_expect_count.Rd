@@ -60,4 +60,5 @@ page |> pz_expect_count(1, target = "h1")
 page |> pz_expect_count(min = 1, target = "a")
 page |> pz_expect_count(0, target = ".modal", not = TRUE)
 }
+
 }

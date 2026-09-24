@@ -6,7 +6,9 @@
 #'
 #' @param ctx A paparazzi context.
 #' @param seconds Number of seconds to wait.
+#'
 #' @return `ctx`, invisibly.
+#'
 #' @export
 pz_wait <- function(ctx, seconds) {
   check_context(ctx)

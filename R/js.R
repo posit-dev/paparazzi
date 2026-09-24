@@ -11,7 +11,9 @@
 #' @param await Await a promise returned by `expr` before returning its value.
 #' @param timeout Seconds before the evaluation fails; `NULL` uses the
 #'   session default.
+#'
 #' @return The value produced by `expr` (converted to R), or `NULL`.
+#'
 #' @export
 pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   check_context(ctx)
@@ -91,7 +93,9 @@ js_value <- function(result) {
 #' Escape hatch for raw Chrome DevTools Protocol calls.
 #'
 #' @param ctx A paparazzi context.
+#'
 #' @return The `chromote::ChromoteSession` backing the page.
+#'
 #' @export
 pz_chromote <- function(ctx) {
   check_context(ctx)
