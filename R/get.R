@@ -56,7 +56,7 @@ pz_get_count <- function(ctx, ..., target = NULL) {
   call <- current_env()
   check_context(ctx, call = call)
   resolved <- target_resolver_expr(target, call = call)
-  els <- loc_resolve_once(ctx, resolved$expr, resolved$description, call = call)
+  els <- loc_resolve_once(ctx, resolved$fn, resolved$description, call = call)
   on.exit(release_elements(els), add = TRUE)
   els$count
 }

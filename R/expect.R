@@ -332,7 +332,7 @@ expect_impl <- function(
   timeout <- resolve_timeout(timeout, ctx$page, call = call)
 
   target_expr <- target_resolver_expr(target, call = call)
-  expr <- target_expr$expr
+  expr <- target_expr$fn
   target_desc <- target_expr$description
 
   start <- Sys.time()

@@ -1,79 +1,87 @@
 # The resolver runs in the page and returns a JS array of matched elements.
-# The spec arrives as a JSON array; NULL qualifiers are omitted from the
-# JSON entirely, so JS sees them as undefined.
-loc_resolver_js <- "(function(specs) {
-  const collapse = (s) => s.replace(/\\s+/g, ' ');
-  const matchesText = (el, text) =>
-    text == null || collapse(el.textContent).indexOf(collapse(text)) !== -1;
-
-  // Resolve one spec to a deduped array of elements, in DOM order.
-  const resolveSpec = (spec) => {
-    let roots;
-    if (spec.within) {
-      roots = resolveSpec(spec.within);
-      if (roots.length === 0) return [];
-    } else {
-      roots = [document];
-    }
-    const seen = new Set();
-    let els = [];
-    for (const root of roots) {
-      for (const el of root.querySelectorAll(spec.css)) {
-        if (!seen.has(el)) { seen.add(el); els.push(el); }
-      }
-    }
-    // The recording overlay lives under this host; it is never page content.
-    els = els.filter((el) => el.closest('#paparazzi-overlay-root') === null);
-    if (spec.has_text != null) {
-      els = els.filter((el) => matchesText(el, spec.has_text));
-    }
-    if (spec.which != null) {
-      if (spec.which === 'first') {
-        els = els.slice(0, 1);
-      } else if (spec.which === 'last') {
-        els = els.slice(-1);
-      } else if (spec.which >= 1 && spec.which <= els.length) {
-        els = [els[spec.which - 1]];
-      } else {
-        els = [];
-      }
-    }
-    return els;
-  };
-
-  // Union: concatenate per-spec matches, deduped across specs.
-  const seen = new Set();
-  const out = [];
-  for (const spec of specs) {
-    for (const el of resolveSpec(spec)) {
-      if (!seen.has(el)) { seen.add(el); out.push(el); }
-    }
-  }
-  // Null (not an empty array) on no match, so the caller can skip the
-  // count read entirely and never holds an empty remote object.
-  return out.length ? out : null;
-})"
-
-# The scope seam: the resolver JS takes its roots as an argument, so the
-# same function object covers every rooting. Today the only root is
-# `document`, reached via `Runtime$evaluate`; scoped contexts will
-# instead invoke the same JS through `Runtime$callFunctionOn`, passing
-# pinned element handles as the root argument.
-loc_resolver_expr <- function(locs) {
+# The specs arrive as a JSON array baked into the function text; NULL
+# qualifiers are omitted from the JSON entirely, so JS sees them as
+# undefined. The function's `this` is the roots array: [document] on the
+# root path, the pinned element set of the current scope when invoked via
+# callFunctionOn on one. loc_resolver_js() returns function TEXT; the
+# callers never see an expression, only the function.
+loc_resolver_js <- function(locs) {
   specs <- jsonlite::toJSON(lapply(locs, loc_spec_fields), auto_unbox = TRUE)
-  paste0("(", loc_resolver_js, ")(\n", specs, "\n)")
+  paste0(
+    "function() {\n",
+    "const specs = ", specs, ";\n",
+    "const collapse = (s) => s.replace(/\\s+/g, ' ');\n",
+    "const matchesText = (el, text) =>\n",
+    "  text == null || collapse(el.textContent).indexOf(collapse(text)) !== -1;\n",
+    "\n",
+    "// Resolve one spec to a deduped array of elements, in DOM order.\n",
+    "// Without `within`, roots come from `this`; a spec's own `within`\n",
+    "// resolves inside the same invocation, so a `within` chain bottoms\n",
+    "// out in the current scope, not the document.\n",
+    "const resolveSpec = (spec) => {\n",
+    "  let roots;\n",
+    "  if (spec.within) {\n",
+    "    roots = resolveSpec(spec.within);\n",
+    "    if (roots.length === 0) return [];\n",
+    "  } else {\n",
+    "    roots = this && this.length ? this : [document];\n",
+    "  }\n",
+    "  const seen = new Set();\n",
+    "  let els = [];\n",
+    "  for (const root of roots) {\n",
+    "    for (const el of root.querySelectorAll(spec.css)) {\n",
+    "      if (!seen.has(el)) { seen.add(el); els.push(el); }\n",
+    "    }\n",
+    "  }\n",
+    "  // The recording overlay lives under this host; it is never page content.\n",
+    "  els = els.filter((el) => el.closest('#paparazzi-overlay-root') === null);\n",
+    "  if (spec.has_text != null) {\n",
+    "    els = els.filter((el) => matchesText(el, spec.has_text));\n",
+    "  }\n",
+    "  if (spec.which != null) {\n",
+    "    if (spec.which === 'first') {\n",
+    "      els = els.slice(0, 1);\n",
+    "    } else if (spec.which === 'last') {\n",
+    "      els = els.slice(-1);\n",
+    "    } else if (spec.which >= 1 && spec.which <= els.length) {\n",
+    "      els = [els[spec.which - 1]];\n",
+    "    } else {\n",
+    "      els = [];\n",
+    "    }\n",
+    "  }\n",
+    "  return els;\n",
+    "};\n",
+    "\n",
+    "// Union: concatenate per-spec matches, deduped across specs.\n",
+    "const seen = new Set();\n",
+    "const out = [];\n",
+    "for (const spec of specs) {\n",
+    "  for (const el of resolveSpec(spec)) {\n",
+    "    if (!seen.has(el)) { seen.add(el); out.push(el); }\n",
+    "  }\n",
+    "}\n",
+    "// Null (not an empty array) on no match, so the caller can skip the\n",
+    "// count read entirely and never holds an empty remote object.\n",
+    "return out.length ? out : null;\n",
+    "}"
+  )
 }
 
 # The target = NULL seam, shared by expect_impl() and get_impl(): NULL
-# means the current context, which today is the root, where it stands
-# for the implicit document.body element -- a one-element JS array that
-# resolves without the loc resolver. The scoping task revisits this.
+# means the current context. Scoped consumers handle NULL before
+# resolving (the pinned set itself), so this root-only meaning -- the
+# implicit document.body element -- stays as it was. Returns function
+# TEXT whose `this` is the roots array; loc_resolve_once() invokes it
+# against [document] or a pinned scope set.
 target_resolver_expr <- function(target, call = caller_env()) {
   if (is.null(target)) {
-    return(list(expr = "[document.body]", description = "document.body"))
+    return(list(
+      fn = "function() { return [document.body]; }",
+      description = "document.body"
+    ))
   }
   locs <- as_loc_list(target, call = call)
-  list(expr = loc_resolver_expr(locs), description = format_loc(locs))
+  list(fn = loc_resolver_js(locs), description = format_loc(locs))
 }
 
 # A spec as a plain nested list (jsonlite won't serialize classed lists);
@@ -94,15 +102,21 @@ loc_spec_fields <- function(loc) {
 
 #' Resolve a target to a remote element array, auto-waiting for a match
 #'
-#' The resolver expression is built once; each poll iteration is then a
-#' single `Runtime$evaluate` (with `returnByValue = FALSE`), and the
-#' `callFunctionOn` count read happens only once a match exists -- an
-#' empty set comes back as JS `null`, so there is no empty remote object
-#' to read or release. `target = NULL` follows the target seam
-#' (target_resolver_expr()): the current context is the root, which
-#' resolves to document.body. Per-command timeouts are the page's
-#' `default_timeout`, separate from the wait budget. The result holds the
-#' objectId of the remote element array; free it with release_elements().
+#' The resolver function text is built once; each poll iteration is then a
+#' single `Runtime$evaluate` (with `returnByValue = FALSE`) at the root,
+#' or a `Runtime$callFunctionOn` on the current scope's pinned array, and
+#' the count read happens only once a match exists -- an empty set comes
+#' back as JS `null`, so there is no empty remote object to read or
+#' release. `target = NULL` follows the target seam
+#' (target_resolver_expr()): the root-only document.body meaning.
+#' `object_group` tags every remote object the resolve creates with the
+#' page's object group (the pz_find() pin); transient resolutions pass
+#' none and release individually. `from_root = TRUE` resolves from the
+#' document instead of the current scope. The scope (if any) is probed
+#' once per loc_resolve() call -- one use, one check. Per-command
+#' timeouts are the page's `default_timeout`, separate from the wait
+#' budget. The result holds the objectId of the remote element array;
+#' free it with release_elements() unless it is pinned.
 #'
 #' @noRd
 loc_resolve <- function(
@@ -111,20 +125,34 @@ loc_resolve <- function(
   ...,
   timeout = NULL,
   multiple = c("error", "all"),
+  object_group = NULL,
+  from_root = FALSE,
   call = caller_env()
 ) {
   check_context(ctx, call = call)
   check_dots_empty()
+  check_bool(from_root, call = call)
   multiple <- arg_match(multiple)
   target_expr <- target_resolver_expr(target, call = call)
-  expr <- target_expr$expr
+  fn <- target_expr$fn
   description <- target_expr$description
   timeout <- resolve_timeout(timeout, ctx$page, call = call)
+
+  # One use, one check: `from_root = TRUE` skips the scope entirely so
+  # the target resolves from the document instead of the pinned set.
+  root <- if (from_root) NULL else scope_root(ctx, call = call)
 
   resolved <- NULL
   pz_poll(
     fn = function() {
-      res <- loc_resolve_once(ctx, expr, description, call)
+      res <- loc_resolve_once(
+        ctx,
+        fn,
+        description,
+        call,
+        root = root,
+        object_group = object_group
+      )
       if (res$count == 0) {
         FALSE
       } else {
@@ -156,15 +184,27 @@ loc_resolve <- function(
 
 #' One resolution attempt
 #'
-#' Evaluates the resolver expression once. JS `null` (empty match set,
-#' no objectId) becomes a zero-count elements object with no handle; a
-#' match runs one `callFunctionOn` length read and returns the live
-#' handle. Each CDP command gets the page's `default_timeout`; a chromote
-#' command timeout is re-raised as a `paparazzi_error_timeout` naming the
-#' description, with the original error as its parent.
+#' Invokes the resolver function text once. With `root = NULL` its `this`
+#' is `document`, reached via one `Runtime$evaluate`; with a pinned set
+#' its `this` is that array, reached via `Runtime$callFunctionOn` on its
+#' objectId -- the same resolver covers every rooting. JS `null` (empty
+#' match set, no objectId) becomes a zero-count elements object with no
+#' handle; a match runs one `callFunctionOn` length read and returns the
+#' live handle. `object_group` tags the result with the page's object
+#' group (the pz_find() pin); transient resolutions pass none. Each CDP
+#' command gets the page's `default_timeout`; a chromote command timeout
+#' is re-raised as a `paparazzi_error_timeout` naming the description,
+#' with the original error as its parent.
 #'
 #' @noRd
-loc_resolve_once <- function(ctx, expr, description, call) {
+loc_resolve_once <- function(
+  ctx,
+  fn,
+  description,
+  call,
+  root = NULL,
+  object_group = NULL
+) {
   timeout <- ctx$page$default_timeout
 
   # A chromote command timeout (slow or hung renderer) is a timeout
@@ -186,12 +226,24 @@ loc_resolve_once <- function(ctx, expr, description, call) {
     )
   }
 
-  res <- run_cdp(ctx$page$session$Runtime$evaluate(
-    expr,
-    awaitPromise = FALSE,
-    returnByValue = FALSE,
-    timeout_ = timeout
-  ))
+  if (is.null(root)) {
+    res <- run_cdp(ctx$page$session$Runtime$evaluate(
+      paste0("(", fn, ").call([document])"),
+      awaitPromise = FALSE,
+      returnByValue = FALSE,
+      objectGroup = object_group,
+      timeout_ = timeout
+    ))
+  } else {
+    # `this` inside the resolver is the pinned array itself.
+    res <- run_cdp(ctx$page$session$Runtime$callFunctionOn(
+      fn,
+      objectId = root$object_id,
+      returnByValue = FALSE,
+      objectGroup = object_group,
+      timeout_ = timeout
+    ))
+  }
   err <- res$exceptionDetails
   if (!is.null(err)) {
     cli::cli_abort(
