@@ -24,7 +24,9 @@ every match, length \code{n} is compared pairwise in order.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
-page body, so \code{pz_expect_text(page, "Welcome")} checks the page text.}
+current context: the pinned set at a scoped context, or the page
+body at the root, so \code{pz_expect_text(page, "Welcome")} checks the
+page text.}
 
 \item{match}{How to compare \code{text}: \code{"contains"} (substring),
 \code{"exact"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).}

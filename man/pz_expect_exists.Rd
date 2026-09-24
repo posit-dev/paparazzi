@@ -13,8 +13,9 @@ pz_expect_exists(ctx, ..., target = NULL, not = FALSE, timeout = NULL)
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
-current context: today only the root exists, where it stands for the
-page body, so \code{pz_expect_exists(page)} trivially passes.}
+current context: the pinned set at a scoped context (so
+\code{pz_expect_exists()} on one trivially passes while the scope is
+live), the page body at the root.}
 
 \item{not}{Invert the check.}
 
