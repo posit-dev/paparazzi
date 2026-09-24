@@ -761,6 +761,107 @@ select_all_js <- "function() {
 }"
 # pz_set_files()'s `files`: paths to existing local files, normalized
 # to the absolute paths the browser reads.
+#' Select text inside an element
+#'
+#' Auto-waits for a match, then highlights the exact `text` inside it
+#' as if dragging across it: the substring is found among the element's
+#' text nodes (so a match spanning inline tags, e.g. across an `<em>`
+#' and a `<strong>`, is selected as one piece) and becomes the page's
+#' real window selection. Typing afterwards replaces it -- call
+#' [pz_type()] with `target = NULL`, which inserts into whatever has
+#' focus.
+#'
+#' A contenteditable target is focused too (dragging across editable
+#' text focuses it, and that focus is where the typing lands); a static
+#' target is not.
+#'
+#' @inheritParams pz_click
+#' @param text A string to select. Must appear exactly in the element,
+#'   across tags if needed; not found is an error.
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs (a union matching any of them). `NULL` uses the current
+#'   scope; at the root context a target is required.
+#'
+#' @return `ctx`, invisibly.
+#'
+#' @seealso [pz_type()], [pz_set_value()]
+#'
+#' @export
+pz_select_text <- function(ctx, text, ..., target = NULL) {
+  check_context(ctx)
+  check_dots_empty()
+  check_string(text)
+  if (!nzchar(text)) {
+    cli::cli_abort(
+      "{.arg text} can't be empty.",
+      class = "paparazzi_error_input"
+    )
+  }
+
+  found <- action_elements(ctx, target)
+  if (!found$pinned) {
+    withr::defer(release_elements(found$els))
+  }
+  el_scroll_into_view(found$els)
+
+  res <- els_arg_values(found$els, select_text_js, list(list(value = text)))
+  if (!identical(res$status, "ok")) {
+    cli::cli_abort(
+      c(
+        "No {.str {text}} in {found$els$description}.",
+        i = "The match must contain the exact text, across tags if needed."
+      ),
+      class = "paparazzi_error_text"
+    )
+  }
+  invisible(ctx)
+}
+# The exact-substring selection: a TreeWalker collects the target's
+# text nodes, the concatenated data is searched, and one Range spans
+# the start and end (node, offset) pair -- so a match crossing inline
+# tags is a single selection. The Range becomes the window's only
+# selection, the same state a mouse drag across the text produces.
+select_text_js <- "function(text) {
+  const el = this[0];
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  let full = '';
+  let node;
+  while ((node = walker.nextNode())) {
+    nodes.push({ node: node, start: full.length });
+    full += node.data;
+  }
+  const idx = full.indexOf(text);
+  if (idx === -1) {
+    return { status: 'notfound' };
+  }
+  const end = idx + text.length;
+  let startNode = null, startOffset = 0, endNode = null, endOffset = 0;
+  for (const span of nodes) {
+    const stop = span.start + span.node.data.length;
+    if (startNode === null && idx < stop) {
+      startNode = span.node;
+      startOffset = idx - span.start;
+    }
+    if (end <= stop) {
+      endNode = span.node;
+      endOffset = end - span.start;
+      break;
+    }
+  }
+  const range = document.createRange();
+  range.setStart(startNode, startOffset);
+  range.setEnd(endNode, endOffset);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  // A user dragging across editable text focuses it; that focus is
+  // what lets typing replace the selection.
+  if (el.isContentEditable) {
+    el.focus();
+  }
+  return { status: 'ok' };
+}"
 check_file_paths <- function(files, call = caller_env()) {
   check_character(files, call = call)
   missing <- files[!file.exists(files)]

@@ -680,3 +680,54 @@ test_that("pz_set_files rejects non-file inputs and validates paths", {
   expect_error(pz_set_files(page, NA, target = "#file"), "NA")
   expect_error(pz_set_files(page, f, "bogus", target = "#file"), "empty")
 })
+
+# --- Advanced interactions (pz_select_text, pz_scroll, pz_drag) on the
+# advanced.html fixture; helpers in helper-advanced.R. ---
+
+test_that("pz_select_text selects an exact substring across inline tags", {
+  page <- local_advanced_page()
+  page <- expect_invisible(
+    pz_select_text(page, "galapagos penguins", target = "#rich")
+  )
+  # The window selection is the real thing: the match starts inside the
+  # <em> and ends inside the <strong>, and reads back as one string.
+  expect_equal(pz_js(page, "window.getSelection().toString()"), "galapagos penguins")
+  expect_equal(
+    pz_js(page, "window.getSelection().anchorNode.parentElement.tagName"),
+    "EM"
+  )
+  expect_equal(
+    pz_js(page, "window.getSelection().extentNode.parentElement.tagName"),
+    "STRONG"
+  )
+})
+
+test_that("pz_select_text lets typing replace the selection", {
+  page <- local_advanced_page()
+  pz_select_text(page, "otters", target = "#editor")
+  pz_type(page, "penguins")
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "penguins are playful"
+  )
+})
+
+test_that("pz_select_text errors on absent text, emptiness, and multiple matches", {
+  page <- local_advanced_page()
+  expect_error(
+    pz_select_text(page, "no such text", target = "#rich"),
+    class = "paparazzi_error_text"
+  )
+  expect_error(
+    pz_select_text(page, ""),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_select_text(page, "duplicate", target = ".dup-select"),
+    class = "paparazzi_error_multiple"
+  )
+  expect_error(
+    pz_select_text(page, "otters"),
+    class = "paparazzi_error_target"
+  )
+})
