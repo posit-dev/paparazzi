@@ -2,7 +2,7 @@
 
 **Kata is the system of record** (the `kata` CLI issue tracker; the session environment provides its usage conventions). One issue per work item; decisions and dispositions land on issues, never only in chat scrollback. See `kata quickstart --agent` for usage details.
 
-**roborev provides external review, requested manually.** Do NOT install the post-commit hook. Request one review per completed unit of work, never per commit: `roborev review <sha>`, then `roborev show <job_id> --job`. Close reviews when the fix is committed (`roborev close`).
+**roborev provides external review, requested manually.** We DO NOT USE the post-commit hook. Request one review per completed unit of work, never per commit: `roborev review <sha>`, then `roborev show <job_id> --job`. Close reviews when the fix is committed (`roborev close`).
 
 ## R Package Development
 
