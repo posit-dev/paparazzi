@@ -25,6 +25,10 @@
       <input type="radio" name="radio" id="radio1" value="r1">
       <input type="radio" name="radio" id="radio2" value="r2">
       <input type="radio" name="other" id="radio3" value="r3">
+      <!-- same name as the formless orphan below: a radio group is
+           same tree root AND same form owner AND same name, so these
+           must never uncheck each other -->
+      <input type="radio" name="orphan" id="orphan-form" value="o2">
     </div>
     <div><input type="range" id="range" min="0" max="100" step="1"></div>
     <div><input type="date" id="date"></div>
@@ -34,6 +38,20 @@
     <input type="file" class="dupfile">
     <input type="file" class="dupfile">
   </form>
+
+  <!-- Radio groups across form boundaries: form-b and form-c hold
+       same-name radios (separate groups), and two name-sharing radios
+       sit outside any form, associated with those forms via the
+       form="..." attribute (peers via the tree root, not a form). -->
+  <form id="form-b">
+    <input type="radio" name="shared" id="radio-b1" value="b1">
+  </form>
+  <form id="form-c">
+    <input type="radio" name="shared" id="radio-c1" value="c1">
+  </form>
+  <input type="radio" name="loose" id="loose-b" value="lb" form="form-b">
+  <input type="radio" name="loose" id="loose-c" value="lc" form="form-c">
+  <input type="radio" name="orphan" id="orphan-free" value="o1">
 
   <!-- Framework-style controlled input: the instance-level value
        accessor is trapped, like a framework that owns the value
