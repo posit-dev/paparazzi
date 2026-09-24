@@ -259,16 +259,28 @@ style_expect_pairs <- function(dots, call = caller_env()) {
 # One expectation check: reads the target's computed values and, when
 # normalizing, resolves the expected values through the probe, in one
 # synchronous JS call. Comparison happens in R (see the expectation
-# core note): the classed failure gets real last-seen values.
+# core note): the classed failure gets real last-seen values. With no
+# matches there is nothing to compare, but the invalid-CSS verdict
+# still runs: it needs no target, and without it a plain expectation
+# would retry a rejected declaration to the timeout and not = TRUE
+# would pass on invalid CSS.
 check_style <- function(pairs, not, normalize, call = caller_env()) {
   js <- style_expect_js(pairs, normalize)
   props <- names(pairs)
   function(els) {
     if (els$count == 0L) {
+      if (normalize) {
+        style_abort_invalid(
+          style_check_invalid(els$page, pairs, call = call),
+          pairs,
+          call = call
+        )
+      }
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
     vals <- els_values(els, js)
-    style_abort_invalid(vals, pairs, call = call)
+    accepted <- vapply(vals[[1]], function(v) isTRUE(v$accepted), logical(1))
+    style_abort_invalid(accepted, pairs, call = call)
     hits <- style_hits(vals, pairs, normalize)
     pass <- if (not) !all(hits) else all(hits)
     list(pass = pass, observed = style_observed(vals, props))
@@ -276,18 +288,52 @@ check_style <- function(pairs, not, normalize, call = caller_env()) {
 }
 # Invalid CSS aborts immediately, outside the retry loop: the browser's
 # verdict on a declaration never changes. Acceptance is a property of
-# the (property, value) pair, so the first match's answers decide.
-style_abort_invalid <- function(vals, pairs, call = caller_env()) {
-  for (p in seq_along(pairs)) {
-    if (identical(vals[[1]][[p]]$accepted, FALSE)) {
-      cli::cli_abort(
-        "Invalid CSS: the browser rejects {.val {pairs[[p]]}} for {.val {names(pairs)[[p]]}}.",
-        class = "paparazzi_error_input",
-        call = call
-      )
-    }
+# the (property, value) pair, so the verdict vector is per pair.
+style_abort_invalid <- function(accepted, pairs, call = caller_env()) {
+  if (any(!accepted)) {
+    p <- which(!accepted)[[1]]
+    cli::cli_abort(
+      "Invalid CSS: the browser rejects {.val {pairs[[p]]}} for {.val {names(pairs)[[p]]}}.",
+      class = "paparazzi_error_input",
+      call = call
+    )
   }
   invisible(NULL)
+}
+# The invalid-declaration verdict with no matches: there is no element
+# array to callFunctionOn, so the check runs on the page with one
+# Runtime$evaluate. The probe is a detached div: setProperty validity
+# holds regardless of attachment, so nothing needs to touch the DOM.
+style_check_invalid <- function(page, pairs, call = caller_env()) {
+  timeout <- page$default_timeout
+  res <- tryCatch(
+    page$session$Runtime$evaluate(
+      paste0("(", style_invalid_js(pairs), ")()"),
+      awaitPromise = FALSE,
+      returnByValue = TRUE,
+      timeout_ = timeout
+    ),
+    error = function(e) {
+      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+        cli::cli_abort(
+          "Timed out after {timeout}s validating CSS.",
+          class = "paparazzi_error_timeout",
+          call = call,
+          parent = e
+        )
+      }
+      stop(e)
+    }
+  )
+  err <- res$exceptionDetails
+  if (!is.null(err)) {
+    cli::cli_abort(
+      "JavaScript error validating CSS: {err$exception$description %||% err$text %||% 'unknown error'}.",
+      class = "paparazzi_error_js",
+      call = call
+    )
+  }
+  vapply(res$result$value, isTRUE, logical(1))
 }
 # Comparison matrix [match, pair]: identical strings pass; px values
 # compare numerically with a 0.5px tolerance; anything else is exact.
@@ -339,19 +385,37 @@ expect_headline_style <- function(pairs, not) {
 # call and removed in a finally block, so the app's DOM is untouched
 # once the call returns.
 style_expect_js <- function(pairs, normalize) {
-  pairs_json <- jsonlite::toJSON(
+  paste0(
+    "function() {\n",
+    "const pairs = ", style_pairs_json(pairs), ";\n",
+    "const normalize = ", if (normalize) "true" else "false", ";\n",
+    style_probe_js,
+    "}"
+  )
+}
+# The invalid-declaration check alone, for the zero-match path: the
+# same setProperty-to-empty-readback verdict, on a detached div.
+style_invalid_js <- function(pairs) {
+  paste0(
+    "function() {
+      const pairs = ", style_pairs_json(pairs), ";
+      const probe = document.createElement('div');
+      return pairs.map((p) => {
+        probe.style.setProperty(p.prop, p.value);
+        // An empty inline style means the browser rejected the
+        // declaration (bad value or unknown property).
+        return probe.style.getPropertyValue(p.prop) !== '';
+      });
+    }"
+  )
+}
+style_pairs_json <- function(pairs) {
+  jsonlite::toJSON(
     lapply(
       seq_along(pairs),
       function(i) list(prop = names(pairs)[[i]], value = unname(pairs)[[i]])
     ),
     auto_unbox = TRUE
-  )
-  paste0(
-    "function() {\n",
-    "const pairs = ", pairs_json, ";\n",
-    "const normalize = ", if (normalize) "true" else "false", ";\n",
-    style_probe_js,
-    "}"
   )
 }
 style_probe_js <- "

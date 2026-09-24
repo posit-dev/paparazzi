@@ -232,6 +232,23 @@ test_that("invalid CSS errors immediately, without retrying", {
   )
 })
 
+test_that("invalid CSS errors immediately even with no matches", {
+  # The verdict is target-independent: with no matches a plain
+  # expectation would retry to the timeout and not = TRUE would pass,
+  # but invalid CSS still aborts on the first check.
+  page <- local_page(style_fixture_file(), timeout = 3)
+  start <- Sys.time()
+  expect_error(
+    pz_expect_style(page, color = "not-a-color", target = ".absent"),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_expect_style(page, color = "not-a-color", target = ".absent", not = TRUE),
+    class = "paparazzi_error_input"
+  )
+  expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
+})
+
 test_that("pz_expect_style rejects shorthands and suggests longhands", {
   page <- local_style_page()
   err <- expect_error(
