@@ -10,7 +10,7 @@
 #' @export
 pz_wait <- function(ctx, seconds) {
   check_context(ctx)
-  rlang::check_number_decimal(seconds, min = 0)
+  check_number_decimal(seconds, min = 0)
   pump_loop(ctx$page$child_loop, seconds)
   invisible(ctx)
 }

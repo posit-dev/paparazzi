@@ -91,7 +91,7 @@ PaparazziPage <- R6::R6Class(
       if (missing(value)) {
         private$default_timeout_
       } else {
-        rlang::check_number_decimal(value, min = 0)
+        check_number_decimal(value, min = 0)
         private$default_timeout_ <- value
       }
     }

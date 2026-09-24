@@ -7,7 +7,7 @@
 \usage{
 pz_with_page(x, code, ...)
 
-pz_local_page(x, ..., .env = rlang::caller_env())
+pz_local_page(x, ..., .env = caller_env())
 }
 \arguments{
 \item{x}{An open page, or anything \code{\link[=pz_open]{pz_open()}} accepts.}

@@ -15,9 +15,9 @@
 #' @export
 pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   check_context(ctx)
-  rlang::check_dots_empty()
-  rlang::check_string(expr)
-  rlang::check_bool(await)
+  check_dots_empty()
+  check_string(expr)
+  check_bool(await)
   timeout <- resolve_timeout(timeout, ctx$page)
 
   res <- tryCatch(

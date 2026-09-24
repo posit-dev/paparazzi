@@ -1,7 +1,7 @@
 check_context <- function(
   ctx,
-  arg = rlang::caller_arg(ctx),
-  call = rlang::caller_env()
+  arg = caller_arg(ctx),
+  call = caller_env()
 ) {
   if (!inherits(ctx, "PaparazziContext")) {
     cli::cli_abort(
@@ -23,12 +23,12 @@ check_context <- function(
 resolve_timeout <- function(
   timeout,
   page,
-  arg = rlang::caller_arg(timeout),
-  call = rlang::caller_env()
+  arg = caller_arg(timeout),
+  call = caller_env()
 ) {
   if (is.null(timeout)) {
     return(page$default_timeout)
   }
-  rlang::check_number_decimal(timeout, min = 0, arg = arg, call = call)
+  check_number_decimal(timeout, min = 0, arg = arg, call = call)
   timeout
 }

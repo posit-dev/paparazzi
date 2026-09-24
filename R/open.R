@@ -29,11 +29,11 @@ pz_open <- function(
   shiny_options = list(),
   envvars = NULL
 ) {
-  rlang::check_dots_empty()
+  check_dots_empty()
   if (!is.null(timeout)) {
-    rlang::check_number_decimal(timeout, min = 0)
+    check_number_decimal(timeout, min = 0)
   }
-  wait <- rlang::arg_match(wait)
+  wait <- arg_match(wait)
   if (identical(wait, "shiny")) {
     cli::cli_abort(
       '{.code wait = "shiny"} is not supported yet; use {.code wait = "load"} for now.',
@@ -84,7 +84,7 @@ pz_open <- function(
   page
 }
 
-open_target_url <- function(x, call = rlang::caller_env()) {
+open_target_url <- function(x, call = caller_env()) {
   if (inherits(x, "shiny.appobj")) {
     cli::cli_abort(
       c(
@@ -95,7 +95,7 @@ open_target_url <- function(x, call = rlang::caller_env()) {
       call = call
     )
   }
-  if (!rlang::is_string(x)) {
+  if (!is_string(x)) {
     cli::cli_abort(
       "{.arg x} must be a URL, a path to a local file, or a ChromoteSession; not {.obj_type_friendly {x}}.",
       class = "paparazzi_error_input",
@@ -223,7 +223,7 @@ pz_with_page <- function(x, code, ...) {
   expr <- substitute(code)
   value <- eval(expr, envir = parent.frame())
   is_block <- is.call(expr) && identical(expr[[1]], quote(`{`))
-  if (!is_block && rlang::is_function(value)) {
+  if (!is_block && is_function(value)) {
     value <- value(page)
   }
   invisible(page)
@@ -231,12 +231,8 @@ pz_with_page <- function(x, code, ...) {
 
 #' @rdname pz_with_page
 #' @export
-pz_local_page <- function(x, ..., .env = rlang::caller_env()) {
+pz_local_page <- function(x, ..., .env = caller_env()) {
   page <- if (inherits(x, "PaparazziPage")) x else pz_open(x, ...)
   withr::defer(pz_close(page), envir = .env)
   page
-}
-
-`%||%` <- function(x, y) {
-  if (is.null(x)) y else x
 }
