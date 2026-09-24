@@ -57,7 +57,9 @@ root context).}
 \if{html}{\out{<a id="method-PaparazziContext-print"></a>}}
 \if{latex}{\out{\hypertarget{method-PaparazziContext-print}{}}}
 \subsection{\code{PaparazziContext$print()}}{
-  Print the scope stack.
+  Print the page summary (URL, device, scope stack,
+recording state) without the target section or visuals; see
+\code{\link[=pz_inspect]{pz_inspect()}}.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{PaparazziContext$print(...)}
@@ -198,7 +200,9 @@ siblings on this internal-keyword topic.)
 \if{html}{\out{<a id="method-PaparazziPage-print"></a>}}
 \if{latex}{\out{\hypertarget{method-PaparazziPage-print}{}}}
 \subsection{\code{PaparazziPage$print()}}{
-  Print a short summary.
+  Print the page summary (URL, device, scope stack,
+recording state) without the target section or visuals; see
+\code{\link[=pz_inspect]{pz_inspect()}}. A closed page prints one line.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{PaparazziPage$print(...)}

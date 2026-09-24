@@ -66,6 +66,10 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
     clip_rects_union(ctx, el_rects(els))
   }
 
+  # Overlay outlines (from pz_inspect()) must never appear in a capture:
+  # hide the overlay host for the CDP capture only, then restore it.
+  overlay_display <- overlay_hide(ctx)
+  on.exit(overlay_restore(ctx, overlay_display), add = TRUE)
   res <- screenshot_capture(ctx, clip)
   writeBin(jsonlite::base64_dec(res$data), path)
   invisible(ctx)
