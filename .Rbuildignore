@@ -1,0 +1,5 @@
+^paparazzi\.Rproj$
+^\.Rproj\.user$
+^\.pi*\.lock$
+^\.agents$
+^LICENSE\.md$
