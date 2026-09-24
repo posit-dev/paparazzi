@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Style fixture</title>
+  <style>
+    html { font-size: 16px; }
+    .btn-primary {
+      color: #ffffff;
+      background-color: #0d6efd;
+      font-weight: normal;
+    }
+    .blue { color: #0000ff; }
+    .card { padding: 8px; color: #333333; }
+  </style>
+</head>
+<body>
+  <!-- % resolves against the parent's size -->
+  <div id="sizes" style="width: 200px; height: 100px;">
+    <div id="half" style="width: 50%; height: 25%;"></div>
+  </div>
+
+  <!-- em for font-size resolves against the parent's font -->
+  <div id="em-parent" style="font-size: 20px;">
+    <div id="em-child" style="font-size: 1.5em;"></div>
+  </div>
+  <!-- em for any other property resolves against the element's own font -->
+  <div id="em-margin" style="font-size: 20px; margin-left: 1em;"></div>
+
+  <!-- currentColor resolves against the element's color -->
+  <div id="current" style="color: #d62828; border: 2px solid currentColor;"></div>
+
+  <!-- hex vs computed rgb() -->
+  <button id="primary" class="btn-primary">Primary</button>
+  <div id="rgb-box" style="color: #0d6efd;"></div>
+
+  <!-- rem needs no context (the root font) -->
+  <div id="rem-box" style="font-size: 1.5rem;"></div>
+  <!-- vw needs no context (the viewport) -->
+  <div id="vw-box" style="width: 50vw;"></div>
+
+  <!-- subpixel value for the px tolerance -->
+  <div id="third" style="width: calc(200px / 3);"></div>
+
+  <!-- shorthand for the longhand suggestion -->
+  <div id="spaced" style="margin: 1rem 2rem;"></div>
+
+  <!-- multiple matches: every match must satisfy every pair -->
+  <div class="card mixed" id="card-1">one</div>
+  <div class="card mixed" id="card-2">two</div>
+  <div class="card mixed" id="card-3">three</div>
+  <div class="mixed" id="card-odd" style="color: #999999;">odd</div>
+
+  <!-- a style that arrives late, for retries -->
+  <div id="late">late</div>
+
+  <!-- custom property -->
+  <div id="custom" style="--bs-primary: #0d6efd;"></div>
+</body>
+</html>
