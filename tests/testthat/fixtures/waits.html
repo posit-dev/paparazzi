@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"><title>paparazzi waits fixture</title>
+  <style>
+    @keyframes bounce {
+      from { top: 0; }
+      to { top: 200px; }
+    }
+    @keyframes drift {
+      from { left: 0; }
+      to { left: 300px; }
+    }
+    /* The text elements have fixed heights so their fill-in can't shift
+         the layout, and the animated boxes live far inside their own
+         relative container, so they can never overlap the link below
+         and steal its clicks. */
+    #ticker, #never-still {
+      height: 20px;
+      margin: 0;
+    }
+    #anim-space {
+      position: relative;
+      height: 540px;
+    }
+    #bouncer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 40px;
+      height: 40px;
+      background: rebeccapurple;
+      animation: bounce 300ms 4;
+    }
+    #endless {
+      position: absolute;
+      top: 250px;
+      left: 0;
+      width: 20px;
+      height: 20px;
+      background: firebrick;
+      animation: drift 200ms infinite;
+    }
+  </style>
+</head>
+<body>
+  <!-- Text stability: #ticker changes every 50 ms for 1 s, then
+       settles. #never-still never settles. -->
+  <p id="ticker"></p>
+  <p id="never-still"></p>
+
+  <!-- Layout stability: #bouncer animates for 1.2 s then stops;
+       #endless animates forever. -->
+  <div id="anim-space">
+    <div id="bouncer"></div>
+    <div id="endless"></div>
+  </div>
+
+  <a id="nav-link" href="nav-target.html">Go to the target page</a>
+
+  <script>
+    let n = 0;
+    const ticker = setInterval(function () {
+      n++;
+      document.getElementById('ticker').textContent = 'tick ' + n;
+      if (n >= 20) {
+        clearInterval(ticker);
+        document.getElementById('ticker').textContent = 'settled';
+      }
+    }, 50);
+    setInterval(function () {
+      document.getElementById('never-still').textContent = String(Math.random());
+    }, 30);
+  </script>
+</body>
+</html>
