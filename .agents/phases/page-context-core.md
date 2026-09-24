@@ -63,6 +63,12 @@ choices and session handoffs for this phase only.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close): landed the whole task (82bdf42) plus review fixes
+  (bfc0db6): navigation failure detection, pz_js timeout, file_url()
+  encoding, app.R basename match, pz_with_page block semantics. 72
+  tests green. Task closed; next is a3vj per the epic's child order.
+  Note: R CMD check has a NOTE for tibble in Imports (unused until the
+  getters task) — expected, leave it.
 - 2026-09-24 (start): claimed qtpz. Harness verified green at df2777d
   (devtools::test passes; a deliberately broken fixture fails). Found
   DESCRIPTION missing the deps from closed paparazzi#1y9n — fixed
