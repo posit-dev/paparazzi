@@ -1,8 +1,9 @@
 # Computed-style reading and checking. Expected values are normalized
-# through a probe element inside a closed shadow root at the document
-# root, so the browser itself resolves em/%/currentColor against the
-# same context the target sees -- and the probe never touches the
-# app's DOM or paints. Vocabulary is "style", not "css": CSS already
+# through a probe element inside a closed shadow root, created and
+# removed within the one synchronous JS call that reads the target, so
+# the browser itself resolves em/%/currentColor against the same
+# context the target sees -- and the probe is never observable in the
+# app's DOM, and never paints. Vocabulary is "style", not "css": CSS already
 # means selectors here, and the values compared are the applied
 # (computed) styles, like Playwright's toHaveCSS() and jQuery's
 # .css().
@@ -320,8 +321,9 @@ expect_headline_style <- function(pairs, not) {
 # One synchronous callFunctionOn on the matched element array: read the
 # targets, set the expected values inline on the probe, copy only the
 # context each value needs (SPEC table), read the probe back. Nothing
-# persists between calls except the probe nodes themselves, which are
-# cached on the document and die with it on navigation.
+# persists between calls: the probe host is created at the top of the
+# call and removed in a finally block, so the app's DOM is untouched
+# once the call returns.
 style_expect_js <- function(pairs, normalize) {
   pairs_json <- jsonlite::toJSON(
     lapply(
@@ -340,70 +342,72 @@ style_expect_js <- function(pairs, normalize) {
 }
 style_probe_js <- "
   // The probe lives in a closed shadow root under a zero-size host at
-  // the document root: never inside the app's DOM (positional
-  // selectors, :empty, and body MutationObservers are untouched) and
-  // never painted (zero size, overflow hidden). visibility: hidden
-  // keeps the subtree laid out, which percentage resolution needs;
-  // display: none would leave raw percentages in the computed read.
-  const probe_ctx = document.__paparazzi_probe || (() => {
-    const host = document.createElement('div');
-    host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;visibility:hidden';
-    document.documentElement.appendChild(host);
-    const root = host.attachShadow({mode: 'closed'});
-    const container = document.createElement('div');
-    const probe = document.createElement('div');
-    container.appendChild(probe);
-    root.appendChild(container);
-    return (document.__paparazzi_probe = {container: container, probe: probe});
-  })();
-  return this.map((el) => {
-    const cs = getComputedStyle(el);
-    return pairs.map((p) => {
-      const actual = cs.getPropertyValue(p.prop);
-      if (!normalize) {
-        return {actual: actual, normalized: null, accepted: true};
-      }
-      const probe = probe_ctx.probe;
-      const container = probe_ctx.container;
-      probe.style.cssText = '';
-      container.style.cssText = '';
-      probe.style.setProperty(p.prop, p.value);
-      // An empty inline style means the browser rejected the
-      // declaration (bad value or unknown property).
-      if (probe.style.getPropertyValue(p.prop) === '') {
-        return {actual: actual, normalized: null, accepted: false};
-      }
-      // Context needs are independent, not exclusive: calc(50% - 1em)
-      // wants the parent's size and the element's font at once. The
-      // contexts touch different container styles, so they compose.
-      if (/currentcolor/i.test(p.value)) {
-        container.style.color = cs.color;
-      }
-      const fontUnits = /[0-9.](em|ex|ch)([^a-z]|$)/i.test(p.value);
-      const percent = p.value.indexOf('%') !== -1;
-      // Relative units on font-size and line-height resolve against
-      // fonts, not sizes: the parent's font for font-size (its em and
-      // % context), the element's own font for line-height and every
-      // other property.
-      if (fontUnits || (percent && (p.prop === 'font-size' || p.prop === 'line-height'))) {
-        const fcs = p.prop === 'font-size'
-          ? getComputedStyle(el.parentElement || document.documentElement)
-          : cs;
-        container.style.fontSize = fcs.fontSize;
-        container.style.fontFamily = fcs.fontFamily;
-      }
-      if (percent && p.prop !== 'font-size' && p.prop !== 'line-height') {
-        const pcs = getComputedStyle(el.parentElement || document.documentElement);
-        container.style.width = pcs.width;
-        container.style.height = pcs.height;
-      }
-      return {
-        actual: actual,
-        normalized: getComputedStyle(probe).getPropertyValue(p.prop),
-        accepted: true
-      };
+  // the document root, for the duration of this one synchronous call
+  // only: JS runs to completion, so no selector, :empty check, style
+  // recalc, screenshot, or recording frame can ever observe the host.
+  // The MutationObserver add/remove records are the accepted residual:
+  // a rendered, attached probe is required for percentage resolution.
+  // visibility: hidden keeps the subtree laid out (display: none would
+  // leave raw percentages in the computed read) and zero size plus
+  // overflow hidden means nothing ever paints.
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;visibility:hidden';
+  document.documentElement.appendChild(host);
+  const root = host.attachShadow({mode: 'closed'});
+  const container = document.createElement('div');
+  const probe = document.createElement('div');
+  container.appendChild(probe);
+  root.appendChild(container);
+  try {
+    return this.map((el) => {
+      const cs = getComputedStyle(el);
+      return pairs.map((p) => {
+        const actual = cs.getPropertyValue(p.prop);
+        if (!normalize) {
+          return {actual: actual, normalized: null, accepted: true};
+        }
+        probe.style.cssText = '';
+        container.style.cssText = '';
+        probe.style.setProperty(p.prop, p.value);
+        // An empty inline style means the browser rejected the
+        // declaration (bad value or unknown property).
+        if (probe.style.getPropertyValue(p.prop) === '') {
+          return {actual: actual, normalized: null, accepted: false};
+        }
+        // Context needs are independent, not exclusive: calc(50% - 1em)
+        // wants the parent's size and the element's font at once. The
+        // contexts touch different container styles, so they compose.
+        if (/currentcolor/i.test(p.value)) {
+          container.style.color = cs.color;
+        }
+        const fontUnits = /[0-9.](em|ex|ch)([^a-z]|$)/i.test(p.value);
+        const percent = p.value.indexOf('%') !== -1;
+        // Relative units on font-size and line-height resolve against
+        // fonts, not sizes: the parent's font for font-size (its em and
+        // % context), the element's own font for line-height and every
+        // other property.
+        if (fontUnits || (percent && (p.prop === 'font-size' || p.prop === 'line-height'))) {
+          const fcs = p.prop === 'font-size'
+            ? getComputedStyle(el.parentElement || document.documentElement)
+            : cs;
+          container.style.fontSize = fcs.fontSize;
+          container.style.fontFamily = fcs.fontFamily;
+        }
+        if (percent && p.prop !== 'font-size' && p.prop !== 'line-height') {
+          const pcs = getComputedStyle(el.parentElement || document.documentElement);
+          container.style.width = pcs.width;
+          container.style.height = pcs.height;
+        }
+        return {
+          actual: actual,
+          normalized: getComputedStyle(probe).getPropertyValue(p.prop),
+          accepted: true
+        };
+      });
     });
-  });
+  } finally {
+    host.remove();
+  }
 "
 style_get_js <- function(props) {
   props_json <- if (is.null(props)) "null" else jsonlite::toJSON(props)
