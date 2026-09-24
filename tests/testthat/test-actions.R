@@ -731,3 +731,63 @@ test_that("pz_select_text errors on absent text, emptiness, and multiple matches
     class = "paparazzi_error_target"
   )
 })
+
+test_that("pz_scroll scrolls the page by, to a direction, and a target into view", {
+  page <- local_advanced_page()
+
+  # by: a pixel delta against the root container, the document.
+  page <- expect_invisible(pz_scroll(page, by = c(0, 300)))
+  expect_equal(pz_js(page, "window.scrollY"), 300)
+
+  # to: the direction vocabulary, straight to the edge.
+  pz_scroll(page, to = "bottom")
+  expect_true(pz_js(page,
+    "window.scrollY === document.documentElement.scrollHeight - window.innerHeight"
+  ))
+  pz_scroll(page, to = "top")
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+
+  # target: auto-scrolls a below-fold element into view.
+  pz_scroll(page, target = "#tall-bottom")
+  y <- pz_js(page, "document.getElementById('tall-bottom').getBoundingClientRect().y")
+  expect_true(y >= 0 && y < pz_js(page, "window.innerHeight"))
+})
+
+test_that("pz_scroll by and to act on the scope's scroll container", {
+  page <- local_advanced_page()
+
+  # The scope element itself is scrollable: it is the container.
+  ctx <- pz_find(page, "#scroller")
+  ctx <- expect_invisible(pz_scroll(ctx, by = c(0, 120)))
+  expect_equal(pz_js(page, "document.getElementById('scroller').scrollTop"), 120)
+  pz_scroll(ctx, to = "bottom")
+  expect_true(pz_js(page, paste(
+    "document.getElementById('scroller').scrollTop ===",
+    "document.getElementById('scroller').scrollHeight -",
+    "document.getElementById('scroller').clientHeight"
+  )))
+
+  # A scope inside a scrollable container resolves up to it, and the
+  # page never moves.
+  ctx <- pz_find(page, "#deep-item")
+  pz_scroll(ctx, to = "top")
+  pz_scroll(ctx, by = c(0, 40))
+  expect_equal(pz_js(page, "document.getElementById('scroller').scrollTop"), 40)
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+})
+
+test_that("pz_scroll validates its modes", {
+  page <- local_advanced_page()
+  expect_error(pz_scroll(page), class = "paparazzi_error_input")
+  expect_error(
+    pz_scroll(page, target = "#rich", by = c(0, 100)),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_scroll(page, to = "bottom", by = c(0, 100)),
+    class = "paparazzi_error_input"
+  )
+  # by and to reuse the shared offset and direction checkers.
+  expect_error(pz_scroll(page, by = "lots"), class = "paparazzi_error_input")
+  expect_error(pz_scroll(page, to = "sideways"), class = "paparazzi_error_input")
+})

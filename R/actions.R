@@ -862,6 +862,140 @@ select_text_js <- "function(text) {
   }
   return { status: 'ok' };
 }"
+#' Scroll the page or an element into view
+#'
+#' @description
+#' Exactly one of `target`, `by`, and `to`:
+#'
+#' - `target`: auto-waits for a match, then scrolls it into view
+#'   (instantly).
+#' - `by = c(x, y)`: scrolls the current scope's scroll container --
+#'   the scope element or its nearest scrollable ancestor, or the page
+#'   itself at the root context -- by that many pixels.
+#' - `to`: scrolls that same container to an edge or corner from the
+#'   direction vocabulary: `"top"`, `"bottom"`, `"left"`, `"right"`,
+#'   the four corners, or `"center"` (e.g. `"bottom"` scrolls to the
+#'   end; `"top right"` to the top-right corner).
+#'
+#' Scrolling is instant; the smooth, on-camera variant arrives with
+#' the recording task.
+#'
+#' @inheritParams pz_click
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs (a union matching any of them). Scrolled into view.
+#' @param by Offset in pixels, `c(x, y)` (or a single number for both
+#'   axes).
+#' @param to A direction string: the sides, the four corners, or
+#'   `"center"`.
+#'
+#' @return `ctx`, invisibly.
+#'
+#' @seealso [pz_find()], [pz_click()]
+#'
+#' @export
+pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
+  check_context(ctx)
+  check_dots_empty()
+  modes <- c(target = !is.null(target), by = !is.null(by), to = !is.null(to))
+  if (sum(modes) != 1L) {
+    cli::cli_abort(
+      "Supply exactly one of {.arg target}, {.arg by}, or {.arg to}.",
+      class = "paparazzi_error_input"
+    )
+  }
+
+  if (!is.null(target)) {
+    found <- action_elements(ctx, target)
+    if (!found$pinned) {
+      withr::defer(release_elements(found$els))
+    }
+    el_scroll_into_view(found$els)
+    return(invisible(ctx))
+  }
+
+  by <- if (!is.null(by)) check_offset(by, arg = "by") else NULL
+  to <- if (!is.null(to)) parse_direction(to, arg = "to") else NULL
+  scoped <- scope_root(ctx)
+  if (!is.null(scoped)) {
+    arg <- if (!is.null(by)) list(by = as.list(by)) else list(to = as.list(to))
+    els_arg_values(scoped, scroll_apply_js, list(list(value = arg)))
+  } else {
+    action_cdp(
+      ctx,
+      "scrolling",
+      cmd = ctx$page$session$Runtime$evaluate(
+        paste0(
+          "(", scroll_apply_js, ").call([], ",
+          scroll_arg_json(by, to),
+          ")"
+        ),
+        returnByValue = TRUE,
+        timeout_ = ctx$page$default_timeout
+      )
+    )
+  }
+  invisible(ctx)
+}
+# The by/to scroll, applied to the current scope's container: the scope
+# element or its nearest scrollable ancestor (overflow auto|scroll
+# plus actual overflow), falling back to the document. One function
+# serves both rootings: callFunctionOn on the pinned set as `this`, or
+# Runtime$evaluate with `this` an empty array (root -- the walk never
+# starts, so the document wins). Application is instant JS, matching
+# el_scroll_into_view()'s precedent; the recording task swaps in
+# animated mouseWheel events at this seam.
+scroll_apply_js <- "function(arg) {
+  const isScrollable = (e) => {
+    if (e === document.scrollingElement) {
+      return true;
+    }
+    const s = getComputedStyle(e);
+    if (!/(auto|scroll)/.test(s.overflow + ' ' + s.overflowX + ' ' + s.overflowY)) {
+      return false;
+    }
+    return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
+  };
+  let container = null;
+  for (let e = this.length ? this[0] : null; e; e = e.parentElement) {
+    if (isScrollable(e)) {
+      container = e;
+      break;
+    }
+  }
+  if (!container) {
+    container = document.scrollingElement;
+  }
+  if (arg.by) {
+    container.scrollBy({
+      left: arg.by[0],
+      top: arg.by[1],
+      behavior: 'instant'
+    });
+  } else {
+    const has = (t) => arg.to.includes(t);
+    const center = arg.to.length === 1 && arg.to[0] === 'center';
+    if (has('left') || has('right') || center) {
+      const max = container.scrollWidth - container.clientWidth;
+      container.scrollLeft = center ? max / 2 : has('left') ? 0 : max;
+    }
+    if (has('top') || has('bottom') || center) {
+      const max = container.scrollHeight - container.clientHeight;
+      container.scrollTop = center ? max / 2 : has('top') ? 0 : max;
+    }
+  }
+  return [container.scrollTop, container.scrollLeft];
+}"
+# The root-context scroll's call payload, inlined into the evaluated
+# function call: callFunctionOn arguments aren't available to
+# Runtime$evaluate, and the values are already validated (finite
+# numbers by check_offset(), direction tokens by parse_direction()).
+scroll_arg_json <- function(by = NULL, to = NULL) {
+  if (!is.null(by)) {
+    paste0('{"by":[', deparse(by[[1]]), ',', deparse(by[[2]]), ']}')
+  } else {
+    paste0('{"to":[', paste(paste0('"', to, '"'), collapse = ","), ']}')
+  }
+}
 check_file_paths <- function(files, call = caller_env()) {
   check_character(files, call = call)
   missing <- files[!file.exists(files)]
