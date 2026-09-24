@@ -23,8 +23,8 @@
    `kata claim <ref>`, keep status truthful, close with evidence
    (`kata close <ref>`). Never end a session with a claimed issue left
    hanging — comment with what remains.
-1. **Small conventional commits**, one logical change each, kata refs in the
-   body.
+1. **Small conventional commits**, one logical change each, kata/roborev refs
+   in the body, never the subject.
 1. **Escalate early on these tripwires** — each is a known money pit:
    anything touching the init/restore window; anything that wants a timer,
    a queue, or a second flag to manage ordering; anything that stores
