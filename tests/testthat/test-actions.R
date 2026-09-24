@@ -280,13 +280,26 @@ test_that("a detached scope surfaces through an action as a classed error", {
 # auto-wait that stands between resolution and pointer dispatch:
 # #never is permanently display:none, #zero is visible by
 # checkVisibility() but has an empty box, and #reveals is hidden and
-# shown after 500ms. A pointer action on a non-actionable element
-# must time out rather than dispatch at (0, 0).
+# shown 500ms after the test arms the reveal. A pointer action on a
+# non-actionable element must time out rather than dispatch at (0, 0).
+
+# The same "visible" the actionability wait and pz_expect_visible()
+# use, read directly off the fixture for the hidden-before assertions.
+hidden_js <- function(id) {
+  paste0(
+    "document.getElementById('",
+    id,
+    "')",
+    ".checkVisibility({ checkVisibilityCSS: true })"
+  )
+}
 
 test_that("pz_click waits out a hidden element's transition to visible", {
   page <- local_actionability_page()
-  # #reveals is display:none now, block in 500ms; the click waits for
-  # it instead of dispatching while it is hidden.
+  # #reveals is display:none; arm the 500ms reveal on demand and prove
+  # it is hidden when the click starts, so the click genuinely waits.
+  expect_false(pz_js(page, hidden_js("reveals")))
+  pz_js(page, "window.__pzReveal()")
   expect_invisible(pz_click(page, "#reveals"))
   log <- log_entries(page)
   expect_length(log_ids(log, "reveals", "click"), 1)
@@ -329,6 +342,8 @@ test_that("a scoped pointer action waits out its pinned element's reveal", {
   # A hidden element matches a scope pin (it is in the DOM); the
   # pointer action on the pinned set must wait for it too.
   ctx <- pz_find(page, "#reveals")
+  expect_false(pz_js(page, hidden_js("reveals")))
+  pz_js(page, "window.__pzReveal()")
   expect_invisible(pz_click(ctx))
   log <- log_entries(page)
   expect_length(log_ids(log, "reveals", "click"), 1)

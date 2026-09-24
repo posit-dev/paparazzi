@@ -33,9 +33,14 @@
       });
     });
 
-    setTimeout(function () {
-      document.getElementById("reveals").style.display = "block";
-    }, 500);
+    // The reveal is armed by the test, not at load: a load-time timer
+    // could fire while the page is still opening, leaving nothing to
+    // wait for. Armed at click time, the 500ms delay is deterministic.
+    window.__pzReveal = function () {
+      setTimeout(function () {
+        document.getElementById("reveals").style.display = "block";
+      }, 500);
+    };
   </script>
 </body>
 </html>
