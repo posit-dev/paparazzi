@@ -40,12 +40,23 @@ mechanism-level choices and session handoffs for this phase only.
   timeout = NULL, multiple = c("error", "all"))` promotes `target`
   (spec, string, or list), then auto-waits: poll resolve-once until at
   least one element matches or the timeout elapses. Polling uses
-  `pz_poll()` (child-loop pump); each individual JS call uses the
-  session default command timeout, NOT the remaining wait budget —
-  retry budget and per-command timeout stay separate (design note from
-  roborev 1217 / paparazzi#8kxx). `timeout = 0` is "check once":
+  `pz_poll()` (child-loop pump). Each individual JS call passes
+  `timeout_ = ctx$page$default_timeout` explicitly — never chromote's
+  implicit default — and NOT the remaining wait budget: retry budget
+  and per-command timeout stay separate (design note from
+  roborev 1217 / paparazzi#8kxx). A chromote command timeout is
+  re-raised as `paparazzi_error_timeout` naming the target, with the
+  chromote error as parent (same mapping as `pz_js()`). `timeout = 0`
+  is "check once":
   `pz_poll()` already evaluates `fn()` once before the deadline check,
   so this falls out naturally — add a test pinning it down.
+- **Resolve-once.** `loc_resolve_once(ctx, expr, description, call)`
+  performs one resolution attempt and returns a possibly-empty
+  `paparazzi_elements` (count 0, no handle) — zero matches is a valid
+  result, which `pz_get_count()` and the expectation retry core
+  (8kxx) need. `loc_resolve()` polls it. The resolver JS returns
+  `null` for an empty set, so an empty poll costs one CDP round trip
+  and never holds an empty remote object.
 - **Result handle.** One resolution = one JS evaluation returning an
   array of elements with `returnByValue = FALSE`, i.e. a single remote
   object (objectId) for the whole matched set. R side stores an S3
@@ -56,11 +67,12 @@ mechanism-level choices and session handoffs for this phase only.
   `Runtime$releaseObjectById`; tests must release what they resolve.
   The per-page object-group lifecycle wrapper is the `pz_find*()`
   pinning task's problem — do not build it here.
-- **Scope seam.** The JS resolver takes the spec as a JSON argument and
-  roots at `document`. Scoped contexts (non-empty `ctx$scope`) arrive
-  with the pinning task; the seam is that the resolver expression is
-  built in one place, so switching to `callFunctionOn` with pinned
-  scope handles later is a local change.
+- **Scope seam.** The resolver JS takes its roots as an argument, so
+  the same function object covers every rooting. Today the only root
+  is `document`, reached via `Runtime$evaluate`; scoped contexts
+  (non-empty `ctx$scope`, arriving with the pinning task) will invoke
+  the same JS through `Runtime$callFunctionOn` with pinned element
+  handles as the root argument.
 - **Overlay exclusion (forward contract).** The recording overlay will
   live in a shadow root whose host element is
   `<div id="paparazzi-overlay-root">`. The resolver excludes the host
@@ -101,6 +113,16 @@ mechanism-level choices and session handoffs for this phase only.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close): landed pz_loc + promotion/unions (138cf79),
+  the lazy resolution engine (0244b73), and review fixes (1ec3c36:
+  plain-text timeout messages, loc_resolve_once + null-for-empty,
+  explicit per-command timeout_ + classed mapping, empty-list/format
+  guards, DOM-change laziness tests). 201 tests green. roborev jobs
+  1219 (claude-code) and 1220 (codex) both closed; dispositions on
+  the kata issue. Next: 8kxx (expectation core) per the epic order —
+  it should build its retry on loc_resolve_once(). Provisional:
+  `has_text` case-sensitivity is pinned by tests but may be revisited
+  with pz_expect_text semantics.
 - 2026-09-24 (start): claimed a3vj; harness green at cb5570c (111
   tests, devtools::test). Blocker qtpz closed. Decisions above resolved
   before code. Next: implement `R/loc.R` + `R/resolve.R` + tests.
