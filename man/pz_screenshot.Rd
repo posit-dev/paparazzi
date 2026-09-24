@@ -19,9 +19,11 @@ or the scope's box (scoped context), or a CSS selector string,
 \code{pz_loc()} spec, or list of either for the union of matched
 elements' bounding boxes.}
 
-\item{frame}{Framing to apply to the capture. Only \code{NULL} (the
-default) and \code{FALSE} are supported, both meaning "capture without
-framing"; framing via \code{pz_frame()} is not yet implemented.}
+\item{frame}{Framing to apply to the capture: \code{NULL} (the default)
+uses the page's default framing set with \code{pz_stage_frame()} if there
+is one, else captures unframed; a \code{\link[=pz_frame]{pz_frame()}} spec frames the
+capture, replacing any default entirely; \code{FALSE} disables framing
+for this capture.}
 }
 \value{
 \code{ctx}, invisibly.
@@ -43,6 +45,9 @@ matching several elements is a union, not an error.
 
 Screenshots are captured at the page's current device pixel ratio: the
 PNG's pixel dimensions are the captured CSS size multiplied by the
-dpr. Framing a capture (padding, aspect ratio, bounds via
-\code{pz_frame()}) is not yet implemented.
+dpr. A \code{\link[=pz_frame]{pz_frame()}} can frame the capture; the page's default framing
+is set with \code{pz_stage_frame()}.
+}
+\seealso{
+\code{\link[=pz_frame]{pz_frame()}}, \code{\link[=pz_stage_frame]{pz_stage_frame()}}
 }

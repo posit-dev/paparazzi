@@ -15,8 +15,8 @@
 #'
 #' Screenshots are captured at the page's current device pixel ratio: the
 #' PNG's pixel dimensions are the captured CSS size multiplied by the
-#' dpr. Framing a capture (padding, aspect ratio, bounds via
-#' `pz_frame()`) is not yet implemented.
+#' dpr. A [pz_frame()] can frame the capture; the page's default framing
+#' is set with `pz_stage_frame()`.
 #'
 #' @inheritParams pz_click
 #' @param path File path the PNG is written to; an existing file is
@@ -25,9 +25,13 @@
 #'   or the scope's box (scoped context), or a CSS selector string,
 #'   `pz_loc()` spec, or list of either for the union of matched
 #'   elements' bounding boxes.
-#' @param frame Framing to apply to the capture. Only `NULL` (the
-#'   default) and `FALSE` are supported, both meaning "capture without
-#'   framing"; framing via `pz_frame()` is not yet implemented.
+#' @param frame Framing to apply to the capture: `NULL` (the default)
+#'   uses the page's default framing set with `pz_stage_frame()` if there
+#'   is one, else captures unframed; a [pz_frame()] spec frames the
+#'   capture, replacing any default entirely; `FALSE` disables framing
+#'   for this capture.
+#'
+#' @seealso [pz_frame()], [pz_stage_frame()]
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -37,20 +41,13 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   check_dots_empty()
   check_string(path)
 
-  if (!is.null(frame) && !identical(frame, FALSE)) {
-    # NULL and FALSE both mean "no framing" today; the distinction matters
-    # once pz_stage_frame() exists. No pz_frame class exists yet, so the
-    # check is structural, not class-based.
-    cli::cli_abort(
-      c(
-        "Framing screenshots isn't implemented yet.",
-        i = "{.code frame = FALSE} captures without framing for now; framing via {.fn pz_frame} is coming."
-      ),
-      class = "paparazzi_error_unsupported"
-    )
-  }
+  # NULL means the page default (pz_stage_frame()) if one is set; FALSE
+  # opts out for one call; a pz_frame() spec replaces the default.
+  frame <- frame_effective(ctx, frame)
 
-  clip <- if (is.null(target) && length(ctx$scope) == 0) {
+  clip <- if (inherits(frame, "paparazzi_frame")) {
+    frame_clip(ctx, target, frame)
+  } else if (is.null(target) && length(ctx$scope) == 0) {
     clip_viewport(ctx)
   } else if (is.null(target)) {
     # The clip is the union of the boxes of the current scope's pinned
