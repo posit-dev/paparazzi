@@ -362,7 +362,7 @@ Computation:
 1. Union the targets' bounding boxes.
 2. Add `pad`, then shift by `offset`.
 3. If `ratio` is set, grow the shorter side to reach it, placing content by `anchor`.
-4. Clamp to `bounds` and to the viewport.
+4. Clamp to `bounds` and to the capture surface: the rendered document for stills (`captureBeyondViewport` renders below-fold content, so a below-fold frame stays capturable) and the visible viewport for recordings.
 5. Round to even pixels for video, whole pixels for stills.
 
 `pz_screenshot()` has no `pad` argument; padding lives in the frame.
