@@ -254,6 +254,168 @@ pz_expect_text <- function(
     description = expect_headline_text(text, match, not)
   )
 }
+#' Expect elements to be enabled
+#'
+#' @description
+#' [pz_expect_enabled()] passes when at least one element matches and
+#' every match is enabled. An element counts as disabled when it matches
+#' the browser's `:disabled` selector, so inputs inside a disabled
+#' `<fieldset>` are disabled too.
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_expect_exists
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_enabled(target = "#submit")
+#' page |> pz_expect_enabled(target = "#submit", not = TRUE)
+#' }
+#'
+#' @export
+pz_expect_enabled <- function(
+  ctx,
+  ...,
+  target = NULL,
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  expect_impl(
+    ctx = ctx,
+    target = target,
+    not = not,
+    timeout = timeout,
+    check = check_state(expect_enabled_js, not, "enabled"),
+    description = if (not) "Expected no element to be enabled" else "Expected all elements to be enabled"
+  )
+}
+#' Expect elements to be focused
+#'
+#' @description
+#' [pz_expect_focused()] passes when at least one element matches and
+#' every match is the page's focused element (`document.activeElement`).
+#' Focus it with [pz_focus()] or a [pz_click()], and remove it with
+#' [pz_blur()].
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_expect_exists
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_focused(target = "#chat_user_input")
+#' }
+#'
+#' @export
+pz_expect_focused <- function(
+  ctx,
+  ...,
+  target = NULL,
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  expect_impl(
+    ctx = ctx,
+    target = target,
+    not = not,
+    timeout = timeout,
+    check = check_state(expect_focused_js, not, "focused"),
+    description = if (not) "Expected no element to be focused" else "Expected all elements to be focused"
+  )
+}
+#' Expect elements to be checked
+#'
+#' @description
+#' [pz_expect_checked()] passes when at least one element matches and
+#' every match is checked (the browser's `:checked` selector, so
+#' checkboxes, radios, and select options all count). Toggle with
+#' [pz_click()] or [pz_set_value()].
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_expect_exists
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_checked(target = "#remember-me")
+#' }
+#'
+#' @export
+pz_expect_checked <- function(
+  ctx,
+  ...,
+  target = NULL,
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  expect_impl(
+    ctx = ctx,
+    target = target,
+    not = not,
+    timeout = timeout,
+    check = check_state(expect_checked_js, not, "checked"),
+    description = if (not) "Expected no element to be checked" else "Expected all elements to be checked"
+  )
+}
+#' Expect elements to be in the viewport
+#'
+#' @description
+#' [pz_expect_in_viewport()] passes when at least one element matches
+#' and every match overlaps the viewport: its bounding box crosses the
+#' visible area by any amount. Elements entirely above, below, or beside
+#' the fold fail; visibility itself is a separate expectation,
+#' [pz_expect_visible()].
+#'
+#' Outside of testthat, a failure aborts with a classed error of class
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
+#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' retry, timeout, and bridge behavior shared by all expectations.
+#'
+#' @inheritParams pz_expect_exists
+#'
+#' @return `ctx`, invisibly.
+#' @examples
+#' \dontrun{
+#' page <- pz_open("https://example.com")
+#' page |> pz_expect_in_viewport(target = "h1")
+#' }
+#'
+#' @export
+pz_expect_in_viewport <- function(
+  ctx,
+  ...,
+  target = NULL,
+  not = FALSE,
+  timeout = NULL
+) {
+  check_dots_empty()
+  expect_impl(
+    ctx = ctx,
+    target = target,
+    not = not,
+    timeout = timeout,
+    check = check_state(expect_viewport_js, not, "in viewport"),
+    description = if (not) "Expected no element to be in the viewport" else "Expected all elements to be in the viewport"
+  )
+}
 #' Retry an expectation check
 #'
 #' Like `pz_poll()`, but instead of aborting on the deadline it returns
@@ -445,6 +607,22 @@ collapse_ws <- function(x) {
 expect_visible_js <- "function() {
   return this.map((el) => el.checkVisibility({ checkVisibilityCSS: true }));
 }"
+expect_enabled_js <- "function() {
+  return this.map((el) => !el.matches(':disabled'));
+}"
+expect_focused_js <- "function() {
+  return this.map((el) => document.activeElement === el);
+}"
+expect_checked_js <- "function() {
+  return this.map((el) => el.matches(':checked'));
+}"
+expect_viewport_js <- "function() {
+  return this.map((el) => {
+    const r = el.getBoundingClientRect();
+    return r.bottom > 0 && r.right > 0 &&
+      r.top < window.innerHeight && r.left < window.innerWidth;
+  });
+}"
 expect_text_js <- "function() {
   return this.map((el) => el.textContent);
 }"
@@ -482,17 +660,23 @@ check_count <- function(min, max, not) {
     list(pass = pass, observed = expect_seen_count(els$count))
   }
 }
-check_visible <- function(not) {
+# State checks share one shape: a JS predicate per element, pass when
+# every match satisfies it (or, with not, when none does, including
+# zero matches, per the SPEC table).
+check_state <- function(js, not, seen) {
   function(els) {
     if (els$count == 0L) {
       # No remote object exists for an empty set; zero matches satisfies
       # only the negated form.
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
-    n_visible <- sum(els_call(els, expect_visible_js))
-    pass <- if (not) n_visible == 0L else n_visible == els$count
-    list(pass = pass, observed = paste0(n_visible, " of ", els$count, " visible"))
+    n_ok <- sum(els_call(els, js))
+    pass <- if (not) n_ok == 0L else n_ok == els$count
+    list(pass = pass, observed = paste0(n_ok, " of ", els$count, " ", seen))
   }
+}
+check_visible <- function(not) {
+  check_state(expect_visible_js, not, "visible")
 }
 check_text <- function(text, match, not) {
   function(els) {

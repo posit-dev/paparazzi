@@ -419,3 +419,105 @@ test_that("a mid-expectation detach raises for target = NULL too", {
     class = "paparazzi_error_detached"
   )
 })
+
+# State expectations run against state.html: enabled/disabled controls
+# (including a disabled fieldset), focus, checkboxes and radios, and
+# elements positioned in and out of the viewport.
+
+test_that("pz_expect_enabled requires every match to be enabled", {
+  page <- local_state_page()
+  pz_expect_enabled(page, target = ".on")
+  pz_expect_enabled(page, target = "#btn-disabled", not = TRUE)
+  # Inputs inside a disabled fieldset count as disabled.
+  pz_expect_enabled(page, target = "#inherited", not = TRUE)
+
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_enabled(page, target = ".ctl", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  msg <- conditionMessage(err)
+  expect_match(msg, "Expected all elements to be enabled", fixed = TRUE)
+  expect_match(msg, "2 of 5 enabled", fixed = TRUE)
+  # Zero matches only satisfies the negated form.
+  err <- expect_error(
+    pz_expect_enabled(page, target = ".never", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  expect_match(conditionMessage(err), "Last seen: 0 matches", fixed = TRUE)
+})
+
+test_that("pz_expect_enabled retries until a control is enabled", {
+  page <- local_state_page()
+  pz_js(page, "setTimeout(function () {
+    document.getElementById('btn-disabled').disabled = false;
+  }, 300)", await = FALSE)
+  pz_expect_enabled(page, target = "#btn-disabled", timeout = 5)
+})
+
+test_that("pz_expect_focused checks document.activeElement", {
+  page <- local_state_page()
+  pz_focus(page, target = "#focus-target")
+  pz_expect_focused(page, target = "#focus-target")
+  pz_expect_focused(page, target = "#btn-enabled", not = TRUE)
+
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_focused(page, target = "#btn-enabled", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  expect_match(conditionMessage(err), "0 of 1 focused", fixed = TRUE)
+})
+
+test_that("pz_expect_checked covers checkboxes and radios", {
+  page <- local_state_page()
+  pz_expect_checked(page, target = ".checked-on")
+  pz_expect_checked(page, target = "#cb-off", not = TRUE)
+
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_checked(page, target = ".check", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  expect_match(conditionMessage(err), "2 of 4 checked", fixed = TRUE)
+
+  # Clicking toggles the checkbox, and the expectation follows.
+  pz_click(page, target = "#cb-off")
+  pz_expect_checked(page, target = "#cb-off")
+})
+
+test_that("pz_expect_in_viewport checks viewport overlap", {
+  page <- local_state_page()
+  pz_expect_in_viewport(page, target = "#in-viewport")
+  pz_expect_in_viewport(page, target = "#off-viewport", not = TRUE)
+
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_in_viewport(page, target = ".vp", timeout = 0),
+    class = "paparazzi_expectation_failure"
+  )
+  expect_match(conditionMessage(err), "1 of 2 in viewport", fixed = TRUE)
+  expect_match(
+    conditionMessage(err),
+    "Expected all elements to be in the viewport",
+    fixed = TRUE
+  )
+})
+
+test_that("pz_expect_in_viewport retries when an element moves into view", {
+  page <- local_state_page()
+  # The fixture scrolls #late-in-viewport inside after 300 ms.
+  pz_expect_in_viewport(page, target = "#late-in-viewport", timeout = 5)
+})
+
+test_that("state expectations work from a scoped context", {
+  page <- local_state_page()
+  ctx <- pz_find(page, "#btn-one")
+  # target = NULL is the pinned set: #btn-one.
+  ctx |> pz_expect_enabled()
+  ctx |> pz_expect_checked(not = TRUE)
+
+  # Explicit targets resolve inside the scope.
+  grp <- pz_find(page, "#grp")
+  grp |> pz_expect_enabled(target = "#inherited", not = TRUE, timeout = 0)
+})
