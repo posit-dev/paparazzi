@@ -86,6 +86,18 @@ mechanism-level choices and session handoffs for framing only.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (close): landed the phase note (7d8425b), framing specs
+  `pz_frame()`/`pz_stage_frame()` + direction parser + page default
+  (370f18a), the `pz_screenshot(frame =)` integration (fe60253), and
+  the fixture + crop-geometry tests (a49bc81). 954 expectations green,
+  0 failures; R CMD check 0/0/4 (all notes pre-existing/environmental).
+  Next: fx4z (recording) consumes `frame_clip(ctx, target, spec,
+  even =)` -- the `paparazzi_frame` spec stored on the page
+  (`page_frame()`/`page_set_frame()`) is THE seam recording reads, with
+  `when` stored but still unread; pass `even = TRUE` for video dims and
+  the visible viewport as the recorder's clamp instead of the
+  document box. Provisional: the cursor/staging task reuses
+  `parse_direction(valid = <subset>)` unchanged.
 - 2026-09-24 (start): claimed r0zd; blocker 18j6 closed (the `frame =`
   seam), baseline 838 tests. Decisions above resolved before code.
   Next: phase note, `R/frame.R`, fixture + `test-frame.R`, screenshot
