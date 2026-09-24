@@ -101,11 +101,39 @@ handoffs for this phase only. Builds on the resolution engine
 - **Validation.** text: check_string; key: check_character(min_length
   = 1, no NA); target: as_loc via loc_resolve; dots:
   check_dots_empty. Errors via cli with `paparazzi_error_*` classes.
+- **Actionability wait (5vak).** Pointer actions (click, hover, type
+  with a target) auto-wait for an actionable element between
+  resolution and dispatch: `el_pointer_point(ctx, els)` is now a
+  `pz_poll()` around scroll + ONE `els_call()` probe returning
+  `[checkVisibility(checkVisibilityCSS), x, y, width, height]` for the
+  first element. Actionable = visible AND width > 0 AND height > 0;
+  "visible" is the same `checkVisibility({checkVisibilityCSS: true})`
+  definition `pz_expect_visible()` uses, so the word means one thing
+  across actions and expectations. Budget: the session
+  `default_timeout`, additive to the resolution wait (worst case 2x);
+  expiry raises `paparazzi_error_timeout`, the same class as every
+  other wait, with the target description in the message. Applies to
+  pinned scope sets too (they share `el_pointer_point`); a pinned
+  element detaching mid-poll surfaces as the raw chromote error from
+  `callFunctionOn`, since the detach check runs once per call in
+  `scope_root()`. NOT applied to `pz_focus()`/`pz_blur()` (element-state
+  methods, no coordinate dispatch -- the 5vak hazard is pointer input
+  at (0, 0)) or `pz_type(target = NULL)` at root (no target, no
+  dispatch point). Playwright-style stability/hittable checks are out
+  of scope: the issue names hidden and zero-sized only.
 
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (5vak landed, review pending): landed the actionability
+  wait (pointer actions poll for visible + non-empty box before
+  dispatch) at b4f609a, with the actionability.html fixture and six
+  tests; full suite 818 green, air clean. Next: garrick's manual code
+  review of the unit, then address findings, then close 5vak (which
+  empties the epic d84x child list) and the epic. Provisional: the
+  wait budget is additive with resolution (2x default_timeout worst
+  case); revisit only if a real use needs a shared budget.
 - 2026-09-24 (close): landed the phase note (8bceb54), keys.R
   parser (7701f68), fixture (076d2dc), the six actions (31d659e),
   and review fixes (Shift shifts the character, modifier keyUp drops
