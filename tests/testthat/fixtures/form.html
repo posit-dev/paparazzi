@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi value-setting fixture</title>
+  <style>
+    body { font-family: sans-serif; margin: 1em; }
+    form div { margin-bottom: 0.5em; }
+    #editor { border: 1px solid #999; padding: 0.5em; min-height: 2em; }
+  </style>
+</head>
+<body>
+  <form id="the-form">
+    <div><input type="text" id="text"></div>
+    <div><textarea id="textarea"></textarea></div>
+    <div>
+      <select id="select">
+        <option value="">--</option>
+        <option value="a">Alpha</option>
+        <option value="b">Beta</option>
+      </select>
+    </div>
+    <div><input type="checkbox" id="check"></div>
+    <div>
+      <input type="radio" name="radio" id="radio1" value="r1">
+      <input type="radio" name="radio" id="radio2" value="r2">
+      <input type="radio" name="other" id="radio3" value="r3">
+    </div>
+    <div><input type="range" id="range" min="0" max="100" step="1"></div>
+    <div><input type="date" id="date"></div>
+    <div><input type="number" id="number" min="0" max="10"></div>
+    <div><input type="file" id="file"></div>
+    <div><input type="file" id="file-multi" multiple></div>
+    <input type="file" class="dupfile">
+    <input type="file" class="dupfile">
+  </form>
+
+  <!-- Framework-style controlled input: the instance-level value
+       accessor is trapped, like a framework that owns the value
+       property. A naive `el.value = x` hits the trap setter; the
+       native prototype setter must bypass it. __pzTraps counts trap
+       hits, __pzVal is what the trap getter hands back. -->
+  <div><input type="text" id="controlled"></div>
+
+  <div id="editor" contenteditable>old <b>bold</b> text</div>
+
+  <p id="para">not a form control</p>
+
+  <script>
+    window.__pzLog = [];
+    function __pzLogEvent(e) {
+      var el = e.target;
+      window.__pzLog.push({
+        type: e.type,
+        id: el.id || el.className || el.tagName,
+        isTrusted: e.isTrusted,
+        value: e.type === "input" && el.value !== undefined
+          ? el.value
+          : el.isContentEditable ? el.textContent : null,
+        checked: "checked" in el ? el.checked : null
+      });
+    }
+    ["input", "change"].forEach(function (t) {
+      document.addEventListener(t, __pzLogEvent, true);
+    });
+
+    // The controlled input: instance-level value accessor override.
+    var controlled = document.getElementById("controlled");
+    window.__pzTraps = 0;
+    controlled.__pzVal = "";
+    Object.defineProperty(controlled, "value", {
+      get: function () { return this.__pzVal; },
+      set: function (v) { window.__pzTraps++; this.__pzVal = String(v); }
+    });
+  </script>
+</body>
+</html>
