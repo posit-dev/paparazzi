@@ -4,6 +4,20 @@
 
 **roborev provides external review, requested manually.** Do NOT install the post-commit hook. Request one review per completed unit of work (a coherent feature slice, possibly several commits), never per commit: `roborev review <sha>`, then `roborev show <job_id> --job` for the result. Close reviews when the fix is committed (`roborev close`).
 
+## R Package Development
+
+1. **Internal helpers are undocumented by default.** Do not write roxygen for
+   internal helpers. Exception: an unusually complicated helper may carry a
+   short roxygen block, which must end with `@noRd`.
+1. **Test files mirror source files.** `R/foo.R` -> `tests/testthat/test-foo.R`.
+   Tests for a function live in the file named after the R file where its
+   primary logic lives.
+1. **Use `cli` for all errors and informational messages.** Errors via
+   `cli::cli_abort()` (keep `class =` for classed errors); informational output
+   via `cli::cli_inform()`/`cli::cat_line()`. Prefer cli inline markup
+   (`{.arg}`, `{.val}`, `{.fn}`) over `sprintf()`. rlang's argument checkers
+   (`check_dots_empty()`, `check_string()`, etc.) are fine and stay.
+
 ## Work Mechanics
 
 1. **One kata issue per work item**, parented appropriately; claim with
