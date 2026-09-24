@@ -996,6 +996,215 @@ scroll_arg_json <- function(by = NULL, to = NULL) {
     paste0('{"to":[', paste(paste0('"', to, '"'), collapse = ","), ']}')
   }
 }
+#' Drag an element to another element or by an offset
+#'
+#' @description
+#' Auto-waits for the source (and, with `to`, the destination) to be
+#' actionable, then drags with real mouse input: press at the source's
+#' center, move to the destination, release. When the source is a
+#' real HTML5 drag source (`draggable`, including inherited
+#' `draggable` or the image/`<a href>` defaults), the drag runs through
+#' the browser's drag pipeline instead: the press and move start a
+#' genuine `dragstart` (so `dataTransfer` holds whatever the page put
+#' there), and the drop is delivered to the destination as trusted
+#' `dragenter`/`dragover`/`drop` events with that payload.
+#'
+#' `to` names the element to drop onto; `by = c(x, y)` drops at that
+#' offset in pixels from the source's center. Supply exactly one.
+#'
+#' @inheritParams pz_click
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs (a union matching any of them). The drag source. Unlike most
+#'   actions it is always required.
+#' @param to A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs (a union matching any of them): the drop target.
+#' @param by Offset in pixels from the source's center, `c(x, y)` (or a
+#'   single number for both axes).
+#'
+#' @return `ctx`, invisibly.
+#'
+#' @seealso [pz_click()], [pz_hover()]
+#'
+#' @export
+pz_drag <- function(ctx, target, to, ..., by = NULL) {
+  check_context(ctx)
+  check_dots_empty()
+  if (missing(to) && is.null(by)) {
+    cli::cli_abort(
+      "Supply {.arg to} or {.arg by}.",
+      class = "paparazzi_error_input"
+    )
+  }
+  if (!missing(to) && !is.null(by)) {
+    cli::cli_abort(
+      "Supply either {.arg to} or {.arg by}, not both.",
+      class = "paparazzi_error_input"
+    )
+  }
+
+  found <- action_elements(ctx, target)
+  if (!found$pinned) {
+    withr::defer(release_elements(found$els))
+  }
+
+  if (missing(to)) {
+    from <- el_pointer_point(ctx, found$els)
+    offset <- check_offset(by, arg = "by")
+    to_point <- c(
+      x = from[["x"]] + offset[[1]],
+      y = from[["y"]] + offset[[2]]
+    )
+  } else {
+    dest <- loc_resolve(ctx, to, multiple = "error")
+    withr::defer(release_elements(dest))
+    # Destination point first: the source's scroll can shift the
+    # destination rect, so the drop point is re-read once after (no
+    # scroll, so it can't shift back).
+    to_point <- el_pointer_point(ctx, dest)
+    from <- el_pointer_point(ctx, found$els)
+    probe <- els_call(dest, pointer_actionable_js)
+    if (length(probe) == 5L && probe[1] == 1 && probe[4] > 0 && probe[5] > 0) {
+      to_point <- c(
+        x = probe[2] + probe[4] / 2,
+        y = probe[3] + probe[5] / 2
+      )
+    }
+  }
+
+  if (isTRUE(els_call(found$els, draggable_js))) {
+    drag_html5(ctx, found$els, from, to_point)
+  } else {
+    dispatch_mouse_drag(
+      ctx,
+      "dragging",
+      found$els$description,
+      from,
+      to_point
+    )
+  }
+  invisible(ctx)
+}
+# Is the source a real HTML5 drag source? Own or inherited draggable
+# attribute (the IDL property only reflects the element's own
+# attribute, so inheritance needs the closest() walk; an explicit
+# false opts out), or the img / <a href> element defaults.
+draggable_js <- "function() {
+  const el = this[0];
+  const own = el.getAttribute('draggable');
+  if (own !== null && own !== '') {
+    return own === 'true';
+  }
+  const inherited = el.closest('[draggable]');
+  if (inherited) {
+    return inherited.getAttribute('draggable') === 'true';
+  }
+  return el.tagName === 'IMG' ||
+    (el.tagName === 'A' && el.hasAttribute('href'));
+}"
+# The instant mouse drag: press at the source, one move to the
+# destination, release. The move is the seam where recording swaps in
+# the cursor glide; press and release stay.
+dispatch_mouse_drag <- function(ctx, action, target, from, to, call = caller_env()) {
+  dispatch_mouse(
+    ctx, action, target, "mouseMoved", from,
+    button = "none", buttons = 0, clickCount = 0, call = call
+  )
+  dispatch_mouse(
+    ctx, action, target, "mousePressed", from,
+    button = "left", buttons = 1, clickCount = 1, call = call
+  )
+  dispatch_mouse(
+    ctx, action, target, "mouseMoved", to,
+    button = "left", buttons = 1, clickCount = 0, call = call
+  )
+  dispatch_mouse(
+    ctx, action, target, "mouseReleased", to,
+    button = "left", buttons = 0, clickCount = 1, call = call
+  )
+}
+# HTML5 drag-and-drop, intercept-then-replay. With interception on, the
+# press-and-move starts a REAL drag (the page's dragstart runs), and the
+# browser reports the resulting drag data -- what the page put on its
+# dataTransfer -- as an Input.dragIntercepted event. The event callback
+# must be registered first (the registration auto-enables the Input
+# domain); the event arrives on chromote's child loop, so the wait is the
+# standard pz_poll. Interception goes OFF before the release -- releasing
+# with it still on cancels the drag and the replayed events never land --
+# then the captured data is replayed onto the destination as
+# dragEnter/dragOver/drop: trusted DnD events with the real payload.
+drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
+  session <- ctx$page$session
+  timeout <- ctx$page$default_timeout
+  data <- NULL
+  dereg <- session$Input$dragIntercepted(
+    callback_ = function(msg) data <<- msg$data
+  )
+  withr::defer(try(dereg(), silent = TRUE))
+
+  action_cdp(
+    ctx, "dragging", els$description, call = call,
+    cmd = session$Input$setInterceptDrags(enabled = TRUE, timeout_ = timeout)
+  )
+  dispatch_mouse(
+    ctx, "dragging", els$description, "mouseMoved", from,
+    button = "none", buttons = 0, clickCount = 0, call = call
+  )
+  dispatch_mouse(
+    ctx, "dragging", els$description, "mousePressed", from,
+    button = "left", buttons = 1, clickCount = 1, call = call
+  )
+  dispatch_mouse(
+    ctx, "dragging", els$description, "mouseMoved", to,
+    button = "left", buttons = 1, clickCount = 0, call = call
+  )
+  tryCatch(
+    pz_poll(
+      fn = function() !is.null(data),
+      timeout = timeout,
+      loop = ctx$page$child_loop,
+      what = paste0("the drag from ", els$description, " to start"),
+      call = call
+    ),
+    error = function(e) {
+      # A dragstart canceled by the page never intercepts; undo the
+      # held button and the interception so the page isn't left
+      # mid-gesture.
+      try(
+        session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout),
+        silent = TRUE
+      )
+      try(
+        dispatch_mouse(
+          ctx, "dragging", els$description, "mouseReleased", to,
+          button = "left", buttons = 0, clickCount = 1, call = call
+        ),
+        silent = TRUE
+      )
+      stop(e)
+    }
+  )
+
+  action_cdp(
+    ctx, "dragging", els$description, call = call,
+    cmd = session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout)
+  )
+  dispatch_mouse(
+    ctx, "dragging", els$description, "mouseReleased", to,
+    button = "left", buttons = 0, clickCount = 1, call = call
+  )
+  for (type in c("dragEnter", "dragOver", "drop")) {
+    action_cdp(
+      ctx, "dragging", els$description, call = call,
+      cmd = session$Input$dispatchDragEvent(
+        type = type,
+        x = to[["x"]],
+        y = to[["y"]],
+        data = data,
+        timeout_ = timeout
+      )
+    )
+  }
+}
 check_file_paths <- function(files, call = caller_env()) {
   check_character(files, call = call)
   missing <- files[!file.exists(files)]

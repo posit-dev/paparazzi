@@ -9,7 +9,7 @@
     #scroller { height: 150px; overflow-y: auto; border: 1px solid #999; }
     #scroller .inner { height: 1200px; background: linear-gradient(#8ac, #468); }
     #editor { border: 1px solid #999; min-height: 2em; padding: 0.25em; }
-    #dragbox { width: 60px; height: 40px; background: #a86; position: relative; left: 0; top: 0; }
+    #dragbox { width: 60px; height: 40px; background: #a86; position: absolute; left: 700px; top: 200px; }
     #draggable { width: 60px; height: 40px; background: #8ac; }
     #dropzone { width: 120px; height: 80px; background: #caa; margin-top: 40px; }
   </style>
@@ -22,6 +22,14 @@
   <p class="dup-select">duplicate one</p>
   <p class="dup-select">duplicate two</p>
 
+  <!-- drag: mouse-path box, then an HTML5 draggable and dropzone.
+       Both drag halves stay near the top: a source and a destination
+       on opposite sides of the tall spacer below can't share one
+       viewport, and neither can a real user's single drag. -->
+  <div id="dragbox">drag me</div>
+  <div id="draggable" draggable="true">html5 drag me</div>
+  <div id="dropzone">drop here</div>
+
   <!-- scroll: a scrollable inner container, then a tall page. -->
   <div id="scroller">
     <div class="inner"></div>
@@ -29,11 +37,6 @@
   </div>
   <div class="spacer"></div>
   <p id="tall-bottom">bottom of the tall page</p>
-
-  <!-- drag: mouse-path box, then an HTML5 draggable and dropzone. -->
-  <div id="dragbox">drag me</div>
-  <div id="draggable" draggable="true">html5 drag me</div>
-  <div id="dropzone">drop here</div>
 
   <script>
     // Event sink for the advanced interaction tests. Records real
@@ -63,12 +66,20 @@
     // is held, so a test can assert where a drag left it.
     var box = document.getElementById("dragbox");
     var held = false;
-    box.addEventListener("mousedown", function () { held = true; });
+    var grabX = 0, grabY = 0;
+    box.addEventListener("mousedown", function (e) {
+      held = true;
+      grabX = e.clientX - box.getBoundingClientRect().left;
+      grabY = e.clientY - box.getBoundingClientRect().top;
+    });
     document.addEventListener("mouseup", function () { held = false; });
     document.addEventListener("mousemove", function (e) {
       if (held) {
-        box.style.left = e.clientX - 30 + "px";
-        box.style.top = e.clientY - 20 + "px";
+        // Absolute positioning: style.left/top are document
+        // coordinates, so the box follows the pointer from the grab
+        // offset exactly and ends centered under the drop point.
+        box.style.left = e.clientX - grabX + window.scrollX + "px";
+        box.style.top = e.clientY - grabY + window.scrollY + "px";
       }
     });
 
