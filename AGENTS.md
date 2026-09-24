@@ -1,3 +1,5 @@
+**Use the `btw` CLI** for R package development tasks (`btw pkg` — check, test, document; also source lookup via `btw pkg src`) and for reading package documentation (`btw docs` — help pages, vignettes, NEWS). See `btw --help` for usage.
+
 **Kata is the system of record** (the `kata` CLI issue tracker; the session environment provides its usage conventions). One issue per work item; decisions and dispositions land on issues, never only in chat scrollback. See `kata quickstart --agent` for usage details.
 
 ## Work Mechanics
