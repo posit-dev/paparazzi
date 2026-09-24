@@ -240,25 +240,6 @@ pz_blur <- function(ctx, ...) {
   }
   invisible(ctx)
 }
-scope_top <- function(ctx) {
-  if (length(ctx$scope) == 0) {
-    NULL
-  } else {
-    ctx$scope[[length(ctx$scope)]]
-  }
-}
-check_scope_single <- function(scoped, call = caller_env()) {
-  if (scoped$count > 1) {
-    cli::cli_abort(
-      c(
-        "Found {scoped$count} elements in the current scope.",
-        i = "Narrow the scope, or target one element with {.fn pz_loc} and {.arg which}."
-      ),
-      class = "paparazzi_error_multiple",
-      call = call
-    )
-  }
-}
 # The element set an element action operates on, detach-checked. NULL
 # means the current context: the pinned set itself at a scoped
 # context, used as-is and never released (its scope owns it), erroring

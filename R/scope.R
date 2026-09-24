@@ -172,6 +172,26 @@ pz_find_reset <- function(ctx) {
   }
   invisible(PaparazziContext$new(ctx$page, scope = list()))
 }
+scope_top <- function(ctx) {
+  if (length(ctx$scope) == 0) {
+    NULL
+  } else {
+    ctx$scope[[length(ctx$scope)]]
+  }
+}
+check_scope_single <- function(scoped, call = caller_env()) {
+  if (scoped$count > 1) {
+    cli::cli_abort(
+      c(
+        "Found {scoped$count} elements in the current scope.",
+        i = "Narrow the scope, or target one element with {.fn pz_loc} and {.arg which}."
+      ),
+      class = "paparazzi_error_multiple",
+      call = call
+    )
+  }
+}
+
 scope_root <- function(ctx, call = caller_env()) {
   scoped <- scope_top(ctx)
   if (is.null(scoped)) {
