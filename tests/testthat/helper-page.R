@@ -23,3 +23,11 @@ local_page <- function(x = fixture_file(), ..., .env = parent.frame()) {
 local_elements_page <- function(.env = parent.frame()) {
   local_page(elements_fixture_file(), .env = .env)
 }
+
+geometry_fixture_file <- function() {
+  test_path("fixtures", "geometry.html")
+}
+
+local_geometry_page <- function(.env = parent.frame()) {
+  local_page(geometry_fixture_file(), .env = .env)
+}

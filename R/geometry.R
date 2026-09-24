@@ -1,0 +1,56 @@
+# Contract for el_rects(), shared by getters, actions, and
+# screenshots: takes a paparazzi_elements object, makes at most one
+# CDP call, and
+# returns a tibble with columns x, y, width, height (doubles, CSS
+# pixels, viewport-relative, one row per element in match order). A
+# zero-count set returns a zero-row tibble without any CDP call.
+el_rects <- function(els, call = caller_env()) {
+  if (!inherits(els, "paparazzi_elements")) {
+    stop_input_type(els, "a <paparazzi_elements> object", call = call)
+  }
+  if (els$count == 0L) {
+    return(tibble::tibble(
+      x = numeric(),
+      y = numeric(),
+      width = numeric(),
+      height = numeric()
+    ))
+  }
+  m <- matrix(
+    els_call(
+      els,
+      "function() {
+        return this.flatMap((el) => {
+          const r = el.getBoundingClientRect();
+          return [r.x, r.y, r.width, r.height];
+        });
+      }",
+      call = call
+    ),
+    ncol = 4,
+    byrow = TRUE
+  )
+  tibble::tibble(
+    x = as.double(m[, 1]),
+    y = as.double(m[, 2]),
+    width = as.double(m[, 3]),
+    height = as.double(m[, 4])
+  )
+}
+
+el_scroll_into_view <- function(els, call = caller_env()) {
+  if (!inherits(els, "paparazzi_elements")) {
+    stop_input_type(els, "a <paparazzi_elements> object", call = call)
+  }
+  # No handle (empty set) means no CDP call is possible or needed.
+  if (els$count == 0L || is.null(els$object_id)) {
+    return(invisible(els))
+  }
+  # Only the FIRST element of the set is scrolled into view.
+  els_call(
+    els,
+    "function() { if (this.length) this[0].scrollIntoView({ block: 'nearest', inline: 'nearest' }); }",
+    call = call
+  )
+  invisible(els)
+}
