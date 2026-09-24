@@ -117,6 +117,10 @@ pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
 #' @param ... Property/value pairs, e.g. `color = "red"`. Dynamic
 #'   dots: a list spliced in with `!!!` works. Names are the CSS
 #'   property names, snake_case accepted.
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs and strings (a union matching any of them). `NULL` means the
+#'   current context: the pinned set at a scoped context, or the page
+#'   body at the root.
 #' @inheritParams pz_expect_exists
 #' @param normalize Normalize expected values in the browser before
 #'   comparing? See Details.
@@ -177,17 +181,27 @@ style_check_shorthand <- function(props, call = caller_env()) {
   )
 }
 style_shorthand_props <- c(
-  "animation", "background", "border", "border-image", "columns",
-  "flex", "flex-flow", "font", "gap", "grid", "inset", "list-style",
-  "margin", "mask", "outline", "overscroll-behavior", "padding",
-  "place-content", "place-items", "place-self", "scroll-margin",
-  "scroll-padding", "text-decoration", "text-emphasis", "transition"
+  "animation", "background", "border", "border-block",
+  "border-block-color", "border-block-style", "border-block-width",
+  "border-bottom", "border-image", "border-inline",
+  "border-inline-color", "border-inline-style", "border-inline-width",
+  "border-left", "border-right", "border-top",
+  "column-rule", "columns", "flex", "flex-flow",
+  "font", "gap", "grid", "inset", "list-style", "margin", "mask",
+  "outline", "overscroll-behavior", "padding", "place-content",
+  "place-items", "place-self", "scroll-margin", "scroll-padding",
+  "text-decoration", "text-emphasis", "transition"
 )
 style_shorthand_longhands <- c(
   animation = "animation-name, animation-duration",
   background = "background-color, background-image",
   border = "border-width, border-style, border-color",
+  "border-bottom" = "border-bottom-width, border-bottom-style, border-bottom-color",
   "border-image" = "border-image-source, border-image-width",
+  "border-left" = "border-left-width, border-left-style, border-left-color",
+  "border-right" = "border-right-width, border-right-style, border-right-color",
+  "border-top" = "border-top-width, border-top-style, border-top-color",
+  "column-rule" = "column-rule-width, column-rule-style, column-rule-color",
   columns = "column-count, column-width",
   flex = "flex-grow, flex-shrink, flex-basis",
   "flex-flow" = "flex-direction, flex-wrap",

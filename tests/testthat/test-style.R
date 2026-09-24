@@ -260,6 +260,11 @@ test_that("pz_expect_style rejects shorthands and suggests longhands", {
     pz_expect_style(page, background = "#0d6efd", target = "#primary"),
     class = "paparazzi_error_input"
   )
+  err <- expect_error(
+    pz_expect_style(page, border_top = "1px solid red", target = "#spaced"),
+    class = "paparazzi_error_input"
+  )
+  expect_match(conditionMessage(err), "border-top-width", fixed = TRUE)
 })
 
 test_that("pz_expect_style retries until the style arrives", {
