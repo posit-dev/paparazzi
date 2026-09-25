@@ -26,8 +26,8 @@ Shiny app directories and app files (\code{app.R}, \code{ui.R}, \code{server.R},
 \strong{objects} are never supported -- run the app in another process and
 pass its URL.}
 
-\item{...}{Checked empty for now. Will be forwarded to \code{pz_device()} for
-device emulation (e.g. \verb{width = 390, mobile = TRUE}).}
+\item{...}{Forwarded to \code{\link[=pz_device]{pz_device()}} as device settings (e.g.
+\verb{width = 390, mobile = TRUE}); they must be named.}
 
 \item{wait}{What to wait for before returning. \code{"auto"} currently resolves
 to \code{"load"}; \code{"shiny"} arrives with the Shiny-integration task.}

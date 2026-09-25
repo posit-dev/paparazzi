@@ -12,8 +12,8 @@
 #'   `app-*.R`, ...) and `pz_app()` handles are not yet supported; Shiny app
 #'   **objects** are never supported -- run the app in another process and
 #'   pass its URL.
-#' @param ... Checked empty for now. Will be forwarded to `pz_device()` for
-#'   device emulation (e.g. `width = 390, mobile = TRUE`).
+#' @param ... Forwarded to [pz_device()] as device settings (e.g.
+#'   `width = 390, mobile = TRUE`); they must be named.
 #' @param wait What to wait for before returning. `"auto"` currently resolves
 #'   to `"load"`; `"shiny"` arrives with the Shiny-integration task.
 #' @param timeout Session default timeout in seconds; `NULL` uses the package
@@ -31,7 +31,7 @@ pz_open <- function(
   shiny_options = list(),
   envvars = NULL
 ) {
-  check_dots_empty()
+  device_dots <- device_check_dots(list2(...))
   check_number_decimal(timeout, min = 0, allow_null = TRUE)
   wait <- arg_match(wait)
   if (identical(wait, "shiny")) {
@@ -51,12 +51,18 @@ pz_open <- function(
   }
 
   if (inherits(x, "ChromoteSession")) {
-    return(PaparazziPage$new(session = x, timeout = timeout %||% 10))
+    page <- PaparazziPage$new(session = x, timeout = timeout %||% 10)
+    # Device settings apply before anything else touches the page.
+    device_open(page, device_dots)
+    return(page)
   }
 
   url <- open_target_url(x)
   session <- chromote::ChromoteSession$new()
   page <- PaparazziPage$new(session = session, timeout = timeout %||% 10)
+  # Applied before navigating, so media queries and layout are right at
+  # first render.
+  device_open(page, device_dots)
 
   # If navigation or the load wait fails, don't leak the browser.
   ok <- FALSE

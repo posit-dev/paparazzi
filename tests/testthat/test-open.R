@@ -86,9 +86,10 @@ test_that("pz_open validates shiny_options and envvars types", {
   )
 })
 
-test_that("pz_open checks dots empty", {
+test_that("pz_open forwards dots to pz_device", {
   skip_if_no_chrome()
-  expect_error(pz_open(fixture_file(), width = 100), "empty")
+  page <- local_page(width = 390)
+  expect_equal(pz_js(page, "innerWidth"), 390)
 })
 
 test_that("session default timeout is 10s, configurable at open", {
