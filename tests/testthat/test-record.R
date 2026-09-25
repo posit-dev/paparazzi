@@ -303,6 +303,27 @@ test_that("frame when = start and stop measure at different times", {
   expect_equal(recorded_video_info(out_start)$width, width_at(116))
 })
 
+test_that("a targetless stop frame crops from the start-time scope", {
+  page <- local_record_page()
+  skip_if_no_av()
+  dpr <- pz_js(page, "window.devicePixelRatio")
+  width_at <- function(css) floor(round(css * dpr) / 4) * 4
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |>
+    pz_find("#box") |>
+    pz_record_start(out, fps = 10, hold = c(0, 0), frame = pz_frame())
+  pz_wait(page, 0.2)
+  # stopping from the root context must not swap the crop to the
+  # viewport; it still covers the scope the recording started in
+  page |> pz_record_stop()
+
+  info <- recorded_video_info(out)
+  # #box is 100x60
+  expect_equal(info$width, width_at(100))
+  expect_equal(info$height, width_at(60))
+})
+
 test_that("keep_frames keeps the captured PNGs", {
   page <- local_record_page()
   skip_if_no_av()

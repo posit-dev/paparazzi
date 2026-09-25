@@ -111,10 +111,17 @@ pz_record_start <- function(
     keep_frames = keep_frames,
     frame = frame
   )
+  # Retain the framing context the recording started in: a when =
+  # "stop" frame is measured against the final layout, but resolved
+  # from this ctx -- its scope -- not from wherever pz_record_stop()
+  # is called. An unscoped start context behaves exactly as before.
+  if (inherits(frame, "paparazzi_frame")) {
+    rec$frame_ctx <- ctx
+  }
   # Measured before the first frame for when = "start"; for "stop" the
   # crop is measured against the final layout in pz_record_stop().
   if (inherits(frame, "paparazzi_frame") && identical(frame$when, "start")) {
-    rec$crop <- record_crop_box(ctx, frame)
+    rec$crop <- record_crop_box(rec$frame_ctx, frame)
   }
   rec$frames_dir <- record_frames_dir(path, keep_frames)
 
@@ -197,7 +204,10 @@ pz_record_stop <- function(ctx) {
   if (
     inherits(rec$frame, "paparazzi_frame") && identical(rec$frame$when, "stop")
   ) {
-    rec$crop <- record_crop_box(ctx, rec$frame)
+    # The final-layout measurement resolves from the retained start
+    # context, so the crop covers the scope the recording began in
+    # even when stop is called from a different one.
+    rec$crop <- record_crop_box(rec$frame_ctx, rec$frame)
   }
   record_encode(rec)
   # The staging hook: an auto cursor under cursor = NULL belonged to the
@@ -330,6 +340,7 @@ new_recorder <- function(
     is.null(rec$frame) &&
     rlang::is_installed("gifski")
   rec$crop <- NULL
+  rec$frame_ctx <- NULL
   rec$frames_dir <- NULL
   rec$times <- numeric(0)
   rec$files <- character(0)
