@@ -511,8 +511,10 @@ record_error <- function(rec, e) {
 # the viewport -- and video-style even rounding. viewport_width is
 # kept for the CSS-to-pixel conversion at encode time.
 record_crop_box <- function(ctx, spec, call = caller_env()) {
-  geometry <- page_geometry(ctx, call = call)
-  box <- frame_content_box(ctx, NULL, spec, geometry, call = call)
+  # NULL means the frame falls back to the viewport; the box is
+  # filled from the geometry read after resolution (auto-waits can
+  # change the page), mirroring frame_clip().
+  box <- frame_content_box(ctx, NULL, spec, call = call)
   clamps <- list()
   if (!is.null(spec$bounds)) {
     els <- loc_resolve(ctx, spec$bounds, multiple = "all", call = call)
@@ -521,6 +523,10 @@ record_crop_box <- function(ctx, spec, call = caller_env()) {
       el_rects(els, call = call),
       call = call
     )
+  }
+  geometry <- page_geometry(ctx, call = call)
+  if (is.null(box)) {
+    box <- c(0, 0, geometry$viewport_width, geometry$viewport_height)
   }
   clamps[["the viewport"]] <- c(
     0,
