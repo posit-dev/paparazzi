@@ -37,6 +37,94 @@ test_that("Shiny idle restarts the hold when busy returns mid-window", {
   expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.5)
 })
 
+test_that("Shiny idle counts brief busy and recalculating pulses inside the hold", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  withr::defer(pz_close(page))
+
+  for (kind in c("busy", "recalculating")) {
+    # Arm after the wait's first idle check, so the entire pulse falls
+    # between that check and the next 100ms sample in the old wait.
+    pz_js(page, paste0(
+      "window.__idlePulseEnd = null; window.__idleArmed = false;",
+      "window.__idleObserver = MutationObserver; window.__idleObservers = 0;",
+      "window.MutationObserver = class extends window.__idleObserver {",
+      "constructor(callback) { super(callback); window.__idleObservers++; } };",
+      "window.__idleQuery = document.querySelector;",
+      "document.querySelector = function(selector) {",
+      "const result = window.__idleQuery.call(this, selector);",
+      "if (selector === '.recalculating' && !window.__idleArmed) {",
+      "window.__idleArmed = true;",
+      "setTimeout(() => {",
+      if (kind == "busy") {
+        "document.documentElement.classList.add('shiny-busy');"
+      } else {
+        "const el = document.createElement('span'); el.className = 'recalculating'; el.id = 'brief-pulse'; document.body.appendChild(el);"
+      },
+      "}, 150);",
+      "setTimeout(() => {",
+      if (kind == "busy") {
+        "document.documentElement.classList.remove('shiny-busy');"
+      } else {
+        "document.getElementById('brief-pulse').remove();"
+      },
+      "window.__idlePulseEnd = performance.now();",
+      "}, 170);",
+      "}",
+      "return result; };"
+    ))
+    pz_wait_for_shiny_idle(page, timeout = 3)
+    pz_js(page, "document.querySelector = window.__idleQuery; window.MutationObserver = window.__idleObserver")
+    expect_gte(pz_js(page, "window.__idleObservers"), 1)
+    expect_true(pz_js(page, "window.__idlePulseEnd !== null"), info = kind)
+    lag <- pz_js(page, "performance.now() - window.__idlePulseEnd")
+    expect_gte(lag, 200)
+  }
+})
+
+test_that("Shiny idle resets the hold on Shiny connection events", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  withr::defer(pz_close(page))
+  pz_js(page, paste0(
+    "window.__idleEventEnd = null;",
+    "setTimeout(() => window.jQuery(document).trigger('shiny:disconnected'), 35);",
+    "setTimeout(() => { window.jQuery(document).trigger('shiny:connected');",
+    "window.__idleEventEnd = performance.now(); }, 65);"
+  ))
+  pz_wait_for_shiny_idle(page, timeout = 3)
+  expect_true(pz_js(page, "window.__idleEventEnd !== null"))
+  expect_gte(pz_js(page, "performance.now() - window.__idleEventEnd"), 200)
+})
+
+test_that("Shiny idle deadline cleans page listeners and observer", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  withr::defer(pz_close(page))
+  listeners <- paste0(
+    "['shiny:connected', 'shiny:disconnected', 'shiny:busy', 'shiny:idle']",
+    ".map((event) => (window.jQuery._data(document, 'events')?.[event] || []).length)"
+  )
+  before <- pz_js(page, listeners)
+  pz_js(page, paste0(
+    "window.__idleDisconnects = 0;",
+    "window.__idleObserver = MutationObserver;",
+    "window.MutationObserver = class extends window.__idleObserver {",
+    "disconnect() { window.__idleDisconnects++; super.disconnect(); }",
+    "};",
+    "document.documentElement.classList.add('shiny-busy');"
+  ))
+  withr::defer(pz_js(page, "window.MutationObserver = window.__idleObserver; document.documentElement.classList.remove('shiny-busy')"))
+  expect_error(pz_wait_for_shiny_idle(page, timeout = 0.35), "Shiny idle", class = "paparazzi_error_timeout")
+  expect_gte(pz_js(page, "window.__idleDisconnects"), 1)
+  expect_identical(pz_js(page, listeners), before)
+  pz_js(page, "document.documentElement.classList.remove('shiny-busy')")
+  expect_no_error(pz_wait_for_shiny_idle(page, timeout = 2))
+})
+
 test_that("Shiny idle on non-Shiny pages fails clearly", {
   page <- local_waits_page()
   expect_error(pz_wait_for_shiny_idle(page, timeout = 1), "not a Shiny page", class = "paparazzi_error_unsupported")

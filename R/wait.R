@@ -20,7 +20,8 @@ pz_wait <- function(ctx, seconds) {
 #'
 #' Waits for the Shiny connection, for `<html>` to lose `shiny-busy`, and
 #' for every `.recalculating` output to finish. All three conditions must
-#' hold for at least 200ms. A page without Shiny errors instead of waiting.
+#' hold continuously for at least 200ms, including brief busy/recalculating
+#' transitions. A page without Shiny errors instead of waiting.
 #'
 #' @inheritParams pz_wait_for_js
 #' @return `ctx`, invisibly.
@@ -42,29 +43,67 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
     )
   }
 
-  stable_since <- NULL
-  pz_poll(
-    fn = function() {
-      idle <- isTRUE(pz_js(ctx, paste0(
-        "!!window.Shiny?.shinyapp?.$socket && ",
-        "Shiny.shinyapp.$socket.readyState === WebSocket.OPEN && ",
-        "!document.documentElement.classList.contains('shiny-busy') && ",
-        "!document.querySelector('.recalculating')"
-      ), timeout = max(0.1, remaining())))
-      if (!idle) {
-        stable_since <<- NULL
-        return(FALSE)
-      }
-      now <- Sys.time()
-      if (is.null(stable_since)) {
-        stable_since <<- now
-      }
-      as.numeric(difftime(now, stable_since, units = "secs")) >= 0.2
-    },
-    timeout = max(0, remaining()),
-    loop = ctx$page$child_loop,
-    what = "Shiny idle"
+  budget <- max(0, remaining())
+  idle_js <- paste0(
+    "new Promise((resolve) => {",
+    "  const budget = ", ceiling(budget * 1000), ";",
+    "  let hold = null;",
+    "  let deadlineTimer;",
+    "  let observer;",
+    "  const events = 'shiny:connected shiny:disconnected shiny:busy shiny:idle';",
+    "  const idle = () => !!window.Shiny?.shinyapp?.$socket &&",
+    "    Shiny.shinyapp.$socket.readyState === WebSocket.OPEN &&",
+    "    !document.documentElement.classList.contains('shiny-busy') &&",
+    "    !document.querySelector('.recalculating');",
+    "  const hasClass = (value, name) => (value || '').split(/\\s+/).includes(name);",
+    "  const relevant = (records) => records.some((record) => {",
+    "    if (record.type === 'attributes') {",
+    "      if (record.target === document.documentElement &&",
+    "          (hasClass(record.oldValue, 'shiny-busy') || record.target.classList.contains('shiny-busy'))) return true;",
+    "      return hasClass(record.oldValue, 'recalculating') || record.target.classList.contains('recalculating');",
+    "    }",
+    "    return [...record.addedNodes, ...record.removedNodes].some((node) =>",
+    "      node.nodeType === 1 && (node.matches('.recalculating') || node.querySelector('.recalculating')));",
+    "  });",
+    "  const finish = (value) => {",
+    "    clearTimeout(hold); clearTimeout(deadlineTimer);",
+    "    observer.disconnect();",
+    "    window.jQuery(document).off(events, changed);",
+    "    window.removeEventListener('pagehide', pagehide);",
+    "    resolve(value);",
+    "  };",
+    "  const check = () => {",
+    "    clearTimeout(hold); hold = null;",
+    "    if (idle()) hold = setTimeout(() => {",
+    "      if (relevant(observer.takeRecords())) { check(); return; }",
+    "      if (idle()) finish(true); else check();",
+    "    }, 200);",
+    "  };",
+    "  const changed = () => check();",
+    "  const pagehide = () => finish(false);",
+    "  observer = new MutationObserver((records) => { if (relevant(records)) check(); });",
+    "  observer.observe(document, {subtree: true, childList: true, attributes: true,",
+    "    attributeFilter: ['class'], attributeOldValue: true});",
+    "  window.jQuery(document).on(events, changed);",
+    "  window.addEventListener('pagehide', pagehide);",
+    "  deadlineTimer = setTimeout(() => finish(false), budget);",
+    "  check();",
+    "})"
   )
+  passed <- if (budget > 0) {
+    tryCatch(
+      isTRUE(pz_js(ctx, idle_js, timeout = max(0.1, remaining() + 0.1))),
+      paparazzi_error_timeout = function(e) FALSE
+    )
+  } else {
+    FALSE
+  }
+  if (!passed) {
+    cli::cli_abort(
+      "Timed out after {timeout}s waiting for Shiny idle.",
+      class = "paparazzi_error_timeout"
+    )
+  }
   invisible(ctx)
 }
 #' Wait until a JavaScript condition holds
