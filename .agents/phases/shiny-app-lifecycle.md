@@ -162,3 +162,17 @@ validation errors.
   targeted `filter = "open"` verified before feature code). Decisions
   above resolved. Next: fixtures + helper + failing tests, then
   `R/app.R`. Provisional: none yet.
+
+## ynfq mechanism decision and handoff
+
+Decision before code: reject `shiny_options$appDir` as reserved input with a
+`paparazzi_error_input`, directing callers to positional `app_dir`. This avoids
+reordering/merging ambiguities while preserving the existing managed
+`host`, `port`, and `launch.browser` config. The regression passes two distinct
+app paths with distinct fixture markers, asserts the input error, and mocks
+`new_app()` to prove no child spawn. Targeted verification only:
+`testthat::test_local(filter = "app|open")`.
+
+Handoff: regression failed before the fix at the bad app-startup path; the fix
+now passes app|open (204 pass, 0 fail, 0 warn). Next: commit and report to the
+coordinator; no further implementation planned. Provisional decisions: none.

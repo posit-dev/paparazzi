@@ -56,6 +56,15 @@ pz_app <- function(
   if (!is.list(shiny_options)) {
     stop_input_type(shiny_options, "a list")
   }
+  if ("appDir" %in% names(shiny_options)) {
+    cli::cli_abort(
+      c(
+        "{.arg shiny_options} must not set {.arg appDir}.",
+        i = "Use {.arg app_dir} to select the app."
+      ),
+      class = "paparazzi_error_input"
+    )
+  }
   check_number_decimal(timeout, min = 0, allow_null = TRUE)
   timeout <- timeout %||% 10
   rlang::check_installed("shiny", reason = "to run a Shiny app.")
