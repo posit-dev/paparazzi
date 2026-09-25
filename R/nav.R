@@ -218,15 +218,28 @@ nav_history <- function(page, offset, call = caller_env()) {
 nav_await <- function(page, p, what, call = caller_env()) {
   settled <- FALSE
   failed <- NULL
-  promises::then(
-    p,
-    onFulfilled = function(value) {
-      settled <<- TRUE
-    },
-    onRejected = function(e) {
-      settled <<- TRUE
-      failed <<- list(e)
-    }
+  # then() on an already-settled promise schedules the callback on the
+  # CURRENT loop, not the loop the promise resolved on -- and the event
+  # can settle before we get here (frameNavigated is dispatched while
+  # the trigger command's own synchronize pumps the child loop, e.g.
+  # when its response is delayed under load). pz_poll() below pumps
+  # only the child loop, so a callback queued on the default loop would
+  # never run and the wait would always time out. with_loop() pins the
+  # callback to the loop that gets pumped; for a still-pending promise
+  # it changes nothing (resolution queues on the resolving loop, which
+  # is the child loop).
+  later::with_loop(
+    page$child_loop,
+    promises::then(
+      p,
+      onFulfilled = function(value) {
+        settled <<- TRUE
+      },
+      onRejected = function(e) {
+        settled <<- TRUE
+        failed <<- list(e)
+      }
+    )
   )
   pz_poll(
     fn = function() settled,

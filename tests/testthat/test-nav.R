@@ -148,3 +148,22 @@ test_that("nav functions return their context invisibly", {
   expect_invisible(pz_nav_back(ctx))
   expect_invisible(pz_nav_forward(ctx))
 })
+
+test_that("nav_await settles a promise that resolved before the wait", {
+  ctx <- local_nav_page()
+  # Under load the anchor event can be dispatched (and its promise
+  # resolved) while the trigger command's own synchronize is still
+  # pumping, i.e. before nav_await() runs. then() on an already-settled
+  # promise queues the callback on the current loop; unless nav_await
+  # pins it to the page's child loop -- the only loop pz_poll() pumps --
+  # the callback never runs and every such wait times out.
+  p <- promises::promise_resolve(TRUE)
+  expect_no_error(nav_await(ctx$page, p, "a pre-settled promise"))
+
+  p <- promises::promise_reject("boom")
+  expect_error(
+    nav_await(ctx$page, p, "a pre-settled promise"),
+    "boom",
+    class = "simpleError"
+  )
+})
