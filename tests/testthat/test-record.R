@@ -140,12 +140,18 @@ test_that("gif encodes via gifski or av", {
   page |> pz_record(out, pz_wait(page, 0.4), fps = 10, hold = c(0.2, 0.2))
 
   expect_true(file.exists(out))
-  info <- recorded_video_info(out)
-  expect_equal(info$codec, "gif")
-  expect_gte(info$duration, 0.6)
-  expect_lte(info$duration, 1.2)
-  expect_equal(info$width %% 2, 0)
-  expect_equal(info$height %% 2, 0)
+  if (rlang::is_installed("av")) {
+    info <- recorded_video_info(out)
+    expect_equal(info$codec, "gif")
+    expect_gte(info$duration, 0.6)
+    expect_lte(info$duration, 1.2)
+    expect_equal(info$width %% 2, 0)
+    expect_equal(info$height %% 2, 0)
+  } else {
+    dims <- gif_dimensions(out)
+    expect_equal(dims[1] %% 2, 0)
+    expect_equal(dims[2] %% 2, 0)
+  }
 })
 
 test_that("an immediate stop still writes a one-frame video", {
