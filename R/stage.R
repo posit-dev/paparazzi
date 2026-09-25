@@ -12,7 +12,10 @@
 #'
 #' Sets the staging options that animate pointer actions, typing, and
 #' scrolling while the page is recording. Only supplied arguments
-#' change; settings live on the page and persist across recordings, so
+#' change -- an omitted argument leaves its setting alone, while an
+#' explicit `NULL` restores the default for that setting (so
+#' `pz_stage(cursor = FALSE)` can be undone with `pz_stage(cursor =
+#' NULL)`). Settings live on the page and persist across recordings, so
 #' [pz_record_start()] never repeats them. Without a recording, staging
 #' is skipped and the chain runs straight to its final state -- except
 #' `cursor = TRUE`, which shows a static cursor in screenshots too.
@@ -21,19 +24,23 @@
 #' @param ... Checked empty; reserved for future use.
 #' @param cursor Cursor visibility: `NULL` (the default) shows the
 #'   cursor only while recording, `TRUE` shows it always (stills too),
-#'   `FALSE` never shows it.
+#'   `FALSE` never shows it. Supply `NULL` to restore the default.
 #' @param cursor_speed Glide speed in pixels per second. Glide duration
 #'   scales with distance: roughly `clamp(0.25 + distance /
-#'   cursor_speed, 0.3, 1.2)` seconds.
+#'   cursor_speed, 0.3, 1.2)` seconds. Supply `NULL` to restore the
+#'   default.
 #' @param enter Where a cursor that has never been shown first appears:
 #'   `NULL` (the default) fades in on the target; a side (`"top"`,
 #'   `"bottom"`, `"left"`, `"right"`) starts off-frame on that side and
-#'   glides in.
+#'   glides in. Supply `NULL` to restore the default.
 #' @param typing Typing style while recording: `"natural"` (the
 #'   default) inserts one character at a time with randomized delays;
-#'   `"instant"` inserts the whole string at once.
+#'   `"instant"` inserts the whole string at once. Supply `NULL` to
+#'   restore the default.
 #' @param typing_speed Natural typing speed in characters per second.
+#'   Supply `NULL` to restore the default.
 #' @param pause Seconds to hold after each action while recording.
+#'   Supply `NULL` to restore the default.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -43,39 +50,65 @@
 pz_stage <- function(
   ctx,
   ...,
-  cursor = NULL,
-  cursor_speed = NULL,
-  enter = NULL,
-  typing = NULL,
-  typing_speed = NULL,
-  pause = NULL
+  cursor,
+  cursor_speed,
+  enter,
+  typing,
+  typing_speed,
+  pause
 ) {
   check_context(ctx)
   check_dots_empty()
   page <- ctx$page
   overrides <- page$.__enclos_env__$private$staging_$stage %||% list()
 
-  if (!is.null(cursor)) {
-    check_bool(cursor)
-    overrides$cursor <- cursor
+  # missing() is the only way to leave a setting alone; an explicit
+  # NULL removes the override (back to the default), a value sets it.
+  if (!missing(cursor)) {
+    if (is.null(cursor)) {
+      overrides[["cursor"]] <- NULL
+    } else {
+      check_bool(cursor)
+      overrides$cursor <- cursor
+    }
   }
-  if (!is.null(cursor_speed)) {
-    check_number_decimal(cursor_speed, min = 1)
-    overrides$cursor_speed <- cursor_speed
+  if (!missing(cursor_speed)) {
+    if (is.null(cursor_speed)) {
+      overrides[["cursor_speed"]] <- NULL
+    } else {
+      check_number_decimal(cursor_speed, min = 1)
+      overrides$cursor_speed <- cursor_speed
+    }
   }
-  if (!is.null(enter)) {
-    overrides$enter <- parse_direction(enter, valid = STAGE_SIDES, arg = "enter")
+  if (!missing(enter)) {
+    if (is.null(enter)) {
+      overrides[["enter"]] <- NULL
+    } else {
+      overrides$enter <- parse_direction(enter, valid = STAGE_SIDES, arg = "enter")
+    }
   }
-  if (!is.null(typing)) {
-    overrides$typing <- arg_match(typing, c("natural", "instant"))
+  if (!missing(typing)) {
+    if (is.null(typing)) {
+      overrides[["typing"]] <- NULL
+    } else {
+      overrides$typing <- arg_match(typing, c("natural", "instant"))
+    }
   }
-  if (!is.null(typing_speed)) {
-    check_number_decimal(typing_speed, min = 0.1)
-    overrides$typing_speed <- typing_speed
+  if (!missing(typing_speed)) {
+    if (is.null(typing_speed)) {
+      overrides[["typing_speed"]] <- NULL
+    } else {
+      check_number_decimal(typing_speed, min = 0.1)
+      overrides$typing_speed <- typing_speed
+    }
   }
-  if (!is.null(pause)) {
-    check_number_decimal(pause, min = 0)
-    overrides$pause <- pause
+  if (!missing(pause)) {
+    if (is.null(pause)) {
+      overrides[["pause"]] <- NULL
+    } else {
+      check_number_decimal(pause, min = 0)
+      overrides$pause <- pause
+    }
   }
   page_set_stage(page, overrides)
 
@@ -156,18 +189,21 @@ stage_scroll_into_view <- function(ctx, els, call = caller_env()) {
 }
 # The animated auto-scroll: real mouseWheel events with the cursor
 # over the container, instead of the instant scrollIntoView. Each round
-# probes the delta that scrollIntoView(block: 'nearest') would apply to
-# the element's nearest scrollable ancestor (or the document), glides
-# the cursor over the container, and wheels the delta with an eased
-# step pattern; a re-probe checks convergence. Wheels that make no
-# progress (a page canceling wheel events, a nested container the probe
-# can't reach) fall back to the instant scroll after one stalled round:
-# the final state is always correct, animated or not.
+# probes the deltas that scrollIntoView(block: 'nearest') would apply
+# across EVERY scrollable ancestor of the element plus the viewport
+# (a target visible inside a container that is itself below the fold
+# still needs the outer containers scrolled), wheels the delta of the
+# OUTERMOST container that still has one, and re-probes; the outer clips
+# contain the inner ones, so the wheeled container is always on screen
+# when its wheel fires. A round that leaves every container's scroll
+# position unchanged (a page canceling wheel events) or exceeds the
+# round bound (a page fighting the scroll) falls back to the instant
+# scroll: the final state is always correct, animated or not.
 stage_wheel_into_view <- function(ctx, els, call = caller_env()) {
   if (els$count == 0L || is.null(els$object_id)) {
     return(invisible(els))
   }
-  prev <- c(Inf, Inf)
+  prev <- NULL
   rounds <- 0L
   repeat {
     probe <- els_values(els, wheel_probe_js, call = call)
@@ -178,13 +214,24 @@ stage_wheel_into_view <- function(ctx, els, call = caller_env()) {
     if (all(delta == 0)) {
       return(invisible(els))
     }
-    rounds <- rounds + 1L
-    if (all(abs(delta - prev) < 0.5) || rounds >= 5L) {
-      # Stalled (no progress) or oscillating (a page fighting the
-      # scroll): the instant scroll guarantees the final state.
+    if (!isTRUE(probe$hit > 0)) {
+      # No point where a wheel would reach the container (a nested
+      # scroller covers the dispatch point and would consume it): the
+      # instant scroll runs BEFORE any wheel can change another
+      # container.
       return(el_scroll_into_view(els, call = call))
     }
-    prev <- delta
+    pos <- unlist(probe$pos)
+    rounds <- rounds + 1L
+    if (
+      (!is.null(prev) && identical(pos, prev)) ||
+        rounds > 2L * probe$n + 3L
+    ) {
+      # Stalled (no scroll position moved) or oscillating: the instant
+      # scroll guarantees the final state.
+      return(el_scroll_into_view(els, call = call))
+    }
+    prev <- pos
     point <- c(x = probe$x, y = probe$y)
     stage_move_cursor(ctx, point)
     stage <- page_stage(ctx$page)
@@ -228,41 +275,49 @@ stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
 }
 # The staged pz_scroll(by =)/pz_scroll(to =): wheel the scope's
 # container (or the document) to the target scroll position with the
-# cursor over it, then verify; a miss (wheel-cancelling page, latching
-# onto a nested scroller under the container center) falls back to the
-# instant application so the final scroll position is always exact.
+# cursor over it, then verify and repair. The wheel point is hit-tested
+# for the container first -- a nested scroller covering it would
+# consume the wheels and leave a state the instant path never produces
+# -- and when no suitable point exists the instant application runs
+# BEFORE any wheel fires. After the wheels, a miss (clamping,
+# canceling) still repairs instantly so the final position is exact.
 scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
   # A wheel only lands on a container the cursor point is actually
-  # over; a scoped container outside the viewport is first brought into
-  # view (a no-op when it already is).
+  # over; a scoped container outside the viewport is first brought
+  # into view -- the staged way while recording, like every other
+  # pre-action scroll (a no-op when it already is).
   if (!is.null(scoped)) {
-    el_scroll_into_view(scoped, call = call)
+    stage_scroll_into_view(ctx, scoped, call = call)
   }
-  probe <- if (!is.null(scoped)) {
-    els_values(scoped, wheel_container_js, call = call)
-  } else {
-    pz_js(ctx, paste0("(", wheel_container_js, ").call([])"))
+  # The container probe, with or without an aim (the target scroll
+  # position, which turns on the hit test); one function serves the
+  # pinned scoped set and the root's empty-array rooting.
+  wheel_container <- function(aim = NULL) {
+    if (!is.null(scoped)) {
+      if (is.null(aim)) {
+        els_values(scoped, wheel_container_js, call = call)
+      } else {
+        els_arg_values(
+          scoped,
+          wheel_container_js,
+          list(list(value = c(aim[[1]], aim[[2]]))),
+          call = call
+        )
+      }
+    } else {
+      pz_js(
+        ctx,
+        paste0(
+          "(", wheel_container_js, ").call([]",
+          if (is.null(aim)) "" else paste0(", ", jsonlite::toJSON(unname(aim))),
+          ")"
+        )
+      )
+    }
   }
-  target <- scroll_wheel_target(probe, by, to)
-  delta <- c(target$left - probe$left, target$top - probe$top)
-  if (all(delta == 0)) {
-    return(invisible(ctx))
-  }
-  point <- c(x = probe$x, y = probe$y)
-  stage_move_cursor(ctx, point)
-  stage <- page_stage(ctx$page)
-  duration <- min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.3), 1.2)
-  stage_wheel(ctx, point, delta[[1]], delta[[2]], duration, call = call)
-  # Verify and repair: wheels are best-effort (clamping, canceling),
-  # the recorded end state must match the instant path.
-  actual <- if (!is.null(scoped)) {
-    els_values(scoped, wheel_container_js, call = call)
-  } else {
-    pz_js(ctx, paste0("(", wheel_container_js, ").call([])"))
-  }
-  if (
-    abs(actual$top - target$top) > 2 || abs(actual$left - target$left) > 2
-  ) {
+  # The instant application: by scrolls the remaining delta, to
+  # scrolls to the target exactly.
+  apply_instant <- function(actual) {
     arg <- scroll_arg_json(
       by = if (!is.null(by)) c(target$left - actual$left, target$top - actual$top),
       to = to
@@ -273,7 +328,7 @@ scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
       } else {
         list(to = as.list(to))
       }
-      els_arg_values(scoped, scroll_apply_js, list(list(value = arg_list)))
+      els_arg_values(scoped, scroll_apply_js, list(list(value = arg_list)), call = call)
     } else {
       action_cdp(
         ctx,
@@ -286,6 +341,33 @@ scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
         )
       )
     }
+    invisible(ctx)
+  }
+  probe <- wheel_container()
+  target <- scroll_wheel_target(probe, by, to)
+  delta <- c(target$left - probe$left, target$top - probe$top)
+  if (all(delta == 0)) {
+    return(invisible(ctx))
+  }
+  # A wheel at the container's center only reaches the container when
+  # the point is over it; no such point means the instant application
+  # runs before any wheel fires.
+  if (!isTRUE(wheel_container(c(target$left, target$top))$hit > 0)) {
+    apply_instant(probe)
+    return(invisible(ctx))
+  }
+  point <- c(x = probe$x, y = probe$y)
+  stage_move_cursor(ctx, point)
+  stage <- page_stage(ctx$page)
+  duration <- min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.3), 1.2)
+  stage_wheel(ctx, point, delta[[1]], delta[[2]], duration, call = call)
+  # Verify and repair: wheels are best-effort (clamping, canceling),
+  # the recorded end state must match the instant path.
+  actual <- wheel_container()
+  if (
+    abs(actual$top - target$top) > 2 || abs(actual$left - target$left) > 2
+  ) {
+    apply_instant(actual)
   }
   invisible(ctx)
 }
@@ -312,13 +394,37 @@ scroll_wheel_target <- function(probe, by, to) {
     top = min(max(top, 0), probe$maxTop)
   )
 }
+# The wheel-latching hit test, interpolated into the two probe functions
+# (it closes over their isScrollable): a wheel dispatched at (x, y)
+# scrolls the nearest scrollable ancestor of the element under the
+# point that can consume the delta, so it reaches `container` only
+# when no nearer scroller intervenes. elementFromPoint() passes
+# through the overlay's pointer-events: none. Returns 1/0.
+wheel_hit_js <- "const wheelHit = (container, x, y, dx, dy) => {
+  const canConsume = (c) =>
+    (dy < 0 && c.scrollTop > 0) ||
+    (dy > 0 && c.scrollTop < c.scrollHeight - c.clientHeight) ||
+    (dx < 0 && c.scrollLeft > 0) ||
+    (dx > 0 && c.scrollLeft < c.scrollWidth - c.clientWidth);
+  const under = document.elementFromPoint(x, y);
+  if (!under) return 0;
+  for (let e = under; e; e = e.parentElement) {
+    if (e === container) return 1;
+    if (isScrollable(e) && canConsume(e)) return 0;
+  }
+  return 0;
+};"
 # The container probe for by/to scrolls: the current scope's scroll
 # container (the scope element or its nearest scrollable ancestor, the
 # document at the root -- the same walk scroll_apply_js does), its
 # viewport center for cursor placement, and its scroll position and
-# range. One function serves both rootings: callFunctionOn on the
-# pinned set as `this`, or Runtime$evaluate with `this` an empty array.
-wheel_container_js <- "function() {
+# range. With an `aim` (the target scroll position, [left, top]) it
+# also hit-tests the center point for that delta, so a wheel is only
+# dispatched when it would reach the container. One function serves
+# both rootings: callFunctionOn on the pinned set as `this`, or
+# Runtime$evaluate with `this` an empty array.
+wheel_container_js <- paste0(
+  "function(aim) {
   const isScrollable = (e) => {
     if (e === document.scrollingElement) {
       return true;
@@ -329,6 +435,9 @@ wheel_container_js <- "function() {
     }
     return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
   };
+  ",
+  wheel_hit_js,
+  "
   let container = null;
   for (let e = this.length ? this[0] : null; e; e = e.parentElement) {
     if (isScrollable(e)) {
@@ -343,22 +452,42 @@ wheel_container_js <- "function() {
   const cr = doc
     ? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }
     : container.getBoundingClientRect();
+  const x = Math.min(Math.max(cr.left + cr.width / 2, 1), window.innerWidth - 1);
+  const y = Math.min(Math.max(cr.top + cr.height / 2, 1), window.innerHeight - 1);
+  let hit = 1;
+  if (aim) {
+    const dx = aim[0] - container.scrollLeft;
+    const dy = aim[1] - container.scrollTop;
+    if (dx !== 0 || dy !== 0) {
+      hit = wheelHit(container, x, y, dx, dy);
+    }
+  }
   return {
-    x: Math.min(Math.max(cr.left + cr.width / 2, 1), window.innerWidth - 1),
-    y: Math.min(Math.max(cr.top + cr.height / 2, 1), window.innerHeight - 1),
+    x: x,
+    y: y,
     top: container.scrollTop,
     left: container.scrollLeft,
     maxTop: container.scrollHeight - container.clientHeight,
-    maxLeft: container.scrollWidth - container.clientWidth
+    maxLeft: container.scrollWidth - container.clientWidth,
+    hit: hit
   };
 }"
-# The scroll probe: the delta that scrollIntoView(block/inline:
-# 'nearest') would apply to the first element's nearest scrollable
-# ancestor-or-self (the document when none scrolls), clamped to the
-# container's range, plus the container's viewport center for cursor
-# placement. Computed without scrolling; the R driver re-probes after
-# wheeling.
-wheel_probe_js <- "function() {
+)
+# The scroll probe: for EVERY scrollable ancestor of the first element,
+# the delta that scrollIntoView(block/inline: 'nearest') would apply
+# to bring the next-inner box (the element itself, or the inner
+# container's clip) inside the container's clip -- the viewport
+# (scrollingElement) is always the outermost, so a target visible inside
+# a container that is below the fold still probes a nonzero outer
+# delta. Inner deltas are invariant under outer scrolls, so wheeling
+# outermost-first settles each level once. Returns the outermost
+# container's nonzero delta (0/0 when the element is in view in every
+# clip), that container's viewport center for cursor placement, the
+# scroll positions of the whole chain (the R driver's stall check),
+# and the chain length (its round bound). Computed without scrolling;
+# the R driver re-probes after wheeling.
+wheel_probe_js <- paste0(
+  "function() {
   if (!this.length) return null;
   const el = this[0];
   const isScrollable = (e) => {
@@ -369,34 +498,58 @@ wheel_probe_js <- "function() {
     }
     return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
   };
-  let container = null;
-  for (let e = el.parentElement; e; e = e.parentElement) {
-    if (isScrollable(e)) { container = e; break; }
-  }
-  const doc = !container || container === document.scrollingElement;
-  const c = doc ? document.scrollingElement : container;
-  const er = el.getBoundingClientRect();
-  const cr = doc
+  ", wheel_hit_js, "
+  const clip = (c) => c === document.scrollingElement
     ? { top: 0, left: 0, bottom: window.innerHeight, right: window.innerWidth,
         width: window.innerWidth, height: window.innerHeight }
     : c.getBoundingClientRect();
-  let dy = 0;
-  if (er.top < cr.top) dy = er.top - cr.top;
-  else if (er.bottom > cr.bottom) dy = Math.min(er.top - cr.top, er.bottom - cr.bottom);
-  let dx = 0;
-  if (er.left < cr.left) dx = er.left - cr.left;
-  else if (er.right > cr.right) dx = Math.min(er.left - cr.left, er.right - cr.right);
-  const maxTop = c.scrollHeight - c.clientHeight;
-  const maxLeft = c.scrollWidth - c.clientWidth;
-  dy = Math.min(Math.max(c.scrollTop + dy, 0), maxTop) - c.scrollTop;
-  dx = Math.min(Math.max(c.scrollLeft + dx, 0), maxLeft) - c.scrollLeft;
+  const chain = [];
+  for (let e = el.parentElement; e; e = e.parentElement) {
+    if (e !== document.scrollingElement && isScrollable(e)) chain.push(e);
+  }
+  chain.push(document.scrollingElement);
+  let box = el.getBoundingClientRect();
+  const pos = [];
+  const deltas = [];
+  for (let i = 0; i < chain.length; i++) {
+    const c = chain[i];
+    const cr = clip(c);
+    let dy = 0;
+    if (box.top < cr.top) dy = box.top - cr.top;
+    else if (box.bottom > cr.bottom) dy = Math.min(box.top - cr.top, box.bottom - cr.bottom);
+    let dx = 0;
+    if (box.left < cr.left) dx = box.left - cr.left;
+    else if (box.right > cr.right) dx = Math.min(box.left - cr.left, box.right - cr.right);
+    const maxTop = c.scrollHeight - c.clientHeight;
+    const maxLeft = c.scrollWidth - c.clientWidth;
+    deltas.push({
+      dx: Math.min(Math.max(c.scrollLeft + dx, 0), maxLeft) - c.scrollLeft,
+      dy: Math.min(Math.max(c.scrollTop + dy, 0), maxTop) - c.scrollTop
+    });
+    pos.push(c.scrollTop, c.scrollLeft);
+    box = cr;
+  }
+  let k = -1;
+  for (let i = chain.length - 1; i >= 0; i--) {
+    if (deltas[i].dx !== 0 || deltas[i].dy !== 0) { k = i; break; }
+  }
+  if (k === -1) {
+    return { dx: 0, dy: 0, hit: 1, x: 0, y: 0, pos: pos, n: chain.length };
+  }
+  const cr = clip(chain[k]);
+  const x = Math.min(Math.max(cr.left + cr.width / 2, 1), window.innerWidth - 1);
+  const y = Math.min(Math.max(cr.top + cr.height / 2, 1), window.innerHeight - 1);
   return {
-    x: Math.min(Math.max(cr.left + cr.width / 2, 1), window.innerWidth - 1),
-    y: Math.min(Math.max(cr.top + cr.height / 2, 1), window.innerHeight - 1),
-    dx: dx,
-    dy: dy
+    x: x,
+    y: y,
+    dx: deltas[k].dx,
+    dy: deltas[k].dy,
+    hit: wheelHit(chain[k], x, y, deltas[k].dx, deltas[k].dy),
+    pos: pos,
+    n: chain.length
   };
 }"
+)
 # pz_stage(pause =): a hold after each action while recording, skipped
 # otherwise (the SPEC matrix). Real time passes -- the recorded frames
 # capture the settled page.
