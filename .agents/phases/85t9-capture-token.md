@@ -22,6 +22,7 @@ Run red-first with `/tmp/pz-chrome-lock.sh Rscript -e 'testthat::test_local(filt
 
 ## Handoff
 
-- Landed: phase note only; no production or test change in this stage.
-- Next: orchestrator sign-off, then red-first test, implementation, and targeted verification.
-- Provisional: callback identity via the pending environment replaces rather than adds occupancy/order state.
+- Landed: signed-off phase note (`4978eed`, sign-off `fbf7fb9`), red-first fake-CDP callback regression (`f502e86`), and pending-slot identity fix (`0cfe719`). The test drives both stale success and stale error while a final capture is pending; the stale error case uses the same vt/file as the final capture to distinguish identity from value equality. `rec$pending` is now both occupancy state and unique callback token; `in_flight` was removed. No new timeout, queue, ordering flag, error class, or user-facing message. No documentation generation needed because no public docs changed.
+- Evidence: before implementation, locked `test_local(filter = "record")` with `testthat::set_max_fails(Inf)` reported `[ FAIL 12 | WARN 0 | SKIP 0 | PASS 381 ]`. After implementation and the same-vt test strengthening, locked `test_local(filter = "record")` reported `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 399 ]`. The full suite was not run.
+- Next: orchestrator review and merge gate; leave this issue open for orchestrator disposition.
+- Provisional: an old metrics callback can still issue a screenshot after its slot is retired, but its terminal callback cannot mutate the pending slot. Suppressing that separate CDP request was not required for this issue and would introduce a second check.
