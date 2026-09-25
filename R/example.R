@@ -1,0 +1,45 @@
+#' Paths to example pages and apps
+#'
+#' paparazzi ships a few small pages and apps for its examples and
+#' articles. `pz_example()` returns the path to one of them, ready to pass to
+#' [pz_open()] or [pz_app()]. The examples are:
+#'
+#' * `"tasks"`: a static task tracker page (an HTML file) with a form, a
+#'   scrollable task list, filter links, an editable notes area, a file input,
+#'   and a help panel that starts hidden.
+#' * `"tasks-app"`: a Shiny app directory with a text input, a selectize
+#'   priority input, an Add button, and a task list whose output takes half
+#'   a second to render. Running it requires the shiny package.
+#'
+#' @param name The name of an example, without a file extension. `NULL`
+#'   returns the names of all examples.
+#'
+#' @return The absolute path to the example's file or directory, or a
+#'   character vector of example names when `name` is `NULL`.
+#'
+#' @examples
+#' pz_example()
+#' pz_example("tasks")
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_title(page)
+#' pz_close(page)
+#'
+#' @export
+pz_example <- function(name = NULL) {
+  check_string(name, allow_null = TRUE)
+  dir <- system.file("examples", package = "paparazzi", mustWork = TRUE)
+  files <- list.files(dir)
+  names <- tools::file_path_sans_ext(files)
+  if (is.null(name)) {
+    return(sort(names))
+  }
+  if (!name %in% names) {
+    cli::cli_abort(c(
+      "{.val {name}} is not a paparazzi example.",
+      "i" = "Available examples: {.val {sort(names)}}."
+    ))
+  }
+  file.path(dir, files[match(name, names)])
+}
