@@ -223,7 +223,7 @@ test_that("late capture callbacks cannot consume the final capture slot", {
       pageX = 0, pageY = 0, clientWidth = 640, clientHeight = 480
     ))
 
-    record_capture(rec, page, 1)
+    record_capture(rec, page, if (late == "error") 2 else 1)
     callbacks$metrics[[1]](metrics)
     rec$pending <- NULL  # The stop poll timed out and retired this capture.
     record_capture(rec, page, 2)
@@ -242,6 +242,7 @@ test_that("late capture callbacks cannot consume the final capture slot", {
     expect_length(rec$files, 0)
     expect_length(rec$times, 0)
     expect_equal(rec$n_errors, 0L)
+    expect_null(rec$first_error)
     expect_false(file.exists(final_pending$file))
 
     callbacks$frames[[2]]$success(list(
