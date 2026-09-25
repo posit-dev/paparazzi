@@ -213,6 +213,29 @@ R/resolve.R).
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-25 (finish): landed the keystone (pz_stage + overlay cursor
+  + staged pointer actions, 46850d8), natural typing and
+  wheel scrolling (73bc194), the test suite with the frame-content
+  demo (fixture cursor.html, helper-cursor.R, band pixel scans), the
+  scoped pz_cursor_show() (55fef53), and the bounded wheel probe loop
+  (da18261). Tests surfaced and fixed: static draws skip the opacity
+  transition (stills were catching mid-fade cursors), the new-document
+  script defers boot until documentElement exists, scoped containers
+  scroll into view before wheeling, wheel points clamp to the
+  viewport. Full suite green at da18261 (baseline 1464 -> 1568, 0
+  failures/skips); an earlier suite run wedged on machine contention
+  (three concurrent suites, dozens of orphaned Chrome processes from
+  killed runs), not on a code hang -- the rerun on a quiet machine
+  passed cleanly. roborev was
+  requested three times (1257-1260, branch range) but BOTH agents fail
+  on environment issues (codex: AWS credentials; claude-code:
+  openai.gpt-6-sol model_not_found) -- rerun `roborev review --branch`
+  when the infra is fixed. Next: review + merge decision stays with
+  garrick; drag/select_text intermediate-move staging and ripple /
+  cursor styles are the named follow-ups. Provisional: wheel scrolling
+  handles one scroll container per probe round and falls back to
+  instant on stalls; nested-container choreography and mid-glide hand
+  shape updates are v2 material.
 - 2026-09-25 (pause, mid-session): landed only the mechanism note
   (22f319e); orientation and browser probes complete, NO package code
   written yet -- R/stage.R, R/cursor.R, fixtures, and tests are all
