@@ -73,6 +73,10 @@ proceeds while a chain of steps runs. \strong{Long-running plain R code
 between steps freezes the recording}: the timer can't fire while R
 is busy, and the missed stretch collapses to a held frame.
 
+Stopping always captures one final frame of the page state at
+\code{pz_record_stop()}, so a change made just before the stop still
+appears; the last-frame hold repeats that final frame.
+
 Cropping never happens at capture time. A \code{\link[=pz_frame]{pz_frame()}} spec (or the
 page default from \code{\link[=pz_stage_frame]{pz_stage_frame()}}) is measured once -- at the
 start for \code{pz_frame(when = "start")}, at the end for the default
