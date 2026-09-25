@@ -161,10 +161,71 @@ one commit per finding.
    in state -- before the injected script takes over -- and disable
    means removing the script and restoring the saved value.
 
+Landing notes (mechanism facts probed during the fix, kept for the
+next reader):
+
+- The `addScriptToEvaluateOnNewDocument` mechanism runs only on
+  documents committed while the **Page domain is enabled**;
+  registration itself survives disable/enable cycles. chromote
+  auto-enables a domain when its event-listener count goes 0→1 and
+  auto-disables it at 1→0 (a released `frameNavigated` promise), so
+  the registration additionally calls `Page$enable()` explicitly.
+  Because that enable can still be undone by a later listener
+  release, every paparazzi settle point re-applies the inline zoom
+  on the settled document (`device_css_reapply()`, skipping script
+  re-registration): the script covers commits paparazzi never
+  settles (`wait = "none"`, external redirects), the reapply covers
+  commits the script missed. `wait_nav_reset()` clears only the
+  `css_zoom` cache slot to drive that reapply. Back/forward at a
+  history boundary re-set the same zoom on the same document,
+  harmlessly. `pz_wait_for_navigation()` also reapplies (it is a
+  settle seam too).
+- The injected script runs before `<html>` exists, so its JS waits
+  for `readystatechange` when `documentElement` is null (probed:
+  `!!document.documentElement` is false at script run time).
+- A fragment (same-document) navigation returns no `loaderId` and
+  fires no `frameNavigated`; a cross-document one returns a
+  `loaderId` and fires it (probed). Downloads answer without a
+  `loaderId` too, so the goto anchor's gate handles them like
+  fragments.
+- On an idle machine a file:// `Page.navigate` response can arrive
+  after the destination already reports `readyState "complete"`
+  (probed), so the goto race is not deterministically reproducible
+  there; the delayed-destination test pins the required behavior
+  (anchor → commit → settle on the completed destination), and the
+  fragment test does fail if the `loaderId` gate is removed (it
+  times out awaiting a commit that never fires).
+- ChromoteSession registers itself with its parent browser object
+  and is never deregistered on close (chromote keeps the registry
+  as a private list, re-read fresh each access); the pz_open leak
+  test finds the failed open's session in that registry and asserts
+  it rejects commands as closed. The default browser is shared
+  across R processes (the #3tty contention), but the registry is
+  per-process, so the test is noise-free.
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-25 (review fix): landed all five roborev 1265 findings, one
+  commit each after 5a82b19 planned them: css zoom across documents
+  (4bb7aef), recorder viewport rebase on navigation (15e41e9), goto
+  commit anchor (2681da0), pz_open deferred close before device_open
+  (291e428), inline-zoom restore on disable (6b5fe2e), plus this note.
+  Targeted open|nav|device|record runs green (300 expectations; two
+  runs showed one transient chromote-timeout failure each, the #3tty
+  parallel-load flake -- clean on rerun while the main-branch baseline
+  suite was running concurrently). Each new test was verified to fail
+  against the reverted fix (detach error, 10s commit timeout, leaked
+  session answering commands, clobbered inline zoom). Next: the full
+  suite + merge stay with the orchestrator; roborev 1265 not closed
+  here. Provisional: the goto race is not deterministically
+  reproducible on an idle machine (file:// navigate responses can
+  arrive post-commit), so the slow-destination test pins behavior
+  rather than reproducing the bug; the css-zoom restore is
+  per-document (a save captured on one document restores onto
+  whichever document is current at disable), matching the decided
+  disposition.
 - 2026-09-25 (landing): re-applied the completed work onto current main
   (7d47509) via stash + reset; dropped the scope.R detach-regex hunk
   (superseded by main's pinned_dead_context_error()) and adapted two
