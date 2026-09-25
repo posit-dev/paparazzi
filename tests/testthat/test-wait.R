@@ -261,12 +261,13 @@ test_that("pz_wait_for_navigation waits for a pending navigation and resets scop
   reset |> pz_expect_text("You made it.", target = "#target-text", match = "exact")
   # The pre-navigation scope is dead: the navigation destroyed the
   # execution context its pins lived in, and the object group was
-  # released, so the next use errors instead of acting on a stale set.
-  # (Released-while-alive contexts raise the classed
-  # paparazzi_error_detached, like the wait = "none" test below; the
-  # dead-context CDP message is the scope seam in R/scope.R, left to
-  # its task.)
-  expect_error(ctx |> pz_expect_text("x", timeout = 0.1))
+  # released, so the next use raises the classed detach error -- not
+  # the raw dead-context CDP error -- instead of acting on a stale
+  # set.
+  expect_error(
+    ctx |> pz_expect_text("x", timeout = 0.1),
+    class = "paparazzi_error_detached"
+  )
 })
 
 test_that("pz_wait_for_navigation follows a clicked link", {
@@ -276,6 +277,13 @@ test_that("pz_wait_for_navigation follows a clicked link", {
   expect_length(reset$scope, 0)
   expect_match(pz_get_url(reset), "nav-target.html", fixed = TRUE)
   reset |> pz_expect_title("paparazzi navigation target", match = "exact")
+  # The same dead-scope verdict on the click-driven navigation: the
+  # old pinned set's context is gone, and its next use maps to the
+  # classed detach error rather than a raw chromote one.
+  expect_error(
+    ctx |> pz_get_text(),
+    class = "paparazzi_error_detached"
+  )
 })
 
 test_that("pz_wait_for_navigation(wait = 'none') resets without waiting", {
