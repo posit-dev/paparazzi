@@ -21,7 +21,10 @@ test_that("pz_get_count at the root counts the body", {
 test_that("pz_get_count returns 0 for a missing target without waiting", {
   # A waiting implementation would burn the session default timeout
   # and raise paparazzi_error_timeout; 0 comes back immediately.
-  page <- local_page(getters_fixture_file(), timeout = 0.3)
+  # Opening gets the normal budget; only the getter's wait is shortened,
+  # so a slow page load under a parallel suite can't fail the open.
+  page <- local_page(getters_fixture_file())
+  page$default_timeout <- 0.3
   expect_identical(pz_get_count(page, target = ".never"), 0L)
 })
 
@@ -204,7 +207,10 @@ test_that("pz_get_text trims leading and trailing whitespace by default", {
 test_that("target-based getters time out with a classed error", {
   # Short session default timeout keeps the suite fast: the getters
   # take no per-call timeout and wait on the session default.
-  page <- local_page(getters_fixture_file(), timeout = 0.3)
+  # Opening gets the normal budget; only the getter's wait is shortened,
+  # so a slow page load under a parallel suite can't fail the open.
+  page <- local_page(getters_fixture_file())
+  page$default_timeout <- 0.3
   expect_error(
     pz_get_text(page, target = ".never"),
     class = "paparazzi_error_timeout"
