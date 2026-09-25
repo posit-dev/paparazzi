@@ -1,6 +1,6 @@
 # Open-page load navigation (3meh)
 
-Source: paparazzi#3meh, linked n4f2 review 1269, .agents/SPEC.md (Sessions and apps), .agents/phases/device-nav.md. Ownership: `R/open.R`, `tests/testthat/test-open.R`, this note. Base: task/3meh; main's post-dbzt full test gate is still running.
+Source: paparazzi#3meh, linked n4f2 review 1269, .agents/SPEC.md (Sessions and apps), .agents/phases/device-nav.md. Ownership: `R/open.R`, `tests/testthat/test-open.R`, this note. Base: task/3meh; main's post-dbzt full test gate passed (1978 pass, zero fail/warn/skip) before implementation was released.
 
 ## Mechanism decision (before code)
 
@@ -17,5 +17,5 @@ Signed off: teammate-2, before code or tests.
 ## Handoff
 
 - Landed: real slow-file open regression failed on original `R/open.R` with the two committed destination URLs missing (203 pass, 1 fail); then shared the existing Shiny commit anchor with load without changing none/wrapped paths.
-- Next: coordinator owns merge and any broader gate; task is ready for handoff after the scoped commit. Targeted `btw pkg test -f 'open|nav' --reporter minimal` passed twice with 204 pass, zero fail/warn/skip; one intermediate run had a non-Shiny-page failure in the existing shared-handle Shiny test, which passed on immediate rerun without changes to that path.
+- Next: coordinator owns merge and any broader gate. Targeted `btw pkg test -f 'open|nav' --reporter minimal` passed twice with 204 pass, zero fail/warn/skip; one intermediate run had a non-Shiny-page failure in the existing shared-handle Shiny test, which passed on immediate rerun without changes to that path.
 - Provisional: no new ordering mechanism; the existing Shiny test's intermittent failure was not modified under this task.

@@ -47,9 +47,9 @@ test_that("new-session load waits anchor to the destination commit", {
     commits <<- c(commits, hist$entries[[hist$currentIndex + 1]]$url)
   })
   for (wait in c("load", "auto")) {
-    page <- pz_open(url, wait = wait, timeout = 5)
-    expect_identical(pz_js(page, "document.readyState"), "complete")
-    pz_close(page)
+    pz_with_page(url, function(page) {
+      expect_identical(pz_js(page, "document.readyState"), "complete")
+    }, wait = wait, timeout = 5)
   }
   expect_identical(commits, rep(url, 2))
 })
