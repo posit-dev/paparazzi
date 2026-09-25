@@ -23,6 +23,10 @@
 #' between steps freezes the recording**: the timer can't fire while R
 #' is busy, and the missed stretch collapses to a held frame.
 #'
+#' Stopping always captures one final frame of the page state at
+#' `pz_record_stop()`, so a change made just before the stop still
+#' appears; the last-frame hold repeats that final frame.
+#'
 #' Cropping never happens at capture time. A [pz_frame()] spec (or the
 #' page default from [pz_stage_frame()]) is measured once -- at the
 #' start for `pz_frame(when = "start")`, at the end for the default
@@ -141,29 +145,13 @@ pz_record_stop <- function(ctx) {
     }
   })
 
-  # The first tick is only scheduled at start; an immediate stop pumps
-  # the loop (still active, so the tick captures) until one capture
-  # settles, giving a one-frame video instead of no file at all.
-  if (length(rec$files) == 0L) {
-    ticks <- rec$ticks
-    tryCatch(
-      pz_poll(
-        function() {
-          length(rec$files) > 0L || (rec$ticks > ticks && !rec$in_flight)
-        },
-        timeout = min(page$default_timeout, 5),
-        loop = page$child_loop,
-        what = "the first frame capture"
-      ),
-      paparazzi_error_timeout = function(e) record_error(rec, e)
-    )
-  }
-
+  # Deactivate first so ticks scheduled by the recording stop re-arming
+  # and can't issue captures while the stop settles its own.
   rec$active <- FALSE
   rec$vt_end <- rec_vt(rec)
 
   # A capture issued before the stop may still be in flight; it belongs
-  # to the recording, so let it settle before encoding.
+  # to the recording, so let it settle before the final capture.
   if (rec$in_flight) {
     tryCatch(
       pz_poll(
@@ -178,6 +166,24 @@ pz_record_stop <- function(ctx) {
       }
     )
   }
+
+  # Capture and await the page state at stop: the final state must be in
+  # the video (the last-frame hold repeats it, not an older frame), and
+  # an immediate stop gets its one frame here. vt is pinned to vt_end so
+  # the frame is kept (post-vt_end captures are dropped).
+  record_capture(rec, page, rec$vt_end)
+  tryCatch(
+    pz_poll(
+      function() !rec$in_flight,
+      timeout = min(page$default_timeout, 5),
+      loop = page$child_loop,
+      what = "the final frame capture"
+    ),
+    paparazzi_error_timeout = function(e) {
+      rec$in_flight <- FALSE
+      record_error(rec, e)
+    }
+  )
 
   if (length(rec$files) == 0L) {
     msg <- "No frames were captured."
@@ -452,10 +458,19 @@ record_tick <- function(page) {
   if (rec$paused || rec$in_flight) {
     return(invisible(TRUE))
   }
+  record_capture(rec, page, rec_vt(rec))
+  invisible(TRUE)
+}
+# Issue one async capture on the page: the tick's periodic capture and
+# the stop-time final frame both come through here. in_flight guards
+# against overlapping captures; the callbacks clear it when chromote
+# invokes them on the child loop. A synchronous failure (e.g. a closed
+# session) clears it and lands in the recorder's error tally instead.
+record_capture <- function(rec, page, vt) {
   rec$in_flight <- TRUE
   index <- length(rec$files) + 1L
   rec$pending <- list(
-    vt = rec_vt(rec),
+    vt = vt,
     file = file.path(rec$frames_dir, sprintf("frame-%06d.png", index))
   )
   tryCatch(
@@ -473,7 +488,7 @@ record_tick <- function(page) {
       record_error(rec, e)
     }
   )
-  invisible(TRUE)
+  invisible(rec)
 }
 # The capture callback: writes the PNG to the frame store at resolve
 # time. At most one capture is in flight, so issue order is resolve

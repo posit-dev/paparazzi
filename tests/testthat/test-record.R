@@ -166,6 +166,36 @@ test_that("an immediate stop still writes a one-frame video", {
   expect_gte(recorded_video_info(out)$frames, 1)
 })
 
+test_that("stop captures a final frame after a late page change", {
+  page <- local_record_page()
+  skip_if_no_av()
+  testthat::skip_if_not_installed("png")
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
+  pz_wait(page, 0.4)
+  # A change right before stop must appear in the final frame; without
+  # the stop-time capture the video would end on an older one.
+  pz_js(
+    page,
+    "document.getElementById('box').style.backgroundColor = 'rgb(255, 0, 0)'"
+  )
+  page |> pz_record_stop()
+
+  files <- sort(list.files(frames_dir, full.names = TRUE, pattern = "[.]png$"))
+  expect_gte(length(files), 2L)
+  dpr <- pz_js(page, "window.devicePixelRatio")
+  # a pixel inside #box (CSS left 40, top 30, 100x60), in device pixels
+  pixel <- function(path) {
+    img <- png::readPNG(path)
+    unname(img[round(40 * dpr) + 1, round(50 * dpr) + 1, 1:3])
+  }
+  expect_false(isTRUE(all.equal(pixel(files[[1]]), c(1, 0, 0), tolerance = 0.05)))
+  expect_equal(pixel(files[[length(files)]]), c(1, 0, 0), tolerance = 0.05)
+})
+
 test_that("an immediate block error is not masked by the stop", {
   page <- local_record_page()
   skip_if_no_av()
