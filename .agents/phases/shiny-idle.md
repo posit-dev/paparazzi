@@ -21,3 +21,13 @@ Signed off: teammate-1, before feature code.
 - Landed: direct Shiny idle wait, 200ms continuous connected/unbusy/no-recalculating hold, non-Shiny error, and open explicit/auto routing for app paths and shared handles; tests use a slow server reactive and verify no early return.
 - Next: coordinator runs full suite on main; em3d handles input-binding change events and tests server-side reactions.
 - Provisional: no change to SPEC's idle hold; the input action must not equate a post-input idle sample with causal completion before Shiny starts reporting busy.
+
+## Review fix: navigation commit (roborev 1269)
+
+For a newly created session using Shiny wait (explicit or auto-app), register the existing `Page.frameNavigated(wait_ = FALSE)` anchor before `Page.navigate`, then await it on a returned `loaderId` before sampling Shiny idle. `Page.navigate` may respond while the original `about:blank` document still reports `readyState == "complete"`; checking load at that point can incorrectly classify the page as non-Shiny. Keep CDP `errorText` handling ahead of the wait, leave `none` and generic `load` untouched, and use `nav_await()` rather than adding ordering state. This does not change init/restore or the Shiny idle hold. Regression coverage will exercise a real new-session app open and document the stale-old-document boundary; without deterministic HTTP gating it may not force the pre-fix race on every run.
+
+## Review-fix handoff
+
+- Landed: new-session Shiny open now waits for the destination `frameNavigated` commit when `Page.navigate` returns a `loaderId`, before checking Shiny idle. Navigation `errorText` still wins; `none`, generic `load`, and wrapped sessions retain their old paths.
+- Verified: pre-fix targeted suite 321 passes; the new test failed before the fix and the targeted `open|wait|app|nav` suite passes 325 assertions afterward. It observes an actual new `about:blank` session at `readyState == "complete"`, then instruments the existing navigation await (without replacing it) to check the destination history entry for explicit and auto app opens. The test verifies the required anchor but does not force a delayed navigation response; it is not a deterministic reproduction of the original timing race.
+- Next: coordinator owns full main suite, review disposition, and issue closure. No change to the em3d causal server-busy seam.
