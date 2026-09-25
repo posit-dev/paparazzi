@@ -406,6 +406,120 @@ test_that("the even crop rounds clamped edges inward, staying inside bounds", {
   expect_lte(crop$x + crop$width, 101.2)
 })
 
+test_that("recorded clicks reach above- and below-fold buttons at DPR 2", {
+  page <- local_record_page()
+  skip_if_no_av()
+  pz_device(page, width = 640, height = 560)
+  pz_js(page, "(() => {
+    document.body.insertAdjacentHTML('beforeend', '<button id=top style=\"position:absolute;left:280px;top:100px;width:120px;height:48px\">Top</button><button id=bottom style=\"position:absolute;left:280px;top:850px;width:120px;height:48px\">Bottom</button>');
+    window.recordClicks = [];
+    document.addEventListener('mousedown', e => recordClicks.push(e.target.id));
+    return true;
+  })()")
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
+  pz_record_start(page, out, fps = 30, hold = c(0, 0), keep_frames = TRUE)
+  targets <- rep(c("bottom", "top"), 4)
+  for (target in targets) {
+    pz_click(page, paste0("#", target))
+  }
+  pz_record_stop(page)
+
+  expect_equal(unlist(pz_js(page, "window.recordClicks")), targets)
+  files <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
+  expect_gt(length(files), 0)
+  for (file in files) {
+    expect_equal(png_dimensions(file), c(1280L, 1120L))
+  }
+  expect_equal(recorded_video_info(out)$width, 1280)
+})
+
+test_that("framed DPR-2 recordings retain viewport frames and click targets", {
+  page <- local_record_page()
+  skip_if_no_av()
+  pz_device(page, width = 640, height = 560)
+  pz_js(page, "(() => {
+    document.body.insertAdjacentHTML('beforeend', '<h1 style=\"display:inline-block\">Tasks</h1><main style=\"width:420px;padding:70px;box-sizing:border-box\"><button id=task-title style=\"width:180px;height:40px\">Title</button><button id=add-task style=\"width:180px;height:40px\">Add</button></main>');
+    window.recordClicks = [];
+    document.addEventListener('mousedown', e => recordClicks.push(e.target.id));
+    return true;
+  })()")
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
+  pz_record_start(page, out, fps = 30, hold = c(0, 0), keep_frames = TRUE,
+                  frame = pz_frame(list("h1", "main"), pad = 16))
+  for (target in rep(c("task-title", "add-task"), 4)) {
+    pz_click(page, paste0("#", target))
+  }
+  pz_record_stop(page)
+
+  expect_equal(unlist(pz_js(page, "window.recordClicks")),
+               rep(c("task-title", "add-task"), 4))
+  files <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
+  expect_gt(length(files), 0)
+  for (file in files) {
+    expect_equal(png_dimensions(file), c(1280L, 1120L))
+  }
+  info <- recorded_video_info(out)
+  expect_lt(info$width, 1280)
+  expect_lt(info$height, 1120)
+})
+
+test_that("recorded viewport clips follow scroll, zoom and resize", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- local_record_page()
+  pz_js(page, "(() => {
+    document.body.insertAdjacentHTML('beforeend', '<div style=\"position:absolute;left:0;top:0;width:3000px;height:3000px;background:rgb(255,0,0)\"></div><div style=\"position:absolute;left:250px;top:450px;width:2000px;height:2000px;background:rgb(0,128,0)\"></div>');
+    return true;
+  })()")
+
+  for (method in c("css", "viewport")) {
+    pz_device(page, width = 640, height = 560, zoom = 2, zoom_method = method)
+    pz_js(page, "window.scrollTo(0, 0)")
+    out <- withr::local_tempfile(fileext = ".mp4")
+    frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+    withr::defer(unlink(frames_dir, recursive = TRUE))
+    pz_record_start(page, out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
+    pz_wait(page, 0.3)
+    before <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
+    expect_gt(length(before), 0)
+    expect_equal(png_dimensions(tail(before, 1)), c(1280L, 1120L))
+    expect_equal(as.numeric(png::readPNG(tail(before, 1))[10, 10, 1:3]), c(1, 0, 0))
+
+    pz_js(page, "window.scrollTo(650, 1100)")
+    expect_gt(pz_js(page, "window.scrollX"), 0)
+    expect_gt(pz_js(page, "window.scrollY"), 0)
+    pz_wait(page, 0.3)
+    scrolled <- setdiff(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE), before)
+    expect_gt(length(scrolled), 0)
+    expect_equal(as.numeric(png::readPNG(tail(scrolled, 1))[10, 10, 1:3]),
+                 c(0, 128 / 255, 0), tolerance = 1 / 255)
+
+    pz_device(page, width = 800, height = 600)
+    pz_poll(
+      function() {
+        resized <- setdiff(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE),
+                           c(before, scrolled))
+        length(resized) > 0 &&
+          identical(png_dimensions(tail(resized, 1)), c(1600L, 1200L))
+      },
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a frame at the resized viewport"
+    )
+    resized <- setdiff(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE),
+                       c(before, scrolled))
+    expect_gt(length(resized), 0)
+    expect_equal(png_dimensions(tail(resized, 1)), c(1600L, 1200L))
+    pz_record_stop(page)
+  }
+})
+
 test_that("keep_frames keeps the captured PNGs", {
   page <- local_record_page()
   skip_if_no_av()
