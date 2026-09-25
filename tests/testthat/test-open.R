@@ -79,6 +79,30 @@ test_that("explicit and auto Shiny waits settle after the slow output", {
   }
 })
 
+test_that("new-session Shiny waits anchor to the destination commit", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  blank <- chromote::ChromoteSession$new()
+  withr::defer(blank$close())
+  # The outgoing document is already complete before the app navigation.
+  expect_identical(blank$Runtime$evaluate("document.readyState")$result$value, "complete")
+
+  app <- local_shiny_app(shiny_idle_fixture())
+  await <- nav_await
+  commits <- character()
+  local_mocked_bindings(nav_await = function(page, p, what, ...) {
+    await(page, p, what, ...)
+    hist <- page$session$Page$getNavigationHistory()
+    commits <<- c(commits, hist$entries[[hist$currentIndex + 1]]$url)
+  })
+  for (wait in c("shiny", "auto")) {
+    page <- pz_open(app, wait = wait, timeout = 5)
+    expect_equal(shiny_idle_state(page)$text, "reactive ready")
+    pz_close(page)
+  }
+  expect_identical(commits, rep(app$url, 2))
+})
+
 test_that("auto routes Shiny app files and shared handles to idle wait", {
   skip_if_no_chrome()
   skip_if_no_shiny()
