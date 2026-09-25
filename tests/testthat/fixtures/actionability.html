@@ -19,12 +19,32 @@
        that point, so pointer actions must refuse it. -->
   <button type="button" id="zero" style="display: block; width: 0; height: 0; padding: 0; border: 0;">zero</button>
 
+  <div style="position: relative; width: 180px; height: 48px; margin: 24px 0;">
+    <button type="button" id="hit-target" style="width: 180px; height: 48px;">target</button>
+    <div id="hit-cover" class="scrim" style="position: absolute; inset: 0; background: rgba(0,0,0,.2);">cover</div>
+  </div>
+  <input id="hit-input" style="width: 180px; height: 48px;">
+  <div id="input-cover" class="scrim" style="position: relative; width: 180px; height: 48px; margin-top: -48px; background: rgba(0,0,0,.2);">cover</div>
+  <div id="shadow-host" style="display: block; width: 180px; height: 48px;"></div>
+  <label id="hit-label" style="display: block; width: 180px; height: 48px;">label</label>
+  <div style="height: 1050px"></div>
+  <button type="button" id="below-hit" style="width: 180px; height: 40px;">below</button>
+  <div id="fixed-cover" class="scrim" style="display: none; position: fixed; left: 0; right: 0; bottom: 0; height: 100px; background: rgba(0,0,0,.2);">fixed</div>
+
   <script>
+    const shadow = document.getElementById("shadow-host").attachShadow({mode: "open"});
+    shadow.innerHTML = '<button type="button" style="width: 180px; height: 48px;">shadow child</button>';
+    window.__pzUncover = function () {
+      setTimeout(function () {
+        document.getElementById("hit-cover").remove();
+      }, 250);
+    };
     // Click sink: one entry per click, {type, id, isTrusted}, matching
     // the __pzLog shape the actions tests read. An action that
     // dispatches at (0, 0) would land on one of these elements or the
     // body and show up here with a null or wrong id.
     window.__pzLog = [];
+    window.__pzPointerLog = [];
     document.addEventListener("click", function (e) {
       window.__pzLog.push({
         type: "click",
@@ -32,6 +52,15 @@
         isTrusted: e.isTrusted
       });
     });
+    for (const type of ["mousedown", "mouseover"]) {
+      document.addEventListener(type, function (e) {
+        window.__pzPointerLog.push({
+          type: type,
+          id: e.target.id || null,
+          isTrusted: e.isTrusted
+        });
+      });
+    }
 
     // The reveal is armed by the test, not at load: a load-time timer
     // could fire while the page is still opening, leaving nothing to
