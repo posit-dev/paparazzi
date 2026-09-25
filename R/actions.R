@@ -761,6 +761,495 @@ select_all_js <- "function() {
 }"
 # pz_set_files()'s `files`: paths to existing local files, normalized
 # to the absolute paths the browser reads.
+#' Select text inside an element
+#'
+#' Auto-waits for a match, then highlights the exact `text` inside it
+#' as if dragging across it: the substring is found among the element's
+#' text nodes (so a match spanning inline tags, e.g. across an `<em>`
+#' and a `<strong>`, is selected as one piece) and becomes the page's
+#' real window selection. Typing afterwards replaces it -- call
+#' [pz_type()] with `target = NULL`, which inserts into whatever has
+#' focus.
+#'
+#' A contenteditable target is focused too (dragging across editable
+#' text focuses it, and that focus is where the typing lands); a static
+#' target is not.
+#'
+#' @inheritParams pz_click
+#' @param text A string to select. Must appear exactly in the element,
+#'   across tags if needed; not found is an error.
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs (a union matching any of them). `NULL` uses the current
+#'   scope; at the root context a target is required.
+#'
+#' @return `ctx`, invisibly.
+#'
+#' @seealso [pz_type()], [pz_set_value()]
+#'
+#' @export
+pz_select_text <- function(ctx, text, ..., target = NULL) {
+  check_context(ctx)
+  check_dots_empty()
+  check_string(text)
+  if (!nzchar(text)) {
+    cli::cli_abort(
+      "{.arg text} can't be empty.",
+      class = "paparazzi_error_input"
+    )
+  }
+
+  found <- action_elements(ctx, target)
+  if (!found$pinned) {
+    withr::defer(release_elements(found$els))
+  }
+  el_scroll_into_view(found$els)
+
+  res <- els_arg_values(found$els, select_text_js, list(list(value = text)))
+  if (!identical(res$status, "ok")) {
+    cli::cli_abort(
+      c(
+        "No {.str {text}} in {found$els$description}.",
+        i = "The match must contain the exact text, across tags if needed."
+      ),
+      class = "paparazzi_error_text"
+    )
+  }
+  invisible(ctx)
+}
+# The exact-substring selection: a TreeWalker collects the target's
+# text nodes, the concatenated data is searched, and one Range spans
+# the start and end (node, offset) pair -- so a match crossing inline
+# tags is a single selection. The Range becomes the window's only
+# selection, the same state a mouse drag across the text produces.
+select_text_js <- "function(text) {
+  const el = this[0];
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  let full = '';
+  let node;
+  while ((node = walker.nextNode())) {
+    nodes.push({ node: node, start: full.length });
+    full += node.data;
+  }
+  const idx = full.indexOf(text);
+  if (idx === -1) {
+    return { status: 'notfound' };
+  }
+  const end = idx + text.length;
+  let startNode = null, startOffset = 0, endNode = null, endOffset = 0;
+  for (const span of nodes) {
+    const stop = span.start + span.node.data.length;
+    if (startNode === null && idx < stop) {
+      startNode = span.node;
+      startOffset = idx - span.start;
+    }
+    if (end <= stop) {
+      endNode = span.node;
+      endOffset = end - span.start;
+      break;
+    }
+  }
+  const range = document.createRange();
+  range.setStart(startNode, startOffset);
+  range.setEnd(endNode, endOffset);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  // A user dragging across editable text focuses it; that focus is
+  // what lets typing replace the selection.
+  if (el.isContentEditable) {
+    el.focus();
+  }
+  return { status: 'ok' };
+}"
+#' Scroll the page or an element into view
+#'
+#' @description
+#' Exactly one of `target`, `by`, and `to`:
+#'
+#' - `target`: auto-waits for a match, then scrolls it into view
+#'   (instantly).
+#' - `by = c(x, y)`: scrolls the current scope's scroll container --
+#'   the scope element or its nearest scrollable ancestor, or the page
+#'   itself at the root context -- by that many pixels.
+#' - `to`: scrolls that same container to an edge or corner from the
+#'   direction vocabulary: `"top"`, `"bottom"`, `"left"`, `"right"`,
+#'   the four corners, or `"center"` (e.g. `"bottom"` scrolls to the
+#'   end; `"top right"` to the top-right corner).
+#'
+#' Scrolling is instant; the smooth, on-camera variant arrives with
+#' the recording task.
+#'
+#' @inheritParams pz_click
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs (a union matching any of them). Scrolled into view.
+#' @param by Offset in pixels, `c(x, y)` (or a single number for both
+#'   axes).
+#' @param to A direction string: the sides, the four corners, or
+#'   `"center"`.
+#'
+#' @return `ctx`, invisibly.
+#'
+#' @seealso [pz_find()], [pz_click()]
+#'
+#' @export
+pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
+  check_context(ctx)
+  check_dots_empty()
+  modes <- c(target = !is.null(target), by = !is.null(by), to = !is.null(to))
+  if (sum(modes) != 1L) {
+    cli::cli_abort(
+      "Supply exactly one of {.arg target}, {.arg by}, or {.arg to}.",
+      class = "paparazzi_error_input"
+    )
+  }
+
+  if (!is.null(target)) {
+    found <- action_elements(ctx, target)
+    if (!found$pinned) {
+      withr::defer(release_elements(found$els))
+    }
+    el_scroll_into_view(found$els)
+    return(invisible(ctx))
+  }
+
+  by <- if (!is.null(by)) check_offset(by, arg = "by") else NULL
+  to <- if (!is.null(to)) parse_direction(to, arg = "to") else NULL
+  scoped <- scope_root(ctx)
+  if (!is.null(scoped)) {
+    arg <- if (!is.null(by)) list(by = as.list(by)) else list(to = as.list(to))
+    els_arg_values(scoped, scroll_apply_js, list(list(value = arg)))
+  } else {
+    action_cdp(
+      ctx,
+      "scrolling",
+      cmd = ctx$page$session$Runtime$evaluate(
+        paste0(
+          "(", scroll_apply_js, ").call([], ",
+          scroll_arg_json(by, to),
+          ")"
+        ),
+        returnByValue = TRUE,
+        timeout_ = ctx$page$default_timeout
+      )
+    )
+  }
+  invisible(ctx)
+}
+# The by/to scroll, applied to the current scope's container: the scope
+# element or its nearest scrollable ancestor (overflow auto|scroll
+# plus actual overflow), falling back to the document. One function
+# serves both rootings: callFunctionOn on the pinned set as `this`, or
+# Runtime$evaluate with `this` an empty array (root -- the walk never
+# starts, so the document wins). Application is instant JS, matching
+# el_scroll_into_view()'s precedent; the recording task swaps in
+# animated mouseWheel events at this seam.
+scroll_apply_js <- "function(arg) {
+  const isScrollable = (e) => {
+    if (e === document.scrollingElement) {
+      return true;
+    }
+    const s = getComputedStyle(e);
+    if (!/(auto|scroll)/.test(s.overflow + ' ' + s.overflowX + ' ' + s.overflowY)) {
+      return false;
+    }
+    return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
+  };
+  let container = null;
+  for (let e = this.length ? this[0] : null; e; e = e.parentElement) {
+    if (isScrollable(e)) {
+      container = e;
+      break;
+    }
+  }
+  if (!container) {
+    container = document.scrollingElement;
+  }
+  if (arg.by) {
+    container.scrollBy({
+      left: arg.by[0],
+      top: arg.by[1],
+      behavior: 'instant'
+    });
+  } else {
+    const has = (t) => arg.to.includes(t);
+    const center = arg.to.length === 1 && arg.to[0] === 'center';
+    if (has('left') || has('right') || center) {
+      const max = container.scrollWidth - container.clientWidth;
+      container.scrollLeft = center ? max / 2 : has('left') ? 0 : max;
+    }
+    if (has('top') || has('bottom') || center) {
+      const max = container.scrollHeight - container.clientHeight;
+      container.scrollTop = center ? max / 2 : has('top') ? 0 : max;
+    }
+  }
+  return [container.scrollTop, container.scrollLeft];
+}"
+# The root-context scroll's call payload, inlined into the evaluated
+# function call: callFunctionOn arguments aren't available to
+# Runtime$evaluate, and the values are already validated (finite
+# numbers by check_offset(), direction tokens by parse_direction()).
+scroll_arg_json <- function(by = NULL, to = NULL) {
+  if (!is.null(by)) {
+    paste0('{"by":[', deparse(by[[1]]), ',', deparse(by[[2]]), ']}')
+  } else {
+    paste0('{"to":[', paste(paste0('"', to, '"'), collapse = ","), ']}')
+  }
+}
+#' Drag an element to another element or by an offset
+#'
+#' @description
+#' Auto-waits for the source (and, with `to`, the destination) to be
+#' actionable, then drags with real mouse input: press at the source's
+#' center, move to the destination, release. When the source is a
+#' real HTML5 drag source (`draggable`, including inherited
+#' `draggable` or the image/`<a href>` defaults), the drag runs through
+#' the browser's drag pipeline instead: the press and move start a
+#' genuine `dragstart` (so `dataTransfer` holds whatever the page put
+#' there), and the drop is delivered to the destination as trusted
+#' `dragenter`/`dragover`/`drop` events with that payload.
+#'
+#' `to` names the element to drop onto; `by = c(x, y)` drops at that
+#' offset in pixels from the source's center. Supply exactly one.
+#'
+#' @inheritParams pz_click
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs (a union matching any of them). The drag source. Unlike most
+#'   actions it is always required.
+#' @param to A CSS selector string, a [pz_loc()] spec, or a list of
+#'   specs (a union matching any of them): the drop target.
+#' @param by Offset in pixels from the source's center, `c(x, y)` (or a
+#'   single number for both axes).
+#'
+#' @return `ctx`, invisibly.
+#'
+#' @seealso [pz_click()], [pz_hover()]
+#'
+#' @export
+pz_drag <- function(ctx, target, to, ..., by = NULL) {
+  check_context(ctx)
+  check_dots_empty()
+  # An explicit to = NULL is absent, not a target: it must not fall
+  # through to the resolver's document.body meaning.
+  to_dest <- !missing(to) && !is.null(to)
+  by_offset <- !is.null(by)
+  if (!to_dest && !by_offset) {
+    cli::cli_abort(
+      "Supply {.arg to} or {.arg by}.",
+      class = "paparazzi_error_input"
+    )
+  }
+  if (to_dest && by_offset) {
+    cli::cli_abort(
+      "Supply either {.arg to} or {.arg by}, not both.",
+      class = "paparazzi_error_input"
+    )
+  }
+
+  found <- action_elements(ctx, target)
+  if (!found$pinned) {
+    withr::defer(release_elements(found$els))
+  }
+
+  if (!to_dest) {
+    from <- el_pointer_point(ctx, found$els)
+    offset <- check_offset(by, arg = "by")
+    to_point <- c(
+      x = from[["x"]] + offset[[1]],
+      y = from[["y"]] + offset[[2]]
+    )
+  } else {
+    dest <- loc_resolve(ctx, to, multiple = "error")
+    withr::defer(release_elements(dest))
+    # Destination point first: the source's scroll can shift the
+    # destination rect, so the drop point is re-read once after (no
+    # scroll, so it can't shift back). Both endpoints must then share
+    # the viewport -- a real drag can't span two screens of a tall
+    # page, and a drop dispatched off-screen lands on nothing.
+    to_point <- el_pointer_point(ctx, dest)
+    from <- el_pointer_point(ctx, found$els)
+    probe <- els_call(dest, dest_point_js)
+    if (length(probe) == 7L && probe[1] == 1 && probe[4] > 0 && probe[5] > 0) {
+      drop <- c(
+        x = probe[2] + probe[4] / 2,
+        y = probe[3] + probe[5] / 2
+      )
+      if (drop[[1]] < 0 || drop[[1]] > probe[6] ||
+        drop[[2]] < 0 || drop[[2]] > probe[7]) {
+        cli::cli_abort(
+          c(
+            "The drag destination is outside the viewport after bringing the source into view.",
+            i = "Both endpoints must be visible at once, like a real drag; scroll or scope so they are."
+          ),
+          class = "paparazzi_error_target"
+        )
+      }
+      to_point <- drop
+    }
+  }
+
+  if (isTRUE(els_call(found$els, draggable_js))) {
+    drag_html5(ctx, found$els, from, to_point)
+  } else {
+    dispatch_mouse_drag(
+      ctx,
+      "dragging",
+      found$els$description,
+      from,
+      to_point
+    )
+  }
+  invisible(ctx)
+}
+# The destination's final point after the source settles: the
+# actionability probe (visible, non-empty box) plus the viewport size,
+# so the drop center can be checked in-view.
+dest_point_js <- "function() {
+  const el = this[0];
+  const r = el.getBoundingClientRect();
+  return [
+    el.checkVisibility({ checkVisibilityCSS: true }) ? 1 : 0,
+    r.x, r.y, r.width, r.height,
+    window.innerWidth, window.innerHeight
+  ];
+}"
+# Is the source a real HTML5 drag source? Own or inherited draggable
+# attribute (the IDL property only reflects the element's own
+# attribute, so inheritance needs the closest() walk; an explicit
+# false opts out; the attribute keywords are case-insensitive), or the
+# img / <a href> element defaults.
+draggable_js <- "function() {
+  const el = this[0];
+  const own = el.getAttribute('draggable');
+  if (own !== null && own !== '') {
+    return own.toLowerCase() === 'true';
+  }
+  const inherited = el.closest('[draggable]');
+  if (inherited) {
+    return inherited.getAttribute('draggable').toLowerCase() === 'true';
+  }
+  return el.tagName === 'IMG' ||
+    (el.tagName === 'A' && el.hasAttribute('href'));
+}"
+# The instant mouse drag: press at the source, one move to the
+# destination, release. The move is the seam where recording swaps in
+# the cursor glide; press and release stay. A dispatch error between
+# press and release leaves the button held, so the release is
+# re-attempted on exit until the normal path completes it.
+dispatch_mouse_drag <- function(ctx, action, target, from, to, call = caller_env()) {
+  pressed <- FALSE
+  withr::defer(if (pressed) {
+    try(
+      dispatch_mouse(
+        ctx, action, target, "mouseReleased", to,
+        button = "left", buttons = 0, clickCount = 1, call = call
+      ),
+      silent = TRUE
+    )
+  })
+  dispatch_mouse(
+    ctx, action, target, "mouseMoved", from,
+    button = "none", buttons = 0, clickCount = 0, call = call
+  )
+  dispatch_mouse(
+    ctx, action, target, "mousePressed", from,
+    button = "left", buttons = 1, clickCount = 1, call = call
+  )
+  pressed <- TRUE
+  dispatch_mouse(
+    ctx, action, target, "mouseMoved", to,
+    button = "left", buttons = 1, clickCount = 0, call = call
+  )
+  dispatch_mouse(
+    ctx, action, target, "mouseReleased", to,
+    button = "left", buttons = 0, clickCount = 1, call = call
+  )
+  pressed <- FALSE
+}
+# HTML5 drag-and-drop, intercept-then-replay. With interception on, the
+# press-and-move starts a REAL drag (the page's dragstart runs), and the
+# browser reports the resulting drag data -- what the page put on its
+# dataTransfer -- as an Input.dragIntercepted event. The event callback
+# must be registered first (the registration auto-enables the Input
+# domain); the event arrives on chromote's child loop, so the wait is the
+# standard pz_poll. Interception goes OFF before the release -- releasing
+# with it still on cancels the drag and the replayed events never land --
+# then the captured data is replayed onto the destination as
+# dragEnter/dragOver/drop: trusted DnD events with the real payload.
+drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
+  session <- ctx$page$session
+  timeout <- ctx$page$default_timeout
+  data <- NULL
+  dereg <- session$Input$dragIntercepted(
+    callback_ = function(msg) data <<- msg$data
+  )
+  withr::defer(try(dereg(), silent = TRUE))
+
+  settled <- FALSE
+  # Any exit before the release leaves the button held and interception
+  # on -- a CDP error mid-sequence, or a dragstart the page cancels (the
+  # interception event never fires, so the poll times out). Both are
+  # undone here; the latch drops once the normal path has released.
+  withr::defer(if (!settled) {
+    try(
+      session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout),
+      silent = TRUE
+    )
+    try(
+      dispatch_mouse(
+        ctx, "dragging", els$description, "mouseReleased", to,
+        button = "left", buttons = 0, clickCount = 1, call = call
+      ),
+      silent = TRUE
+    )
+  })
+
+  action_cdp(
+    ctx, "dragging", els$description, call = call,
+    cmd = session$Input$setInterceptDrags(enabled = TRUE, timeout_ = timeout)
+  )
+  dispatch_mouse(
+    ctx, "dragging", els$description, "mouseMoved", from,
+    button = "none", buttons = 0, clickCount = 0, call = call
+  )
+  dispatch_mouse(
+    ctx, "dragging", els$description, "mousePressed", from,
+    button = "left", buttons = 1, clickCount = 1, call = call
+  )
+  dispatch_mouse(
+    ctx, "dragging", els$description, "mouseMoved", to,
+    button = "left", buttons = 1, clickCount = 0, call = call
+  )
+  pz_poll(
+    fn = function() !is.null(data),
+    timeout = timeout,
+    loop = ctx$page$child_loop,
+    what = paste0("the drag from ", els$description, " to start"),
+    call = call
+  )
+
+  action_cdp(
+    ctx, "dragging", els$description, call = call,
+    cmd = session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout)
+  )
+  dispatch_mouse(
+    ctx, "dragging", els$description, "mouseReleased", to,
+    button = "left", buttons = 0, clickCount = 1, call = call
+  )
+  settled <- TRUE
+  for (type in c("dragEnter", "dragOver", "drop")) {
+    action_cdp(
+      ctx, "dragging", els$description, call = call,
+      cmd = session$Input$dispatchDragEvent(
+        type = type,
+        x = to[["x"]],
+        y = to[["y"]],
+        data = data,
+        timeout_ = timeout
+      )
+    )
+  }
+}
 check_file_paths <- function(files, call = caller_env()) {
   check_character(files, call = call)
   missing <- files[!file.exists(files)]

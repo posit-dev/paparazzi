@@ -698,3 +698,228 @@ test_that("pz_set_files rejects non-file inputs and validates paths", {
   expect_error(pz_set_files(page, NA, target = "#file"), "NA")
   expect_error(pz_set_files(page, f, "bogus", target = "#file"), "empty")
 })
+
+# --- Advanced interactions (pz_select_text, pz_scroll, pz_drag) on the
+# advanced.html fixture; helpers in helper-advanced.R. ---
+
+test_that("pz_select_text selects an exact substring across inline tags", {
+  page <- local_advanced_page()
+  page <- expect_invisible(
+    pz_select_text(page, "galapagos penguins", target = "#rich")
+  )
+  # The window selection is the real thing: the match starts inside the
+  # <em> and ends inside the <strong>, and reads back as one string.
+  expect_equal(pz_js(page, "window.getSelection().toString()"), "galapagos penguins")
+  expect_equal(
+    pz_js(page, "window.getSelection().anchorNode.parentElement.tagName"),
+    "EM"
+  )
+  expect_equal(
+    pz_js(page, "window.getSelection().extentNode.parentElement.tagName"),
+    "STRONG"
+  )
+})
+
+test_that("pz_select_text lets typing replace the selection", {
+  page <- local_advanced_page()
+  pz_select_text(page, "otters", target = "#editor")
+  pz_type(page, "penguins")
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "penguins are playful"
+  )
+})
+
+test_that("pz_select_text errors on absent text, emptiness, and multiple matches", {
+  page <- local_advanced_page()
+  expect_error(
+    pz_select_text(page, "no such text", target = "#rich"),
+    class = "paparazzi_error_text"
+  )
+  expect_error(
+    pz_select_text(page, ""),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_select_text(page, "duplicate", target = ".dup-select"),
+    class = "paparazzi_error_multiple"
+  )
+  expect_error(
+    pz_select_text(page, "otters"),
+    class = "paparazzi_error_target"
+  )
+})
+
+test_that("pz_scroll scrolls the page by, to a direction, and a target into view", {
+  page <- local_advanced_page()
+
+  # by: a pixel delta against the root container, the document.
+  page <- expect_invisible(pz_scroll(page, by = c(0, 300)))
+  expect_equal(pz_js(page, "window.scrollY"), 300)
+
+  # to: the direction vocabulary, straight to the edge.
+  pz_scroll(page, to = "bottom")
+  expect_true(pz_js(page,
+    "window.scrollY === document.documentElement.scrollHeight - window.innerHeight"
+  ))
+  pz_scroll(page, to = "top")
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+
+  # target: auto-scrolls a below-fold element into view.
+  pz_scroll(page, target = "#tall-bottom")
+  y <- pz_js(page, "document.getElementById('tall-bottom').getBoundingClientRect().y")
+  expect_true(y >= 0 && y < pz_js(page, "window.innerHeight"))
+})
+
+test_that("pz_scroll by and to act on the scope's scroll container", {
+  page <- local_advanced_page()
+
+  # The scope element itself is scrollable: it is the container.
+  ctx <- pz_find(page, "#scroller")
+  ctx <- expect_invisible(pz_scroll(ctx, by = c(0, 120)))
+  expect_equal(pz_js(page, "document.getElementById('scroller').scrollTop"), 120)
+  pz_scroll(ctx, to = "bottom")
+  expect_true(pz_js(page, paste(
+    "document.getElementById('scroller').scrollTop ===",
+    "document.getElementById('scroller').scrollHeight -",
+    "document.getElementById('scroller').clientHeight"
+  )))
+
+  # A scope inside a scrollable container resolves up to it, and the
+  # page never moves.
+  ctx <- pz_find(page, "#deep-item")
+  pz_scroll(ctx, to = "top")
+  pz_scroll(ctx, by = c(0, 40))
+  expect_equal(pz_js(page, "document.getElementById('scroller').scrollTop"), 40)
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+})
+
+test_that("pz_scroll validates its modes", {
+  page <- local_advanced_page()
+  expect_error(pz_scroll(page), class = "paparazzi_error_input")
+  expect_error(
+    pz_scroll(page, target = "#rich", by = c(0, 100)),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_scroll(page, to = "bottom", by = c(0, 100)),
+    class = "paparazzi_error_input"
+  )
+  # by and to reuse the shared offset and direction checkers.
+  expect_error(pz_scroll(page, by = "lots"), class = "paparazzi_error_input")
+  expect_error(pz_scroll(page, to = "sideways"), class = "paparazzi_error_input")
+})
+
+test_that("pz_drag moves a mouse-dragged element onto the destination", {
+  page <- local_advanced_page()
+  page <- expect_invisible(pz_drag(page, "#dragbox", "#dropzone"))
+
+  # The fixture's box follows the pointer while held, so it ends
+  # centered where the drag dropped it.
+  centers <- function(sel) {
+    pz_js(page, paste0(
+      "(() => { const r = document.querySelector('", sel,
+      "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+    ))
+  }
+  box <- centers("#dragbox")
+  zone <- centers("#dropzone")
+  expect_lt(abs(box[[1]] - zone[[1]]), 2)
+  expect_lt(abs(box[[2]] - zone[[2]]), 2)
+
+  # Real, trusted pointer input in order: down on the box, a move, up.
+  log <- adv_log(page)
+  expect_true(all(adv_log_types(log) %in%
+    c("mousemove", "mousedown", "mouseup")))
+  box_types <- adv_log_types(log, "dragbox")
+  expect_true("mousedown" %in% box_types)
+  expect_lt(
+    match("mousedown", box_types),
+    match("mouseup", box_types)
+  )
+  moused <- log[vapply(log, function(e) {
+    identical(e$type, "mousedown") && identical(e$id, "dragbox")
+  }, logical(1))][[1]]
+  expect_true(moused$isTrusted)
+  # A non-draggable source never starts an HTML5 drag.
+  expect_false("dragstart" %in% adv_log_types(log))
+})
+
+test_that("pz_drag drops at a by offset from the source", {
+  page <- local_advanced_page()
+  before <- pz_js(page, paste(
+    "(() => { const r = document.getElementById('dragbox').getBoundingClientRect();",
+    "return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+  ))
+  pz_drag(page, "#dragbox", by = c(80, 0))
+  after <- pz_js(page, paste(
+    "(() => { const r = document.getElementById('dragbox').getBoundingClientRect();",
+    "return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+  ))
+  expect_lt(abs(after[[1]] - (before[[1]] + 80)), 2)
+  expect_lt(abs(after[[2]] - before[[2]]), 2)
+})
+
+test_that("pz_drag routes an HTML5 source through the drag pipeline", {
+  page <- local_advanced_page()
+  pz_drag(page, "#draggable", "#dropzone")
+
+  # The page's own dragstart ran (trusted) and its payload survived to
+  # the drop, which the dropzone records.
+  expect_equal(
+    pz_js(page, "document.getElementById('dropzone').textContent"),
+    "got:payload-123"
+  )
+  log <- adv_log(page)
+  types <- adv_log_types(log)
+  expect_true("dragstart" %in% types)
+  expect_true("dragend" %in% types)
+  expect_true("drop" %in% types)
+  starts <- log[vapply(log, function(e) {
+    identical(e$type, "dragstart") && identical(e$id, "draggable")
+  }, logical(1))][[1]]
+  expect_true(starts$isTrusted)
+  drops <- log[vapply(log, function(e) {
+    identical(e$type, "drop") && identical(e$id, "dropzone")
+  }, logical(1))][[1]]
+  expect_true(drops$isTrusted)
+})
+
+test_that("pz_drag validates its input and errors on multiple matches", {
+  page <- local_advanced_page()
+  expect_error(pz_drag(page, "#dragbox"), class = "paparazzi_error_input")
+  expect_error(
+    pz_drag(page, "#dragbox", "#dropzone", by = c(10, 10)),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_drag(page, ".dup-select", "#dropzone"),
+    class = "paparazzi_error_multiple"
+  )
+  expect_error(
+    pz_drag(page, "#dragbox", ".dup-select"),
+    class = "paparazzi_error_multiple"
+  )
+})
+
+test_that("pz_drag review fixes: NULL to, uppercase draggable, viewport", {
+  page <- local_advanced_page()
+  # An explicit to = NULL is absent, not document.body.
+  expect_error(
+    pz_drag(page, "#dragbox", NULL),
+    class = "paparazzi_error_input"
+  )
+  # draggable attribute keywords are case-insensitive: an uppercase
+  # source still routes through the HTML5 pipeline.
+  pz_drag(page, "#draggable-uc", "#dropzone")
+  expect_equal(
+    pz_js(page, "document.getElementById('dropzone').textContent"),
+    "got:payload-uc"
+  )
+  # Bringing a far source into view pushes the destination out of the
+  # viewport; the drag errors instead of dropping on empty space.
+  expect_error(
+    pz_drag(page, "#tall-bottom", "#editor"),
+    class = "paparazzi_error_target"
+  )
+})
