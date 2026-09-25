@@ -841,6 +841,21 @@ test_that("pz_scroll validates its modes", {
   expect_equal(pz_js(page, "window.scrollY"), 0)
 })
 
+test_that("pz_scroll by takes an integer offset and surfaces page errors", {
+  page <- local_advanced_page()
+  # A scalar integer offset is a JSON number, not the invalid literal
+  # "100L" the old serialization produced.
+  pz_scroll(page, by = 100L)
+  expect_equal(pz_js(page, "window.scrollY"), 100)
+  # A page-side evaluation error surfaces instead of the scroll
+  # silently not happening.
+  pz_js(
+    page,
+    "document.documentElement.scrollBy = function () { throw new Error('no scrolling'); };"
+  )
+  expect_error(pz_scroll(page, by = c(0, 100)), class = "paparazzi_error_js")
+})
+
 test_that("pz_drag moves a mouse-dragged element onto the destination", {
   page <- local_advanced_page()
   page <- expect_invisible(pz_drag(page, "#dragbox", "#dropzone"))

@@ -1011,10 +1011,16 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
     return(invisible(ctx))
   }
   if (!is.null(scoped)) {
-    arg <- if (!is.null(by)) list(by = as.list(by)) else list(to = as.list(to))
+    # Offsets serialize as JSON numbers: a scalar integer offset
+    # keeps its integer type through check_offset()'s length-1 rep().
+    arg <- if (!is.null(by)) {
+      list(by = as.list(as.double(by)))
+    } else {
+      list(to = as.list(to))
+    }
     els_arg_values(scoped, scroll_apply_js, list(list(value = arg)))
   } else {
-    action_cdp(
+    res <- action_cdp(
       ctx,
       "scrolling",
       cmd = ctx$page$session$Runtime$evaluate(
@@ -1027,6 +1033,16 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
         timeout_ = ctx$page$default_timeout
       )
     )
+    # The evaluate command itself succeeds while the expression
+    # throws; an unraised exceptionDetails was a silently unmoved
+    # scroll (the same mapping els_arg_values() uses).
+    if (!is.null(res$exceptionDetails)) {
+      err <- res$exceptionDetails
+      cli::cli_abort(
+        "JavaScript error scrolling: {err$exception$description %||% err$text %||% 'unknown error'}.",
+        class = "paparazzi_error_js"
+      )
+    }
   }
   stage_action_pause(ctx)
   invisible(ctx)
@@ -1086,6 +1102,12 @@ scroll_apply_js <- "function(arg) {
 # numbers by check_offset(), direction tokens by parse_direction()).
 scroll_arg_json <- function(by = NULL, to = NULL) {
   if (!is.null(by)) {
+    # as.double() first: a scalar integer offset (by = 100L) survives
+    # check_offset() as an integer, and deparse(100L) is "100L" -- not
+    # a JavaScript number. deparse() of a double is a valid JSON
+    # number for every finite value (the only ones check_offset()
+    # allows through).
+    by <- as.double(by)
     paste0('{"by":[', deparse(by[[1]]), ',', deparse(by[[2]]), ']}')
   } else {
     paste0('{"to":[', paste(paste0('"', to, '"'), collapse = ","), ']}')
