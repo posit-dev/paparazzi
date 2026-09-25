@@ -35,6 +35,7 @@ pz_click <- function(ctx, target = NULL, ...) {
   }
   point <- el_pointer_point(ctx, found$els)
   dispatch_click(ctx, "clicking", found$els$description, point)
+  stage_action_pause(ctx)
   invisible(ctx)
 }
 #' Hover the pointer over an element
@@ -70,6 +71,7 @@ pz_hover <- function(ctx, target = NULL, ...) {
     buttons = 0,
     clickCount = 0
   )
+  stage_action_pause(ctx)
   invisible(ctx)
 }
 #' Type text into an element
@@ -123,6 +125,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
   # pointer state stays real.
   dispatch_click(ctx, "typing into", found$els$description, point)
   insert_text(ctx, found$els$description, text)
+  stage_action_pause(ctx)
   invisible(ctx)
 }
 #' Press key combinations
@@ -314,6 +317,9 @@ el_pointer_point <- function(ctx, els, call = caller_env()) {
     what = paste0(els$description, " to become visible with a non-empty box"),
     call = call
   )
+  # The staging seam: with a visible cursor this glides (recording) or
+  # jumps (stills) the cursor to the click point; otherwise a no-op.
+  stage_move_cursor(ctx, point)
   point
 }
 # Every CDP command from the actions runs with the page's default
@@ -375,7 +381,10 @@ dispatch_mouse <- function(
 # The real pointer sequence behind pz_click() and pz_type()'s
 # focus-via-click: a move to the point first so pointer state stays
 # real (:hover, the cursor), then a left-button press and release at the
-# same point.
+# same point. While recording with a visible cursor, the staging adds a
+# short pause after the glide, plays the press scale-down around
+# pressed/released, and holds briefly after; all of it is skipped
+# otherwise (the SPEC matrix).
 dispatch_click <- function(ctx, action, target, point, call = caller_env()) {
   dispatch_mouse(
     ctx,
@@ -388,6 +397,12 @@ dispatch_click <- function(ctx, action, target, point, call = caller_env()) {
     clickCount = 0,
     call = call
   )
+  staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
+  if (staged) {
+    pump_loop(ctx$page$child_loop, 0.15)
+    cursor_press(ctx, TRUE)
+    pump_loop(ctx$page$child_loop, 0.08)
+  }
   dispatch_mouse(
     ctx,
     action,
@@ -410,6 +425,10 @@ dispatch_click <- function(ctx, action, target, point, call = caller_env()) {
     clickCount = 1,
     call = call
   )
+  if (staged) {
+    cursor_press(ctx, FALSE)
+    pump_loop(ctx$page$child_loop, 0.2)
+  }
 }
 insert_text <- function(ctx, target, text, call = caller_env()) {
   action_cdp(

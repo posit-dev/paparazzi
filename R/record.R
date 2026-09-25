@@ -193,6 +193,9 @@ pz_record_stop <- function(ctx) {
     rec$crop <- record_crop_box(ctx, rec$frame)
   }
   record_encode(rec)
+  # The staging hook: an auto cursor under cursor = NULL belonged to the
+  # recording, so it leaves the page now that stills would catch it.
+  stage_record_stopped(ctx)
   invisible(ctx)
 }
 #' Pause and resume a recording
