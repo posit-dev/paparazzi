@@ -1,6 +1,6 @@
 # Late recorder callback after capture timeout
 
-Signed off:
+Signed off: orchestrator. Removing `in_flight` is approved: the pending environment is the single occupancy state and the callback identity.
 
 ## Problem and mechanism
 
