@@ -265,10 +265,10 @@ pz_wait_for_stable <- function(
 #' submitted form, a JS redirect. A navigation completed by the preceding
 #' user action is detected even if it finishes before this wait starts.
 #' Paparazzi never detects navigations on its own, so a wait marks
-#' exactly where one is expected. Call it immediately after the action: it waits for the document the action
-#' navigated to to finish loading and then hold still for a moment, so a
-#' navigation that is in flight when the wait starts is waited out, not
-#' raced. A navigation that begins while the wait is already running is
+#' exactly where one is expected. Call it immediately after the action:
+#' it waits for the document the action navigated to to finish loading
+#' and then hold still for a moment, so a navigation that is in flight
+#' when the wait starts is waited out, not raced. A navigation that begins while the wait is already running is
 #' caught too; one scheduled beyond the timeout can't be -- block on
 #' its trigger with [pz_wait_for_js()] first.
 #'
@@ -318,8 +318,8 @@ pz_wait_for_navigation <- function(
   }
   # The load and settle phases each get the full timeout, like
   # wait_for_stable's resolve and stability windows. The snapshot
-  # precedes them both: a complete, settled page satisfies the settle check with nothing navigating,
-  # so the wait must hold the identity of the document it started on
+  # precedes them both: a complete, settled page satisfies the settle
+  # check with nothing navigating, so the wait must hold the identity of the document it started on
   # and only pass on a different document (a new timeOrigin), on a
   # document created after the last action began, or on one it caught
   # incomplete (the in-flight navigation this wait waits out).
@@ -372,7 +372,9 @@ nav_snapshot <- function(ctx, timeout) {
 # occurred: a changed wait-start timeOrigin, a wait-start snapshot that
 # caught the document incomplete, or a document newer than the last
 # action's start. A settled page with no such evidence times out.
-nav_settle <- function(ctx, settle, timeout, snapshot, action_start = NULL, call = caller_env()) {
+nav_settle <- function(
+  ctx, settle, timeout, snapshot, action_start = NULL, call = caller_env()
+) {
   read <- function() {
     tryCatch(
       pz_js(

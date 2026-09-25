@@ -33,10 +33,10 @@ The explicit wait after an action that navigates -- a clicked link, a
 submitted form, a JS redirect. A navigation completed by the preceding
 user action is detected even if it finishes before this wait starts.
 Paparazzi never detects navigations on its own, so a wait marks
-exactly where one is expected. Call it immediately after the action: it waits for the document the action
-navigated to to finish loading and then hold still for a moment, so a
-navigation that is in flight when the wait starts is waited out, not
-raced. A navigation that begins while the wait is already running is
+exactly where one is expected. Call it immediately after the action:
+it waits for the document the action navigated to to finish loading
+and then hold still for a moment, so a navigation that is in flight
+when the wait starts is waited out, not raced. A navigation that begins while the wait is already running is
 caught too; one scheduled beyond the timeout can't be -- block on
 its trigger with \code{\link[=pz_wait_for_js]{pz_wait_for_js()}} first.
 }
