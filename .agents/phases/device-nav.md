@@ -67,8 +67,9 @@ Builds on the page core
   left pending). **Superseded by h5qs:** `"shiny"` now follows load
   with Shiny idle; `"auto"` does so for an app-backed page on its app
   origin after load settles. Back/forward take no `wait` argument (per
-  SPEC) but now apply the same auto rule after the load wait -- at a history boundary no
-  navigation is triggered at all, so nothing waits. Back/forward use
+  SPEC) and stay load-only (a bfcache-restored Shiny page may not
+  reconnect) -- at a history boundary no navigation is triggered at
+  all, so nothing waits. Back/forward use
   `Page$getNavigationHistory()` + `Page$navigateToHistoryEntry()`;
   out-of-range is a no-op.
 - **History arithmetic.** CDP's `currentIndex` is 0-based, R's
