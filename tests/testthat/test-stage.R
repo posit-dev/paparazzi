@@ -20,6 +20,14 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_true(stage$cursor)
   expect_equal(stage$cursor_speed, 800)
 
+  # An explicit NULL removes the override (back to the default);
+  # only omitted arguments leave a setting alone.
+  page |> pz_stage(
+    cursor = NULL, cursor_speed = NULL, enter = NULL,
+    typing = NULL, typing_speed = NULL, pause = NULL
+  )
+  expect_identical(page_stage(page), STAGE_DEFAULTS)
+
   expect_error(pz_stage(page, cursor = "yes"), class = "rlang_error")
   expect_error(pz_stage(page, cursor_speed = 0), class = "rlang_error")
   expect_error(pz_stage(page, enter = "up"), class = "paparazzi_error_input")
@@ -141,6 +149,25 @@ test_that("a target visible in a below-the-fold container is wheeled into view",
   expect_equal(pz_js(page, "document.getElementById('deep').scrollTop"), 0)
   expect_true(pz_js(page, "window.scrollY") > 0)
   expect_true(pz_js(page, "window.__log.wheels") > 0)
+})
+
+test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(cursor = FALSE)
+  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |> pz_click("#btn")
+  # cursor = FALSE never draws, even while recording.
+  expect_null(cursor_overlay_state(page))
+
+  page |> pz_stage(cursor = NULL)
+  page |> pz_click("#btn")
+  # The NULL restored the default: auto draws while recording.
+  st <- cursor_overlay_state(page)
+  expect_equal(st[[1]], 1)
+  expect_equal(st[2:3], c(660, 322))
+  page |> pz_record_stop()
+  expect_equal(pz_js(page, "window.__log.clicks"), 2)
 })
 
 test_that("a nested scroller over the viewport center never eats root wheels", {

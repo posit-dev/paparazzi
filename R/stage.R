@@ -12,7 +12,10 @@
 #'
 #' Sets the staging options that animate pointer actions, typing, and
 #' scrolling while the page is recording. Only supplied arguments
-#' change; settings live on the page and persist across recordings, so
+#' change -- an omitted argument leaves its setting alone, while an
+#' explicit `NULL` restores the default for that setting (so
+#' `pz_stage(cursor = FALSE)` can be undone with `pz_stage(cursor =
+#' NULL)`). Settings live on the page and persist across recordings, so
 #' [pz_record_start()] never repeats them. Without a recording, staging
 #' is skipped and the chain runs straight to its final state -- except
 #' `cursor = TRUE`, which shows a static cursor in screenshots too.
@@ -21,19 +24,23 @@
 #' @param ... Checked empty; reserved for future use.
 #' @param cursor Cursor visibility: `NULL` (the default) shows the
 #'   cursor only while recording, `TRUE` shows it always (stills too),
-#'   `FALSE` never shows it.
+#'   `FALSE` never shows it. Supply `NULL` to restore the default.
 #' @param cursor_speed Glide speed in pixels per second. Glide duration
 #'   scales with distance: roughly `clamp(0.25 + distance /
-#'   cursor_speed, 0.3, 1.2)` seconds.
+#'   cursor_speed, 0.3, 1.2)` seconds. Supply `NULL` to restore the
+#'   default.
 #' @param enter Where a cursor that has never been shown first appears:
 #'   `NULL` (the default) fades in on the target; a side (`"top"`,
 #'   `"bottom"`, `"left"`, `"right"`) starts off-frame on that side and
-#'   glides in.
+#'   glides in. Supply `NULL` to restore the default.
 #' @param typing Typing style while recording: `"natural"` (the
 #'   default) inserts one character at a time with randomized delays;
-#'   `"instant"` inserts the whole string at once.
+#'   `"instant"` inserts the whole string at once. Supply `NULL` to
+#'   restore the default.
 #' @param typing_speed Natural typing speed in characters per second.
+#'   Supply `NULL` to restore the default.
 #' @param pause Seconds to hold after each action while recording.
+#'   Supply `NULL` to restore the default.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -43,39 +50,65 @@
 pz_stage <- function(
   ctx,
   ...,
-  cursor = NULL,
-  cursor_speed = NULL,
-  enter = NULL,
-  typing = NULL,
-  typing_speed = NULL,
-  pause = NULL
+  cursor,
+  cursor_speed,
+  enter,
+  typing,
+  typing_speed,
+  pause
 ) {
   check_context(ctx)
   check_dots_empty()
   page <- ctx$page
   overrides <- page$.__enclos_env__$private$staging_$stage %||% list()
 
-  if (!is.null(cursor)) {
-    check_bool(cursor)
-    overrides$cursor <- cursor
+  # missing() is the only way to leave a setting alone; an explicit
+  # NULL removes the override (back to the default), a value sets it.
+  if (!missing(cursor)) {
+    if (is.null(cursor)) {
+      overrides[["cursor"]] <- NULL
+    } else {
+      check_bool(cursor)
+      overrides$cursor <- cursor
+    }
   }
-  if (!is.null(cursor_speed)) {
-    check_number_decimal(cursor_speed, min = 1)
-    overrides$cursor_speed <- cursor_speed
+  if (!missing(cursor_speed)) {
+    if (is.null(cursor_speed)) {
+      overrides[["cursor_speed"]] <- NULL
+    } else {
+      check_number_decimal(cursor_speed, min = 1)
+      overrides$cursor_speed <- cursor_speed
+    }
   }
-  if (!is.null(enter)) {
-    overrides$enter <- parse_direction(enter, valid = STAGE_SIDES, arg = "enter")
+  if (!missing(enter)) {
+    if (is.null(enter)) {
+      overrides[["enter"]] <- NULL
+    } else {
+      overrides$enter <- parse_direction(enter, valid = STAGE_SIDES, arg = "enter")
+    }
   }
-  if (!is.null(typing)) {
-    overrides$typing <- arg_match(typing, c("natural", "instant"))
+  if (!missing(typing)) {
+    if (is.null(typing)) {
+      overrides[["typing"]] <- NULL
+    } else {
+      overrides$typing <- arg_match(typing, c("natural", "instant"))
+    }
   }
-  if (!is.null(typing_speed)) {
-    check_number_decimal(typing_speed, min = 0.1)
-    overrides$typing_speed <- typing_speed
+  if (!missing(typing_speed)) {
+    if (is.null(typing_speed)) {
+      overrides[["typing_speed"]] <- NULL
+    } else {
+      check_number_decimal(typing_speed, min = 0.1)
+      overrides$typing_speed <- typing_speed
+    }
   }
-  if (!is.null(pause)) {
-    check_number_decimal(pause, min = 0)
-    overrides$pause <- pause
+  if (!missing(pause)) {
+    if (is.null(pause)) {
+      overrides[["pause"]] <- NULL
+    } else {
+      check_number_decimal(pause, min = 0)
+      overrides$pause <- pause
+    }
   }
   page_set_stage(page, overrides)
 
