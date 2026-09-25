@@ -261,6 +261,23 @@ All seven findings accepted; one commit per finding.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-25 (review fix): landed all seven roborev 1263 findings, one
+  commit each (739bfa6 planned them first): the into-view probe walks
+  every scrollable ancestor and wheels outermost-first with a
+  position-based stall check (f174d57), both wheel paths hit-test the
+  dispatch point and fall back to instant BEFORE any wheel fires
+  (a15c410), pz_stage() treats supplied NULL as override removal
+  (f5070db), a scoped scroll's scope goes through the staged into-view
+  (986b3ef), the stage pause now holds after pz_press/select_text/
+  drag (bc5fa58), the demo frames assert the press, the growing text,
+  and intermediate scroll positions (b10adbc), and pz_cursor_hide()'s
+  stickiness is documented as designed (faef416, roxygen + man regen).
+  Full suite green at faef416: 1627 PASS / 0 FAIL / 0 SKIP (baseline
+  ~1600). Next: review/merge decision stays with garrick; roborev
+  1263 is ready to close once the fixes are reviewed; drag/select_text
+  intermediate-move staging and ripple/cursor styles stay the named
+  follow-ups. Provisional: the wait.R man pages that had drifted on
+  main were deliberately left out of the regen.
 - 2026-09-25 (finish): landed the keystone (pz_stage + overlay cursor
   + staged pointer actions, 46850d8), natural typing and
   wheel scrolling (73bc194), the test suite with the frame-content
