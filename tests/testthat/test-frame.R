@@ -8,6 +8,7 @@
 #   #inner-tr   (520, 220)   40x40    rgb(200, 200, 30)
 #   #low        (50, 1500)  100x60    rgb(200, 120, 30)
 #   #deep       (100, 1940)  40x40    rgb(30, 200, 200)
+#   #fractional (620.4, 262.6) 200.2x88.8 rgb(60, 60, 60)
 # PNG pixel dimensions are round(css_size * dpr); dpr is read live.
 
 test_that("pz_frame returns a normalized spec", {
@@ -185,6 +186,37 @@ test_that("frame_round rounds to whole or even pixels", {
   )
 })
 
+test_that("frame_round rounds constrained edges inward", {
+  # Edges a clamp fixed in place must not escape the CSS bounds: a
+  # bound beginning at 200.4 must not become a clip at 200.
+  expect_identical(
+    frame_round(
+      c(200.4, 100.6, 300.5, 400.2),
+      pinned = c(TRUE, TRUE, TRUE, TRUE)
+    ),
+    c(201, 101, 300, 400)
+  )
+  # Mixed: pinned left/top round inward, free right/bottom stay
+  # nearest.
+  expect_identical(
+    frame_round(
+      c(200.4, 100.6, 310.6, 412.4),
+      pinned = c(TRUE, TRUE, FALSE, FALSE)
+    ),
+    c(201, 101, 311, 412)
+  )
+  # Even mode keeps the same intent: inward for pinned, nearest even
+  # otherwise.
+  expect_identical(
+    frame_round(
+      c(200.4, 101.4, 300.6, 402.2),
+      pinned = c(TRUE, TRUE, TRUE, TRUE),
+      even = TRUE
+    ),
+    c(202, 102, 300, 402)
+  )
+})
+
 test_that("a pad-only frame pads the capture on all sides", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
@@ -315,6 +347,25 @@ test_that("bounds clamp the frame to their box", {
   expect_frame_pixel(page, path, 40, 40, dpr, c(200, 200, 30))
   # Below the cut pad: #bound's background, not the page background.
   expect_frame_pixel(page, path, 100, 5, dpr, c(240, 240, 240))
+})
+
+test_that("a fractional bound rounds the clip inward on every edge", {
+  page <- local_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- frame_dpr(page)
+
+  # #fractional begins at (620.4, 262.6); with pad 120 around #wide,
+  # the bound clamps all four edges of the frame, and inward rounding
+  # keeps every pixel inside it: left 620.4 becomes 621, not 620.
+  pz_screenshot(
+    page,
+    path,
+    target = "#wide",
+    frame = pz_frame(pad = 120, bounds = "#fractional")
+  )
+  expect_identical(png_dimensions(path), as.integer(round(c(199, 88) * dpr)))
+  expect_frame_pixel(page, path, 0, 0, dpr, c(60, 60, 60))
+  expect_frame_pixel(page, path, 198, 87, dpr, c(60, 60, 60))
 })
 
 test_that("the frame clamps to the page at the top-left corner", {

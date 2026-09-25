@@ -50,7 +50,10 @@ mechanism-level choices and session handoffs for framing only.
      capturable, and beyond-document growth would produce unrendered
      pixels. This is the SPEC's "clamp to the viewport" step.
   5. Round edges to whole pixels (stills); the recording task will pass
-     an even-pixel rounding through the same step.
+     an even-pixel rounding through the same step. Edges a clamp fixed
+     in place round inward (left/top up, right/bottom down) so the
+     pixel clip stays within the CSS bounds; free edges round to the
+     nearest pixel (or nearest even pixel for video).
   Steps 2-4 are pure geometry (`frame_apply()`), unit-testable without
   a page; `frame_clip()` owns the reads (one JS evaluation for
   scroll/viewport/document size) and the final

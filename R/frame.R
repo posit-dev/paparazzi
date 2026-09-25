@@ -380,13 +380,25 @@ frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
     -geometry$scroll_y + geometry$document_height
   )
   box <- frame_apply(spec, box, clamps, call = call)
+  # Which edges a clamp fixed in place: rounding those outward would
+  # put the pixel clip outside the CSS bounds (a bound beginning at
+  # 200.4 must not become a clip at 200), so frame_round() rounds them
+  # inward. The comparisons are exact: a binding clamp assigned the
+  # edge its value, so they are bit-equal; coinciding values are
+  # treated as pinned, which errs on the safe side.
+  pinned <- c(
+    any(vapply(clamps, function(clamp) clamp[1] >= box[1], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[2] >= box[2], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[3] <= box[3], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[4] <= box[4], logical(1)))
+  )
   # The pipeline ran viewport-relative; CDP clip coordinates are
   # document-relative.
   box <- box + c(
     geometry$scroll_x, geometry$scroll_y,
     geometry$scroll_x, geometry$scroll_y
   )
-  box <- frame_round(box, even = even)
+  box <- frame_round(box, pinned = pinned, even = even)
   # Horizontal only: an RTL frame can resolve into the document's
   # negative-x region, and CDP clip origins must be non-negative.
   # Shift the origin to 0 preserving the size -- the captured region
@@ -555,10 +567,26 @@ frame_grow_ratio <- function(ratio, box, anchor) {
 }
 # Round box edges: whole pixels for stills, even pixels for video
 # (the recorder's path), so width and height never split a pixel.
-frame_round <- function(box, even = FALSE) {
-  if (even) {
-    2 * round(box / 2)
-  } else {
-    round(box)
+# Edges a clamp fixed in place ("pinned") round INWARD -- left/top
+# up, right/bottom down -- so the final pixel clip stays within the
+# CSS bounds; free edges round to the nearest pixel.
+frame_round <- function(
+  box,
+  pinned = c(FALSE, FALSE, FALSE, FALSE),
+  even = FALSE
+) {
+  round_edge <- function(value, pin, up) {
+    unit <- if (even) 2 else 1
+    if (pin) {
+      unit * (if (up) ceiling(value / unit) else floor(value / unit))
+    } else {
+      unit * round(value / unit)
+    }
   }
+  c(
+    round_edge(box[1], pinned[1], up = TRUE),
+    round_edge(box[2], pinned[2], up = TRUE),
+    round_edge(box[3], pinned[3], up = FALSE),
+    round_edge(box[4], pinned[4], up = FALSE)
+  )
 }
