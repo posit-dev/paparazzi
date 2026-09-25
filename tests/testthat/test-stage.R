@@ -143,6 +143,63 @@ test_that("a target visible in a below-the-fold container is wheeled into view",
   expect_true(pz_js(page, "window.__log.wheels") > 0)
 })
 
+test_that("a nested scroller over the viewport center never eats root wheels", {
+  skip_if_no_av()
+  # A FIXED scroller over the viewport center stays over it at every
+  # scroll position and would consume every wheel aimed at the
+  # document; with no point that reaches the container, the instant
+  # application must run before any wheel fires, so recorded and
+  # unrecorded chains end in the identical state.
+  cover_center <- function(page) {
+    pz_js(page, paste0(
+      "(() => {",
+      "const d = document.createElement('div');",
+      "d.id = 'center-scroller';",
+      "d.style.cssText = 'position:fixed;",
+      "left:calc(50% - 150px);top:calc(50% - 100px);",
+      "width:300px;height:200px;overflow:auto;';",
+      "const tall = document.createElement('div');",
+      "tall.style.cssText = 'height:2000px;background:#f8f8f8;';",
+      "d.appendChild(tall);",
+      "document.body.appendChild(d);",
+      "})()"
+    ))
+  }
+
+  page <- local_cursor_page()
+  cover_center(page)
+  page |> pz_stage()
+  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |> pz_scroll(by = c(0, 400))
+  expect_equal(pz_js(page, "window.scrollY"), 400)
+  # Not one wheel fired: the scroll was applied instantly, and the
+  # covering scroller is untouched.
+  expect_equal(pz_js(page, "window.__log.wheels"), 0)
+  expect_equal(pz_js(page, "document.getElementById('center-scroller').scrollTop"), 0)
+  # The auto-scroll before an action hits the same fallback: the fixed
+  # scroller still covers every root wheel point.
+  page |> pz_click("#below")
+  expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
+  expect_equal(pz_js(page, "window.__log.wheels"), 0)
+  expect_equal(pz_js(page, "document.getElementById('center-scroller').scrollTop"), 0)
+  page |> pz_record_stop()
+  recorded <- c(
+    scrollY = pz_js(page, "window.scrollY"),
+    scoped = pz_js(page, "document.getElementById('center-scroller').scrollTop")
+  )
+
+  page2 <- local_cursor_page()
+  cover_center(page2)
+  page2 |> pz_scroll(by = c(0, 400))
+  page2 |> pz_click("#below")
+  unrecorded <- c(
+    scrollY = pz_js(page2, "window.scrollY"),
+    scoped = pz_js(page2, "document.getElementById('center-scroller').scrollTop")
+  )
+
+  expect_equal(recorded, unrecorded)
+})
+
 test_that("the stage pause holds after each action only while recording", {
   skip_if_no_av()
   page <- local_cursor_page()
