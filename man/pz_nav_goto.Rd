@@ -26,9 +26,11 @@ pz_nav_forward(ctx, ...)
 document to finish loading; \code{"shiny"} also waits for Shiny idle.
 \code{"auto"} (the default) uses \code{"shiny"} when the page was opened on an
 app handle or app path and lands on that app's origin, \code{"load"}
-otherwise. \code{"none"} returns without settling. \code{\link[=pz_nav_back]{pz_nav_back()}}/
-\code{\link[=pz_nav_forward]{pz_nav_forward()}} take no \code{wait} but use \code{"auto"} after navigation
-(instantly at a history boundary, where nothing navigates).}
+otherwise. \code{"none"} returns without settling. \code{\link[=pz_nav_back]{pz_nav_back()}} and
+\code{\link[=pz_nav_forward]{pz_nav_forward()}} take no \code{wait}: they wait for load only, and return
+at once at a history boundary, where nothing navigates. A Shiny page
+restored from the back/forward cache may not reconnect, so they don't
+wait for Shiny; call \code{\link[=pz_wait_for_shiny_idle]{pz_wait_for_shiny_idle()}} if you need it.}
 }
 \value{
 The root context, invisibly.

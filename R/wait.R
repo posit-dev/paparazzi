@@ -313,8 +313,7 @@ pz_wait_for_navigation <- function(
   }
   # The load and settle phases each get the full timeout, like
   # wait_for_stable's resolve and stability windows. The snapshot
-  # precedes them both: a complete,
-  # settled page satisfies the settle check with nothing navigating,
+  # precedes them both: a complete, settled page satisfies the settle check with nothing navigating,
   # so the wait must hold the identity of the document it started on
   # and only pass on a different document (a new timeOrigin) -- or on
   # one it caught incomplete, the in-flight navigation this wait

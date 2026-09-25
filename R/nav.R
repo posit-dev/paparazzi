@@ -17,9 +17,11 @@
 #'   document to finish loading; `"shiny"` also waits for Shiny idle.
 #'   `"auto"` (the default) uses `"shiny"` when the page was opened on an
 #'   app handle or app path and lands on that app's origin, `"load"`
-#'   otherwise. `"none"` returns without settling. [pz_nav_back()]/
-#'   [pz_nav_forward()] take no `wait` but use `"auto"` after navigation
-#'   (instantly at a history boundary, where nothing navigates).
+#'   otherwise. `"none"` returns without settling. [pz_nav_back()] and
+#'   [pz_nav_forward()] take no `wait`: they wait for load only, and return
+#'   at once at a history boundary, where nothing navigates. A Shiny page
+#'   restored from the back/forward cache may not reconnect, so they don't
+#'   wait for Shiny; call [pz_wait_for_shiny_idle()] if you need it.
 #'
 #' @return The root context, invisibly.
 #'
@@ -109,7 +111,6 @@ pz_nav_back <- function(ctx, ...) {
 
   if (nav_history(ctx$page, -1)) {
     wait_for_load(ctx$page, timeout = ctx$page$default_timeout)
-    nav_settle_shiny(ctx$page, "auto", ctx$page$default_timeout)
   }
   # Runs at the history boundary too: the cache was cleared in
   # wait_nav_reset(), and re-setting the same zoom is harmless.
@@ -126,7 +127,6 @@ pz_nav_forward <- function(ctx, ...) {
 
   if (nav_history(ctx$page, 1)) {
     wait_for_load(ctx$page, timeout = ctx$page$default_timeout)
-    nav_settle_shiny(ctx$page, "auto", ctx$page$default_timeout)
   }
   device_css_reapply(ctx$page)
   invisible(root)
