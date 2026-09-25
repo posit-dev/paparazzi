@@ -231,12 +231,25 @@ new_pinned <- function(page, object_id, count, description, locs) {
   # unreachable, so does the environment, and the release fires. The
   # closure captures the pieces, never the wrapper, so no cycle keeps
   # the wrapper alive. Best-effort only -- group release is
-  # authoritative.
+  # authoritative. The release must be fire-and-forget: a finalizer can
+  # run at any allocation, and a synchronous wait would pump the event
+  # loop mid-expression, settling an in-flight command's promise before
+  # its own wait_for() registers -- chromote's synchronize() then
+  # schedules its completion handler on the default loop (never pumped
+  # here) and spins forever.
   if (!is.null(object_id)) {
     finalizer <- new.env(parent = emptyenv())
     reg.finalizer(finalizer, function(e) {
       if (!page$is_closed()) {
-        try(page$session$Runtime$releaseObject(object_id), silent = TRUE)
+        try(
+          page$session$Runtime$releaseObject(
+            object_id,
+            wait_ = FALSE,
+            callback_ = function(res) invisible(NULL),
+            error_ = function(err) invisible(NULL)
+          ),
+          silent = TRUE
+        )
       }
     })
     attr(els, "finalizer_") <- finalizer
