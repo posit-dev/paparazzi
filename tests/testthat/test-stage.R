@@ -273,6 +273,44 @@ test_that("the stage pause holds after each action only while recording", {
   expect_equal(pz_js(page2, "window.__log.clicks"), 1)
 })
 
+test_that("the stage pause holds after press, select_text, and drag too", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(pause = 0.5)
+  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+
+  # Focus the field for the keypress (the click's own hold is outside
+  # the timed stretch).
+  page |> pz_click("#name")
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_press("a")
+  t_press <- proc.time()[["elapsed"]] - t0
+
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_select_text("Go", target = "#btn")
+  t_select <- proc.time()[["elapsed"]] - t0
+
+  # The drag's glide time is timing noise, so two identical drags are
+  # held against each other: the cursor pre-placed on the source (a
+  # duration = 0 move), one drag with the pause and one without.
+  page |> pz_stage(pause = 0)
+  page |> pz_cursor_move("#plain", duration = 0)
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_drag("#plain", by = c(50, 0))
+  t_drag0 <- proc.time()[["elapsed"]] - t0
+  page |> pz_stage(pause = 0.5)
+  page |> pz_cursor_move("#plain", duration = 0)
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_drag("#plain", by = c(50, 0))
+  t_drag <- proc.time()[["elapsed"]] - t0
+
+  page |> pz_record_stop()
+
+  expect_true(t_press >= 0.45)
+  expect_true(t_select >= 0.45)
+  expect_true(t_drag - t_drag0 >= 0.4)
+})
+
 test_that("recorded demo glides, presses, types, and scrolls on camera", {
   skip_if_no_av()
   page <- local_cursor_page()

@@ -176,6 +176,7 @@ pz_press <- function(ctx, key, ...) {
       )
     }
   }
+  stage_action_pause(ctx)
   invisible(ctx)
 }
 #' Focus an element
@@ -861,6 +862,7 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
       class = "paparazzi_error_text"
     )
   }
+  stage_action_pause(ctx)
   invisible(ctx)
 }
 # The exact-substring selection: a TreeWalker collects the target's
@@ -1156,6 +1158,7 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
       to_point
     )
   }
+  stage_action_pause(ctx)
   invisible(ctx)
 }
 # The destination's final point after the source settles: the
