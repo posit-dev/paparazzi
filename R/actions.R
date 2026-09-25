@@ -31,6 +31,7 @@
 pz_click <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   found <- action_elements(ctx, target)
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
@@ -58,6 +59,7 @@ pz_click <- function(ctx, target = NULL, ...) {
 pz_hover <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   found <- action_elements(ctx, target)
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
@@ -110,6 +112,7 @@ pz_hover <- function(ctx, target = NULL, ...) {
 pz_type <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   check_string(text)
 
   # Root with no target: insert into whatever currently has focus.
@@ -170,6 +173,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 pz_press <- function(ctx, key, ...) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   check_character(key)
 
   session <- ctx$page$session
@@ -208,6 +212,7 @@ pz_press <- function(ctx, key, ...) {
 pz_focus <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   found <- action_elements(ctx, target)
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
@@ -236,6 +241,7 @@ pz_focus <- function(ctx, target = NULL, ...) {
 pz_blur <- function(ctx, ...) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   scoped <- scope_root(ctx)
   if (!is.null(scoped)) {
     check_scope_single(scoped)
@@ -265,6 +271,11 @@ pz_blur <- function(ctx, ...) {
 # scope (auto-waiting, so re-renders within the scope are fine) and is
 # released after the action. Returns list(els, pinned): a pinned set
 # must NOT be released by the caller.
+# Record before resolution or dispatch: either can trigger navigation.
+action_start <- function(ctx) {
+  ctx$page$last_action_start <- as.numeric(Sys.time()) * 1000
+}
+
 action_elements <- function(ctx, target, call = caller_env()) {
   if (is.null(target)) {
     scoped <- scope_root(ctx, call = call)
@@ -531,6 +542,7 @@ type_selection_js <- "function() {
 pz_set_value <- function(ctx, value, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   arg <- set_value_argument(value)
 
   found <- action_elements(ctx, target)
@@ -571,6 +583,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
 pz_set_files <- function(ctx, files, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   files <- check_file_paths(files)
 
   found <- action_elements(ctx, target)
@@ -869,6 +882,7 @@ select_all_js <- "function() {
 pz_select_text <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   check_string(text)
   if (!nzchar(text)) {
     cli::cli_abort(
@@ -979,6 +993,7 @@ select_text_js <- "function(text) {
 pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   modes <- c(target = !is.null(target), by = !is.null(by), to = !is.null(to))
   if (sum(modes) != 1L) {
     cli::cli_abort(
@@ -1148,6 +1163,7 @@ scroll_arg_json <- function(by = NULL, to = NULL) {
 pz_drag <- function(ctx, target, to, ..., by = NULL) {
   check_context(ctx)
   check_dots_empty()
+  action_start(ctx)
   # An explicit to = NULL is absent, not a target: it must not fall
   # through to the resolver's document.body meaning.
   to_dest <- !missing(to) && !is.null(to)

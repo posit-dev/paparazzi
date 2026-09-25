@@ -63,11 +63,11 @@ testthat bridge, the classed failure format) — nothing here reinvents it.
   group wholesale, then return the root context (like `pz_find_reset()`;
   the caller's context is never mutated). `wait = "none"` skips the
   poll; the old "auto" -> "load" claim is superseded by h5qs:
-  app-backed pages on their app origin also wait for Shiny idle. Known hole,
-  accepted and documented: a navigation that fully commits AND loads
-  before the wait starts is indistinguishable from no navigation and
-  times out — post-hoc detection can't do better without the actions
-  recording state (a cross-file flag; tripwire, not built).
+  app-backed pages on their app origin also wait for Shiny idle. Superseded
+  by npaj: the former known hole for navigations that commit and load
+  before the wait starts is closed by recording the last action start
+  on the page and comparing it with the settled document's timeOrigin;
+  see `npaj-nav-after-action.md`.
 - **No element-state wait.** The wait docs point at
   `pz_expect_visible()` / `pz_expect_hidden()` / `pz_expect_exists(not
   = TRUE)`, which already retry.

@@ -30,9 +30,10 @@ default.}
 }
 \description{
 The explicit wait after an action that navigates -- a clicked link, a
-submitted form, a JS redirect. Paparazzi never detects navigations on
-its own, so a wait marks exactly where one is expected. Call it
-immediately after the action: it waits for the document the action
+submitted form, a JS redirect. A navigation completed by the preceding
+user action is detected even if it finishes before this wait starts.
+Paparazzi never detects navigations on its own, so a wait marks
+exactly where one is expected. Call it immediately after the action: it waits for the document the action
 navigated to to finish loading and then hold still for a moment, so a
 navigation that is in flight when the wait starts is waited out, not
 raced. A navigation that begins while the wait is already running is
@@ -41,12 +42,15 @@ its trigger with \code{\link[=pz_wait_for_js]{pz_wait_for_js()}} first.
 }
 \details{
 The settled state alone is not enough: the wait snapshots the
-document it starts on and passes only when the settled document is
-a different one, so a page where nothing navigates times out with
-a classed error rather than passing. On success it resets the scope
-to the root and releases every pinned scope object: contexts scoped
-before the navigation error on their next use instead of acting on
-a stale set.
+document it starts on and also checks whether the settled document
+was created after the last user action began. A page where nothing
+navigates still times out with a classed error rather than passing.
+The action-start comparison assumes R and the browser share a machine
+clock. A successful wait consumes the preceding action's navigation
+evidence, so a second wait without another action times out. On
+success it resets the scope to the root and releases every pinned
+scope object: contexts scoped before the navigation error on their
+next use instead of acting on a stale set.
 }
 \examples{
 \dontrun{

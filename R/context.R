@@ -155,6 +155,12 @@ PaparazziPage <- R6::R6Class(
       }
     },
 
+    #' @field last_action_start Epoch milliseconds when the last user action began
+    #'   (internal; same-machine clock as Chrome's `performance.timeOrigin`).
+    last_action_start = function(value) {
+      if (missing(value)) private$last_action_start_ else private$last_action_start_ <- value
+    },
+
     #' @field object_group The CDP object group holding every remote
     #'   object a scope pinned (read-only; internal).
     object_group = function() {
@@ -167,6 +173,7 @@ PaparazziPage <- R6::R6Class(
     shared_app_ = NULL,
     closed_ = FALSE,
     default_timeout_ = 10,
+    last_action_start_ = NULL,
     # One object group per page for every remote object a scope pinned,
     # released wholesale on close (and, later, navigation). A constant
     # is safe because groups are per session, so it can't collide across

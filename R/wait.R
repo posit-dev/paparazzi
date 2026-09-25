@@ -262,9 +262,10 @@ pz_wait_for_stable <- function(
 #' Wait for a navigation to finish
 #'
 #' The explicit wait after an action that navigates -- a clicked link, a
-#' submitted form, a JS redirect. Paparazzi never detects navigations on
-#' its own, so a wait marks exactly where one is expected. Call it
-#' immediately after the action: it waits for the document the action
+#' submitted form, a JS redirect. A navigation completed by the preceding
+#' user action is detected even if it finishes before this wait starts.
+#' Paparazzi never detects navigations on its own, so a wait marks
+#' exactly where one is expected. Call it immediately after the action: it waits for the document the action
 #' navigated to to finish loading and then hold still for a moment, so a
 #' navigation that is in flight when the wait starts is waited out, not
 #' raced. A navigation that begins while the wait is already running is
@@ -272,12 +273,15 @@ pz_wait_for_stable <- function(
 #' its trigger with [pz_wait_for_js()] first.
 #'
 #' The settled state alone is not enough: the wait snapshots the
-#' document it starts on and passes only when the settled document is
-#' a different one, so a page where nothing navigates times out with
-#' a classed error rather than passing. On success it resets the scope
-#' to the root and releases every pinned scope object: contexts scoped
-#' before the navigation error on their next use instead of acting on
-#' a stale set.
+#' document it starts on and also checks whether the settled document
+#' was created after the last user action began. A page where nothing
+#' navigates still times out with a classed error rather than passing.
+#' The action-start comparison assumes R and the browser share a machine
+#' clock. A successful wait consumes the preceding action's navigation
+#' evidence, so a second wait without another action times out. On
+#' success it resets the scope to the root and releases every pinned
+#' scope object: contexts scoped before the navigation error on their
+#' next use instead of acting on a stale set.
 #'
 #' @inheritParams pz_click
 #' @param wait What to wait for: `"load"` settles the navigation;
@@ -316,16 +320,17 @@ pz_wait_for_navigation <- function(
   # wait_for_stable's resolve and stability windows. The snapshot
   # precedes them both: a complete, settled page satisfies the settle check with nothing navigating,
   # so the wait must hold the identity of the document it started on
-  # and only pass on a different document (a new timeOrigin) -- or on
-  # one it caught incomplete, the in-flight navigation this wait
-  # waits out.
+  # and only pass on a different document (a new timeOrigin), on a
+  # document created after the last action began, or on one it caught
+  # incomplete (the in-flight navigation this wait waits out).
   snapshot <- nav_snapshot(ctx, timeout)
   wait_for_load(ctx$page, timeout = timeout)
   nav_settle(
     ctx,
     settle = nav_settle_secs,
     timeout = timeout,
-    snapshot = snapshot
+    snapshot = snapshot,
+    action_start = ctx$page$last_action_start
   )
   root <- wait_nav_reset(ctx)
   device_css_reapply(ctx$page)
@@ -364,11 +369,10 @@ nav_snapshot <- function(ctx, timeout) {
 # document swap mid-window (the commit the action triggered) is caught
 # and its load is waited out before passing. Completing the window is
 # not enough on its own: the pass needs positive evidence a navigation
-# occurred, a timeOrigin the wait-start snapshot doesn't hold (or a
-# snapshot that caught the document incomplete -- the in-flight case),
-# so a settled page with nothing navigated times out instead of
-# passing.
-nav_settle <- function(ctx, settle, timeout, snapshot, call = caller_env()) {
+# occurred: a changed wait-start timeOrigin, a wait-start snapshot that
+# caught the document incomplete, or a document newer than the last
+# action's start. A settled page with no such evidence times out.
+nav_settle <- function(ctx, settle, timeout, snapshot, action_start = NULL, call = caller_env()) {
   read <- function() {
     tryCatch(
       pz_js(
@@ -397,7 +401,8 @@ nav_settle <- function(ctx, settle, timeout, snapshot, call = caller_env()) {
       # simplifyVector = FALSE keeps the boolean a boolean: the mixed
       # [boolean, number] JSON would coerce TRUE to 1 otherwise.
       state <- jsonlite::fromJSON(s, simplifyVector = FALSE)
-      nav <- !identical(state[[2]], snapshot$origin) || !isTRUE(snapshot$complete)
+      nav <- !identical(state[[2]], snapshot$origin) || !isTRUE(snapshot$complete) ||
+        (!is.null(action_start) && state[[2]] > action_start)
       isTRUE(state[[1]]) && nav &&
         as.numeric(difftime(now, stable_since, units = "secs")) >= settle
     },
@@ -507,6 +512,7 @@ stable_sample_js <- function(prop) {
 # returned context is back at the root. The caller's context is never
 # mutated.
 wait_nav_reset <- function(ctx) {
+  ctx$page$last_action_start <- NULL
   ctx$page$release_object_group()
   record_nav_rebased(ctx$page)
   # The inline css zoom dies with the document being left; its
