@@ -64,8 +64,10 @@ Builds on the page core
   `paparazzi_error_navigation`. `wait` on goto/reload resolves
   `"auto"` -> `"load"`; `"shiny"` errors unsupported, `"none"`
   skips (reload then skips the event registration too -- nothing is
-  left pending). Back/forward take no `wait` argument (per SPEC) but
-  always settle via the same load wait -- at a history boundary no
+  left pending). **Superseded by h5qs:** `"shiny"` now follows load
+  with Shiny idle; `"auto"` does so for an app-backed page on its app
+  origin after load settles. Back/forward take no `wait` argument (per
+  SPEC) but now apply the same auto rule after the load wait -- at a history boundary no
   navigation is triggered at all, so nothing waits. Back/forward use
   `Page$getNavigationHistory()` + `Page$navigateToHistoryEntry()`;
   out-of-range is a no-op.

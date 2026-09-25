@@ -22,12 +22,13 @@ pz_nav_forward(ctx, ...)
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{wait}{What to wait for before returning: \code{"auto"} (the default)
-resolves to \code{"load"} (\code{document.readyState == "complete"});
-\code{"shiny"} is not supported yet; \code{"none"} returns immediately.
-\code{\link[=pz_nav_back]{pz_nav_back()}}/\code{\link[=pz_nav_forward]{pz_nav_forward()}} take no \code{wait} but always settle
-the same way (instantly at a history boundary, where nothing
-navigates).}
+\item{wait}{What to wait for before returning: \code{"load"} waits for the
+document to finish loading; \code{"shiny"} also waits for Shiny idle.
+\code{"auto"} (the default) uses \code{"shiny"} when the page was opened on an
+app handle or app path and lands on that app's origin, \code{"load"}
+otherwise. \code{"none"} returns without settling. \code{\link[=pz_nav_back]{pz_nav_back()}}/
+\code{\link[=pz_nav_forward]{pz_nav_forward()}} take no \code{wait} but use \code{"auto"} after navigation
+(instantly at a history boundary, where nothing navigates).}
 }
 \value{
 The root context, invisibly.

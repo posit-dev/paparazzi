@@ -7,7 +7,7 @@
 pz_wait_for_navigation(
   ctx,
   ...,
-  wait = c("auto", "load", "none"),
+  wait = c("auto", "load", "shiny", "none"),
   timeout = NULL
 )
 }
@@ -16,9 +16,11 @@ pz_wait_for_navigation(
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{wait}{What to wait for: \code{"auto"} resolves to \code{"load"} (the
-document finishes loading, like \code{\link[=pz_open]{pz_open()}}); \code{"none"} skips the
-wait and only resets the scope.}
+\item{wait}{What to wait for: \code{"load"} settles the navigation;
+\code{"shiny"} also waits for Shiny idle after load. \code{"auto"} uses
+\code{"shiny"} only when the page was opened on an app handle or app path
+and lands on that app's origin; otherwise it uses \code{"load"}.
+\code{"none"} skips settling and only resets the scope.}
 
 \item{timeout}{Seconds before giving up; \code{NULL} uses the session
 default.}

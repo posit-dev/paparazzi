@@ -62,7 +62,8 @@ testthat bridge, the classed failure format) — nothing here reinvents it.
   failures are "not yet", not errors. On success: release the object
   group wholesale, then return the root context (like `pz_find_reset()`;
   the caller's context is never mutated). `wait = "none"` skips the
-  poll; "auto" resolves to "load" like `pz_open()`. Known hole,
+  poll; the old "auto" -> "load" claim is superseded by h5qs:
+  app-backed pages on their app origin also wait for Shiny idle. Known hole,
   accepted and documented: a navigation that fully commits AND loads
   before the wait starts is indistinguishable from no navigation and
   times out — post-hoc detection can't do better without the actions
