@@ -148,6 +148,18 @@ test_that("gif encodes via gifski or av", {
   expect_equal(info$height %% 2, 0)
 })
 
+test_that("an immediate stop still writes a one-frame video", {
+  page <- local_record_page()
+  skip_if_no_av()
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  page |> pz_record_stop()
+
+  expect_true(file.exists(out))
+  expect_gte(recorded_video_info(out)$frames, 1)
+})
+
 test_that("closing the page tears down the recorder on the next tick", {
   page <- local_record_page()
   skip_if_no_av()

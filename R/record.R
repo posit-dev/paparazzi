@@ -134,14 +134,33 @@ pz_record_stop <- function(ctx) {
   check_context(ctx)
   page <- ctx$page
   rec <- check_recording(ctx)
-  rec$active <- FALSE
-  rec$vt_end <- rec_vt(rec)
   withr::defer({
     page_set_recorder(page, NULL)
     if (!rec$keep_frames) {
       unlink(rec$frames_dir, recursive = TRUE)
     }
   })
+
+  # The first tick is only scheduled at start; an immediate stop pumps
+  # the loop (still active, so the tick captures) until one capture
+  # settles, giving a one-frame video instead of no file at all.
+  if (length(rec$files) == 0L) {
+    ticks <- rec$ticks
+    tryCatch(
+      pz_poll(
+        function() {
+          length(rec$files) > 0L || (rec$ticks > ticks && !rec$in_flight)
+        },
+        timeout = min(page$default_timeout, 5),
+        loop = page$child_loop,
+        what = "the first frame capture"
+      ),
+      paparazzi_error_timeout = function(e) record_error(rec, e)
+    )
+  }
+
+  rec$active <- FALSE
+  rec$vt_end <- rec_vt(rec)
 
   # A capture issued before the stop may still be in flight; it belongs
   # to the recording, so let it settle before encoding.
@@ -305,6 +324,7 @@ new_recorder <- function(
   rec$in_flight <- FALSE
   rec$pending <- NULL
   rec$vt_end <- NULL
+  rec$ticks <- 0L
   rec$n_errors <- 0L
   rec$first_error <- NULL
   rec
@@ -415,6 +435,7 @@ record_tick <- function(page) {
     delay = 1 / rec$fps,
     loop = page$child_loop
   )
+  rec$ticks <- rec$ticks + 1L
   if (rec$paused || rec$in_flight) {
     return(invisible(TRUE))
   }
