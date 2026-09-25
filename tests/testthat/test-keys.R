@@ -21,7 +21,7 @@ test_that("key_parse parses a plain key without modifiers", {
   expect_identical(parsed$modifier_keys, character(0))
   expect_identical(
     parsed$key,
-    list(key = "Enter", code = "Enter", keyCode = 13L, text = NULL)
+    list(key = "Enter", code = "Enter", keyCode = 13L, text = "\r")
   )
 })
 
@@ -88,7 +88,7 @@ test_that("key_parse parses modifier combos", {
   meta_enter <- key_parse("Meta+Enter")
   expect_identical(meta_enter$modifiers, "Meta")
   expect_identical(meta_enter$modifier_keys, "Meta")
-  expect_identical(meta_enter$key, list(key = "Enter", code = "Enter", keyCode = 13L, text = NULL))
+  expect_identical(meta_enter$key, list(key = "Enter", code = "Enter", keyCode = 13L, text = "\r"))
 
   # Explicit Shift doesn't double up with an implied one.
   shift_tab <- key_parse("Shift+Tab")
@@ -216,7 +216,7 @@ test_that("the text field is present only for text-producing keys", {
   expect_identical(key_parse("a")$key$text, "a")
   expect_identical(key_parse("A")$key$text, "A")
   expect_identical(key_parse("Space")$key$text, " ")
-  expect_null(key_parse("Enter")$key$text)
+  expect_identical(key_parse("Enter")$key$text, "\r")
   expect_null(key_parse("Tab")$key$text)
   expect_null(key_parse("ArrowLeft")$key$text)
   expect_null(key_parse("Control")$key$text)
@@ -252,14 +252,11 @@ test_that("key_events produces a down/up pair for a plain text key", {
   )
 })
 
-test_that("a key that produces no text dispatches rawKeyDown", {
+test_that("Enter is dispatched as a text-producing key", {
   events <- key_events(key_parse("Enter"))
   expect_length(events, 2)
-  expect_identical(names(events[[1]]), c("type", "modifiers", "windowsVirtualKeyCode", "key", "code"))
-  expect_identical(
-    events[[1]],
-    list(type = "rawKeyDown", modifiers = 0L, windowsVirtualKeyCode = 13L, key = "Enter", code = "Enter")
-  )
+  expect_identical(events[[1]]$type, "keyDown")
+  expect_identical(events[[1]]$text, "\r")
   expect_identical(events[[2]]$type, "keyUp")
 })
 
@@ -309,17 +306,18 @@ test_that("key_events wraps the main key with modifier down/up events", {
   )
 })
 
-test_that("key_events dispatches Meta+Enter as raw events", {
-  events <- key_events(key_parse("Meta+Enter"))
-  expect_length(events, 4)
-  expect_identical(events[[1]]$key, "Meta")
-  expect_identical(events[[1]]$modifiers, 4L)
-  expect_identical(
-    events[[2]],
-    list(type = "rawKeyDown", modifiers = 4L, windowsVirtualKeyCode = 13L, key = "Enter", code = "Enter")
-  )
-  expect_identical(events[[3]]$type, "keyUp")
-  expect_identical(events[[4]]$key, "Meta")
+test_that("Control and Meta suppress Enter text while Shift retains it", {
+  control <- key_events(key_parse("Control+Enter"))
+  expect_identical(control[[2]]$type, "rawKeyDown")
+  expect_null(control[[2]]$text)
+
+  meta <- key_events(key_parse("Meta+Enter"))
+  expect_identical(meta[[2]]$type, "rawKeyDown")
+  expect_null(meta[[2]]$text)
+
+  shift <- key_events(key_parse("Shift+Enter"))
+  expect_identical(shift[[2]]$type, "keyDown")
+  expect_identical(shift[[2]]$text, "\r")
 })
 
 test_that("explicit Shift gets real down/up events", {

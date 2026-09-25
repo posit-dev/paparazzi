@@ -150,6 +150,38 @@ test_that("pz_press sends keydown and keyup to the focused element", {
   expect_true(all(vapply(enter, function(e) isTRUE(e$isTrusted), logical(1))))
 })
 
+test_that("Enter implicitly submits a form from a text input", {
+  page <- local_actions_page()
+  pz_js(
+    page,
+    "document.querySelector('form').addEventListener('submit', function(e) { e.preventDefault(); window.__submitted = true; })"
+  )
+  pz_click(page, "#name")
+  pz_press(page, "Enter")
+
+  expect_true(pz_js(page, "window.__submitted === true"))
+})
+
+test_that("Enter inserts a newline in a textarea", {
+  page <- local_actions_page()
+  pz_click(page, "#bio")
+  pz_type(page, "a")
+  pz_press(page, "Enter")
+  pz_type(page, "b")
+
+  expect_identical(pz_js(page, "document.getElementById('bio').value"), "a\nb")
+})
+
+test_that("Shift+Enter inserts a newline in a textarea", {
+  page <- local_actions_page()
+  pz_click(page, "#bio")
+  pz_type(page, "a")
+  pz_press(page, "Shift+Enter")
+  pz_type(page, "b")
+
+  expect_identical(pz_js(page, "document.getElementById('bio').value"), "a\nb")
+})
+
 test_that("pz_press implies Shift for uppercase keys", {
   page <- local_actions_page()
   pz_click(page, "#name")

@@ -24,7 +24,7 @@ key_modifier_names <- c(
 # Control+Shift+A. The table is small by design; new keys are one more
 # entry.
 key_table <- list(
-  Enter = list(key = "Enter", code = "Enter", keyCode = 13L),
+  Enter = list(key = "Enter", code = "Enter", keyCode = 13L, text = "\r"),
   Tab = list(key = "Tab", code = "Tab", keyCode = 9L),
   Escape = list(key = "Escape", code = "Escape", keyCode = 27L),
   Backspace = list(key = "Backspace", code = "Backspace", keyCode = 8L),
