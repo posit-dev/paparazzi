@@ -998,6 +998,13 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
   by <- if (!is.null(by)) check_offset(by, arg = "by") else NULL
   to <- if (!is.null(to)) parse_direction(to, arg = "to") else NULL
   scoped <- scope_root(ctx)
+  # by/to act on the scope's ONE container, before both the staged
+  # wheel branch and the instant JS -- a multi-match scope has no
+  # single container, the same error every scoped element action
+  # raises.
+  if (!is.null(scoped)) {
+    check_scope_single(scoped)
+  }
   if (stage_recording(ctx$page)) {
     scroll_staged(ctx, scoped, by, to)
     stage_action_pause(ctx)

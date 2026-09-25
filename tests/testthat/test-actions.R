@@ -832,6 +832,13 @@ test_that("pz_scroll validates its modes", {
   # by and to reuse the shared offset and direction checkers.
   expect_error(pz_scroll(page, by = "lots"), class = "paparazzi_error_input")
   expect_error(pz_scroll(page, to = "sideways"), class = "paparazzi_error_input")
+  # A multi-match scope has no single container to scroll: both
+  # modes error instead of acting on the first match.
+  ctx <- pz_find(page, ".dup-select")
+  expect_error(pz_scroll(ctx, by = c(0, 50)), class = "paparazzi_error_multiple")
+  expect_error(pz_scroll(ctx, to = "top"), class = "paparazzi_error_multiple")
+  # The page never moved.
+  expect_equal(pz_js(page, "window.scrollY"), 0)
 })
 
 test_that("pz_drag moves a mouse-dragged element onto the destination", {
