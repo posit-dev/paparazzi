@@ -283,10 +283,11 @@ stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
 # canceling) still repairs instantly so the final position is exact.
 scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
   # A wheel only lands on a container the cursor point is actually
-  # over; a scoped container outside the viewport is first brought into
-  # view (a no-op when it already is).
+  # over; a scoped container outside the viewport is first brought
+  # into view -- the staged way while recording, like every other
+  # pre-action scroll (a no-op when it already is).
   if (!is.null(scoped)) {
-    el_scroll_into_view(scoped, call = call)
+    stage_scroll_into_view(ctx, scoped, call = call)
   }
   # The container probe, with or without an aim (the target scroll
   # position, which turns on the hit test); one function serves the

@@ -227,6 +227,35 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
   expect_equal(recorded, unrecorded)
 })
 
+test_that("an off-screen scope is brought into view with staged wheels too", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  pz_js(page, paste0(
+    "(() => {",
+    "const d = document.createElement('div');",
+    "d.id = 'deep-scope';",
+    "d.style.cssText = 'position:absolute;left:100px;",
+    "top:calc(100vh + 300px);width:300px;height:250px;",
+    "overflow:auto;border:1px solid #ccc;';",
+    "const tall = document.createElement('div');",
+    "tall.style.cssText = 'height:900px;background:#f8f8f8;';",
+    "d.appendChild(tall);",
+    "document.body.appendChild(d);",
+    "})()"
+  ))
+  page |> pz_stage()
+  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  # The scope's container is already at its target (top), so every
+  # wheel has to come from the into-view: a recorded scoped scroll
+  # must animate the scope on screen, not jump it with scrollIntoView.
+  page |> pz_find("#deep-scope") |> pz_scroll(to = "top")
+  page |> pz_record_stop()
+
+  expect_true(pz_js(page, "window.__log.wheels") > 0)
+  expect_equal(pz_js(page, "document.getElementById('deep-scope').scrollTop"), 0)
+  expect_true(pz_js(page, "window.scrollY") > 0)
+})
+
 test_that("the stage pause holds after each action only while recording", {
   skip_if_no_av()
   page <- local_cursor_page()
