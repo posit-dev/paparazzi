@@ -209,6 +209,54 @@ R/resolve.R).
   trusted wheel events reached the page and intermediate frames show
   intermediate scroll offsets.
 
+## Review-fix round (roborev 1263)
+
+All seven findings accepted; one commit per finding.
+
+1. (HIGH) The into-view probe only computed the delta for the NEAREST
+   scrollable ancestor, so a target visible inside a container that is
+   itself below the fold probed zero and a recorded click dispatched
+   off-screen. Fix: the probe walks every scrollable ancestor plus the
+   viewport, computes each level's `scrollIntoView('nearest')` delta
+   (inner deltas are invariant under outer scrolls), and the R loop
+   wheels the OUTERMOST container with a nonzero delta first -- outer
+   clips contain the inner ones, so the wheeled container is on screen
+   before its wheel fires. Stalls are detected by unchanged scroll
+   positions (not by comparing deltas across rounds, which now span
+   different containers).
+2. (HIGH) Root scrolling wheeled at the viewport center; a nested
+   scroller covering that point consumed the wheels and the instant
+   repair then left the scroller changed, so recorded and unrecorded
+   chains could end in DIFFERENT states. Fix: hit-test the dispatch
+   point before any wheel fires -- `elementFromPoint()` (which passes
+   through the overlay's `pointer-events: none`) walks up to the
+   nearest scrollable that can consume the delta, and the wheel only
+   fires when that is the intended container; otherwise the instant
+   application runs FIRST. Real-wheel semantics are preserved: a valid
+   point always gets real wheels, never a silent JS scroll.
+3. (MEDIUM) `pz_stage()` treated explicit `NULL` as omitted, so
+   `cursor = FALSE` could never be undone. Fix: `missing()` is the only
+   way to leave a setting alone; a supplied `NULL` removes the
+   override (back to the default).
+4. (MEDIUM) A recorded scoped scroll brought an off-screen scope into
+   view with an instant `scrollIntoView()`. Fix: the scope goes through
+   `stage_scroll_into_view()` like every other pre-action scroll.
+5. (MEDIUM) The stage `pause` missed `pz_press()`, `pz_select_text()`,
+   and `pz_drag()`. Fix: `stage_action_pause()` after each successful
+   exported action (the three missing call sites in R/actions.R; no
+   common action-exit point exists).
+6. (MEDIUM) The demo asserted glide frames only. Fix: frame-content
+   assertions for the press (cursor ink height shrinks at the button),
+   the growing text (ink count in an input rect that excludes the
+   cursor), and intermediate scroll positions (the fixed-point pixel
+   takes >= 3 distinct values across the scroll stretch).
+7. (LOW) `pz_cursor_hide()` stickiness is BY DESIGN: an explicit hide
+   stays hidden until `pz_cursor_show()`/`pz_cursor_move()` re-shows
+   it -- that is what distinguishes it from `pz_cursor_leave()` (the
+   documented "glides back in on the next action" variant). Fixed by
+   documentation: the roxygen and this note now promise exactly that;
+   no behavior change.
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
