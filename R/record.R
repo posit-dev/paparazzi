@@ -399,12 +399,23 @@ record_tick <- function(page) {
   if (is.null(rec) || !rec$active) {
     return(invisible(FALSE))
   }
+  if (page$is_closed()) {
+    # page$close() can't stop the recorder (the page lifecycle lives in
+    # context.R), so a tick on a closed page tears the recorder down
+    # instead of re-arming forever and leaking the frames directory.
+    rec$active <- FALSE
+    page_set_recorder(page, NULL)
+    if (!rec$keep_frames && !is.null(rec$frames_dir)) {
+      unlink(rec$frames_dir, recursive = TRUE)
+    }
+    return(invisible(FALSE))
+  }
   later::later(
     function() record_tick(page),
     delay = 1 / rec$fps,
     loop = page$child_loop
   )
-  if (page$is_closed() || rec$paused || rec$in_flight) {
+  if (rec$paused || rec$in_flight) {
     return(invisible(TRUE))
   }
   rec$in_flight <- TRUE

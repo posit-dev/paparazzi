@@ -148,6 +148,19 @@ test_that("gif encodes via gifski or av", {
   expect_equal(info$height %% 2, 0)
 })
 
+test_that("closing the page tears down the recorder on the next tick", {
+  page <- local_record_page()
+  skip_if_no_av()
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  pz_close(page)
+  # After close the child loop may never pump again, so the tick can't
+  # be relied on to fire on its own; invoke it directly.
+  record_tick(page)
+  expect_null(page_recorder(page))
+})
+
 test_that("a frame crops the recording at encode time", {
   page <- local_record_page()
   skip_if_no_av()
