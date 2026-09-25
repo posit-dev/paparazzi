@@ -32,6 +32,28 @@ test_that("pz_open waits for load by default", {
   expect_true(pz_js(page, "window.fixtureReady"))
 })
 
+test_that("new-session load waits anchor to the destination commit", {
+  skip_if_no_chrome()
+  blank <- chromote::ChromoteSession$new()
+  withr::defer(blank$close())
+  expect_identical(blank$Runtime$evaluate("document.readyState")$result$value, "complete")
+
+  url <- nav_fixture_url("slow")
+  await <- nav_await
+  commits <- character()
+  local_mocked_bindings(nav_await = function(page, p, what, ...) {
+    await(page, p, what, ...)
+    hist <- page$session$Page$getNavigationHistory()
+    commits <<- c(commits, hist$entries[[hist$currentIndex + 1]]$url)
+  })
+  for (wait in c("load", "auto")) {
+    page <- pz_open(url, wait = wait, timeout = 5)
+    expect_identical(pz_js(page, "document.readyState"), "complete")
+    pz_close(page)
+  }
+  expect_identical(commits, rep(url, 2))
+})
+
 test_that("wait = 'none' and wait = 'load' both open", {
   for (w in c("none", "load", "auto")) {
     page <- local_page(wait = w)

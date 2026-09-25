@@ -88,7 +88,7 @@ pz_open <- function(
   # first render.
   device_open(page, device_dots)
 
-  navigated <- if (identical(wait, "shiny")) {
+  navigated <- if (wait %in% c("load", "shiny")) {
     session$Page$frameNavigated(wait_ = FALSE)
   }
   # CDP reports navigation failures as `errorText`, not as errors.
@@ -99,13 +99,13 @@ pz_open <- function(
       class = "paparazzi_error_navigation"
     )
   }
+  if (wait %in% c("load", "shiny") && !is.null(nav$loaderId)) {
+    nav_await(page, navigated, what = "page navigation")
+  }
   if (identical(wait, "load")) {
     wait_for_load(page, timeout = page$default_timeout)
     device_css_reapply(page)
   } else if (identical(wait, "shiny")) {
-    if (!is.null(nav$loaderId)) {
-      nav_await(page, navigated, what = "page navigation")
-    }
     pz_wait_for_shiny_idle(page, timeout = page$default_timeout)
     device_css_reapply(page)
   }
