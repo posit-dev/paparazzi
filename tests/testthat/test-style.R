@@ -360,3 +360,37 @@ test_that("the probe leaves body:empty matching unaffected", {
   # the body.
   expect_identical(pz_get_count(page, target = "body:empty"), 1L)
 })
+
+test_that("the probe does not disturb positional-selector styles", {
+  page <- local_style_page()
+  # Styles keyed on a positional selector: appended to documentElement,
+  # the probe host makes body stop matching :last-child, so the
+  # #pos-colored read (and the #pos-sized width, read as % context)
+  # must be captured before the host attaches -- otherwise the probe
+  # compares against a style the page did not have.
+  pz_js(
+    page,
+    "const s = document.createElement('style');
+     s.textContent = 'body:last-child #pos-colored { color: #d62828; }'
+       + ' body:last-child #pos-sized { width: 200px; }';
+     document.head.appendChild(s);
+     const colored = document.createElement('div'); colored.id = 'pos-colored';
+     const sized = document.createElement('div'); sized.id = 'pos-sized';
+     const half = document.createElement('div'); half.id = 'pos-half';
+     half.style.width = '50%';
+     sized.appendChild(half);
+     document.body.append(colored, sized);"
+  )
+  before <- pz_get_style(page, "color", target = "#pos-colored")$color
+  expect_identical(before, "rgb(214, 40, 40)")
+  pz_expect_style(page, color = "#d62828", target = "#pos-colored")
+  # The % context is the positionally-sized parent's 200px width.
+  pz_expect_style(page, width = "100px", target = "#pos-half")
+  pz_expect_style(page, width = "50%", target = "#pos-half")
+  # The positional styles survive the probe calls unchanged.
+  expect_identical(
+    pz_get_style(page, "color", target = "#pos-colored")$color,
+    before
+  )
+  expect_identical(pz_get_style(page, "width", target = "#pos-sized")$width, "200px")
+})
