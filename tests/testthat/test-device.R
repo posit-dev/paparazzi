@@ -133,6 +133,24 @@ test_that("css zoom survives navigation, reload, and disabling", {
   expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1")
 })
 
+test_that("disabling css zoom restores the page's own inline zoom", {
+  # The fixture's <html> carries its own inline zoom; emulation must
+  # give it back on disable, not remove it.
+  page <- local_page(device_zoom_fixture_file())
+  expect_equal(js(page, "document.documentElement.style.zoom"), "1.5")
+
+  pz_device(page, zoom = 2, zoom_method = "css")
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "2")
+
+  # A factor change while active keeps the first save.
+  pz_device(page, zoom = 3)
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "3")
+
+  pz_device(page, zoom = 1)
+  expect_equal(js(page, "document.documentElement.style.zoom"), "1.5")
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1.5")
+})
+
 test_that("zoom defaults to the viewport method", {
   page <- local_device_page()
   pz_device(page, width = 800, height = 600, scale = 2)

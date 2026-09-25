@@ -198,6 +198,7 @@ device_state <- function(page) {
     state$overridden <- FALSE
     state$css_zoom <- NULL
     state$css_script <- NULL
+    state$css_zoom_saved <- NULL
     state$color_scheme <- NULL
     state$reduced_motion <- NULL
     attr(page, "paparazzi_device") <- state
@@ -274,7 +275,9 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
   }
   if (is.null(desired)) {
     # Disable: the injected script goes away with the effect, so
-    # future documents stay at their own size too.
+    # future documents stay at their own size too, and the current
+    # document gets back the inline zoom paparazzi found at the first
+    # application (or none).
     if (!is.null(state$css_script)) {
       page$session$Page$removeScriptToEvaluateOnNewDocument(
         identifier = state$css_script,
@@ -282,12 +285,33 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
       )
       state$css_script <- NULL
     }
-    device_eval(page, "document.documentElement.style.removeProperty('zoom')")
+    saved <- state$css_zoom_saved
+    state$css_zoom_saved <- NULL
+    if (is.null(saved) || !nzchar(saved)) {
+      device_eval(page, "document.documentElement.style.removeProperty('zoom')")
+    } else {
+      device_eval(
+        page,
+        paste0(
+          "document.documentElement.style.zoom = ",
+          jsonlite::toJSON(saved, auto_unbox = TRUE)
+        )
+      )
+    }
   } else {
     # Reapply after a navigation skips the registration: the script
     # in place already encodes the desired zoom (only pz_device()
     # changes the factor, and it re-registers).
     if (register || is.null(state$css_script)) {
+      if (is.null(state$css_script)) {
+        # First application: remember the page's own inline zoom so
+        # disable can give it back (never re-captured once the script
+        # is in place, so the settle reapplies keep the first save).
+        state$css_zoom_saved <- device_eval(
+          page,
+          "document.documentElement.style.zoom || ''"
+        )
+      }
       if (!is.null(state$css_script)) {
         page$session$Page$removeScriptToEvaluateOnNewDocument(
           identifier = state$css_script,
