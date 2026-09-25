@@ -111,3 +111,32 @@ back. The annotated capture bypasses the guard by calling
   pz_inspect() with a target on a stale scope aborts with the classed
   detach error (consistent one-use probe) rather than warning; rstudioapi
   stays out of Suggests (DESCRIPTION off-limits this phase).
+
+## Review-fix round (roborev 1249, triaged)
+
+Three accepted findings on R/inspect.R; one declined (tibble-row
+as.numeric claim) left untouched — the green nonempty-target suite
+disproves it.
+
+1. Enabled predicate: `el.disabled === true || hasAttribute('disabled')`
+   misses controls disabled by an ancestor `<fieldset disabled>`. Switch
+   inspect_match_js to `!el.matches(':disabled')` so the summary agrees
+   with pz_expect_enabled() and the browser's own state. Test: a control
+   inside a disabled fieldset reports `disabled`.
+2. Outline numbering: overlay_draw() filters zero-area target rects
+   before the JS numbers badges from array position, so a hidden match 1
+   makes visible match 2 wear badge "1". Pass each drawn rect's original
+   match number through the draw payload instead. Test: hidden first
+   match + visible second under show = "browser" → the badge reads "2".
+3. Overlay cleanup: overlay_clear() runs only after a successful capture
+   and write, so a capture timeout or unwritable path leaves outlines in
+   the live page. Move cleanup to a best-effort withr::defer() in
+   pz_inspect() (screenshot branch only; browser mode intentionally
+   persists). Test: capture to an unwritable path errors and the page is
+   clean afterwards.
+
+Fixture additions (inspect.html only): #insp-ghost/#insp-real pair
+(.insp-pair) and a disabled fieldset with #insp-fieldset-btn. Three
+commits, kata ref paparazzi#5wdj + roborev 1249 in each body; full
+`btw pkg test` green (dark-mode summary failure and chromote flakes
+excepted per known issues).
