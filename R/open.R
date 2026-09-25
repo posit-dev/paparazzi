@@ -18,9 +18,10 @@
 #'   process and pass its URL.
 #' @param ... Forwarded to [pz_device()] as device settings (e.g.
 #'   `width = 390, mobile = TRUE`); they must be named.
-#' @param wait What to wait for before returning. `"auto"` uses the load wait
-#'   for now, including for Shiny apps; Shiny idle support arrives separately.
-#'   Explicit `"shiny"` is not yet supported.
+#' @param wait What to wait for before returning. `"auto"` waits for Shiny
+#'   idle on app paths and handles, and for load on other pages. `"shiny"`
+#'   explicitly waits for Shiny to connect and become idle; non-Shiny pages
+#'   error.
 #' @param timeout Session default timeout in seconds; `NULL` uses the package
 #'   default (10 s). Per-call `timeout = NULL` means "session default".
 #' @param shiny_options,envvars Passed to [pz_app()] when opening an app path.
@@ -39,12 +40,6 @@ pz_open <- function(
   device_dots <- device_check_dots(list2(...))
   check_number_decimal(timeout, min = 0, allow_null = TRUE)
   wait <- arg_match(wait)
-  if (identical(wait, "shiny")) {
-    cli::cli_abort(
-      '{.code wait = "shiny"} is not supported yet; use {.code wait = "load"} for now.',
-      class = "paparazzi_error_unsupported"
-    )
-  }
   if (!is.list(shiny_options)) {
     stop_input_type(shiny_options, "a list")
   }
@@ -56,6 +51,9 @@ pz_open <- function(
     page <- PaparazziPage$new(session = x, timeout = timeout %||% 10)
     # Device settings apply before anything else touches the page.
     device_open(page, device_dots)
+    if (identical(wait, "shiny")) {
+      pz_wait_for_shiny_idle(page, timeout = page$default_timeout)
+    }
     return(page)
   }
 
@@ -101,19 +99,20 @@ pz_open <- function(
   if (identical(wait, "load")) {
     wait_for_load(page, timeout = page$default_timeout)
     device_css_reapply(page)
+  } else if (identical(wait, "shiny")) {
+    pz_wait_for_shiny_idle(page, timeout = page$default_timeout)
+    device_css_reapply(page)
   }
 
   ok <- TRUE
   page
 }
-# Shiny auto currently shares load behavior; the Shiny idle task changes only
-# this resolution seam when its wait implementation lands.
 open_wait_mode <- function(wait, is_shiny_app) {
   if (!identical(wait, "auto")) {
     return(wait)
   }
   if (is_shiny_app) {
-    return("load")
+    return("shiny")
   }
   "load"
 }

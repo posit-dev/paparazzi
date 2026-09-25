@@ -1,3 +1,58 @@
+test_that("Shiny idle waits for a slow reactive output and holds for 200ms", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(shiny_idle_fixture(), wait = "none")
+  withr::defer(pz_close(page))
+  start <- Sys.time()
+  result <- withVisible(pz_wait_for_shiny_idle(page, timeout = 5))
+  expect_false(result$visible)
+  expect_identical(result$value, page)
+  expect_equal(shiny_idle_state(page)$text, "reactive ready")
+  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.9)
+})
+
+test_that("Shiny idle restarts its stability window when busy returns", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  withr::defer(pz_close(page))
+  pz_js(page, "document.documentElement.classList.add('shiny-busy'); setTimeout(() => document.documentElement.classList.remove('shiny-busy'), 250)")
+  start <- Sys.time()
+  pz_wait_for_shiny_idle(page, timeout = 3)
+  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.4)
+  pz_js(page, "document.querySelector('#slow').classList.add('recalculating'); setTimeout(() => document.querySelector('#slow').classList.remove('recalculating'), 250)")
+  start <- Sys.time()
+  pz_wait_for_shiny_idle(page, timeout = 3)
+  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.4)
+})
+
+test_that("Shiny idle restarts the hold when busy returns mid-window", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  withr::defer(pz_close(page))
+  pz_js(page, "setTimeout(() => document.documentElement.classList.add('shiny-busy'), 100); setTimeout(() => document.documentElement.classList.remove('shiny-busy'), 360)")
+  start <- Sys.time()
+  pz_wait_for_shiny_idle(page, timeout = 3)
+  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.5)
+})
+
+test_that("Shiny idle on non-Shiny pages fails clearly", {
+  page <- local_waits_page()
+  expect_error(pz_wait_for_shiny_idle(page, timeout = 1), "not a Shiny page", class = "paparazzi_error_unsupported")
+  expect_error(pz_wait_for_shiny_idle(page, extra = 1), "empty")
+  expect_error(pz_wait_for_shiny_idle(page, timeout = -1), "timeout")
+})
+
+test_that("Shiny idle times out while the page remains busy", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  withr::defer(pz_close(page))
+  pz_js(page, "document.documentElement.classList.add('shiny-busy')")
+  expect_error(pz_wait_for_shiny_idle(page, timeout = 0.35), "Shiny idle", class = "paparazzi_error_timeout")
+})
+
 test_that("pz_wait pauses and returns ctx invisibly", {
   page <- local_page()
   start <- Sys.time()
