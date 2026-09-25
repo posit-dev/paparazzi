@@ -344,38 +344,69 @@ frame_effective <- function(ctx, frame, call = caller_env()) {
     call = call
   )
 }
-# The CDP clip for a framed capture: resolves the frame's content and
-# bounds, runs the pipeline (viewport-relative), then converts to
-# document coordinates and rounds the final edges. `even` selects
-# video-style even-pixel rounding for the recorder; stills round to
-# whole pixels.
+# The CDP clip for a framed capture: resolves and measures the frame's
+# content and bounds, then reads the page geometry and runs the
+# pipeline (viewport-relative), converts to document coordinates and
+# rounds the final edges. `even` selects video-style even-pixel
+# rounding for the recorder; stills round to whole pixels.
 frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
-  geometry <- page_geometry(ctx, call = call)
-  box <- frame_content_box(ctx, target, spec, geometry, call = call)
+  # NULL means the frame falls back to the viewport; the box is filled
+  # from the geometry read below.
+  box <- frame_content_box(ctx, target, spec, call = call)
   clamps <- list()
   if (!is.null(spec$bounds)) {
     els <- loc_resolve(ctx, spec$bounds, multiple = "all", call = call)
     withr::defer(release_elements(els))
     clamps[["frame bounds"]] <- box_union(el_rects(els, call = call), call = call)
   }
+  # The geometry read comes after resolution and measurement:
+  # resolution auto-waits, and a target appearing mid-wait can expand
+  # the document -- clamping the measured box against pre-wait
+  # dimensions would error or clip against stale geometry.
+  geometry <- page_geometry(ctx, call = call)
+  if (is.null(box)) {
+    box <- c(0, 0, geometry$viewport_width, geometry$viewport_height)
+  }
   # The page's rendered area, in viewport coordinates. The document
   # box -- not the visible viewport: captureBeyondViewport renders the
   # whole document, so below-fold content stays capturable and
-  # beyond-document growth would be unrendered pixels.
+  # beyond-document growth would be unrendered pixels. The box anchors
+  # to the document's real span: an RTL document wider than the
+  # viewport overflows to the left, reaching negative document x.
   clamps[["the page"]] <- c(
-    -geometry$scroll_x,
+    geometry$document_left - geometry$scroll_x,
     -geometry$scroll_y,
-    -geometry$scroll_x + geometry$document_width,
+    geometry$document_left - geometry$scroll_x + geometry$document_width,
     -geometry$scroll_y + geometry$document_height
   )
   box <- frame_apply(spec, box, clamps, call = call)
+  # Which edges a clamp fixed in place: rounding those outward would
+  # put the pixel clip outside the CSS bounds (a bound beginning at
+  # 200.4 must not become a clip at 200), so frame_round() rounds them
+  # inward. The comparisons are exact: a binding clamp assigned the
+  # edge its value, so they are bit-equal; coinciding values are
+  # treated as pinned, which errs on the safe side.
+  pinned <- c(
+    any(vapply(clamps, function(clamp) clamp[1] >= box[1], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[2] >= box[2], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[3] <= box[3], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[4] <= box[4], logical(1)))
+  )
   # The pipeline ran viewport-relative; CDP clip coordinates are
   # document-relative.
   box <- box + c(
     geometry$scroll_x, geometry$scroll_y,
     geometry$scroll_x, geometry$scroll_y
   )
-  box <- frame_round(box, even = even)
+  box <- frame_round(box, pinned = pinned, even = even)
+  # Horizontal only: an RTL frame can resolve into the document's
+  # negative-x region, and CDP clip origins must be non-negative.
+  # Shift the origin to 0 preserving the size -- the captured region
+  # shifts with it, mirroring the unframed path (clip_viewport()).
+  if (box[1] < 0) {
+    box[3] <- box[3] - box[1]
+    box[1] <- 0
+  }
   width <- box[3] - box[1]
   height <- box[4] - box[2]
   if (width <= 0 || height <= 0) {
@@ -389,8 +420,9 @@ frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
 }
 # The content box a frame is computed from, viewport-relative: the
 # frame's own target if it has one, else the call's target, else the
-# pinned scope (scoped context), else the viewport.
-frame_content_box <- function(ctx, target, spec, geometry, call = caller_env()) {
+# pinned scope (scoped context), else NULL for the viewport fallback
+# (the caller fills it from the geometry it reads after resolution).
+frame_content_box <- function(ctx, target, spec, call = caller_env()) {
   want <- if (is.null(spec$target)) target else spec$target
   if (!is.null(want)) {
     els <- loc_resolve(ctx, want, multiple = "all", call = call)
@@ -401,7 +433,7 @@ frame_content_box <- function(ctx, target, spec, geometry, call = caller_env()) 
   if (!is.null(scoped)) {
     return(box_union(el_rects(scoped, call = call), call = call))
   }
-  c(0, 0, geometry$viewport_width, geometry$viewport_height)
+  NULL
 }
 # The union of element rects, as a viewport-relative box
 # c(left, top, right, bottom). The four edges are pure reductions over
@@ -422,18 +454,31 @@ box_union <- function(rects, call = caller_env()) {
   )
 }
 # One JS read of the geometry framing needs: scroll offsets, viewport
-# size, and document size.
+# size, document size, and the document's left edge in document
+# coordinates.
 page_geometry <- function(ctx, call = caller_env()) {
   g <- pz_js(
     ctx,
     "[window.scrollX, window.scrollY, window.innerWidth, window.innerHeight,
       Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
-      Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)]"
+      Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+      (function() {
+        // An RTL document wider than the viewport overflows to the
+        // left: the scrollable canvas reaches negative document x,
+        // spanning [-(scrollWidth - innerWidth), innerWidth].
+        const vw = window.innerWidth;
+        const docW = Math.max(
+          document.documentElement.scrollWidth,
+          document.body.scrollWidth
+        );
+        return getComputedStyle(document.documentElement).direction === 'rtl' &&
+          docW > vw ? -(docW - vw) : 0;
+      })()]"
   )
   g <- unlist(g)
-  if (!is.numeric(g) || length(g) != 6) {
+  if (!is.numeric(g) || length(g) != 7) {
     cli::cli_abort(
-      "Internal error: the page geometry read returned {.obj_type_friendly {g}}, not six numbers.",
+      "Internal error: the page geometry read returned {.obj_type_friendly {g}}, not seven numbers.",
       class = "paparazzi_error_internal",
       call = call
     )
@@ -444,7 +489,8 @@ page_geometry <- function(ctx, call = caller_env()) {
     viewport_width = g[3],
     viewport_height = g[4],
     document_width = g[5],
-    document_height = g[6]
+    document_height = g[6],
+    document_left = g[7]
   )
 }
 # Pure framing geometry on a viewport-relative box
@@ -521,10 +567,26 @@ frame_grow_ratio <- function(ratio, box, anchor) {
 }
 # Round box edges: whole pixels for stills, even pixels for video
 # (the recorder's path), so width and height never split a pixel.
-frame_round <- function(box, even = FALSE) {
-  if (even) {
-    2 * round(box / 2)
-  } else {
-    round(box)
+# Edges a clamp fixed in place ("pinned") round INWARD -- left/top
+# up, right/bottom down -- so the final pixel clip stays within the
+# CSS bounds; free edges round to the nearest pixel.
+frame_round <- function(
+  box,
+  pinned = c(FALSE, FALSE, FALSE, FALSE),
+  even = FALSE
+) {
+  round_edge <- function(value, pin, up) {
+    unit <- if (even) 2 else 1
+    if (pin) {
+      unit * (if (up) ceiling(value / unit) else floor(value / unit))
+    } else {
+      unit * round(value / unit)
+    }
   }
+  c(
+    round_edge(box[1], pinned[1], up = TRUE),
+    round_edge(box[2], pinned[2], up = TRUE),
+    round_edge(box[3], pinned[3], up = FALSE),
+    round_edge(box[4], pinned[4], up = FALSE)
+  )
 }

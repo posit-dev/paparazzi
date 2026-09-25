@@ -1,13 +1,14 @@
 # Fixture geometry (tests/testthat/fixtures/frame.html), all CSS px,
 # viewport-relative; the body is 2000px tall and nothing overlaps:
-#   #card     (100, 80)  120x90   rgb(200, 30, 30)
-#   #small    (400, 60)   60x45   rgb(30, 120, 200)
-#   #wide     (700, 200) 120x60   rgb(30, 200, 120)
-#   #corner   (10, 10)   100x50   rgb(120, 30, 200)
-#   #bound    (200, 200) 400x400  rgb(240, 240, 240)
-#   #inner-tr (520, 220)  40x40   rgb(200, 200, 30)
-#   #low      (50, 1500) 100x60   rgb(200, 120, 30)
-#   #deep     (100, 1940) 40x40   rgb(30, 200, 200)
+#   #card       (100, 80)   120x90    rgb(200, 30, 30)
+#   #small      (400, 60)    60x45    rgb(30, 120, 200)
+#   #wide       (700, 200)  120x60    rgb(30, 200, 120)
+#   #corner     (10, 10)    100x50    rgb(120, 30, 200)
+#   #bound      (200, 200)  400x400   rgb(240, 240, 240)
+#   #inner-tr   (520, 220)   40x40    rgb(200, 200, 30)
+#   #low        (50, 1500)  100x60    rgb(200, 120, 30)
+#   #deep       (100, 1940)  40x40    rgb(30, 200, 200)
+#   #fractional (620.4, 262.6) 200.2x88.8 rgb(60, 60, 60)
 # PNG pixel dimensions are round(css_size * dpr); dpr is read live.
 
 test_that("pz_frame returns a normalized spec", {
@@ -185,6 +186,37 @@ test_that("frame_round rounds to whole or even pixels", {
   )
 })
 
+test_that("frame_round rounds constrained edges inward", {
+  # Edges a clamp fixed in place must not escape the CSS bounds: a
+  # bound beginning at 200.4 must not become a clip at 200.
+  expect_identical(
+    frame_round(
+      c(200.4, 100.6, 300.5, 400.2),
+      pinned = c(TRUE, TRUE, TRUE, TRUE)
+    ),
+    c(201, 101, 300, 400)
+  )
+  # Mixed: pinned left/top round inward, free right/bottom stay
+  # nearest.
+  expect_identical(
+    frame_round(
+      c(200.4, 100.6, 310.6, 412.4),
+      pinned = c(TRUE, TRUE, FALSE, FALSE)
+    ),
+    c(201, 101, 311, 412)
+  )
+  # Even mode keeps the same intent: inward for pinned, nearest even
+  # otherwise.
+  expect_identical(
+    frame_round(
+      c(200.4, 101.4, 300.6, 402.2),
+      pinned = c(TRUE, TRUE, TRUE, TRUE),
+      even = TRUE
+    ),
+    c(202, 102, 300, 402)
+  )
+})
+
 test_that("a pad-only frame pads the capture on all sides", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
@@ -317,6 +349,25 @@ test_that("bounds clamp the frame to their box", {
   expect_frame_pixel(page, path, 100, 5, dpr, c(240, 240, 240))
 })
 
+test_that("a fractional bound rounds the clip inward on every edge", {
+  page <- local_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- frame_dpr(page)
+
+  # #fractional begins at (620.4, 262.6); with pad 120 around #wide,
+  # the bound clamps all four edges of the frame, and inward rounding
+  # keeps every pixel inside it: left 620.4 becomes 621, not 620.
+  pz_screenshot(
+    page,
+    path,
+    target = "#wide",
+    frame = pz_frame(pad = 120, bounds = "#fractional")
+  )
+  expect_identical(png_dimensions(path), as.integer(round(c(199, 88) * dpr)))
+  expect_frame_pixel(page, path, 0, 0, dpr, c(60, 60, 60))
+  expect_frame_pixel(page, path, 198, 87, dpr, c(60, 60, 60))
+})
+
 test_that("the frame clamps to the page at the top-left corner", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
@@ -352,6 +403,35 @@ test_that("a below-fold frame captures without scrolling", {
   expect_identical(png_dimensions(path), as.integer(round(c(140, 100) * dpr)))
   expect_frame_pixel(page, path, 70, 50, dpr, c(200, 120, 30))
   expect_equal(pz_js(page, "window.scrollY"), 0)
+})
+
+test_that("the frame clamps against geometry read after resolution auto-waits", {
+  page <- local_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- frame_dpr(page)
+
+  # A late element expands the document while the target resolution
+  # auto-waits for it; the clamp must see the expanded document, not
+  # the pre-wait 2000px one.
+  pz_js(
+    page,
+    "setTimeout(() => {
+      const el = document.createElement('div');
+      el.id = 'late';
+      el.style.cssText =
+        'position:absolute;left:100px;top:2600px;width:40px;height:40px;background:rgb(10,20,30)';
+      document.body.appendChild(el);
+      document.body.style.height = '2700px';
+    }, 300)"
+  )
+  pz_screenshot(page, path, target = "#late", frame = pz_frame(pad = 32))
+  # #late (100, 2600) 40x40 + 32 = (68, 2568) 104x104, entirely below
+  # the pre-expansion document: only fresh geometry keeps it capturable.
+  expect_identical(png_dimensions(path), as.integer(round(c(104, 104) * dpr)))
+  expect_equal(
+    pz_js(page, "document.documentElement.scrollHeight"),
+    2700
+  )
 })
 
 test_that("a frame's own target replaces the call's target", {
@@ -395,6 +475,43 @@ test_that("an identity frame at the root captures the viewport", {
   pz_screenshot(page, plain)
   pz_screenshot(page, framed, frame = pz_frame())
   expect_identical(png_dimensions(framed), png_dimensions(plain))
+})
+
+test_that("an identity frame keeps the viewport on negative RTL scroll", {
+  page <- local_rtl_frame_page()
+  plain <- withr::local_tempfile(fileext = ".png")
+  framed <- withr::local_tempfile(fileext = ".png")
+
+  # The RTL fixture overflows left, so scrolling into it makes
+  # scrollX negative and the viewport's left portion sits at negative
+  # document x. The document clamp must anchor to the real document
+  # span, or an identity frame narrows by |scrollX|.
+  pz_js(page, "window.scrollTo(-100, 0)")
+  skip_if(pz_js(page, "window.scrollX") >= 0, "browser won't scroll negative in RTL")
+
+  pz_screenshot(page, plain)
+  pz_screenshot(page, framed, frame = pz_frame())
+  expect_identical(png_dimensions(framed), png_dimensions(plain))
+})
+
+test_that("a frame on RTL left-overflow content captures it", {
+  page <- local_rtl_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- frame_dpr(page)
+
+  # #mark sits in the left overflow, at negative document x
+  # (around [-1208, -1108] for a 992px viewport): clamping to
+  # [0, scrollWidth] would reject it as outside the page instead of
+  # capturing it.
+  skip_if(
+    pz_js(page, "document.body.getBoundingClientRect().left") >= 0,
+    "browser doesn't overflow RTL documents to the left"
+  )
+
+  pz_screenshot(page, path, target = "#mark", frame = pz_frame(pad = 10))
+  # #mark 100x60 + 10 on each side; the negative document origin
+  # shifts to 0 with the size preserved.
+  expect_identical(png_dimensions(path), as.integer(round(c(120, 80) * dpr)))
 })
 
 test_that("a frame on a scoped context uses the scope's box", {

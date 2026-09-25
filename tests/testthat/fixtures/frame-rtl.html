@@ -1,0 +1,34 @@
+<!doctype html>
+<html dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi RTL framing fixture</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    /* An RTL document wider than the viewport overflows to the left:
+       window.scrollX goes negative to reveal it, and the document
+       spans [-(3000 - vw), vw] in document coordinates, not [0, 3000]. */
+    body {
+      width: 3000px;
+      height: 400px;
+    }
+    /* #mark sits in the left overflow, around document x [-1208,
+       -1108] for a 992px viewport: anchored off the initial containing
+       block's right edge (the ICB spans document [0, vw]). */
+    #mark {
+      position: absolute;
+      top: 50px;
+      right: 2100px;
+      width: 100px;
+      height: 60px;
+      background: rgb(10, 20, 30);
+    }
+  </style>
+</head>
+<body>
+  <div id="mark"></div>
+</body>
+</html>

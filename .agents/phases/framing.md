@@ -40,15 +40,20 @@ mechanism-level choices and session handoffs for framing only.
      grows left, otherwise the extra width splits; `top` grows down,
      `bottom` grows up, otherwise the extra height splits.
   4. Clamp: intersect with the `bounds` box (resolved and unioned like
-     any target) and with the document box -- `[0, scrollWidth] x
-     `[0, scrollHeight]` in document coordinates, i.e. the
-     `(-scrollX, -scrollY)`-anchored region viewport-relative. The document
-     box, NOT the visible viewport: `captureBeyondViewport` renders the
-     whole document, so below-fold targets stay capturable, and
-     beyond-document growth would produce unrendered pixels. This is
-     the SPEC's "clamp to the viewport" step.
+     any target) and with the document box -- the document's REAL
+     span `[document_left, document_left + scrollWidth] x
+     `[0, scrollHeight]` in document coordinates (`document_left`
+     is 0 except on RTL pages wider than the viewport, where it is
+     negative), i.e. the scroll-anchored region viewport-relative. The
+     document box, NOT the visible viewport: `captureBeyondViewport`
+     renders the whole document, so below-fold targets stay
+     capturable, and beyond-document growth would produce unrendered
+     pixels. This is the SPEC's "clamp to the viewport" step.
   5. Round edges to whole pixels (stills); the recording task will pass
-     an even-pixel rounding through the same step.
+     an even-pixel rounding through the same step. Edges a clamp fixed
+     in place round inward (left/top up, right/bottom down) so the
+     pixel clip stays within the CSS bounds; free edges round to the
+     nearest pixel (or nearest even pixel for video).
   Steps 2-4 are pure geometry (`frame_apply()`), unit-testable without
   a page; `frame_clip()` owns the reads (one JS evaluation for
   scroll/viewport/document size) and the final
@@ -82,10 +87,59 @@ mechanism-level choices and session handoffs for framing only.
   `fixtures/screenshot.html` counts stay pinned; test-frame.R uses its
   own fixture.
 
+## Review fixes (roborev 1245)
+
+One commit per accepted finding. The document-vs-viewport clamp
+finding was declined (the document clamp for stills is intended; SPEC
+"Framing" step 4 amended on main to say "capture surface"), so the
+current clamp semantics stay.
+
+- **Geometry read order.** `frame_clip()` resolves and measures targets
+  and bounds first, then reads page geometry: resolution auto-waits,
+  so a target appearing mid-wait can expand the document, and the
+  clamp must see the expanded document. The viewport fallback box is
+  filled from that fresh read.
+- **RTL negative-scrollX narrowing.** Empirical Chrome model: an RTL
+  document wider than the viewport overflows to the LEFT, so the
+  scrollable canvas spans document coordinates `[-(scrollWidth -
+  innerWidth), innerWidth]`, not `[0, scrollWidth]`, and
+  `window.scrollX` goes negative to reveal it. Two changes in
+  `frame_clip()`: the page clamp anchors to the real document span (a
+  new `document_left` read in `page_geometry()`: `-(scrollWidth -
+  innerWidth)` when the root element is RTL and wider than the
+  viewport, else 0 -- LTR unchanged), and a clip whose document origin
+  went negative shifts to x = 0 preserving its size (CDP clip origins
+  must be non-negative; the region shifts with it, mirroring
+  `clip_viewport()`). Identity `pz_frame()` then matches the unframed
+  screenshot's dimensions. New fixture `frame-rtl.html`; dimension
+  assertions only -- Chrome's `captureBeyondViewport` resize
+  re-lays-out the page, so pixel placement in RTL captures is
+  browser-dependent and not asserted.
+- **Rounding vs fractional bounds.** Edges a clamp fixed in place
+  ("pinned") round INWARD (left/top up, right/bottom down; even mode
+  doubles the same rule) so the rounded pixel clip stays within the
+  CSS bounds; free edges keep nearest-pixel (stills) or nearest-even
+  (video) rounding, preserving the documented ratio-growth behavior.
+  Pinned-ness is derived in `frame_clip()` by comparing the clamped
+  edges with the clamp boxes (bit-equal when a clamp bound the edge;
+  conservative when the values merely coincide). A fractional
+  `#fractional` element joins `frame.html` as a bounds target.
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-25 (r0zd review fixes): landed roborev 1245's three accepted
+  findings -- geometry read after resolution auto-waits (3b4e95f),
+  the page clamp anchored to the RTL document span with a
+  size-preserving origin shift (9c0f23e), and clamped edges rounding
+  inward within fractional bounds (9771193). The document-vs-viewport
+  clamp finding stays declined (SPEC step 4 amended on main). Frame
+  tests 126 green at the final state; full suite 1349 PASS, 1 FAIL --
+  the known dark-mode inspect failure, fixed on main as 09dc4f1.
+  Next: the `when` field and recording's `even = TRUE` seam are
+  unchanged and still open. Provisional: pinned-edge rounding
+  treats coinciding free edges as pinned (errs safe).
 - 2026-09-24 (close): landed the phase note (7d8425b), framing specs
   `pz_frame()`/`pz_stage_frame()` + direction parser + page default
   (370f18a), the `pz_screenshot(frame =)` integration (fe60253), and

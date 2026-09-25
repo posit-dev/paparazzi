@@ -77,6 +77,16 @@
       height: 40px;
       background: rgb(30, 200, 200);
     }
+    /* Fractional CSS geometry for rounding-vs-bounds coverage; clear
+       of every other element's box and asserted pixels. */
+    #fractional {
+      position: absolute;
+      left: 620.4px;
+      top: 262.6px;
+      width: 200.2px;
+      height: 88.8px;
+      background: rgb(60, 60, 60);
+    }
   </style>
 </head>
 <body>
@@ -88,5 +98,6 @@
   <div id="inner-tr"></div>
   <div id="low"></div>
   <div id="deep"></div>
+  <div id="fractional"></div>
 </body>
 </html>
