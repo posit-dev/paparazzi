@@ -31,7 +31,7 @@ pz_set_shiny_input <- function(ctx, id, value, ..., wait = TRUE) {
   scoped <- scope_root(ctx)
   scope <- if (is.null(scoped)) "document" else scoped$description
   id_json <- as.character(jsonlite::toJSON(id, auto_unbox = TRUE))
-  value_json <- as.character(jsonlite::toJSON(value, auto_unbox = TRUE, null = "null"))
+  value_json <- as.character(jsonlite::toJSON(value, auto_unbox = TRUE, null = "null", digits = NA))
   invocation <- paste0("(", shiny_input_set_js, ").call(this, ", id_json, ", ", value_json, ")")
   result <- if (is.null(scoped)) {
     pz_js(ctx, paste0("(", shiny_input_set_js, ").call([document], ", id_json, ", ", value_json, ")"))
