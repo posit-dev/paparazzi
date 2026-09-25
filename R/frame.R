@@ -344,19 +344,28 @@ frame_effective <- function(ctx, frame, call = caller_env()) {
     call = call
   )
 }
-# The CDP clip for a framed capture: resolves the frame's content and
-# bounds, runs the pipeline (viewport-relative), then converts to
-# document coordinates and rounds the final edges. `even` selects
-# video-style even-pixel rounding for the recorder; stills round to
-# whole pixels.
+# The CDP clip for a framed capture: resolves and measures the frame's
+# content and bounds, then reads the page geometry and runs the
+# pipeline (viewport-relative), converts to document coordinates and
+# rounds the final edges. `even` selects video-style even-pixel
+# rounding for the recorder; stills round to whole pixels.
 frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
-  geometry <- page_geometry(ctx, call = call)
-  box <- frame_content_box(ctx, target, spec, geometry, call = call)
+  # NULL means the frame falls back to the viewport; the box is filled
+  # from the geometry read below.
+  box <- frame_content_box(ctx, target, spec, call = call)
   clamps <- list()
   if (!is.null(spec$bounds)) {
     els <- loc_resolve(ctx, spec$bounds, multiple = "all", call = call)
     withr::defer(release_elements(els))
     clamps[["frame bounds"]] <- box_union(el_rects(els, call = call), call = call)
+  }
+  # The geometry read comes after resolution and measurement:
+  # resolution auto-waits, and a target appearing mid-wait can expand
+  # the document -- clamping the measured box against pre-wait
+  # dimensions would error or clip against stale geometry.
+  geometry <- page_geometry(ctx, call = call)
+  if (is.null(box)) {
+    box <- c(0, 0, geometry$viewport_width, geometry$viewport_height)
   }
   # The page's rendered area, in viewport coordinates. The document
   # box -- not the visible viewport: captureBeyondViewport renders the
@@ -389,8 +398,9 @@ frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
 }
 # The content box a frame is computed from, viewport-relative: the
 # frame's own target if it has one, else the call's target, else the
-# pinned scope (scoped context), else the viewport.
-frame_content_box <- function(ctx, target, spec, geometry, call = caller_env()) {
+# pinned scope (scoped context), else NULL for the viewport fallback
+# (the caller fills it from the geometry it reads after resolution).
+frame_content_box <- function(ctx, target, spec, call = caller_env()) {
   want <- if (is.null(spec$target)) target else spec$target
   if (!is.null(want)) {
     els <- loc_resolve(ctx, want, multiple = "all", call = call)
@@ -401,7 +411,7 @@ frame_content_box <- function(ctx, target, spec, geometry, call = caller_env()) 
   if (!is.null(scoped)) {
     return(box_union(el_rects(scoped, call = call), call = call))
   }
-  c(0, 0, geometry$viewport_width, geometry$viewport_height)
+  NULL
 }
 # The union of element rects, as a viewport-relative box
 # c(left, top, right, bottom). The four edges are pure reductions over

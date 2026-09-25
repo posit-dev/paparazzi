@@ -354,6 +354,35 @@ test_that("a below-fold frame captures without scrolling", {
   expect_equal(pz_js(page, "window.scrollY"), 0)
 })
 
+test_that("the frame clamps against geometry read after resolution auto-waits", {
+  page <- local_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- frame_dpr(page)
+
+  # A late element expands the document while the target resolution
+  # auto-waits for it; the clamp must see the expanded document, not
+  # the pre-wait 2000px one.
+  pz_js(
+    page,
+    "setTimeout(() => {
+      const el = document.createElement('div');
+      el.id = 'late';
+      el.style.cssText =
+        'position:absolute;left:100px;top:2600px;width:40px;height:40px;background:rgb(10,20,30)';
+      document.body.appendChild(el);
+      document.body.style.height = '2700px';
+    }, 300)"
+  )
+  pz_screenshot(page, path, target = "#late", frame = pz_frame(pad = 32))
+  # #late (100, 2600) 40x40 + 32 = (68, 2568) 104x104, entirely below
+  # the pre-expansion document: only fresh geometry keeps it capturable.
+  expect_identical(png_dimensions(path), as.integer(round(c(104, 104) * dpr)))
+  expect_equal(
+    pz_js(page, "document.documentElement.scrollHeight"),
+    2700
+  )
+})
+
 test_that("a frame's own target replaces the call's target", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
