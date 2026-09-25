@@ -123,7 +123,8 @@ inspect_resolve_matches <- function(ctx, target, call = caller_env()) {
 }
 # Per-match read: opening tag (attributes rendered, no children),
 # checkVisibility() with CSS checks (the pz_expect_visible() predicate),
-# enabled (no disabled property, no disabled attribute), and the box.
+# enabled (:disabled also covers controls disabled by an ancestor
+# <fieldset disabled>), and the box.
 inspect_match_js <- "function() {
   return this.map((el) => {
     const attrs = Array.from(el.attributes, (a) =>
@@ -134,7 +135,7 @@ inspect_match_js <- "function() {
     return [
       tag,
       el.checkVisibility({ checkVisibilityCSS: true }),
-      !(el.disabled === true || el.hasAttribute('disabled')),
+      !el.matches(':disabled'),
       r.x, r.y, r.width, r.height
     ];
   });

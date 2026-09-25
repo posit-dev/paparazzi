@@ -256,3 +256,10 @@ test_that("pz_inspect validates its input", {
   )
   expect_error(pz_inspect(page, "oops" = 1), class = "rlang_error")
 })
+
+test_that("a control inside a disabled fieldset reports disabled", {
+  page <- local_inspect_page()
+  got <- inspect_capture(function() pz_inspect(page, "#insp-fieldset-btn"))
+  expect_match(got$out[[7]], "^     visible · disabled ·")
+})
+
