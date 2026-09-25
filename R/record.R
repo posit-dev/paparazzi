@@ -490,6 +490,9 @@ record_page_closed <- function(page) {
 # against overlapping captures; the callbacks clear it when chromote
 # invokes them on the child loop. A synchronous failure (e.g. a closed
 # session) clears it and lands in the recorder's error tally instead.
+# Unclipped surface captures at DPR 2 can remap concurrent mouse input
+# to half its coordinates; a viewport clip avoids that Chrome path while
+# retaining full-resolution PNGs for the encode-time crop.
 record_capture <- function(rec, page, vt) {
   rec$in_flight <- TRUE
   index <- length(rec$files) + 1L
@@ -498,19 +501,33 @@ record_capture <- function(rec, page, vt) {
     file = file.path(rec$frames_dir, sprintf("frame-%06d.png", index))
   )
   tryCatch(
-    page$session$Page$captureScreenshot(
-      format = "png",
-      fromSurface = TRUE,
+    page$session$Page$getLayoutMetrics(
       wait_ = FALSE,
       timeout_ = page$default_timeout,
-      callback_ = function(res) record_frame_done(rec, res = res),
+      callback_ = function(metrics) {
+        tryCatch({
+          v <- metrics$cssVisualViewport
+          clip <- list(
+            x = max(v$pageX, 0),
+            y = max(v$pageY, 0),
+            width = v$clientWidth,
+            height = v$clientHeight,
+            scale = 1
+          )
+          page$session$Page$captureScreenshot(
+            format = "png",
+            clip = clip,
+            fromSurface = TRUE,
+            wait_ = FALSE,
+            timeout_ = page$default_timeout,
+            callback_ = function(res) record_frame_done(rec, res = res),
+            error_ = function(err) record_frame_done(rec, err = err)
+          )
+        }, error = function(e) record_frame_done(rec, err = e))
+      },
       error_ = function(err) record_frame_done(rec, err = err)
     ),
-    error = function(e) {
-      rec$in_flight <- FALSE
-      rec$pending <- NULL
-      record_error(rec, e)
-    }
+    error = function(e) record_frame_done(rec, err = e)
   )
   invisible(rec)
 }
