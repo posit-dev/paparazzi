@@ -19,8 +19,9 @@
 #'
 #' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs. The cursor centers on the match. `NULL` shows the cursor at
-#'   its last position (or the viewport center the first time).
+#'   specs. The cursor centers on the match. `NULL` uses the current
+#'   scope's element or, at the root context, shows the cursor at its
+#'   last position (or the viewport center the first time).
 #' @param from A side of the frame to enter from: `"top"`, `"bottom"`,
 #'   `"left"`, or `"right"`.
 #'
@@ -43,7 +44,18 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL) {
   point <- if (!is.null(target)) {
     cursor_target_point(ctx, target)
   } else {
-    cursor_current_point(ctx)
+    scoped <- scope_root(ctx)
+    if (!is.null(scoped)) {
+      check_scope_single(scoped)
+      stage_scroll_into_view(ctx, scoped)
+      rects <- el_rects(scoped)
+      c(
+        x = rects$x[[1]] + rects$width[[1]] / 2,
+        y = rects$y[[1]] + rects$height[[1]] / 2
+      )
+    } else {
+      cursor_current_point(ctx)
+    }
   }
   cursor_show_at(ctx, point, from = from)
   invisible(ctx)

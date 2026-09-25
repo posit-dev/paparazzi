@@ -33,6 +33,12 @@ test_that("cursor functions draw, hide, move, and leave the overlay cursor", {
   expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
 })
 
+test_that("pz_cursor_show() on a scoped context centers on the scope", {
+  page <- local_cursor_page()
+  page |> pz_find("#btn") |> pz_cursor_show()
+  expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
+})
+
 test_that("pz_cursor_show(from =) starts off-frame on that side", {
   page <- local_cursor_page()
   # Not recording: the entrance collapses to a static jump to the target.

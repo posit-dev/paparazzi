@@ -10,8 +10,9 @@ pz_cursor_show(ctx, target = NULL, ..., from = NULL)
 \item{ctx}{A paparazzi context.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs. The cursor centers on the match. \code{NULL} shows the cursor at
-its last position (or the viewport center the first time).}
+specs. The cursor centers on the match. \code{NULL} uses the current
+scope's element or, at the root context, shows the cursor at its
+last position (or the viewport center the first time).}
 
 \item{...}{Checked empty; reserved for future use.}
 
