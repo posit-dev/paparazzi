@@ -174,11 +174,27 @@ inspect_positive_rects <- function(rects) {
   }
   rects[rects$width > 0 & rects$height > 0, ]
 }
-# The one seam for recording/cursor state. Neither subsystem exists yet,
-# so the summary reads off/hidden; the recorder and cursor tasks replace
-# this accessor with a real page-state read, in one place.
+# The one seam for recording/cursor state in the summary: recording
+# reads the recorder, cursor reads the staging state (peek only --
+# inspecting must not create cursor state).
 inspect_recording_state <- function(page) {
-  list(recording = "off", cursor = "hidden")
+  rec <- page_recorder(page)
+  recording <- if (is.null(rec) || !isTRUE(rec$active)) {
+    "off"
+  } else if (isTRUE(rec$paused)) {
+    "paused"
+  } else {
+    "on"
+  }
+  cur <- page_cursor_peek(page)
+  cursor <- if (is.null(cur) || !cursor_visible(page)) {
+    "hidden"
+  } else if (!is.null(cur$off_frame)) {
+    "off-frame"
+  } else {
+    "visible"
+  }
+  list(recording = recording, cursor = cursor)
 }
 # ── Summary ─────────────────────────────────────────────────────────
 # The summary is composed as plain strings and emitted with cat_line():
@@ -387,16 +403,23 @@ overlay_clear <- function(ctx) {
   invisible(TRUE)
 }
 # Hide-during-capture guard for pz_screenshot(): one JS call hides the
-# overlay host (returning its previous inline display, or null when no
-# host exists -- the common case), the capture runs, one call restores
-# it. A null/empty previous display means the host had no inline style,
+# inspect outline layers (returning their previous inline displays, or
+# null when nothing is drawn -- the common case), the capture runs, one
+# call restores them. Only .pz-inspect layers hide: a visible cursor
+# (cursor = TRUE, or an explicit pz_cursor_show()) belongs in stills.
+# An empty-string previous display means the layer had no inline style,
 # so restoring sets display back to '' (the stylesheet default).
 overlay_hide <- function(ctx) {
   pz_js(
     ctx,
     paste0(
       "(() => { const h = document.getElementById('paparazzi-overlay-root'); ",
-      "if (!h) return null; const prev = h.style.display; h.style.display = 'none'; return prev; })()"
+      "if (!h || !h.shadowRoot) return null; ",
+      "const layers = h.shadowRoot.querySelectorAll('.pz-inspect'); ",
+      "if (!layers.length) return null; ",
+      "const prev = []; ",
+      "layers.forEach((n) => { prev.push(n.style.display); n.style.display = 'none'; }); ",
+      "return prev; })()"
     ),
     await = FALSE
   )
@@ -405,12 +428,15 @@ overlay_restore <- function(ctx, display) {
   if (is.null(display)) {
     return(invisible(NULL))
   }
-  value <- if (identical(display, "")) "''" else jsonlite::toJSON(as.character(display))
+  values <- jsonlite::toJSON(as.character(unlist(display)))
   pz_js(
     ctx,
     paste0(
       "(() => { const h = document.getElementById('paparazzi-overlay-root'); ",
-      "if (h) h.style.display = ", value, "; })()"
+      "if (!h || !h.shadowRoot) return; ",
+      "const prev = ", values, "; ",
+      "h.shadowRoot.querySelectorAll('.pz-inspect').forEach((n, i) => { n.style.display = prev[i]; }); ",
+      "})()"
     ),
     await = FALSE
   )
