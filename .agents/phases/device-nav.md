@@ -108,6 +108,59 @@ Builds on the page core
   restore -- both settle mechanisms avoid it for exactly this
   reason. `promises` moves to Imports for `nav_await()`.
 
+## Review-fix round (roborev 1265)
+
+Dispositions for all five accepted findings, decided before any code;
+one commit per finding.
+
+1. (HIGH) The css zoom lived as an inline style on `<html>`, so any
+   navigation discarded it and `state$css_zoom` caching skipped ever
+   re-applying it -- a `pz_open(url, zoom_method = "css")` lost its
+   zoom at the first navigation. Fix: the apply mechanism becomes
+   `Page.addScriptToEvaluateOnNewDocument` (the CDP feature built for
+   exactly this) with a top-frame guard in the injected JS
+   (`window === window.top`) so iframes keep their own layout. The
+   script is registered whenever a css zoom is active -- including
+   from `pz_open()`'s device dots, so the destination document gets
+   it; an inline application still covers the CURRENT document --
+   removed with `Page.removeScriptToEvaluateOnNewDocument` when the
+   zoom disables, and re-registered when the factor changes.
+   `state$css_zoom` keeps meaning "the zoom currently in effect".
+2. (HIGH) A scoped framed recording retained its start-time
+   `rec$frame_ctx`, but navigation releases the pins it holds, so the
+   `when = "stop"` crop in `pz_record_stop()` hit the detach error
+   instead of finishing. The recording survives (SPEC: staging and
+   recorder carry over), but its framing falls back to the viewport:
+   the rebase hook lives in `wait_nav_reset()` -- the single seam
+   every nav entry point and `pz_wait_for_navigation()` share -- and
+   clears `rec$frame` and `rec$frame_ctx`, so a not-yet-measured
+   `when = "stop"` crop resolves as the full viewport; a
+   `when = "start"` crop was already measured as a fixed box in
+   viewport coordinates and stays.
+3. (MEDIUM) `pz_nav_goto()` waited on `readyState` alone, which
+   settles on the outgoing page whenever it is still `"complete"`
+   when `Page.navigate()` returns. Fix: mirror `pz_nav_reload()` --
+   register `frameNavigated(wait_ = FALSE)` BEFORE the navigate, then
+   `nav_await()` it, then `wait_for_load()` -- for `wait = "load"`.
+   Same-document navigations (URL fragments) never fire frameNavigated
+   (probed), but their `Page.navigate` response also carries no
+   `loaderId` while a cross-document one does (probed), so the anchor
+   is gated on `loaderId`: a fragment navigation skips straight to
+   the readyState wait, where the instant settle is correct (the
+   document never changed, it is already complete).
+4. (MEDIUM) `pz_open()` registered its deferred close after
+   `device_open()`, so an invalid device setting or a failed emulation
+   command (e.g. a bad timezone) leaked the freshly created browser
+   session. Fix: register the deferred close immediately after
+   `PaparazziPage$new()`, before `device_open()`, in the new-session
+   branch only -- the ChromoteSession wrap branch must never close
+   the caller's session (the caller owns it).
+5. (LOW) Disabling css zoom removed the inline `zoom` property even
+   when the document had one before emulation. Fix: the first
+   application captures the page's own inline zoom (or its absence)
+   in state -- before the injected script takes over -- and disable
+   means removing the script and restoring the saved value.
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
