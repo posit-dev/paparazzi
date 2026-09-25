@@ -1,6 +1,6 @@
 # Completed back/forward-cache navigation (paparazzi#xwzz)
 
-Signed off:
+Signed off: orchestrator, per garrick's decision (option a): record the main-frame loaderId at action start (one Page.getFrameTree round trip per action, accepted) and REPLACE the npaj wall-clock timestamp comparison with the loaderId comparison -- the timestamp evidence is deleted, provided the npaj fast-link tests stay green on loaderId alone. file:// limitations (no bfcache) are accepted as-is; no extra work for file://. The bfcache regression uses an httpuv-served fixture.
 
 ## Problem and empirical evidence
 
