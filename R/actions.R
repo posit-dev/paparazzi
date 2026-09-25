@@ -9,11 +9,13 @@
 #'
 #' Auto-waits for the element to be actionable -- visible with a
 #' non-empty box, the same "visible" [pz_expect_visible()] uses -- then
-#' scrolls it into view (instantly) and clicks the center of it with
-#' real browser input events: a mouse move to the point, then a
-#' left-button press and release. The page sees a trusted pointer
-#' sequence -- exactly what a user's click produces -- so `:hover`
-#' state, focus, and click handlers all behave as they would live.
+#' scrolls it into view and clicks the center of it with real browser
+#' input events: a mouse move to the point, then a left-button press
+#' and release. The page sees a trusted pointer sequence -- exactly
+#' what a user's click produces -- so `:hover` state, focus, and click
+#' handlers all behave as they would live. While recording, the staging
+#' settings ([pz_stage()]) animate the scroll, the cursor glide, and
+#' the press; otherwise everything runs straight to the final state.
 #'
 #' @param ctx A paparazzi context.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
@@ -86,10 +88,12 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #' if nothing editable is focused, the text goes nowhere, exactly like
 #' typing into a page with no focused field.
 #'
-#' Insertion is instant (one `insertText`); natural, per-keystroke
-#' typing arrives with the recording task. For a value-setting primitive
-#' that works on selects, checkboxes, and range inputs, see
-#' `pz_set_value()` (a later task).
+#' Insertion is instant (one `insertText`), except while recording
+#' with `typing = "natural"` (the default; see [pz_stage()]): one
+#' `insertText` per character with randomized delays around
+#' `typing_speed`, so the video shows the text appearing. For a
+#' value-setting primitive that works on selects, checkboxes, and range
+#' inputs, see `pz_set_value()` (a later task).
 #'
 #' @inheritParams pz_click
 #' @param text A string to type.
@@ -291,14 +295,15 @@ pointer_actionable_js <- "function() {
 # only covers ">= 1 match", so without this wait a hidden or zero-sized
 # match would dispatch at (0, 0) and hit whatever sits there. Rects are
 # viewport-relative and go stale after the scroll, so each attempt
-# scrolls first, then reads. This helper is the seam where the
-# cursor/staging work swaps in the animated scroll and the cursor
-# glide; keep scroll + rect + center together.
+# scrolls first, then reads. The scroll and the post-poll cursor move
+# are the staging seams: stage_scroll_into_view() wheels the scroll
+# while recording (instant otherwise), stage_move_cursor() glides or
+# jumps the cursor to the point; keep scroll + rect + center together.
 el_pointer_point <- function(ctx, els, call = caller_env()) {
   point <- NULL
   pz_poll(
     fn = function() {
-      el_scroll_into_view(els, call = call)
+      stage_scroll_into_view(ctx, els, call = call)
       probe <- els_call(els, pointer_actionable_js, call = call)
       if (
         length(probe) == 5L && probe[1] == 1 && probe[4] > 0 && probe[5] > 0
@@ -430,7 +435,30 @@ dispatch_click <- function(ctx, action, target, point, call = caller_env()) {
     pump_loop(ctx$page$child_loop, 0.2)
   }
 }
+# Typing is instant everywhere except a recording with
+# typing = "natural": one Input.insertText per character with a pumped,
+# randomized delay around 1/typing_speed between characters (the
+# recording captures the text growing; no typo simulation). The pumped
+# delay keeps the recorder's ticks firing between keystrokes.
 insert_text <- function(ctx, target, text, call = caller_env()) {
+  page <- ctx$page
+  stage <- page_stage(page)
+  if (
+    stage_recording(page) &&
+      identical(stage$typing, "natural") &&
+      nchar(text) > 1L
+  ) {
+    chars <- strsplit(text, "", fixed = TRUE)[[1]]
+    for (char in chars) {
+      insert_text_once(ctx, target, char, call = call)
+      delay <- stats::runif(1L, 0.5, 1.5) / stage$typing_speed
+      pump_loop(page$child_loop, delay, interval = min(delay, 0.03))
+    }
+    return(invisible(ctx))
+  }
+  insert_text_once(ctx, target, text, call = call)
+}
+insert_text_once <- function(ctx, target, text, call = caller_env()) {
   action_cdp(
     ctx,
     "typing into",
@@ -896,8 +924,11 @@ select_text_js <- "function(text) {
 #'   the four corners, or `"center"` (e.g. `"bottom"` scrolls to the
 #'   end; `"top right"` to the top-right corner).
 #'
-#' Scrolling is instant; the smooth, on-camera variant arrives with
-#' the recording task.
+#' Scrolling is instant outside a recording; while recording it is
+#' staged as real mouse wheel events with the cursor over the
+#' container, so the video shows the scroll. Wheel scrolling is
+#' best-effort: if the page swallows the events, the instant scroll
+#' still guarantees the final position.
 #'
 #' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
@@ -928,13 +959,19 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
     if (!found$pinned) {
       withr::defer(release_elements(found$els))
     }
-    el_scroll_into_view(found$els)
+    stage_scroll_into_view(ctx, found$els)
+    stage_action_pause(ctx)
     return(invisible(ctx))
   }
 
   by <- if (!is.null(by)) check_offset(by, arg = "by") else NULL
   to <- if (!is.null(to)) parse_direction(to, arg = "to") else NULL
   scoped <- scope_root(ctx)
+  if (stage_recording(ctx$page)) {
+    scroll_staged(ctx, scoped, by, to)
+    stage_action_pause(ctx)
+    return(invisible(ctx))
+  }
   if (!is.null(scoped)) {
     arg <- if (!is.null(by)) list(by = as.list(by)) else list(to = as.list(to))
     els_arg_values(scoped, scroll_apply_js, list(list(value = arg)))
@@ -953,6 +990,7 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
       )
     )
   }
+  stage_action_pause(ctx)
   invisible(ctx)
 }
 # The by/to scroll, applied to the current scope's container: the scope

@@ -154,11 +154,239 @@ stage_scroll_into_view <- function(ctx, els, call = caller_env()) {
   }
   stage_wheel_into_view(ctx, els, call = call)
 }
-# Instant placeholder until the wheel driver lands in this file; keeps
-# the seam wired so the action pipeline is staging-aware from the start.
+# The animated auto-scroll: real mouseWheel events with the cursor
+# over the container, instead of the instant scrollIntoView. Each round
+# probes the delta that scrollIntoView(block: 'nearest') would apply to
+# the element's nearest scrollable ancestor (or the document), glides
+# the cursor over the container, and wheels the delta with an eased
+# step pattern; a re-probe checks convergence. Wheels that make no
+# progress (a page canceling wheel events, a nested container the probe
+# can't reach) fall back to the instant scroll after one stalled round:
+# the final state is always correct, animated or not.
 stage_wheel_into_view <- function(ctx, els, call = caller_env()) {
-  el_scroll_into_view(els, call = call)
+  if (els$count == 0L || is.null(els$object_id)) {
+    return(invisible(els))
+  }
+  prev <- c(Inf, Inf)
+  repeat {
+    probe <- els_values(els, wheel_probe_js, call = call)
+    if (is.null(probe)) {
+      return(invisible(els))
+    }
+    delta <- c(probe$dx, probe$dy)
+    if (all(delta == 0)) {
+      return(invisible(els))
+    }
+    if (all(abs(delta - prev) < 0.5)) {
+      return(el_scroll_into_view(els, call = call))
+    }
+    prev <- delta
+    point <- c(x = probe$x, y = probe$y)
+    stage_move_cursor(ctx, point)
+    stage <- page_stage(ctx$page)
+    duration <- min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.3), 1.2)
+    stage_wheel(ctx, point, delta[[1]], delta[[2]], duration, call = call)
+  }
 }
+# Wheel a scroll delta over `duration` seconds: ~100px steps, weights
+# from a cubic ease-in-out over the step index so the scroll eases like
+# a glide, a short pump between steps (the wheels land asynchronously,
+# and the recorder's ticks capture the intermediate positions).
+stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
+  page <- ctx$page
+  steps <- max(1L, ceiling(max(abs(dx), abs(dy)) / 100))
+  ease <- function(t) {
+    if (t < 0.5) 4 * t^3 else 1 - (-2 * t + 2)^3 / 2
+  }
+  t0 <- 0
+  for (i in seq_len(steps)) {
+    t1 <- ease(i / steps)
+    frac <- t1 - t0
+    t0 <- t1
+    action_cdp(
+      ctx,
+      "scrolling",
+      call = call,
+      cmd = page$session$Input$dispatchMouseEvent(
+        type = "mouseWheel",
+        x = point[["x"]],
+        y = point[["y"]],
+        deltaX = dx * frac,
+        deltaY = dy * frac,
+        pointerType = "mouse",
+        timeout_ = page$default_timeout
+      )
+    )
+    interval <- duration / steps
+    pump_loop(page$child_loop, interval, interval = min(interval, 0.05))
+  }
+  invisible(TRUE)
+}
+# The staged pz_scroll(by =)/pz_scroll(to =): wheel the scope's
+# container (or the document) to the target scroll position with the
+# cursor over it, then verify; a miss (wheel-cancelling page, latching
+# onto a nested scroller under the container center) falls back to the
+# instant application so the final scroll position is always exact.
+scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
+  probe <- if (!is.null(scoped)) {
+    els_values(scoped, wheel_container_js, call = call)
+  } else {
+    pz_js(ctx, paste0("(", wheel_container_js, ").call([])"))
+  }
+  target <- scroll_wheel_target(probe, by, to)
+  delta <- c(target$left - probe$left, target$top - probe$top)
+  if (all(delta == 0)) {
+    return(invisible(ctx))
+  }
+  point <- c(x = probe$x, y = probe$y)
+  stage_move_cursor(ctx, point)
+  stage <- page_stage(ctx$page)
+  duration <- min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.3), 1.2)
+  stage_wheel(ctx, point, delta[[1]], delta[[2]], duration, call = call)
+  # Verify and repair: wheels are best-effort (clamping, canceling),
+  # the recorded end state must match the instant path.
+  actual <- if (!is.null(scoped)) {
+    els_values(scoped, wheel_container_js, call = call)
+  } else {
+    pz_js(ctx, paste0("(", wheel_container_js, ").call([])"))
+  }
+  if (
+    abs(actual$top - target$top) > 2 || abs(actual$left - target$left) > 2
+  ) {
+    arg <- scroll_arg_json(
+      by = if (!is.null(by)) c(target$left - actual$left, target$top - actual$top),
+      to = to
+    )
+    if (!is.null(scoped)) {
+      arg_list <- if (!is.null(by)) {
+        list(by = as.list(c(target$left - actual$left, target$top - actual$top)))
+      } else {
+        list(to = as.list(to))
+      }
+      els_arg_values(scoped, scroll_apply_js, list(list(value = arg_list)))
+    } else {
+      action_cdp(
+        ctx,
+        "scrolling",
+        call = call,
+        cmd = ctx$page$session$Runtime$evaluate(
+          paste0("(", scroll_apply_js, ").call([], ", arg, ")"),
+          returnByValue = TRUE,
+          timeout_ = ctx$page$default_timeout
+        )
+      )
+    }
+  }
+  invisible(ctx)
+}
+# The target scroll position for a by/to scroll, from the container
+# probe: by adds an offset, to aims at an edge/corner/center per the
+# direction tokens (an axis the tokens don't name keeps its position).
+scroll_wheel_target <- function(probe, by, to) {
+  left <- probe$left
+  top <- probe$top
+  if (!is.null(by)) {
+    left <- left + by[[1]]
+    top <- top + by[[2]]
+  } else {
+    center <- identical(to, "center")
+    if ("left" %in% to) left <- 0
+    if ("right" %in% to) left <- probe$maxLeft
+    if (center) left <- probe$maxLeft / 2
+    if ("top" %in% to) top <- 0
+    if ("bottom" %in% to) top <- probe$maxTop
+    if (center) top <- probe$maxTop / 2
+  }
+  list(
+    left = min(max(left, 0), probe$maxLeft),
+    top = min(max(top, 0), probe$maxTop)
+  )
+}
+# The container probe for by/to scrolls: the current scope's scroll
+# container (the scope element or its nearest scrollable ancestor, the
+# document at the root -- the same walk scroll_apply_js does), its
+# viewport center for cursor placement, and its scroll position and
+# range. One function serves both rootings: callFunctionOn on the
+# pinned set as `this`, or Runtime$evaluate with `this` an empty array.
+wheel_container_js <- "function() {
+  const isScrollable = (e) => {
+    if (e === document.scrollingElement) {
+      return true;
+    }
+    const s = getComputedStyle(e);
+    if (!/(auto|scroll)/.test(s.overflow + ' ' + s.overflowX + ' ' + s.overflowY)) {
+      return false;
+    }
+    return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
+  };
+  let container = null;
+  for (let e = this.length ? this[0] : null; e; e = e.parentElement) {
+    if (isScrollable(e)) {
+      container = e;
+      break;
+    }
+  }
+  if (!container) {
+    container = document.scrollingElement;
+  }
+  const doc = container === document.scrollingElement;
+  const cr = doc
+    ? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }
+    : container.getBoundingClientRect();
+  return {
+    x: cr.left + cr.width / 2,
+    y: cr.top + cr.height / 2,
+    top: container.scrollTop,
+    left: container.scrollLeft,
+    maxTop: container.scrollHeight - container.clientHeight,
+    maxLeft: container.scrollWidth - container.clientWidth
+  };
+}"
+# The scroll probe: the delta that scrollIntoView(block/inline:
+# 'nearest') would apply to the first element's nearest scrollable
+# ancestor-or-self (the document when none scrolls), clamped to the
+# container's range, plus the container's viewport center for cursor
+# placement. Computed without scrolling; the R driver re-probes after
+# wheeling.
+wheel_probe_js <- "function() {
+  if (!this.length) return null;
+  const el = this[0];
+  const isScrollable = (e) => {
+    if (e === document.scrollingElement) return true;
+    const s = getComputedStyle(e);
+    if (!/(auto|scroll)/.test(s.overflow + ' ' + s.overflowX + ' ' + s.overflowY)) {
+      return false;
+    }
+    return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
+  };
+  let container = null;
+  for (let e = el.parentElement; e; e = e.parentElement) {
+    if (isScrollable(e)) { container = e; break; }
+  }
+  const doc = !container || container === document.scrollingElement;
+  const c = doc ? document.scrollingElement : container;
+  const er = el.getBoundingClientRect();
+  const cr = doc
+    ? { top: 0, left: 0, bottom: window.innerHeight, right: window.innerWidth,
+        width: window.innerWidth, height: window.innerHeight }
+    : c.getBoundingClientRect();
+  let dy = 0;
+  if (er.top < cr.top) dy = er.top - cr.top;
+  else if (er.bottom > cr.bottom) dy = Math.min(er.top - cr.top, er.bottom - cr.bottom);
+  let dx = 0;
+  if (er.left < cr.left) dx = er.left - cr.left;
+  else if (er.right > cr.right) dx = Math.min(er.left - cr.left, er.right - cr.right);
+  const maxTop = c.scrollHeight - c.clientHeight;
+  const maxLeft = c.scrollWidth - c.clientWidth;
+  dy = Math.min(Math.max(c.scrollTop + dy, 0), maxTop) - c.scrollTop;
+  dx = Math.min(Math.max(c.scrollLeft + dx, 0), maxLeft) - c.scrollLeft;
+  return {
+    x: cr.left + cr.width / 2,
+    y: cr.top + cr.height / 2,
+    dx: dx,
+    dy: dy
+  };
+}"
 # pz_stage(pause =): a hold after each action while recording, skipped
 # otherwise (the SPEC matrix). Real time passes -- the recorded frames
 # capture the settled page.

@@ -30,10 +30,12 @@ root context, inserts into whatever element currently has focus;
 if nothing editable is focused, the text goes nowhere, exactly like
 typing into a page with no focused field.
 
-Insertion is instant (one \code{insertText}); natural, per-keystroke
-typing arrives with the recording task. For a value-setting primitive
-that works on selects, checkboxes, and range inputs, see
-\code{pz_set_value()} (a later task).
+Insertion is instant (one \code{insertText}), except while recording
+with \code{typing = "natural"} (the default; see \code{\link[=pz_stage]{pz_stage()}}): one
+\code{insertText} per character with randomized delays around
+\code{typing_speed}, so the video shows the text appearing. For a
+value-setting primitive that works on selects, checkboxes, and range
+inputs, see \code{pz_set_value()} (a later task).
 }
 \seealso{
 \code{\link[=pz_press]{pz_press()}} for key combos (Enter, Control+A, ...) and

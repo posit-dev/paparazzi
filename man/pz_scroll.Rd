@@ -37,8 +37,11 @@ the four corners, or \code{"center"} (e.g. \code{"bottom"} scrolls to the
 end; \code{"top right"} to the top-right corner).
 }
 
-Scrolling is instant; the smooth, on-camera variant arrives with
-the recording task.
+Scrolling is instant outside a recording; while recording it is
+staged as real mouse wheel events with the cursor over the
+container, so the video shows the scroll. Wheel scrolling is
+best-effort: if the page swallows the events, the instant scroll
+still guarantees the final position.
 }
 \seealso{
 \code{\link[=pz_find]{pz_find()}}, \code{\link[=pz_click]{pz_click()}}
