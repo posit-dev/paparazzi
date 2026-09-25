@@ -18,10 +18,11 @@ pz_open(
 \itemize{
 \item a URL string (any scheme, including \verb{file://}, \verb{about:}, \verb{data:});
 \item a path to an existing local file (opened as \verb{file://});
-\item a Shiny app directory or app file (\code{app.R}, \code{ui.R}, \code{server.R},
-\verb{app-*.R}, ...), started by this page and stopped when it closes;
+\item a Shiny app directory (including split \code{ui.R}/\code{server.R} apps) or
+runnable app file (\code{app.R}, \verb{app-*.R}, \verb{*_app.R}, etc.), started by
+this page and stopped when it closes;
 \item a \code{\link[=pz_app]{pz_app()}} handle, shared across pages (closing the page leaves
-the app running);
+the app running); \code{ui.R} and \code{server.R} passed alone open as files;
 \item an existing \code{ChromoteSession} (wrapped as-is; nothing is navigated).
 }
 

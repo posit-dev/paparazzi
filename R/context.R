@@ -63,13 +63,14 @@ PaparazziPage <- R6::R6Class(
     #' @description Wrap a `ChromoteSession` as a paparazzi page.
     #' @param session A `chromote::ChromoteSession`.
     #' @param timeout Default timeout in seconds for this session.
-    #' @param owned_app App started by this page, if any; shared handles are
-    #'   not passed here.
-    initialize = function(session, timeout = 10, owned_app = NULL) {
+    #' @param owned_app App started by this page, if any.
+    #' @param shared_app Caller-owned app handle kept alive while the page lives.
+    initialize = function(session, timeout = 10, owned_app = NULL, shared_app = NULL) {
       stopifnot(inherits(session, "ChromoteSession"))
       private$chromote_ <- session
       private$default_timeout_ <- timeout
       private$owned_app_ <- owned_app
+      private$shared_app_ <- shared_app
       self$page <- self
     },
 
@@ -163,6 +164,7 @@ PaparazziPage <- R6::R6Class(
   private = list(
     chromote_ = NULL,
     owned_app_ = NULL,
+    shared_app_ = NULL,
     closed_ = FALSE,
     default_timeout_ = 10,
     # One object group per page for every remote object a scope pinned,

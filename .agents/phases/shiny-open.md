@@ -15,8 +15,19 @@ Source: .agents/SPEC.md, Sessions and apps (Opening pages, Apps, Page lifecycle)
 
 Signed off: teammate-1, before feature code.
 
+## Review 1268 fix decision (before code)
+
+- Treat only runnable standalone files (`app.R` and existing `app-*.R` / `*_app.R` variants) as app paths; `ui.R` and `server.R` remain ordinary local files when passed alone, while their containing app directory still runs through `pz_app()`. Correct the public help and exercise both paths in `test-open.R`.
+- Keep a separate non-owning shared handle reference on the page so a temporary `pz_app()` cannot finalize while its page lives; page close stops only `owned_app`. Test forced GC during page lifetime and continued app liveness after closing when another reference is held. No scheduling or ordering machinery.
+
 ## Handoff
 
 - Landed: directory/app.R (and recognized file variants) start page-owned apps; handle pages are shared; owned-app stop on close/open failure, with block cleanup and option forwarding verified. Baseline 139 passes; red test demonstrated six failures before implementation.
 - Next: n4f2 replaces the Shiny auto `load` placeholder at `open_wait_mode()` and implements actual connected/idle waiting; orchestrator runs full suite on main as merge gate.
-- Provisional: Shiny auto returns `load` until n4f2. The internally documented `PaparazziPage$initialize(owned_app)` source parameter changes `man/PaparazziContext.Rd` on `btw pkg document`; this task restores that unapproved generated artifact after documenting, so the coordinator can decide whether to update the internal topic separately.
+- Provisional (original task): Shiny auto returns `load` until n4f2. At that task's handoff, the internally documented constructor help was outside its edit scope; the review fix below can update the generated topic.
+
+## Review 1268 handoff
+
+- Landed: standalone `ui.R`/`server.R` are local files, split app directories still launch, and a page retains a non-owning reference to its shared app handle.
+- Next: coordinator runs the main full-suite merge gate; n4f2 still owns the Shiny idle wait.
+- Provisional: none for this fix; `man/PaparazziContext.Rd` is now within the approved generated-file scope and tracks the constructor change.
