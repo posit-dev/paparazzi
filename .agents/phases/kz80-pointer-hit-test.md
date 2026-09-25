@@ -1,6 +1,6 @@
 # Pointer press-point hit testing (paparazzi#kz80)
 
-Signed off:
+Signed off: orchestrator. One hit-test after the final scroll, no post-glide re-check (agreed: that would be a guard for the guard; a reproducible glide-time race becomes its own issue). Amendment: the exported docs DO change -- every roxygen block that defines actionability as "visible with a non-empty box" (pz_click, pz_hover, pz_type, pz_drag, and any shared @section/@inheritParams text) gains "and receives pointer events at its center (not covered by another element)"; run `btw pkg document`. The zoom check is optional: include it only if it is deterministic.
 
 ## Problem and mechanism
 
