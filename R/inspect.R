@@ -65,6 +65,9 @@ pz_inspect <- function(
     if (identical(show, "browser")) {
       ctx$page$view()
     } else {
+      # Best-effort cleanup on every exit path: a capture timeout or an
+      # unwritable path must not leave outlines in the live page.
+      withr::defer(try(overlay_clear(ctx), silent = TRUE))
       path <- path %||% tempfile(fileext = ".png")
       inspect_annotated_capture(ctx, scope_rects, target_rects, path)
       inspect_show(path)
@@ -434,7 +437,8 @@ overlay_restore <- function(ctx, display) {
 # ── Annotated capture ───────────────────────────────────────────────
 # Drawn -> screenshot_capture() (the internal CDP call, NOT
 # pz_screenshot(), whose capture guard would hide the outlines) ->
-# clear, so the annotated image exists and the page returns to clean.
+# so the annotated image exists. Clearing happens in pz_inspect()'s
+# deferred cleanup, covering failed captures too.
 # The capture region follows pz_screenshot() conventions: the viewport
 # at the root, otherwise the union of scope and target rects padded so
 # outlines and badges aren't clipped.
@@ -456,7 +460,6 @@ inspect_annotated_capture <- function(ctx, scope_rects, target_rects, path) {
   }
   res <- screenshot_capture(ctx, clip)
   writeBin(jsonlite::base64_dec(res$data), path)
-  overlay_clear(ctx)
   invisible(path)
 }
 # The annotated PNG opens in the IDE viewer when rstudioapi is available;
