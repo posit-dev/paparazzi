@@ -73,6 +73,10 @@ PaparazziPage <- R6::R6Class(
     #' @description Close the page and its browser session. Idempotent.
     close = function() {
       if (!private$closed_) {
+        # A recorder on this page can't wait for its next tick: the
+        # closed session's loop may never pump again. Teardown makes
+        # no CDP calls, so it is safe before the session goes away.
+        record_page_closed(self)
         # Release every pinned scope object before the session goes away;
         # contexts that survive the release raise the classed detach
         # error on their next use instead of a raw chromote one.

@@ -231,17 +231,24 @@ test_that("a quick restart does not double the capture chain", {
   expect_lte(ticks, 4L)
 })
 
-test_that("closing the page tears down the recorder on the next tick", {
+test_that("closing the page tears down the recorder synchronously", {
   page <- local_record_page()
-  skip_if_no_av()
 
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  rec <- page_recorder(page)
+  expect_true(rec$active)
+  frames_dir <- rec$frames_dir
+  expect_true(dir.exists(frames_dir))
+
   pz_close(page)
-  # After close the child loop may never pump again, so the tick can't
-  # be relied on to fire on its own; invoke it directly.
-  record_tick(page)
+
+  # no tick involved: the close path itself clears the recorder slot,
+  # deactivates the recorder, and drops the temp frames dir -- the
+  # closed session's loop may never pump again
   expect_null(page_recorder(page))
+  expect_false(rec$active)
+  expect_false(dir.exists(frames_dir))
 })
 
 test_that("a frame crops the recording at encode time", {

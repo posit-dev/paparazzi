@@ -455,17 +455,6 @@ record_tick <- function(page, rec = page_recorder(page)) {
   if (!identical(rec, page_recorder(page))) {
     return(invisible(FALSE))
   }
-  if (page$is_closed()) {
-    # page$close() can't stop the recorder (the page lifecycle lives in
-    # context.R), so a tick on a closed page tears the recorder down
-    # instead of re-arming forever and leaking the frames directory.
-    rec$active <- FALSE
-    page_set_recorder(page, NULL)
-    if (!rec$keep_frames && !is.null(rec$frames_dir)) {
-      unlink(rec$frames_dir, recursive = TRUE)
-    }
-    return(invisible(FALSE))
-  }
   later::later(
     function() record_tick(page, rec),
     delay = 1 / rec$fps,
@@ -476,6 +465,24 @@ record_tick <- function(page, rec = page_recorder(page)) {
     return(invisible(TRUE))
   }
   record_capture(rec, page, rec_vt(rec))
+  invisible(TRUE)
+}
+# Synchronous teardown for the page-lifecycle close path (context.R):
+# the closed session's child loop may never pump again, so a later
+# tick can't be relied on to clean up. Deactivates the recorder,
+# clears the recorder slot, and drops the temp frames dir; kept frames
+# survive on purpose. An in-flight capture is left to resolve
+# harmlessly on the discarded recorder.
+record_page_closed <- function(page) {
+  rec <- page_recorder(page)
+  if (is.null(rec)) {
+    return(invisible(FALSE))
+  }
+  rec$active <- FALSE
+  page_set_recorder(page, NULL)
+  if (!rec$keep_frames && !is.null(rec$frames_dir)) {
+    unlink(rec$frames_dir, recursive = TRUE)
+  }
   invisible(TRUE)
 }
 # Issue one async capture on the page: the tick's periodic capture and
