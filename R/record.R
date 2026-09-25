@@ -120,8 +120,9 @@ pz_record_start <- function(
 
   page_set_recorder(page, rec)
   # Fire the first tick as soon as the loop pumps so short recordings
-  # still get an early frame; ticks re-arm at 1/fps from then on.
-  later::later(function() record_tick(page), delay = 0, loop = page$child_loop)
+  # still get an early frame; ticks re-arm at 1/fps from then on. The
+  # tick closure carries its recorder so it can't adopt a later one.
+  later::later(function() record_tick(page, rec), delay = 0, loop = page$child_loop)
   invisible(ctx)
 }
 #' Stop a recording and write the video
@@ -432,10 +433,15 @@ record_frames_dir <- function(path, keep_frames) {
 # skipped tick shows up as a repeated frame after resampling). The tick
 # runs inside run_now() during whatever pumped the loop, so its errors
 # are caught and counted on the recorder instead of escaping into an
-# unrelated call.
-record_tick <- function(page) {
-  rec <- page_recorder(page)
+# unrelated call. Each scheduled tick is bound to the recorder that
+# scheduled it: one identity check against the page's current recorder
+# kills ticks left behind by a stopped recording, which would otherwise
+# adopt a newer one and double the capture chain after a quick restart.
+record_tick <- function(page, rec = page_recorder(page)) {
   if (is.null(rec) || !rec$active) {
+    return(invisible(FALSE))
+  }
+  if (!identical(rec, page_recorder(page))) {
     return(invisible(FALSE))
   }
   if (page$is_closed()) {
@@ -450,7 +456,7 @@ record_tick <- function(page) {
     return(invisible(FALSE))
   }
   later::later(
-    function() record_tick(page),
+    function() record_tick(page, rec),
     delay = 1 / rec$fps,
     loop = page$child_loop
   )

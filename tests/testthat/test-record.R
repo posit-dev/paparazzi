@@ -208,6 +208,29 @@ test_that("an immediate block error is not masked by the stop", {
   )
 })
 
+test_that("a quick restart does not double the capture chain", {
+  page <- local_record_page()
+  skip_if_no_av()
+
+  out1 <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out1, fps = 2, hold = c(0, 0))
+  pz_wait(page, 0.3)
+  # a tick from the first recording is still scheduled when stop runs
+  page |> pz_record_stop()
+
+  out2 <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out2, fps = 2, hold = c(0, 0))
+  rec <- page_recorder(page)
+  pz_wait(page, 1.2)
+  ticks <- rec$ticks
+  page |> pz_record_stop()
+
+  # one chain at 2 fps over 1.2s: a tick every 0.5s, so 3 or so; a
+  # second chain left over from the first recording would double it
+  expect_gte(ticks, 2L)
+  expect_lte(ticks, 4L)
+})
+
 test_that("closing the page tears down the recorder on the next tick", {
   page <- local_record_page()
   skip_if_no_av()
