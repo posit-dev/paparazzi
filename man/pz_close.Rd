@@ -17,3 +17,12 @@ Closes the page's browser session and, if the page started a Shiny app,
 stops that app. A page opened from a shared \code{\link[=pz_app]{pz_app()}} handle leaves the
 app running. Idempotent; closing an already-closed page is a no-op.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+pz_close(page)
+
+# Closing a closed page does nothing
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

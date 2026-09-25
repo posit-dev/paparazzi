@@ -28,6 +28,24 @@
 #'
 #' @return A `PaparazziPage` (the root context).
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' # A local HTML file opens as a file:// URL
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_url(page)
+#' pz_close(page)
+#'
+#' # Named arguments in `...` set up the device before the page loads
+#' phone <- pz_open(pz_example("tasks"), width = 390, height = 844, mobile = TRUE)
+#' pz_js(phone, "window.innerWidth")
+#' pz_close(phone)
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")
+#' # An app directory runs in a background R process that the page owns.
+#' # pz_open() returns once Shiny has connected and gone idle.
+#' page <- pz_open(pz_example("tasks-app"))
+#' pz_get_text(page, target = "#summary")
+#' pz_close(page) # also stops the app
+#'
 #' @export
 pz_open <- function(
   x,
@@ -142,6 +160,13 @@ open_wait_mode <- function(wait, is_shiny_app) {
 #'
 #' @return `page`, invisibly.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_close(page)
+#'
+#' # Closing a closed page does nothing
+#' pz_close(page)
+#'
 #' @export
 pz_close <- function(page) {
   check_page(page)
@@ -167,6 +192,22 @@ pz_close <- function(page) {
 #'
 #' @return [pz_with_page()] returns the page invisibly; [pz_local_page()]
 #'   returns it visibly.
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' path <- file.path(tempdir(), "task-list.png")
+#'
+#' # The page closes when the function returns, even if it errors
+#' pz_with_page(pz_example("tasks"), function(page) {
+#'   pz_screenshot(page, path, target = ".task-list")
+#' })
+#' file.exists(path)
+#'
+#' # pz_local_page() ties the page to the calling function, e.g. a test
+#' count_tasks <- function() {
+#'   page <- pz_local_page(pz_example("tasks"))
+#'   pz_get_count(page, target = ".task")
+#' }
+#' count_tasks()
 #'
 #' @export
 pz_with_page <- function(x, code, ...) {

@@ -31,8 +31,8 @@ and methods \code{stop()}, \code{logs()}, and \code{is_running()}.
 \description{
 Starts a Shiny app -- a directory or an app file -- in a background R
 process and returns a handle for its lifecycle. One app can back any
-number of pages: share the handle's \code{url} (or, once \code{pz_open()}
-learns about apps, the handle itself) across pages.
+number of pages: pass the handle to \code{\link[=pz_open]{pz_open()}} for each page. Closing
+those pages leaves the app running.
 }
 \details{
 The handle has \verb{$stop()} and \verb{$logs()} methods and a \code{print()} method
@@ -45,10 +45,20 @@ App stdout and stderr go to a temporary log file (never an undrained
 pipe), readable mid-run with \verb{$logs()}.
 }
 \examples{
-\dontrun{
-app <- pz_app("apps/complete-app", envvars = c(MOCK = "1"))
-app$logs()
-app$stop()
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")) withAutoprint(\{ # examplesIf}
+app <- pz_app(pz_example("tasks-app"))
+app
 
+# Pages opened on a handle share the app, here at two screen sizes
+desktop <- pz_open(app, width = 1280)
+phone <- pz_open(app, width = 390, mobile = TRUE)
+pz_get_text(phone, target = "#summary")
+pz_close(desktop)
+pz_close(phone)
+
+# Closing the pages leaves the app running until you stop it
+app$is_running()
+head(app$logs())
+app$stop()
+\dontshow{\}) # examplesIf}
 }

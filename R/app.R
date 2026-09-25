@@ -2,8 +2,8 @@
 #'
 #' Starts a Shiny app -- a directory or an app file -- in a background R
 #' process and returns a handle for its lifecycle. One app can back any
-#' number of pages: share the handle's `url` (or, once `pz_open()`
-#' learns about apps, the handle itself) across pages.
+#' number of pages: pass the handle to [pz_open()] for each page. Closing
+#' those pages leaves the app running.
 #'
 #' The handle has `$stop()` and `$logs()` methods and a `print()` method
 #' showing the URL, port, and status -- the one place the paparazzi API
@@ -30,12 +30,21 @@
 #' @return A `PaparazziApp` handle with public fields `url` and `port`
 #'   and methods `stop()`, `logs()`, and `is_running()`.
 #'
-#' @examples
-#' \dontrun{
-#' app <- pz_app("apps/complete-app", envvars = c(MOCK = "1"))
-#' app$logs()
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")
+#' app <- pz_app(pz_example("tasks-app"))
+#' app
+#'
+#' # Pages opened on a handle share the app, here at two screen sizes
+#' desktop <- pz_open(app, width = 1280)
+#' phone <- pz_open(app, width = 390, mobile = TRUE)
+#' pz_get_text(phone, target = "#summary")
+#' pz_close(desktop)
+#' pz_close(phone)
+#'
+#' # Closing the pages leaves the app running until you stop it
+#' app$is_running()
+#' head(app$logs())
 #' app$stop()
-#' }
 #'
 #' @export
 pz_app <- function(

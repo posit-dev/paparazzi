@@ -46,6 +46,27 @@ afterwards -- re-scope with \code{\link[=pz_find]{pz_find()}} on the returned ro
 Session-level state (timeout, and later staging and recording) is
 untouched.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+url <- pz_get_url(page)
+
+# The filter links change the URL fragment, so each filter is a history entry
+page |> pz_nav_goto(paste0(url, "#done"))
+pz_get_count(page, target = ".task:not(.hidden)")
+
+page |> pz_nav_back()
+pz_get_count(page, target = ".task:not(.hidden)")
+
+page |> pz_nav_forward()
+pz_get_url(page)
+
+# Reloading keeps the URL, fragment included
+page |> pz_nav_reload()
+pz_get_url(page)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_find_reset]{pz_find_reset()}} for scope-only resets (no navigation).
 }

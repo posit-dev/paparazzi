@@ -27,6 +27,25 @@
 #'
 #' @seealso [pz_find_reset()] for scope-only resets (no navigation).
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' url <- pz_get_url(page)
+#'
+#' # The filter links change the URL fragment, so each filter is a history entry
+#' page |> pz_nav_goto(paste0(url, "#done"))
+#' pz_get_count(page, target = ".task:not(.hidden)")
+#'
+#' page |> pz_nav_back()
+#' pz_get_count(page, target = ".task:not(.hidden)")
+#'
+#' page |> pz_nav_forward()
+#' pz_get_url(page)
+#'
+#' # Reloading keeps the URL, fragment included
+#' page |> pz_nav_reload()
+#' pz_get_url(page)
+#' pz_close(page)
+#'
 #' @export
 pz_nav_goto <- function(ctx, url, ..., wait = c("auto", "load", "shiny", "none")) {
   check_context(ctx)

@@ -33,3 +33,21 @@ calling frame (e.g. a test) exits, via \code{\link[withr:defer]{withr::defer()}}
 already-open page or anything \code{\link[=pz_open]{pz_open()}} accepts, and always close on
 exit: the block owns the resource.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+path <- file.path(tempdir(), "task-list.png")
+
+# The page closes when the function returns, even if it errors
+pz_with_page(pz_example("tasks"), function(page) {
+  pz_screenshot(page, path, target = ".task-list")
+})
+file.exists(path)
+
+# pz_local_page() ties the page to the calling function, e.g. a test
+count_tasks <- function() {
+  page <- pz_local_page(pz_example("tasks"))
+  pz_get_count(page, target = ".task")
+}
+count_tasks()
+\dontshow{\}) # examplesIf}
+}

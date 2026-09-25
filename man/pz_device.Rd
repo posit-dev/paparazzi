@@ -75,6 +75,19 @@ zoom 2).
 \code{reduced_motion = TRUE} gives deterministic stills (animations stop);
 it's opt-in because it's usually wrong for videos.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+
+# Only the settings you supply change
+page |> pz_device(width = 390, height = 844, mobile = TRUE)
+pz_js(page, "[window.innerWidth, window.devicePixelRatio]")
+
+page |> pz_device(color_scheme = "dark")
+pz_get_style(page, "background-color", target = "body")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_open]{pz_open()}} forwards its \code{...} here.
 }

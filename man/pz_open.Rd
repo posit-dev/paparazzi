@@ -50,3 +50,23 @@ Opens a URL, local file, Shiny app, or existing
 \link[chromote:ChromoteSession]{chromote::ChromoteSession} as a paparazzi page: the root context that
 starts every \verb{|>} chain.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+# A local HTML file opens as a file:// URL
+page <- pz_open(pz_example("tasks"))
+pz_get_url(page)
+pz_close(page)
+
+# Named arguments in `...` set up the device before the page loads
+phone <- pz_open(pz_example("tasks"), width = 390, height = 844, mobile = TRUE)
+pz_js(phone, "window.innerWidth")
+pz_close(phone)
+\dontshow{\}) # examplesIf}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")) withAutoprint(\{ # examplesIf}
+# An app directory runs in a background R process that the page owns.
+# pz_open() returns once Shiny has connected and gone idle.
+page <- pz_open(pz_example("tasks-app"))
+pz_get_text(page, target = "#summary")
+pz_close(page) # also stops the app
+\dontshow{\}) # examplesIf}
+}
