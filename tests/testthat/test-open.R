@@ -114,6 +114,45 @@ test_that("pz_close is idempotent and functions reject closed pages", {
   expect_error(pz_wait(page, 0), class = "paparazzi_error_closed")
 })
 
+test_that("a failed device setting after page creation closes the new session", {
+  skip_if_no_chrome()
+  # Every ChromoteSession registers itself with its parent browser
+  # object and is never removed on close, so the registry (an R-level
+  # list, re-read fresh) holds the session pz_open() created even after
+  # its cleanup. An invalid timezone fails inside
+  # Emulation.setTimezoneOverride, i.e. after the page (and its
+  # session) already exist.
+  registry <- function() {
+    chromote::default_chromote_object()$.__enclos_env__$private$sessions
+  }
+  before <- names(registry())
+  expect_error(
+    pz_open(fixture_file(), timezone = "Mars/Olympus"),
+    regexp = "Invalid timezone"
+  )
+  new_ids <- setdiff(names(registry()), before)
+  expect_length(new_ids, 1L)
+  # A leaked session would still answer commands; the deferred close
+  # makes the new one reject them as closed.
+  expect_error(
+    registry()[[new_ids]]$Page$getNavigationHistory(),
+    regexp = "closed"
+  )
+})
+
+test_that("a failed device setting on a wrapped session leaves it open", {
+  skip_if_no_chrome()
+  session <- chromote::ChromoteSession$new()
+  withr::defer(session$close())
+
+  expect_error(
+    pz_open(session, timezone = "Mars/Olympus"),
+    regexp = "Invalid timezone"
+  )
+  # The caller owns this session; the failure must not close it.
+  expect_no_error(session$Page$getNavigationHistory())
+})
+
 test_that("pz_open aborts when navigation fails", {
   skip_if_no_chrome()
   expect_error(

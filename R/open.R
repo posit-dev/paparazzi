@@ -60,13 +60,15 @@ pz_open <- function(
   url <- open_target_url(x)
   session <- chromote::ChromoteSession$new()
   page <- PaparazziPage$new(session = session, timeout = timeout %||% 10)
+  # If device settings, navigation, or the load wait fail, don't leak
+  # the browser this call just created. The wrap branch above must not
+  # register this: the caller owns that session.
+  ok <- FALSE
+  withr::defer(if (!ok) try(page$close(), silent = TRUE))
+
   # Applied before navigating, so media queries and layout are right at
   # first render.
   device_open(page, device_dots)
-
-  # If navigation or the load wait fails, don't leak the browser.
-  ok <- FALSE
-  withr::defer(if (!ok) try(page$close(), silent = TRUE))
 
   # CDP reports navigation failures as `errorText`, not as errors.
   nav <- session$Page$navigate(url)
