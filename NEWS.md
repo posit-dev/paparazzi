@@ -1,4 +1,4 @@
-# paparazzi (development version)
+# paparazzi 0.0.0.9000
 
 * First development version. paparazzi drives a headless Chrome browser from R
   through chromote, with one `|>` chain per script: open pages and Shiny apps
