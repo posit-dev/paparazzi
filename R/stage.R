@@ -156,18 +156,21 @@ stage_scroll_into_view <- function(ctx, els, call = caller_env()) {
 }
 # The animated auto-scroll: real mouseWheel events with the cursor
 # over the container, instead of the instant scrollIntoView. Each round
-# probes the delta that scrollIntoView(block: 'nearest') would apply to
-# the element's nearest scrollable ancestor (or the document), glides
-# the cursor over the container, and wheels the delta with an eased
-# step pattern; a re-probe checks convergence. Wheels that make no
-# progress (a page canceling wheel events, a nested container the probe
-# can't reach) fall back to the instant scroll after one stalled round:
-# the final state is always correct, animated or not.
+# probes the deltas that scrollIntoView(block: 'nearest') would apply
+# across EVERY scrollable ancestor of the element plus the viewport
+# (a target visible inside a container that is itself below the fold
+# still needs the outer containers scrolled), wheels the delta of the
+# OUTERMOST container that still has one, and re-probes; the outer clips
+# contain the inner ones, so the wheeled container is always on screen
+# when its wheel fires. A round that leaves every container's scroll
+# position unchanged (a page canceling wheel events) or exceeds the
+# round bound (a page fighting the scroll) falls back to the instant
+# scroll: the final state is always correct, animated or not.
 stage_wheel_into_view <- function(ctx, els, call = caller_env()) {
   if (els$count == 0L || is.null(els$object_id)) {
     return(invisible(els))
   }
-  prev <- c(Inf, Inf)
+  prev <- NULL
   rounds <- 0L
   repeat {
     probe <- els_values(els, wheel_probe_js, call = call)
@@ -178,13 +181,17 @@ stage_wheel_into_view <- function(ctx, els, call = caller_env()) {
     if (all(delta == 0)) {
       return(invisible(els))
     }
+    pos <- unlist(probe$pos)
     rounds <- rounds + 1L
-    if (all(abs(delta - prev) < 0.5) || rounds >= 5L) {
-      # Stalled (no progress) or oscillating (a page fighting the
-      # scroll): the instant scroll guarantees the final state.
+    if (
+      (!is.null(prev) && identical(pos, prev)) ||
+        rounds > 2L * probe$n + 3L
+    ) {
+      # Stalled (no scroll position moved) or oscillating: the instant
+      # scroll guarantees the final state.
       return(el_scroll_into_view(els, call = call))
     }
-    prev <- delta
+    prev <- pos
     point <- c(x = probe$x, y = probe$y)
     stage_move_cursor(ctx, point)
     stage <- page_stage(ctx$page)
@@ -352,12 +359,19 @@ wheel_container_js <- "function() {
     maxLeft: container.scrollWidth - container.clientWidth
   };
 }"
-# The scroll probe: the delta that scrollIntoView(block/inline:
-# 'nearest') would apply to the first element's nearest scrollable
-# ancestor-or-self (the document when none scrolls), clamped to the
-# container's range, plus the container's viewport center for cursor
-# placement. Computed without scrolling; the R driver re-probes after
-# wheeling.
+# The scroll probe: for EVERY scrollable ancestor of the first element,
+# the delta that scrollIntoView(block/inline: 'nearest') would apply
+# to bring the next-inner box (the element itself, or the inner
+# container's clip) inside the container's clip -- the viewport
+# (scrollingElement) is always the outermost, so a target visible inside
+# a container that is below the fold still probes a nonzero outer
+# delta. Inner deltas are invariant under outer scrolls, so wheeling
+# outermost-first settles each level once. Returns the outermost
+# container's nonzero delta (0/0 when the element is in view in every
+# clip), that container's viewport center for cursor placement, the
+# scroll positions of the whole chain (the R driver's stall check),
+# and the chain length (its round bound). Computed without scrolling;
+# the R driver re-probes after wheeling.
 wheel_probe_js <- "function() {
   if (!this.length) return null;
   const el = this[0];
@@ -369,32 +383,51 @@ wheel_probe_js <- "function() {
     }
     return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
   };
-  let container = null;
-  for (let e = el.parentElement; e; e = e.parentElement) {
-    if (isScrollable(e)) { container = e; break; }
-  }
-  const doc = !container || container === document.scrollingElement;
-  const c = doc ? document.scrollingElement : container;
-  const er = el.getBoundingClientRect();
-  const cr = doc
+  const clip = (c) => c === document.scrollingElement
     ? { top: 0, left: 0, bottom: window.innerHeight, right: window.innerWidth,
         width: window.innerWidth, height: window.innerHeight }
     : c.getBoundingClientRect();
-  let dy = 0;
-  if (er.top < cr.top) dy = er.top - cr.top;
-  else if (er.bottom > cr.bottom) dy = Math.min(er.top - cr.top, er.bottom - cr.bottom);
-  let dx = 0;
-  if (er.left < cr.left) dx = er.left - cr.left;
-  else if (er.right > cr.right) dx = Math.min(er.left - cr.left, er.right - cr.right);
-  const maxTop = c.scrollHeight - c.clientHeight;
-  const maxLeft = c.scrollWidth - c.clientWidth;
-  dy = Math.min(Math.max(c.scrollTop + dy, 0), maxTop) - c.scrollTop;
-  dx = Math.min(Math.max(c.scrollLeft + dx, 0), maxLeft) - c.scrollLeft;
+  const chain = [];
+  for (let e = el.parentElement; e; e = e.parentElement) {
+    if (e !== document.scrollingElement && isScrollable(e)) chain.push(e);
+  }
+  chain.push(document.scrollingElement);
+  let box = el.getBoundingClientRect();
+  const pos = [];
+  const deltas = [];
+  for (let i = 0; i < chain.length; i++) {
+    const c = chain[i];
+    const cr = clip(c);
+    let dy = 0;
+    if (box.top < cr.top) dy = box.top - cr.top;
+    else if (box.bottom > cr.bottom) dy = Math.min(box.top - cr.top, box.bottom - cr.bottom);
+    let dx = 0;
+    if (box.left < cr.left) dx = box.left - cr.left;
+    else if (box.right > cr.right) dx = Math.min(box.left - cr.left, box.right - cr.right);
+    const maxTop = c.scrollHeight - c.clientHeight;
+    const maxLeft = c.scrollWidth - c.clientWidth;
+    deltas.push({
+      dx: Math.min(Math.max(c.scrollLeft + dx, 0), maxLeft) - c.scrollLeft,
+      dy: Math.min(Math.max(c.scrollTop + dy, 0), maxTop) - c.scrollTop
+    });
+    pos.push(c.scrollTop, c.scrollLeft);
+    box = cr;
+  }
+  let k = -1;
+  for (let i = chain.length - 1; i >= 0; i--) {
+    if (deltas[i].dx !== 0 || deltas[i].dy !== 0) { k = i; break; }
+  }
+  if (k === -1) {
+    return { dx: 0, dy: 0, x: 0, y: 0, pos: pos, n: chain.length };
+  }
+  const cr = clip(chain[k]);
   return {
     x: Math.min(Math.max(cr.left + cr.width / 2, 1), window.innerWidth - 1),
     y: Math.min(Math.max(cr.top + cr.height / 2, 1), window.innerHeight - 1),
-    dx: dx,
-    dy: dy
+    dx: deltas[k].dx,
+    dy: deltas[k].dy,
+    pos: pos,
+    n: chain.length
   };
 }"
 # pz_stage(pause =): a hold after each action while recording, skipped

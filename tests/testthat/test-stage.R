@@ -104,6 +104,45 @@ test_that("the auto-scroll before actions is the same staged wheel scroll", {
   expect_true(pz_js(page, "window.scrollY") > 500)
 })
 
+test_that("a target visible in a below-the-fold container is wheeled into view", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  # A scrollable container beyond the fold whose target sits inside its
+  # clip: the target is visible to the container yet off-screen, so the
+  # auto-scroll must reach past the nearest scrollable ancestor to the
+  # document.
+  pz_js(page, paste0(
+    "(() => {",
+    "const d = document.createElement('div');",
+    "d.id = 'deep';",
+    "d.style.cssText = 'position:absolute;left:100px;",
+    "top:calc(100vh + 300px);width:300px;height:250px;",
+    "overflow:auto;border:1px solid #ccc;';",
+    "const b = document.createElement('button');",
+    "b.id = 'deep-btn';",
+    "b.textContent = 'deep';",
+    "b.style.cssText = 'margin-top:20px;width:120px;height:40px;';",
+    "const tall = document.createElement('div');",
+    "tall.style.cssText = 'height:900px;background:#f8f8f8;';",
+    "d.appendChild(b); d.appendChild(tall);",
+    "document.body.appendChild(d);",
+    "b.addEventListener('click',", 
+    "  () => window.__log.deepClicks = (window.__log.deepClicks || 0) + 1);",
+    "})()"
+  ))
+  page |> pz_stage()
+  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |> pz_click("#deep-btn")
+  page |> pz_record_stop()
+
+  expect_equal(pz_js(page, "window.__log.deepClicks"), 1)
+  # Only the document needed scrolling: the container was already
+  # showing the target.
+  expect_equal(pz_js(page, "document.getElementById('deep').scrollTop"), 0)
+  expect_true(pz_js(page, "window.scrollY") > 0)
+  expect_true(pz_js(page, "window.__log.wheels") > 0)
+})
+
 test_that("the stage pause holds after each action only while recording", {
   skip_if_no_av()
   page <- local_cursor_page()
