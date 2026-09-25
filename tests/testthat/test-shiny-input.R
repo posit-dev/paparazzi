@@ -46,6 +46,13 @@ test_that("binding setters update control UI and server outputs, including repea
   expect_equal(shiny_input_text(page, "mod-out"), "root itself")
 })
 
+test_that("fine-step numeric binding retains precision in control and server", {
+  page <- local_shiny_input_page()
+  pz_set_shiny_input(page, "precise", 1.23456789)
+  expect_equal(as.numeric(pz_js(page, "document.getElementById('precise').value")), 1.23456789, tolerance = 1e-10)
+  expect_equal(shiny_input_text(page, "precise_out"), "1.23456789")
+})
+
 test_that("missing bindings, unsupported values and invalid arguments fail clearly", {
   page <- local_shiny_input_page()
   expect_error(pz_set_shiny_input(page, "absent", "x"), "absent.*scope", class = "paparazzi_error_binding")
