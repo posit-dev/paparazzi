@@ -45,7 +45,9 @@ of a property, rounded to whole pixels.
 }
 \details{
 The wait first waits (up to \code{timeout}) for \code{target} to match, then
-samples within its own \code{timeout} budget.
+samples within a second, separate \code{timeout} budget of its own: a
+target that appears near the locator deadline still gets its full
+\code{for_ms} window.
 
 There is deliberately no element-state wait: \code{\link[=pz_expect_visible]{pz_expect_visible()}},
 \code{\link[=pz_expect_hidden]{pz_expect_hidden()}}, and \code{\link[=pz_expect_exists]{pz_expect_exists()}} with \code{not = TRUE} already

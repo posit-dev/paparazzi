@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>paparazzi device fixture</title>
+<style>
+  html, body { margin: 0; }
+  body { background: #ffffff; }
+  #vh { height: 50vh; background: #add8e6; }
+  #px { width: 100px; height: 10px; background: #90ee90; }
+  #spin { width: 10px; height: 10px; background: #ffa500; animation: spin 1s linear infinite; }
+  @media (prefers-color-scheme: dark) { body { background: #222222; } }
+  @media (prefers-reduced-motion: reduce) { #spin { animation: none; } }
+  @media (max-width: 500px) { #px { background: #ff0000; } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="vh"></div>
+<div id="px"></div>
+<div id="spin"></div>
+</body>
+</html>

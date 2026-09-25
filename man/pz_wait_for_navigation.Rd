@@ -33,14 +33,18 @@ its own, so a wait marks exactly where one is expected. Call it
 immediately after the action: it waits for the document the action
 navigated to to finish loading and then hold still for a moment, so a
 navigation that is in flight when the wait starts is waited out, not
-raced. On success it resets the scope to the root and releases every
-pinned scope object: contexts scoped before the navigation error on
-their next use instead of acting on a stale set.
+raced. A navigation that begins while the wait is already running is
+caught too; one scheduled beyond the timeout can't be -- block on
+its trigger with \code{\link[=pz_wait_for_js]{pz_wait_for_js()}} first.
 }
 \details{
-A navigation the page hasn't started yet -- a redirect scheduled
-seconds later -- is beyond a post-action wait; block on its trigger
-with \code{\link[=pz_wait_for_js]{pz_wait_for_js()}} first.
+The settled state alone is not enough: the wait snapshots the
+document it starts on and passes only when the settled document is
+a different one, so a page where nothing navigates times out with
+a classed error rather than passing. On success it resets the scope
+to the root and releases every pinned scope object: contexts scoped
+before the navigation error on their next use instead of acting on
+a stale set.
 }
 \examples{
 \dontrun{
