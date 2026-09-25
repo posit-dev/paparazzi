@@ -11,7 +11,8 @@
   </style>
 </head>
 <body>
-  <form>
+  <!-- Enter implicitly submits; keep the page (and its event log) in place. -->
+  <form onsubmit="event.preventDefault()">
     <div><input type="text" id="name" placeholder="name"></div>
     <div><textarea id="bio" placeholder="bio"></textarea></div>
     <button type="button" id="save">save</button>
