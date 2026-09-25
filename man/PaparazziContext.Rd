@@ -131,7 +131,7 @@ object a scope pinned (read-only; internal).}
   Wrap a \code{ChromoteSession} as a paparazzi page.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{PaparazziPage$new(session, timeout = 10, owned_app = NULL)}
+    \preformatted{PaparazziPage$new(session, timeout = 10, owned_app = NULL, shared_app = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -139,8 +139,8 @@ object a scope pinned (read-only; internal).}
     \describe{
       \item{\code{session}}{A \code{chromote::ChromoteSession}.}
       \item{\code{timeout}}{Default timeout in seconds for this session.}
-      \item{\code{owned_app}}{App started by this page, if any; shared handles are
-not passed here.}
+      \item{\code{owned_app}}{App started by this page, if any.}
+      \item{\code{shared_app}}{Caller-owned app handle kept alive while the page lives.}
     }
     \if{html}{\out{</div>}}
   }

@@ -111,6 +111,7 @@ test_that("a page opened on a handle does not own the app", {
   expect_true(wait_until(function() {
     grepl("hello paparazzi", pz_js(page, "document.body.innerText"))
   }))
+  gc()
   pz_close(page)
   expect_true(app$is_running())
   expect_true(app_port_reachable(app$port))
@@ -118,6 +119,22 @@ test_that("a page opened on a handle does not own the app", {
   withr::defer(pz_close(second))
   expect_true(wait_until(function() {
     grepl("hello paparazzi", pz_js(second, "document.body.innerText"))
+  }))
+})
+
+test_that("a temporary app handle survives GC while its page is open", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(pz_app(shiny_app_fixture_dir()))
+  withr::defer({
+    pz_close(page)
+    page$.__enclos_env__$private$shared_app_$stop()
+  })
+  port <- as.integer(pz_js(page, "location.port"))
+  gc()
+  expect_true(app_port_reachable(port))
+  expect_true(wait_until(function() {
+    grepl("hello paparazzi", pz_js(page, "document.body.innerText"))
   }))
 })
 

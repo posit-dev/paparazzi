@@ -59,6 +59,7 @@ pz_open <- function(
   }
 
   owned_app <- NULL
+  shared_app <- if (inherits(x, "PaparazziApp")) x else NULL
   is_app <- inherits(x, "PaparazziApp") ||
     (is_string(x) && file.exists(x) &&
       (dir.exists(x) || is_shiny_app_file(basename(x))))
@@ -73,7 +74,10 @@ pz_open <- function(
   }
   wait <- open_wait_mode(wait, is_app)
   session <- chromote::ChromoteSession$new()
-  page <- PaparazziPage$new(session = session, timeout = timeout %||% 10, owned_app = owned_app)
+  page <- PaparazziPage$new(
+    session = session, timeout = timeout %||% 10,
+    owned_app = owned_app, shared_app = shared_app
+  )
   owned_app <- NULL
   # If device settings, navigation, or the load wait fail, don't leak
   # the browser this call just created. The wrap branch above must not
