@@ -547,6 +547,23 @@ record_error <- function(rec, e) {
   }
   invisible(NULL)
 }
+# A navigation replaces the document, so a recording's framing -- whose
+# target and bounds are pinned elements of the outgoing document --
+# dies with it. The recording itself survives (the timer, clock, and
+# captures are session-level), but the framing falls back to the
+# viewport: a when = "stop" crop not yet measured resolves as the
+# full viewport instead of raising the detach error at stop. A when =
+# "start" crop was already measured as a fixed box in viewport
+# coordinates and stays.
+record_nav_rebased <- function(page) {
+  rec <- page_recorder(page)
+  if (is.null(rec) || is.null(rec$frame)) {
+    return(invisible(FALSE))
+  }
+  rec$frame <- NULL
+  rec$frame_ctx <- NULL
+  invisible(TRUE)
+}
 # The crop box in viewport-relative CSS pixels (the PNG's coordinate
 # space): the framing pipeline with the visible viewport as the clamp
 # -- not the document box frame_clip() uses, since the PNG holds only

@@ -331,6 +331,58 @@ test_that("a targetless stop frame crops from the start-time scope", {
   expect_equal(info$height, width_at(60))
 })
 
+test_that("a framed recording survives a navigation by framing the viewport", {
+  page <- local_record_page()
+  skip_if_no_av()
+  dpr <- pz_js(page, "window.devicePixelRatio")
+  vw <- pz_js(page, "innerWidth")
+  vh <- pz_js(page, "innerHeight")
+  width_at <- function(css) floor(round(css * dpr) / 4) * 4
+  height_at <- function(css) floor(round(css * dpr) / 4) * 4
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |>
+    pz_find("#box") |>
+    pz_record_start(out, fps = 10, hold = c(0, 0), frame = pz_frame())
+  pz_wait(page, 0.2)
+  root <- pz_nav_goto(page, nav_fixture_url("b"))
+  # Frames keep being captured on the new document.
+  pz_wait(root, 0.3)
+  expect_no_error(pz_record_stop(root))
+
+  info <- recorded_video_info(out)
+  expect_gte(info$frames, 3)
+  # The navigation released the scope the recording started in, so the
+  # not-yet-measured when = "stop" crop resolved as the full viewport
+  # instead of raising the detach error.
+  expect_equal(info$width, width_at(vw))
+  expect_equal(info$height, height_at(vh))
+})
+
+test_that("a when = start crop is measured before the navigation and stays", {
+  page <- local_record_page()
+  skip_if_no_av()
+  dpr <- pz_js(page, "window.devicePixelRatio")
+  width_at <- function(css) floor(round(css * dpr) / 4) * 4
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |>
+    pz_find("#box") |>
+    pz_record_start(
+      out,
+      fps = 10,
+      hold = c(0, 0),
+      frame = pz_frame(when = "start")
+    )
+  pz_wait(page, 0.2)
+  pz_nav_goto(page, nav_fixture_url("b"))
+  pz_wait(page, 0.3)
+  expect_no_error(pz_record_stop(page))
+  # Measured before the navigation: the 100px box as it was, a fixed
+  # box in viewport coordinates.
+  expect_equal(recorded_video_info(out)$width, width_at(100))
+})
+
 test_that("the even crop rounds clamped edges inward, staying inside bounds", {
   page <- local_record_page()
 

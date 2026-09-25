@@ -416,6 +416,7 @@ stable_sample_js <- function(prop) {
 # mutated.
 wait_nav_reset <- function(ctx) {
   ctx$page$release_object_group()
+  record_nav_rebased(ctx$page)
   # The inline css zoom dies with the document being left; its
   # "applied" cache dies with it, and the settle point re-applies.
   state <- attr(ctx$page, "paparazzi_device")
