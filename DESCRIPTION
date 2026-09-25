@@ -27,12 +27,14 @@ Imports:
     R6,
     rlang (>= 1.2.0),
     tibble,
+    utils,
     withr
 Suggests:
     av,
     gifski,
     httpuv,
     png,
+    rstudioapi,
     shiny,
     testthat (>= 3.2.0)
 Config/Needs/website: av, gifski, shiny

@@ -216,7 +216,7 @@ inspect_recording_state <- function(page) {
 # SPEC's example output.
 inspect_header <- function() {
   width <- getOption("width", 80L)
-  paste0("── paparazzi page ", strrep("─", max(1, as.integer(width) - 18)))
+  paste0("\u2500\u2500 paparazzi page ", strrep("\u2500", max(1, as.integer(width) - 18)))
 }
 inspect_summary_print <- function(ctx, matches = NULL) {
   if (ctx$page$is_closed()) {
@@ -238,10 +238,10 @@ inspect_summary_print <- function(ctx, matches = NULL) {
 
   cli::cat_line(inspect_header())
   cli::cat_line(sprintf("%-11s%s", "URL", v[[1]]))
-  cli::cat_line(sprintf("%-11s%s × %s @%s · %s", "Device", v[[2]], v[[3]], scale, scheme))
+  cli::cat_line(sprintf("%-11s%s \u00d7 %s @%s \u00b7 %s", "Device", v[[2]], v[[3]], scale, scheme))
 
   scope <- inspect_scope_entries(ctx)
-  cli::cat_line(sprintf("%-11s%s", "Scope", paste(c("root", scope$entries), collapse = " › ")))
+  cli::cat_line(sprintf("%-11s%s", "Scope", paste(c("root", scope$entries), collapse = " \u203a ")))
   for (msg in scope$warnings) {
     cli::cli_inform(c("!" = "{msg}"), msg = msg)
   }
@@ -251,7 +251,7 @@ inspect_summary_print <- function(ctx, matches = NULL) {
   }
 
   cli::cat_line(sprintf(
-    "%-11s%s · cursor %s",
+    "%-11s%s \u00b7 cursor %s",
     "Recording", rec$recording, rec$cursor
   ))
   invisible(NULL)
@@ -324,7 +324,7 @@ inspect_target_print <- function(matches) {
   } else {
     paste0(matches$count, " matches")
   }
-  cli::cat_line(sprintf("%-11s%s → %s", "Target", matches$description, phrase))
+  cli::cat_line(sprintf("%-11s%s \u2192 %s", "Target", matches$description, phrase))
   shown <- utils::head(matches$rows, 10)
   for (i in seq_along(shown)) {
     row <- shown[[i]]
@@ -332,13 +332,13 @@ inspect_target_print <- function(matches) {
     enabled <- if (row$enabled) "enabled" else "disabled"
     cli::cat_line(sprintf("  %d  %s", i, inspect_short_tag(row$tag)))
     cli::cat_line(sprintf(
-      "     %s · %s · at %.0f,%.0f · %.0f × %.0f",
+      "     %s \u00b7 %s \u00b7 at %.0f,%.0f \u00b7 %.0f \u00d7 %.0f",
       visible, enabled, row$x, row$y, row$width, row$height
     ))
   }
   if (matches$count > length(shown)) {
     cli::cat_line(sprintf(
-      "     … and %d more",
+      "     \u2026 and %d more",
       matches$count - length(shown)
     ))
   }
@@ -348,7 +348,7 @@ inspect_short_tag <- function(tag, width = 60) {
   if (nchar(tag) <= width) {
     tag
   } else {
-    paste0(substr(tag, 1, width - 1), "…")
+    paste0(substr(tag, 1, width - 1), "\u2026")
   }
 }
 # ── Overlay outlines ────────────────────────────────────────────────

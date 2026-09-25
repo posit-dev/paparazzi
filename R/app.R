@@ -195,7 +195,7 @@ app_startup_error <- function(failure, app_dir, timeout, call) {
       "The Shiny app at {.path {app_dir}} {what}.",
       if (length(failure$log)) {
         # Tail and escape opaque child output before cli parses its braces.
-        log <- paste(tail(failure$log, 20L), collapse = "\n")
+        log <- paste(utils::tail(failure$log, 20L), collapse = "\n")
         log <- substr(log, max(1L, nchar(log) - 3999L), nchar(log))
         c(x = cli_escape(log))
       }

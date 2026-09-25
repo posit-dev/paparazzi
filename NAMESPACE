@@ -83,6 +83,7 @@ export(pz_wait_for_shiny_idle)
 export(pz_wait_for_stable)
 export(pz_with_page)
 import(rlang)
+importFrom(R6,R6Class)
 importFrom(pillar,
   pillar_shaft,
   type_sum
