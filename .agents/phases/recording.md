@@ -118,6 +118,21 @@ choices and session handoffs for recording only.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-25 (finish): landed the previous session's three hardening
+  fixes as four commits: closed-page tick teardown -- a tick on a
+  closed page deactivates the recorder and removes the temp frames
+  dir instead of re-arming forever (b802171); immediate-stop one-frame
+  capture -- pz_record_stop() pumps the child loop for a first frame
+  before deactivating, bounded by a tick counter on the recorder
+  (9034dbc); block error rethrown over the stop error (e5fd076); and
+  gif assertions without av via a GIF logical-screen-descriptor reader
+  (8541856). Full suite 1167 green (one chromote-timeout flake in
+  test-get.R passed on serial rerun). Next: recording is done per
+  acceptance; the cursor/staging task consumes `page_recorder()` state
+  and `pz_record_hold()`'s no-op pattern; `method = "screencast"`
+  remains the reserved seam. Provisional: the immediate-stop pump can
+  hold a stop up to 5s when the loop can't produce a frame (e.g. the
+  page was closed first) and then aborts with the kept `first_error`.
 - 2026-09-24 (close): landed the phase note (b3fb55f), R/record.R
   lifecycle + poll timer + resample + av/gifski encode (06e6b1f), and
   fixture/helper/tests (8d42eef). 1163 expectations green twice, 0
