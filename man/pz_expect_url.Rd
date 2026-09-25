@@ -42,10 +42,13 @@ reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect
 retry, timeout, and bridge behavior shared by all expectations.
 }
 \examples{
-\dontrun{
-page <- pz_open("https://example.com")
-page |> pz_expect_url("example.com")
-page |> pz_expect_url("https://example.com/", match = "exact")
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |> pz_expect_url("tasks.html")
 
+page |>
+  pz_click(pz_loc(".filters a", has_text = "Done")) |>
+  pz_expect_url("#done$", match = "regex")
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }

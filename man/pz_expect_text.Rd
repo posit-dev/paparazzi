@@ -56,11 +56,19 @@ reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect
 retry, timeout, and bridge behavior shared by all expectations.
 }
 \examples{
-\dontrun{
-page <- pz_open("https://example.com")
-page |> pz_expect_text("Example Domain")
-page |> pz_expect_text("Example", target = "h1", match = "exact")
-page |> pz_expect_text("example", target = "h1", not = TRUE)
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |> pz_expect_text("Tasks", target = "h1", match = "exact")
+page |> pz_expect_text("passport", target = pz_loc(".task", which = "first"))
 
+# A vector compares pairwise with the matches, in order
+page |> pz_expect_text(c("All", "Open", "Done"), target = ".filters a")
+
+# Regular expressions use R's syntax
+page |> pz_expect_text("^[A-Z]", target = ".task-title", match = "regex")
+
+# On failure, the error shows the target and the last text seen
+try(pz_expect_text(page, "otters", target = "h1", timeout = 0.5))
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }

@@ -37,9 +37,15 @@ reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect
 retry, timeout, and bridge behavior shared by all expectations.
 }
 \examples{
-\dontrun{
-page <- pz_open("https://example.com")
-page |> pz_expect_focused(target = "#chat_user_input")
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |>
+  pz_click("#task-title") |>
+  pz_expect_focused(target = "#task-title")
 
+page |>
+  pz_press("Tab") |>
+  pz_expect_focused(target = "#task-priority")
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }

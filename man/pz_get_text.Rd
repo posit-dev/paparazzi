@@ -27,3 +27,17 @@ A character vector, one entry per match.
 collapsed to single spaces and trimmed, matching \code{\link[=pz_expect_text]{pz_expect_text()}};
 \code{raw = TRUE} returns the text exactly as the browser holds it.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+pz_get_text(page, target = "h1")
+
+# One string per match
+pz_get_text(page, target = ".task[data-priority='high'] .task-title")
+
+# Whitespace is collapsed unless raw = TRUE
+pz_get_text(page, target = "#help")
+pz_get_text(page, target = "#help", raw = TRUE)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

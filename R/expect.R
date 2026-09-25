@@ -24,12 +24,17 @@
 #'   (default) uses the session default, `0` checks once.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_exists(target = "a")
-#' page |> pz_expect_exists(target = ".modal", not = TRUE)
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_expect_exists(target = ".task")
+#'
+#' # The help panel is in the page even while it's hidden
+#' page |> pz_expect_exists(target = "#help")
+#' page |> pz_expect_exists(target = ".error-message", not = TRUE)
+#'
+#' # A failing expectation retries until the timeout, then errors
+#' try(pz_expect_exists(page, target = ".error-message", timeout = 0.5))
+#' pz_close(page)
 #'
 #' @export
 pz_expect_exists <- function(
@@ -69,13 +74,18 @@ pz_expect_exists <- function(
 #' @param max Maximum count; with `min`, an inclusive range check.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_count(1, target = "h1")
-#' page |> pz_expect_count(min = 1, target = "a")
-#' page |> pz_expect_count(0, target = ".modal", not = TRUE)
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_expect_count(7, target = ".task")
+#' page |> pz_expect_count(min = 1, max = 2, target = ".task.done")
+#'
+#' # Expectations retry, so they wait for the page to catch up: the new task
+#' # appears after a short "Saving..." delay
+#' page |>
+#'   pz_type("Buy milk", target = "#task-title") |>
+#'   pz_click("#add-task") |>
+#'   pz_expect_count(8, target = ".task")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_count <- function(
@@ -151,12 +161,17 @@ pz_expect_count <- function(
 #' @inheritParams pz_expect_exists
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_visible(target = "h1")
-#' page |> pz_expect_hidden(target = ".modal")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_expect_hidden(target = "#help")
+#'
+#' page |>
+#'   pz_click("#toggle-help") |>
+#'   pz_expect_visible(target = "#help")
+#'
+#' # Every match must pass, so check one task or narrow the target
+#' page |> pz_expect_visible(target = pz_loc(".task", has_text = "passport"))
+#' pz_close(page)
 #'
 #' @export
 pz_expect_visible <- function(
@@ -224,13 +239,20 @@ pz_expect_hidden <- function(
 #'   (default) uses the session default, `0` checks once.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_text("Example Domain")
-#' page |> pz_expect_text("Example", target = "h1", match = "exact")
-#' page |> pz_expect_text("example", target = "h1", not = TRUE)
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_expect_text("Tasks", target = "h1", match = "exact")
+#' page |> pz_expect_text("passport", target = pz_loc(".task", which = "first"))
+#'
+#' # A vector compares pairwise with the matches, in order
+#' page |> pz_expect_text(c("All", "Open", "Done"), target = ".filters a")
+#'
+#' # Regular expressions use R's syntax
+#' page |> pz_expect_text("^[A-Z]", target = ".task-title", match = "regex")
+#'
+#' # On failure, the error shows the target and the last text seen
+#' try(pz_expect_text(page, "otters", target = "h1", timeout = 0.5))
+#' pz_close(page)
 #'
 #' @export
 pz_expect_text <- function(
@@ -270,12 +292,15 @@ pz_expect_text <- function(
 #' @inheritParams pz_expect_exists
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_enabled(target = "#submit")
-#' page |> pz_expect_enabled(target = "#submit", not = TRUE)
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # Add is disabled until the title has text
+#' page |> pz_expect_enabled(target = "#add-task", not = TRUE)
+#' page |>
+#'   pz_type("Buy milk", target = "#task-title") |>
+#'   pz_expect_enabled(target = "#add-task")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_enabled <- function(
@@ -311,11 +336,16 @@ pz_expect_enabled <- function(
 #' @inheritParams pz_expect_exists
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_focused(target = "#chat_user_input")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |>
+#'   pz_click("#task-title") |>
+#'   pz_expect_focused(target = "#task-title")
+#'
+#' page |>
+#'   pz_press("Tab") |>
+#'   pz_expect_focused(target = "#task-priority")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_focused <- function(
@@ -351,11 +381,13 @@ pz_expect_focused <- function(
 #' @inheritParams pz_expect_exists
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_checked(target = "#remember-me")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_expect_checked(target = "#task-urgent", not = TRUE)
+#' page |>
+#'   pz_click("#task-urgent") |>
+#'   pz_expect_checked(target = "#task-urgent")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_checked <- function(
@@ -392,11 +424,16 @@ pz_expect_checked <- function(
 #' @inheritParams pz_expect_exists
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_in_viewport(target = "h1")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"), height = 500)
+#'
+#' # The last task is inside the scrolling list, below its visible area
+#' last_task <- pz_loc(".task", which = "last")
+#' page |> pz_expect_in_viewport(target = last_task, not = TRUE)
+#' page |>
+#'   pz_scroll(last_task) |>
+#'   pz_expect_in_viewport(target = last_task)
+#' pz_close(page)
 #'
 #' @export
 pz_expect_in_viewport <- function(
@@ -440,12 +477,14 @@ pz_expect_in_viewport <- function(
 #'   to every match, length `n` is compared pairwise in order.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_value("otters", target = "#chat_user_input")
-#' page |> pz_expect_value("", target = "#chat_user_input")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_expect_value("normal", target = "#task-priority", match = "exact")
+#'
+#' page |>
+#'   pz_type("Buy milk", target = "#task-title") |>
+#'   pz_expect_value("milk", target = "#task-title")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_value <- function(
@@ -494,12 +533,15 @@ pz_expect_value <- function(
 #'   applies to every match, length `n` is compared pairwise in order.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_attr("href", "https://example.com/", target = "a")
-#' page |> pz_expect_attr("aria-expanded", "true", target = "#menu")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_expect_attr("data-priority", "high", target = pz_loc(".task", has_text = "tax"))
+#'
+#' # The toggle keeps its aria-expanded attribute in sync
+#' page |>
+#'   pz_click("#toggle-help") |>
+#'   pz_expect_attr("aria-expanded", "true", target = "#toggle-help")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_attr <- function(
@@ -548,11 +590,16 @@ pz_expect_attr <- function(
 #' @param class A single class name to expect on every match.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_class("showing", target = ".modal")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' water <- pz_loc(".task", has_text = "Water")
+#' page |> pz_expect_class("done", target = water, not = TRUE)
+#'
+#' page |>
+#'   pz_find(water) |>
+#'   pz_click(".task-done") |>
+#'   pz_expect_class("done")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_class <- function(
@@ -606,12 +653,13 @@ pz_expect_class <- function(
 #'   e.g. `"el => el.scrollTop > 0"`.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_js("el => el.scrollTop > 0", target = "#feed")
-#' page |> pz_expect_js("el => !el.disabled", target = "#submit")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # The predicate receives each matching element
+#' page |> pz_expect_js("el => el.scrollHeight > el.clientHeight", target = ".task-list")
+#' page |> pz_expect_js("el => el.draggable", target = ".task")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_js <- function(
@@ -654,12 +702,14 @@ pz_expect_js <- function(
 #'   (default) uses the session default, `0` checks once.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_url("example.com")
-#' page |> pz_expect_url("https://example.com/", match = "exact")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_expect_url("tasks.html")
+#'
+#' page |>
+#'   pz_click(pz_loc(".filters a", has_text = "Done")) |>
+#'   pz_expect_url("#done$", match = "regex")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_url <- function(
@@ -699,12 +749,10 @@ pz_expect_url <- function(
 #' @param title The expected page title, a single string.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_title("Example Domain")
-#' page |> pz_expect_title("Example", match = "exact")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_expect_title("Tasks", match = "exact")
+#' pz_close(page)
 #'
 #' @export
 pz_expect_title <- function(

@@ -19,3 +19,15 @@ Pauses for \code{seconds}, driving chromote's child event loop so timers
 scheduled on it (e.g. recording capture) keep firing during the wait.
 Never sleeps without pumping the loop.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+
+# A fixed pause; prefer an expectation or wait_for function when you
+# know what you're waiting for
+page |>
+  pz_click("#toggle-help") |>
+  pz_wait(0.5)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

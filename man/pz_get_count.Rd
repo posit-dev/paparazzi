@@ -28,3 +28,18 @@ elements have left the page it raises \code{paparazzi_error_detached}
 instead of returning \code{0}, because the pinned set promises a live set
 and is never silently re-queried.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+pz_get_count(page, target = ".task")
+
+# Zero is an answer, so pz_get_count() never waits
+pz_get_count(page, target = ".error-message")
+
+# Counts are relative to the current scope
+page |>
+  pz_find(".task-list") |>
+  pz_get_count(target = ".task.done")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

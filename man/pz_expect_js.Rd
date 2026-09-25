@@ -41,10 +41,12 @@ reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect
 retry, timeout, and bridge behavior shared by all expectations.
 }
 \examples{
-\dontrun{
-page <- pz_open("https://example.com")
-page |> pz_expect_js("el => el.scrollTop > 0", target = "#feed")
-page |> pz_expect_js("el => !el.disabled", target = "#submit")
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
 
+# The predicate receives each matching element
+page |> pz_expect_js("el => el.scrollHeight > el.clientHeight", target = ".task-list")
+page |> pz_expect_js("el => el.draggable", target = ".task")
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }

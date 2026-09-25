@@ -5,8 +5,10 @@
 #' [pz_open()] or [pz_app()]. The examples are:
 #'
 #' * `"tasks"`: a static task tracker page (an HTML file) with a form, a
-#'   scrollable task list, filter links, an editable notes area, a file input,
-#'   and a help panel that starts hidden.
+#'   scrollable list of draggable tasks, filter links that change the URL
+#'   fragment, an editable notes area, a file input, a help panel that starts
+#'   hidden, and a "Start over" link that loads the page again. Adding a task
+#'   shows "Saving..." for 400ms before the task appears.
 #' * `"tasks-app"`: a Shiny app directory with a text input, a selectize
 #'   priority input, an Add button, and a task list whose output takes half
 #'   a second to render. Running it requires the shiny package.

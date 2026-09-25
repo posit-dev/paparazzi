@@ -27,3 +27,10 @@ each match, pinned at get time (see \code{\link[=pz_get_rect]{pz_get_rect()}}).
 the \code{id} and \code{class} attributes, and the whitespace-collapsed text.
 \code{id} and \code{class} are \code{NA} when the attribute is absent.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+pz_get_elements(page, target = "#new-task > *")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

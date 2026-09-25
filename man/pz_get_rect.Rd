@@ -27,3 +27,16 @@ from it: \code{rects$element[[2]] |> pz_hover()}.
 \code{\link[=pz_get_rect]{pz_get_rect()}} returns the bounding box of every element matching
 \code{target}, one row per match in match order.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+rects <- pz_get_rect(page, target = ".filters a")
+rects
+
+# Each row's element column is a context scoped to that match
+rects$element[[3]] |>
+  pz_click() |>
+  pz_expect_url("#done")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

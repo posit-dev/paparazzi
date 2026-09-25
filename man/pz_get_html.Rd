@@ -23,3 +23,10 @@ A character vector, one entry per match.
 \code{\link[=pz_get_html]{pz_get_html()}} returns the outer HTML of every element matching
 \code{target}, one entry per match.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+pz_get_html(page, target = pz_loc(".task", which = "first"))
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

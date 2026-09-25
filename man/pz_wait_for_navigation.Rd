@@ -56,12 +56,18 @@ pinned scope object: contexts scoped before the navigation error on
 their next use instead of acting on a stale set.
 }
 \examples{
-\dontrun{
-page |>
-  pz_click(target = "a.next-page") |>
-  pz_wait_for_navigation()
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |> pz_click(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank")))
+pz_get_count(page, target = ".task.done")
 
+# "Start over" is a link to a new copy of the page
+page |>
+  pz_click("#start-over") |>
+  pz_wait_for_navigation()
+pz_get_count(page, target = ".task.done")
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=pz_find_reset]{pz_find_reset()}}, \code{\link[=pz_wait_for_js]{pz_wait_for_js()}}, \code{\link[=pz_wait_for_stable]{pz_wait_for_stable()}}

@@ -43,6 +43,16 @@ select it with \code{df$`font-size` }); custom properties
 (\code{"--bs-primary"}) pass through unchanged. \code{props = NULL} returns
 every computed property the browser reports (longhands only).
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+pz_get_style(page, c("font-size", "font_weight"), target = "h1")
+
+# One row per match
+pz_get_style(page, "text-decoration-line", target = ".task-title")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_expect_style]{pz_expect_style()}}
 }

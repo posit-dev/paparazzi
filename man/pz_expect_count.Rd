@@ -53,11 +53,17 @@ reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect
 retry, timeout, and bridge behavior shared by all expectations.
 }
 \examples{
-\dontrun{
-page <- pz_open("https://example.com")
-page |> pz_expect_count(1, target = "h1")
-page |> pz_expect_count(min = 1, target = "a")
-page |> pz_expect_count(0, target = ".modal", not = TRUE)
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |> pz_expect_count(7, target = ".task")
+page |> pz_expect_count(min = 1, max = 2, target = ".task.done")
 
+# Expectations retry, so they wait for the page to catch up: the new task
+# appears after a short "Saving..." delay
+page |>
+  pz_type("Buy milk", target = "#task-title") |>
+  pz_click("#add-task") |>
+  pz_expect_count(8, target = ".task")
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }

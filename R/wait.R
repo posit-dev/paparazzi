@@ -9,6 +9,16 @@
 #'
 #' @return `ctx`, invisibly.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # A fixed pause; prefer an expectation or wait_for function when you
+#' # know what you're waiting for
+#' page |>
+#'   pz_click("#toggle-help") |>
+#'   pz_wait(0.5)
+#' pz_close(page)
+#'
 #' @export
 pz_wait <- function(ctx, seconds) {
   check_context(ctx)
@@ -27,6 +37,17 @@ pz_wait <- function(ctx, seconds) {
 #' @inheritParams pz_wait_for_js
 #' @return `ctx`, invisibly.
 #' @seealso [pz_open()]
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")
+#' page <- pz_open(pz_example("tasks-app"))
+#'
+#' # Clicking Add makes the server re-render the task list, which takes a moment
+#' page |>
+#'   pz_set_value("Buy milk", target = "#title") |>
+#'   pz_click("#add") |>
+#'   pz_wait_for_shiny_idle()
+#' pz_get_text(page, target = "#summary")
+#' pz_close(page)
+#'
 #' @export
 pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
   check_dots_empty()
@@ -127,10 +148,14 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
 #'
 #' @return `ctx`, invisibly.
 #' @seealso [pz_wait_for_stable()], [pz_wait_for_navigation()]
-#' @examples
-#' \dontrun{
-#' page |> pz_wait_for_js("window.app !== undefined")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |>
+#'   pz_type("Buy milk", target = "#task-title") |>
+#'   pz_press("Enter") |>
+#'   pz_wait_for_js("document.querySelectorAll('.task').length === 8")
+#' pz_get_text(page, target = pz_loc(".task-title", which = "first"))
+#' pz_close(page)
 #'
 #' @export
 pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
@@ -183,13 +208,16 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
 #'
 #' @return `ctx`, invisibly.
 #' @seealso [pz_wait_for_js()], [pz_wait_for_navigation()]
-#' @examples
-#' \dontrun{
-#' # Wait for the chat to stop streaming replies.
-#' page |> pz_wait_for_stable(target = ".replies", for_ms = 500)
-#' # Wait for an animation to finish moving.
-#' page |> pz_wait_for_stable(target = ".card", prop = "rect", for_ms = 300)
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # The status line reads "Saving..." and then "Saved"; wait for it to settle
+#' page |>
+#'   pz_type("Buy milk", target = "#task-title") |>
+#'   pz_click("#add-task") |>
+#'   pz_wait_for_stable(target = "#status", for_ms = 500)
+#' pz_get_text(page, target = "#status")
+#' pz_close(page)
 #'
 #' @export
 pz_wait_for_stable <- function(
@@ -295,12 +323,17 @@ pz_wait_for_stable <- function(
 #'
 #' @return `ctx`, invisibly, with the scope reset to the root.
 #' @seealso [pz_find_reset()], [pz_wait_for_js()], [pz_wait_for_stable()]
-#' @examples
-#' \dontrun{
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_click(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank")))
+#' pz_get_count(page, target = ".task.done")
+#'
+#' # "Start over" is a link to a new copy of the page
 #' page |>
-#'   pz_click(target = "a.next-page") |>
+#'   pz_click("#start-over") |>
 #'   pz_wait_for_navigation()
-#' }
+#' pz_get_count(page, target = ".task.done")
+#' pz_close(page)
 #'
 #' @export
 pz_wait_for_navigation <- function(

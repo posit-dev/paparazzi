@@ -41,6 +41,14 @@
 #'
 #' @seealso [pz_expect_style()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_style(page, c("font-size", "font_weight"), target = "h1")
+#'
+#' # One row per match
+#' pz_get_style(page, "text-decoration-line", target = ".task-title")
+#' pz_close(page)
+#'
 #' @export
 pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
   check_dots_empty()
@@ -126,16 +134,18 @@ pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
 #'   comparing? See Details.
 #'
 #' @return `ctx`, invisibly.
-#' @examples
-#' \dontrun{
-#' page <- pz_open("https://example.com")
-#' page |> pz_expect_style(color = "#0d6efd", target = ".btn-primary")
-#' page |> pz_expect_style(font_size = "1rem", border_color = "currentColor", target = ".btn")
-#' styles <- list(display = "block", margin_top = "0")
-#' page |> pz_expect_style(!!!styles, target = "header")
-#' }
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
 #'
-#' @seealso [pz_get_style()]
+#' # Expected values are written as you'd write them in CSS
+#' page |> pz_expect_style(background_color = "#0d6efd", target = "#add-task")
+#' page |> pz_expect_style(font_size = "1.5rem", target = "h1")
+#' page |> pz_expect_style(display = "none", target = "#help")
+#'
+#' page |>
+#'   pz_click("#toggle-help") |>
+#'   pz_expect_style(display = "none", target = "#help", not = TRUE)
+#' pz_close(page)
 #'
 #' @export
 pz_expect_style <- function(

@@ -17,6 +17,19 @@
 #'
 #' @return An integer.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_count(page, target = ".task")
+#'
+#' # Zero is an answer, so pz_get_count() never waits
+#' pz_get_count(page, target = ".error-message")
+#'
+#' # Counts are relative to the current scope
+#' page |>
+#'   pz_find(".task-list") |>
+#'   pz_get_count(target = ".task.done")
+#' pz_close(page)
+#'
 #' @export
 pz_get_count <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -56,6 +69,18 @@ pz_get_count <- function(ctx, ..., target = NULL) {
 #'
 #' @return A character vector, one entry per match.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_text(page, target = "h1")
+#'
+#' # One string per match
+#' pz_get_text(page, target = ".task[data-priority='high'] .task-title")
+#'
+#' # Whitespace is collapsed unless raw = TRUE
+#' pz_get_text(page, target = "#help")
+#' pz_get_text(page, target = "#help", raw = TRUE)
+#' pz_close(page)
+#'
 #' @export
 pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
   check_dots_empty()
@@ -80,6 +105,12 @@ pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
 #'
 #' @return A character vector, one entry per match.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_type("Buy milk", target = "#task-title")
+#' pz_get_value(page, target = list("#task-title", "#task-priority"))
+#' pz_close(page)
+#'
 #' @export
 pz_get_value <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -99,6 +130,14 @@ pz_get_value <- function(ctx, ..., target = NULL) {
 #' @param name The attribute name.
 #'
 #' @return A character vector, one entry per match.
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_attr(page, "data-priority", target = ".task")
+#'
+#' # Missing attributes are NA
+#' pz_get_attr(page, "aria-label", target = "select, input[type='text']")
+#' pz_close(page)
 #'
 #' @export
 pz_get_attr <- function(ctx, name, ..., target = NULL) {
@@ -131,6 +170,17 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
 #'   to that one match, pinned at get time, so a chain can continue
 #'   from it: `rects$element[[2]] |> pz_hover()`.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' rects <- pz_get_rect(page, target = ".filters a")
+#' rects
+#'
+#' # Each row's element column is a context scoped to that match
+#' rects$element[[3]] |>
+#'   pz_click() |>
+#'   pz_expect_url("#done")
+#' pz_close(page)
+#'
 #' @export
 pz_get_rect <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -156,6 +206,11 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
 #' @return A tibble with columns `tag`, `id`, `class`, `text`, one row
 #'   per match, plus an `element` list-column of contexts scoped to
 #'   each match, pinned at get time (see [pz_get_rect()]).
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_elements(page, target = "#new-task > *")
+#' pz_close(page)
 #'
 #' @export
 pz_get_elements <- function(ctx, ..., target = NULL) {
@@ -188,6 +243,11 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
 #'
 #' @return A character vector, one entry per match.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_html(page, target = pz_loc(".task", which = "first"))
+#' pz_close(page)
+#'
 #' @export
 pz_get_html <- function(ctx, ..., target = NULL) {
   check_dots_empty()
@@ -206,6 +266,12 @@ pz_get_html <- function(ctx, ..., target = NULL) {
 #'
 #' @return A character vector of length one.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_click(pz_loc(".filters a", has_text = "Open"))
+#' basename(pz_get_url(page))
+#' pz_close(page)
+#'
 #' @export
 pz_get_url <- function(ctx) {
   check_context(ctx)
@@ -218,6 +284,11 @@ pz_get_url <- function(ctx) {
 #' @inheritParams pz_click
 #'
 #' @return A character vector of length one.
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_title(page)
+#' pz_close(page)
 #'
 #' @export
 pz_get_title <- function(ctx) {

@@ -25,3 +25,13 @@ A character vector, one entry per match.
 \code{\link[=pz_get_attr]{pz_get_attr()}} returns the named attribute of every element matching
 \code{target}, one entry per match. Missing attributes give \code{NA}.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+pz_get_attr(page, "data-priority", target = ".task")
+
+# Missing attributes are NA
+pz_get_attr(page, "aria-label", target = "select, input[type='text']")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

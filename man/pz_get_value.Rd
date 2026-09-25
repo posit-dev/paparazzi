@@ -24,3 +24,11 @@ A character vector, one entry per match.
 matching \code{target}, one entry per match. Elements without a value
 property (non-form elements) give \code{NA}.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |> pz_type("Buy milk", target = "#task-title")
+pz_get_value(page, target = list("#task-title", "#task-priority"))
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

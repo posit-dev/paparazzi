@@ -32,10 +32,15 @@ There is deliberately no element-state wait (\code{pz_wait_for(target, state =)}
 \code{\link[=pz_expect_exists]{pz_expect_exists()}} with \code{not = TRUE} already retry, so they wait.
 }
 \examples{
-\dontrun{
-page |> pz_wait_for_js("window.app !== undefined")
-}
-
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |>
+  pz_type("Buy milk", target = "#task-title") |>
+  pz_press("Enter") |>
+  pz_wait_for_js("document.querySelectorAll('.task').length === 8")
+pz_get_text(page, target = pz_loc(".task-title", which = "first"))
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=pz_wait_for_stable]{pz_wait_for_stable()}}, \code{\link[=pz_wait_for_navigation]{pz_wait_for_navigation()}}

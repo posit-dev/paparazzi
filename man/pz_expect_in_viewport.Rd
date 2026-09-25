@@ -38,9 +38,15 @@ reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect
 retry, timeout, and bridge behavior shared by all expectations.
 }
 \examples{
-\dontrun{
-page <- pz_open("https://example.com")
-page |> pz_expect_in_viewport(target = "h1")
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"), height = 500)
 
+# The last task is inside the scrolling list, below its visible area
+last_task <- pz_loc(".task", which = "last")
+page |> pz_expect_in_viewport(target = last_task, not = TRUE)
+page |>
+  pz_scroll(last_task) |>
+  pz_expect_in_viewport(target = last_task)
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }

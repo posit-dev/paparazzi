@@ -72,15 +72,17 @@ errors immediately as invalid CSS, without retrying (only detected
 with \code{normalize = TRUE}).
 }
 \examples{
-\dontrun{
-page <- pz_open("https://example.com")
-page |> pz_expect_style(color = "#0d6efd", target = ".btn-primary")
-page |> pz_expect_style(font_size = "1rem", border_color = "currentColor", target = ".btn")
-styles <- list(display = "block", margin_top = "0")
-page |> pz_expect_style(!!!styles, target = "header")
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
 
-}
-\seealso{
-\code{\link[=pz_get_style]{pz_get_style()}}
+# Expected values are written as you'd write them in CSS
+page |> pz_expect_style(background_color = "#0d6efd", target = "#add-task")
+page |> pz_expect_style(font_size = "1.5rem", target = "h1")
+page |> pz_expect_style(display = "none", target = "#help")
+
+page |>
+  pz_click("#toggle-help") |>
+  pz_expect_style(display = "none", target = "#help", not = TRUE)
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }

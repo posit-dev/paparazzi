@@ -54,13 +54,17 @@ There is deliberately no element-state wait: \code{\link[=pz_expect_visible]{pz_
 retry, so they wait.
 }
 \examples{
-\dontrun{
-# Wait for the chat to stop streaming replies.
-page |> pz_wait_for_stable(target = ".replies", for_ms = 500)
-# Wait for an animation to finish moving.
-page |> pz_wait_for_stable(target = ".card", prop = "rect", for_ms = 300)
-}
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
 
+# The status line reads "Saving..." and then "Saved"; wait for it to settle
+page |>
+  pz_type("Buy milk", target = "#task-title") |>
+  pz_click("#add-task") |>
+  pz_wait_for_stable(target = "#status", for_ms = 500)
+pz_get_text(page, target = "#status")
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=pz_wait_for_js]{pz_wait_for_js()}}, \code{\link[=pz_wait_for_navigation]{pz_wait_for_navigation()}}
