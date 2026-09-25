@@ -83,4 +83,11 @@ testthat bridge, the classed failure format) — nothing here reinvents it.
 
 (newest first; three lines per session: landed / next / provisional)
 
-- (to be filled at close)
+- 2026-09-25 (review fixes): landed the dead-context mapping (d8a7a2f,
+  roborev 1248): a destroyed-context CDP failure after a real
+  navigation now maps to the classed paparazzi_error_detached instead
+  of a raw chromote error, and both navigation tests assert the class.
+  Next: none — roborev 1248's findings for this phase are all
+  dispositioned (accepted ones landed here; nav-evidence and stability
+  budget landed earlier on this branch).
+  Provisional: none.

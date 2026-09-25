@@ -95,6 +95,15 @@ fixture `tests/testthat/fixtures/style.html`, helpers in
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-25 (review fix): landed the probe read-ordering fix (d9876ad,
+  roborev 1248, ref body paparazzi#2rwr): the targets' computed styles
+  and the parent font/size context are captured BEFORE the probe host
+  attaches, so a positional rule like body:last-child can't stop
+  matching during the read; regression test injects body:last-child
+  styles at runtime and fails on the old ordering. Next: none.
+  Provisional: the MutationObserver disposition (declined — documented
+  residual, see the disposition comment on the issue) stands unchanged.
+
 - 2026-09-24 (review fixes): landed roborev follow-ups: probe is now
 create-use-remove within the single synchronous call (no persistent
 light-DOM child), props = NULL unions property names across matches,

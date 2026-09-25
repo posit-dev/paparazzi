@@ -172,6 +172,35 @@ test_that("pz_wait_for_stable passes immediately on a static page and for_ms = 0
   expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 2)
 })
 
+test_that("pz_wait_for_stable keeps the locator and stability budgets separate", {
+  page <- local_waits_page()
+  # The target appears 0.6s into the 1s locator timeout. With the
+  # budgets shared, only 0.4s would remain -- less than the 500ms
+  # window -- and the wait would false-timeout; the stability loop
+  # gets its own full budget, so the window completes.
+  pz_js(
+    page,
+    paste0(
+      "setTimeout(function () {",
+      "const el = document.createElement('p');",
+      "el.id = 'late-stable';",
+      "el.textContent = 'steady text';",
+      "document.body.appendChild(el);",
+      "}, 600)"
+    ),
+    await = FALSE
+  )
+  start <- Sys.time()
+  expect_no_error(
+    pz_wait_for_stable(page, target = "#late-stable", for_ms = 500, timeout = 1)
+  )
+  # The resolve (~0.6s) plus the full 500ms window, both inside the
+  # 1s stability budget.
+  elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
+  expect_gte(elapsed, 1)
+  expect_lt(elapsed, 3)
+})
+
 test_that("pz_wait_for_stable validates its inputs", {
   page <- local_waits_page()
   expect_error(pz_wait_for_stable(page, prop = "getBoundingClientRect()"), "single JavaScript property name")
@@ -183,12 +212,38 @@ test_that("pz_wait_for_stable validates its inputs", {
 
 test_that("pz_wait_for_navigation times out when nothing navigates", {
   page <- local_waits_page()
+  # The timeout clears the 0.5s settle window: the page is complete
+  # and settled from the start, so without the navigation-evidence
+  # requirement the wait would pass; instead it must time out with
+  # the navigation-specific message.
   start <- Sys.time()
-  expect_error(
-    pz_wait_for_navigation(page, timeout = 0.4),
+  err <- expect_error(
+    pz_wait_for_navigation(page, timeout = 1.2),
     class = "paparazzi_error_timeout"
   )
-  expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 3)
+  expect_match(
+    conditionMessage(err),
+    "Timed out after 1.2s waiting for the navigation to complete.",
+    fixed = TRUE
+  )
+  elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
+  expect_gte(elapsed, 1)
+  expect_lt(elapsed, 5)
+})
+
+test_that("pz_wait_for_navigation catches a navigation that starts after the wait", {
+  page <- local_waits_page()
+  # The redirect fires 100ms in: after the wait starts, well inside
+  # its timeout, so the new document's timeOrigin is positive
+  # evidence and the wait follows it out.
+  pz_js(
+    page,
+    "setTimeout(function () { location.href = 'nav-target.html'; }, 100)",
+    await = FALSE
+  )
+  reset <- pz_wait_for_navigation(page, timeout = 5)
+  expect_length(reset$scope, 0)
+  expect_match(pz_get_url(reset), "nav-target.html", fixed = TRUE)
 })
 
 test_that("pz_wait_for_navigation waits for a pending navigation and resets scope", {
@@ -206,12 +261,13 @@ test_that("pz_wait_for_navigation waits for a pending navigation and resets scop
   reset |> pz_expect_text("You made it.", target = "#target-text", match = "exact")
   # The pre-navigation scope is dead: the navigation destroyed the
   # execution context its pins lived in, and the object group was
-  # released, so the next use errors instead of acting on a stale set.
-  # (Released-while-alive contexts raise the classed
-  # paparazzi_error_detached, like the wait = "none" test below; the
-  # dead-context CDP message is the scope seam in R/scope.R, left to
-  # its task.)
-  expect_error(ctx |> pz_expect_text("x", timeout = 0.1))
+  # released, so the next use raises the classed detach error -- not
+  # the raw dead-context CDP error -- instead of acting on a stale
+  # set.
+  expect_error(
+    ctx |> pz_expect_text("x", timeout = 0.1),
+    class = "paparazzi_error_detached"
+  )
 })
 
 test_that("pz_wait_for_navigation follows a clicked link", {
@@ -221,6 +277,13 @@ test_that("pz_wait_for_navigation follows a clicked link", {
   expect_length(reset$scope, 0)
   expect_match(pz_get_url(reset), "nav-target.html", fixed = TRUE)
   reset |> pz_expect_title("paparazzi navigation target", match = "exact")
+  # The same dead-scope verdict on the click-driven navigation: the
+  # old pinned set's context is gone, and its next use maps to the
+  # classed detach error rather than a raw chromote one.
+  expect_error(
+    ctx |> pz_get_text(),
+    class = "paparazzi_error_detached"
+  )
 })
 
 test_that("pz_wait_for_navigation(wait = 'none') resets without waiting", {

@@ -245,10 +245,13 @@ new_pinned <- function(page, object_id, count, description, locs) {
 }
 # The detach check: one callFunctionOn, returnByValue. Any detached
 # element invalidates the set (pinned sets promise their whole set). A
-# CDP "Could not find object with given id" failure -- a context that
-# outlived a group release -- maps to the same class, so
-# post-navigation / post-close contexts raise the classed error rather
-# than a raw chromote one.
+# CDP failure that means the set's world is gone -- "Could not find
+# object with given id" (a context that outlived a group release) or
+# "Cannot find context with specified id" / "Execution context was
+# destroyed" (a navigation that destroyed the context the set was
+# pinned in) -- maps to the same class, so post-navigation /
+# post-close contexts raise the classed error rather than a raw
+# chromote one.
 pinned_assert_connected <- function(pinned, call = caller_env()) {
   res <- tryCatch(
     pinned$page$session$Runtime$callFunctionOn(
@@ -258,11 +261,7 @@ pinned_assert_connected <- function(pinned, call = caller_env()) {
       timeout_ = pinned$page$default_timeout
     ),
     error = function(e) {
-      if (grepl(
-        "could not find object with",
-        conditionMessage(e),
-        ignore.case = TRUE
-      )) {
+      if (pinned_dead_context_error(e)) {
         pinned_abort_detached(pinned, call)
       }
       stop(e)
@@ -280,6 +279,18 @@ pinned_assert_connected <- function(pinned, call = caller_env()) {
     pinned_abort_detached(pinned, call)
   }
   invisible(pinned)
+}
+# A chromote failure meaning the pinned set's execution context no
+# longer exists: the object group was released (the object is gone),
+# or a navigation destroyed the context the set was pinned in (the
+# context is gone, and every object with it).
+pinned_dead_context_error <- function(e) {
+  msg <- conditionMessage(e)
+  any(
+    grepl("could not find object with", msg, ignore.case = TRUE),
+    grepl("cannot find context", msg, ignore.case = TRUE),
+    grepl("execution context was destroyed", msg, ignore.case = TRUE)
+  )
 }
 pinned_abort_detached <- function(pinned, call = caller_env()) {
   cli::cli_abort(
