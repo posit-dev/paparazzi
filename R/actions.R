@@ -124,6 +124,17 @@ pz_type <- function(ctx, text, ..., target = NULL) {
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
   }
+  # The scoped select-then-type step: the scope element holds the
+  # page's real selection, and a keypress replaces it. The focusing
+  # click below would collapse the selection first, so a scoped
+  # element with an active selection is typed into directly (the
+  # element is focused in the probe). Only the no-target path: an
+  # explicit target keeps its click-to-focus.
+  if (is.null(target) && isTRUE(els_call(found$els, type_selection_js))) {
+    insert_text(ctx, found$els$description, text)
+    stage_action_pause(ctx)
+    return(invisible(ctx))
+  }
   point <- el_pointer_point(ctx, found$els)
   # Focus comes from the real click pipeline (not JS .focus()) so
   # pointer state stays real.
@@ -471,6 +482,26 @@ insert_text_once <- function(ctx, target, text, call = caller_env()) {
     )
   )
 }
+# Does the element hold the page's active selection (pz_select_text's
+# work), ready for a keypress to replace it? TRUE means the caller
+# skips the focusing click -- a click collapses the selection -- and
+# inserts instead; the focus the click would have produced is taken
+# here, which keeps the selection (it lives inside the element).
+type_selection_js <- "function() {
+  const el = this[0];
+  if (!el || !el.isContentEditable) {
+    return false;
+  }
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+    return false;
+  }
+  if (!el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+    return false;
+  }
+  el.focus();
+  return true;
+}"
 #' Set the value of a form control
 #'
 #' Auto-waits for a match, then sets the value instantly -- never staged
@@ -969,16 +1000,29 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
   by <- if (!is.null(by)) check_offset(by, arg = "by") else NULL
   to <- if (!is.null(to)) parse_direction(to, arg = "to") else NULL
   scoped <- scope_root(ctx)
+  # by/to act on the scope's ONE container, before both the staged
+  # wheel branch and the instant JS -- a multi-match scope has no
+  # single container, the same error every scoped element action
+  # raises.
+  if (!is.null(scoped)) {
+    check_scope_single(scoped)
+  }
   if (stage_recording(ctx$page)) {
     scroll_staged(ctx, scoped, by, to)
     stage_action_pause(ctx)
     return(invisible(ctx))
   }
   if (!is.null(scoped)) {
-    arg <- if (!is.null(by)) list(by = as.list(by)) else list(to = as.list(to))
+    # Offsets serialize as JSON numbers: a scalar integer offset
+    # keeps its integer type through check_offset()'s length-1 rep().
+    arg <- if (!is.null(by)) {
+      list(by = as.list(as.double(by)))
+    } else {
+      list(to = as.list(to))
+    }
     els_arg_values(scoped, scroll_apply_js, list(list(value = arg)))
   } else {
-    action_cdp(
+    res <- action_cdp(
       ctx,
       "scrolling",
       cmd = ctx$page$session$Runtime$evaluate(
@@ -991,6 +1035,16 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
         timeout_ = ctx$page$default_timeout
       )
     )
+    # The evaluate command itself succeeds while the expression
+    # throws; an unraised exceptionDetails was a silently unmoved
+    # scroll (the same mapping els_arg_values() uses).
+    if (!is.null(res$exceptionDetails)) {
+      err <- res$exceptionDetails
+      cli::cli_abort(
+        "JavaScript error scrolling: {err$exception$description %||% err$text %||% 'unknown error'}.",
+        class = "paparazzi_error_js"
+      )
+    }
   }
   stage_action_pause(ctx)
   invisible(ctx)
@@ -1050,6 +1104,12 @@ scroll_apply_js <- "function(arg) {
 # numbers by check_offset(), direction tokens by parse_direction()).
 scroll_arg_json <- function(by = NULL, to = NULL) {
   if (!is.null(by)) {
+    # as.double() first: a scalar integer offset (by = 100L) survives
+    # check_offset() as an integer, and deparse(100L) is "100L" -- not
+    # a JavaScript number. deparse() of a double is a valid JSON
+    # number for every finite value (the only ones check_offset()
+    # allows through).
+    by <- as.double(by)
     paste0('{"by":[', deparse(by[[1]]), ',', deparse(by[[2]]), ']}')
   } else {
     paste0('{"to":[', paste(paste0('"', to, '"'), collapse = ","), ']}')
@@ -1144,6 +1204,18 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
         )
       }
       to_point <- drop
+    } else {
+      # The source's scroll hid or emptied the destination: its
+      # earlier point is stale, so dropping there lands on whatever
+      # moved in -- a failed final probe is a non-actionable
+      # destination, not a fall-through.
+      cli::cli_abort(
+        c(
+          "The drag destination is no longer visible with a non-empty box after bringing the source into view.",
+          i = "Both endpoints must stay actionable at once, like a real drag; scroll or scope so they do."
+        ),
+        class = "paparazzi_error_target"
+      )
     }
   }
 

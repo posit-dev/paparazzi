@@ -64,9 +64,57 @@ Builds on the action pipeline (`actions.md`: `action_elements()`,
   (`dispatch_mouse_drag()`, `drag_html5()`, `scroll_apply_js`,
   `select_text_js`); no staging hooks are built now.
 
+## Review fixes (roborev 1261, follow-up round)
+
+The second review round of the merged unit; all four findings
+triaged ACCEPTED. Fixes on fix/pat5-review, one commit each.
+
+- **Select-then-type, scoped (HIGH).** `pz_type()` scoped with no
+  target clicked the scope element first, collapsing a selection
+  `pz_select_text()` had left -- the documented next step replaced
+  nothing. A scoped element holding an active, non-collapsed
+  selection is now typed into directly (the element is focused in the
+  probe), matching what the root context already did. Only the
+  `target = NULL` path changes: an explicit target keeps its
+  click-to-focus.
+- **Scroll by/to on a multi-match scope (HIGH).** The by/to modes
+  took the first element of a multi-match scope instead of erroring
+  like every other scoped action. `check_scope_single()` now runs
+  before either mode (and before the staged wheel branch, so both
+  paths share it).
+- **Integer scroll offsets + silent page errors (MEDIUM).** A
+  scalar offset kept its integer type through `check_offset()`'s
+  length-1 `rep()`, and the root path's `deparse()` serialized it as
+  the invalid literal `100L`; the `Runtime$evaluate` branch also
+  ignored `exceptionDetails`, so a parse error or page-side throw
+  meant a silently unmoved scroll. Offsets are coerced with
+  `as.double()` before serialization (both paths), and evaluation
+  exceptions now raise `paparazzi_error_js` (the els_values()
+  precedent).
+- **Drag destination probe fall-through (MEDIUM).** When bringing
+  the source into view hid or emptied the destination, the final
+  probe failed its condition and the drag proceeded at the
+  destination's EARLIER coordinates, reporting success after
+  dropping elsewhere. A failed final probe is now a
+  `paparazzi_error_target` (non-actionable destination), sibling to
+  the existing outside-the-viewport error.
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
+
+- 2026-09-26 (pat5 review round 2): landed all four roborev 1261
+  findings, one commit each on fix/pat5-review -- scoped
+  select-then-type keeps the selection (544b9da), pz_scroll by/to
+  error on a multi-match scope (e90bae4), integer offsets serialize
+  as JSON numbers and evaluate exceptions raise (34439e0), a failed
+  final drag probe errors instead of dropping at stale coordinates
+  (f79f0ac; fixture hides the zone synchronously via a scrollIntoView
+  wrap). Next: the parent runs the final full suite --
+  test-actions.R was green (217 pass / 0 fail) after each commit, but
+  the full run was handed off mid-flight under three-way machine
+  contention (treat chromote timeouts as the paparazzi#3tty flake).
+  Provisional: none.
 
 - 2026-09-25 (pat5): landed the phase note, fixture + helper, the
   three actions, and acceptance tests (f768367..b0d4c05); roborev 1250

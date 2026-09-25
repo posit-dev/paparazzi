@@ -728,6 +728,30 @@ test_that("pz_select_text lets typing replace the selection", {
     pz_js(page, "document.getElementById('editor').textContent"),
     "penguins are playful"
   )
+  # Scoped too: the focusing click pz_type() makes would collapse the
+  # selection before the insert, so a scope element holding an active
+  # selection is typed into directly.
+  pz_js(page, "document.getElementById('editor').textContent = 'otters are playful'")
+  ctx <- pz_find(page, "#editor")
+  pz_select_text(ctx, "otters")
+  pz_type(ctx, "penguins")
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "penguins are playful"
+  )
+  # Without a selection, the scoped path still clicks to focus: a
+  # trusted mousedown on the editor, the insert at the click's caret.
+  pz_js(page, "document.getElementById('editor').textContent = 'otters are playful'")
+  ctx <- pz_find(page, "#editor")
+  pz_type(ctx, "x")
+  log <- adv_log(page)
+  expect_true(any(vapply(log, function(e) {
+    identical(e$type, "mousedown") && identical(e$id, "editor") && isTRUE(e$isTrusted)
+  }, logical(1))))
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "otters are playfulx"
+  )
 })
 
 test_that("pz_select_text errors on absent text, emptiness, and multiple matches", {
@@ -808,6 +832,28 @@ test_that("pz_scroll validates its modes", {
   # by and to reuse the shared offset and direction checkers.
   expect_error(pz_scroll(page, by = "lots"), class = "paparazzi_error_input")
   expect_error(pz_scroll(page, to = "sideways"), class = "paparazzi_error_input")
+  # A multi-match scope has no single container to scroll: both
+  # modes error instead of acting on the first match.
+  ctx <- pz_find(page, ".dup-select")
+  expect_error(pz_scroll(ctx, by = c(0, 50)), class = "paparazzi_error_multiple")
+  expect_error(pz_scroll(ctx, to = "top"), class = "paparazzi_error_multiple")
+  # The page never moved.
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+})
+
+test_that("pz_scroll by takes an integer offset and surfaces page errors", {
+  page <- local_advanced_page()
+  # A scalar integer offset is a JSON number, not the invalid literal
+  # "100L" the old serialization produced.
+  pz_scroll(page, by = 100L)
+  expect_equal(pz_js(page, "window.scrollY"), 100)
+  # A page-side evaluation error surfaces instead of the scroll
+  # silently not happening.
+  pz_js(
+    page,
+    "document.documentElement.scrollBy = function () { throw new Error('no scrolling'); };"
+  )
+  expect_error(pz_scroll(page, by = c(0, 100)), class = "paparazzi_error_js")
 })
 
 test_that("pz_drag moves a mouse-dragged element onto the destination", {
@@ -922,4 +968,17 @@ test_that("pz_drag review fixes: NULL to, uppercase draggable, viewport", {
     pz_drag(page, "#tall-bottom", "#editor"),
     class = "paparazzi_error_target"
   )
+})
+
+test_that("pz_drag errors when the destination hides after the source's scroll", {
+  page <- local_advanced_page()
+  # The fixture hides #vanishing-zone the moment #tall-bottom is
+  # scrolled into view, so the final destination probe fails; the
+  # drag errors instead of dropping at the zone's earlier point.
+  expect_error(
+    pz_drag(page, "#tall-bottom", "#vanishing-zone"),
+    class = "paparazzi_error_target"
+  )
+  # Nothing was dispatched: the error fires before any press.
+  expect_false("mousedown" %in% adv_log_types(adv_log(page)))
 })
