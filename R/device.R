@@ -1,0 +1,337 @@
+#' Emulate a device
+#'
+#' Configures device emulation for the page: viewport size, device scale
+#' factor, mobile-ness, zoom, color scheme, reduced motion, locale and
+#' time zone. Only **supplied** arguments change state: `NULL` (the
+#' default) means "leave this setting alone", so `zoom = 1`, not
+#' `zoom = NULL`, disables an active zoom. Whenever a viewport override
+#' is applied, `scale` defaults to 2 (retina).
+#'
+#' The two zoom methods trade off differently:
+#' * `zoom_method = "viewport"` (the default) shrinks the CSS viewport
+#'   and raises the device scale factor, so `vh` stays correct but
+#'   media queries can start (or stop) matching.
+#' * `zoom_method = "css"` applies a CSS `zoom` to the page instead:
+#'   layout and media queries are untouched, but `vh`-sized elements no
+#'   longer fit the viewport (a 50vh element covers the whole viewport
+#'   at zoom 2).
+#'
+#' `reduced_motion = TRUE` gives deterministic stills (animations stop);
+#' it's opt-in because it's usually wrong for videos.
+#'
+#' @inheritParams pz_click
+#' @param width,height Viewport size in CSS pixels. Only the supplied
+#'   one changes; the other keeps its current value.
+#' @param scale Device scale factor. Defaults to 2 when an override is
+#'   applied and no `scale` was supplied.
+#' @param mobile Emulate a mobile device (touch input, mobile viewport
+#'   semantics)?
+#' @param zoom Zoom factor; `1` disables zoom.
+#' @param zoom_method `"viewport"` (default) or `"css"`; see above. Used
+#'   when a `zoom` is (or later becomes) active.
+#' @param color_scheme `"light"` or `"dark"` for
+#'   `prefers-color-scheme`.
+#' @param reduced_motion Emulate `prefers-reduced-motion`? `TRUE` maps
+#'   to `reduce`, `FALSE` to `no-preference`.
+#' @param locale An ICU locale, e.g. `"de-DE"`.
+#' @param timezone An IANA time zone, e.g. `"Pacific/Auckland"`.
+#'
+#' @return `ctx`, invisibly.
+#'
+#' @seealso [pz_open()] forwards its `...` here.
+#'
+#' @export
+pz_device <- function(
+  ctx,
+  ...,
+  width = NULL,
+  height = NULL,
+  scale = NULL,
+  mobile = NULL,
+  zoom = NULL,
+  zoom_method = NULL,
+  color_scheme = NULL,
+  reduced_motion = NULL,
+  locale = NULL,
+  timezone = NULL
+) {
+  check_context(ctx)
+  check_dots_empty()
+  width <- check_dimension(width, "width")
+  height <- check_dimension(height, "height")
+  scale <- check_dimension(scale, "scale")
+  zoom <- check_dimension(zoom, "zoom")
+  if (!is.null(mobile)) {
+    check_bool(mobile)
+  }
+  if (!is.null(zoom_method)) {
+    zoom_method <- arg_match(zoom_method, values = c("viewport", "css"))
+  }
+  if (!is.null(color_scheme)) {
+    color_scheme <- arg_match(color_scheme, values = c("light", "dark"))
+  }
+  if (!is.null(reduced_motion)) {
+    check_bool(reduced_motion)
+  }
+  if (!is.null(locale)) {
+    check_string(locale)
+  }
+  if (!is.null(timezone)) {
+    check_string(timezone)
+  }
+
+  state <- device_state(ctx$page)
+  state$width <- width %||% state$width
+  state$height <- height %||% state$height
+  state$scale <- scale %||% state$scale
+  state$mobile <- mobile %||% state$mobile
+  state$zoom <- zoom %||% state$zoom
+  state$zoom_method <- zoom_method %||% state$zoom_method
+
+  device_apply_override(ctx$page, state)
+  device_apply_css_zoom(ctx$page, state)
+
+  device_apply_media(ctx$page, state, color_scheme, reduced_motion)
+
+  if (!is.null(locale)) {
+    ctx$page$session$Emulation$setLocaleOverride(
+      locale = locale,
+      timeout_ = ctx$page$default_timeout
+    )
+  }
+  if (!is.null(timezone)) {
+    ctx$page$session$Emulation$setTimezoneOverride(
+      timezoneId = timezone,
+      timeout_ = ctx$page$default_timeout
+    )
+  }
+
+  invisible(ctx)
+}
+# pz_open()'s dots are pz_device() settings, validated up front so a
+# misspelling names the mistake instead of landing in check_dots_empty()
+# as an anonymous unused argument. Unnamed dots error (settings must be
+# named); unknown names error with a near-miss hint (adist, the same
+# idea as match.arg's suggestion).
+device_check_dots <- function(dots, call = caller_env()) {
+  if (!length(dots)) {
+    return(dots)
+  }
+  # Unnamed dots have no name at all, not an empty one.
+  nms <- names(dots)
+  if (is.null(nms) || any(!nzchar(nms))) {
+    cli::cli_abort(
+      "Device settings in {.arg ...} must be named, e.g. {.code width = 390}.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  ok <- setdiff(names(formals(pz_device)), c("ctx", "..."))
+  for (bad in setdiff(nms, ok)) {
+    dist <- utils::adist(tolower(bad), tolower(ok))[1, ]
+    near <- ok[dist > 0 & dist <= max(1, floor(nchar(bad) / 2))]
+    cli::cli_abort(
+      c(
+        "Unknown device setting in {.arg ...}: {.arg {bad}}.",
+        if (length(near)) {
+          i = cli::format_inline("Did you mean {.arg {near}}?")
+        }
+      ),
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  dots
+}
+# pz_open() applies forwarded device settings right after the page is
+# created, before any navigation, so media queries and layout are
+# right at first render.
+device_open <- function(page, dots) {
+  if (length(dots)) {
+    do.call(pz_device, c(list(ctx = page), dots))
+  }
+  invisible(page)
+}
+# pz_device()'s positive-numeric arguments (width, height, scale, zoom):
+# rlang has no check_number_positive(), so this wraps check_number_decimal().
+# 0 is rejected everywhere: a zero viewport is meaningless and a zero
+# scale/zoom would silently reset the page.
+check_dimension <- function(
+  x,
+  arg = caller_arg(x),
+  call = caller_env()
+) {
+  if (is.null(x)) {
+    return(NULL)
+  }
+  check_number_decimal(x, min = 0, arg = arg, call = call)
+  if (x <= 0) {
+    cli::cli_abort(
+      "{.arg {arg}} must be positive, not {x}.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  x
+}
+# Device state rides on the page as an attribute: R6 objects are
+# environments, so the attribute travels with the page and dies with
+# it, and no R6 field is needed for it. The state is an environment so
+# device_apply_*() helpers can update it in place. Sticky base_width/
+# base_height hold the pre-zoom viewport captured at the first
+# viewport zoom (a live innerWidth read is already zoomed then);
+# base_scale is not sticky because scale always carries a value
+# whenever an override is applied.
+device_state <- function(page) {
+  state <- attr(page, "paparazzi_device")
+  if (is.null(state)) {
+    state <- new.env(parent = emptyenv())
+    state$width <- NULL
+    state$height <- NULL
+    state$scale <- NULL
+    state$mobile <- NULL
+    state$zoom <- NULL
+    state$zoom_method <- NULL
+    state$base_width <- NULL
+    state$base_height <- NULL
+    state$overridden <- FALSE
+    state$css_zoom <- NULL
+    state$color_scheme <- NULL
+    state$reduced_motion <- NULL
+    attr(page, "paparazzi_device") <- state
+  }
+  state
+}
+# Recompute the full metrics override from state. CDP semantics (probed):
+# width/height of 0 keep the current value; deviceScaleFactor of 0
+# resets to 1, so the factor is always sent explicitly; width/height
+# are protocol integers, hence the rounding.
+device_apply_override <- function(page, state) {
+  zoom <- state$zoom
+  method <- state$zoom_method %||% "viewport"
+  zoom_on <- !is.null(zoom) && !isTRUE(zoom == 1)
+  viewport_zoom <- zoom_on && identical(method, "viewport")
+  base_set <- !(
+    is.null(state$width) &&
+      is.null(state$height) &&
+      is.null(state$scale) &&
+      is.null(state$mobile)
+  )
+
+  if (!viewport_zoom && !base_set) {
+    if (isTRUE(state$overridden)) {
+      page$session$Emulation$clearDeviceMetricsOverride(
+        timeout_ = page$default_timeout
+      )
+      state$overridden <- FALSE
+    }
+    return(invisible(page))
+  }
+
+  if (viewport_zoom && (is.null(state$base_width) || is.null(state$base_height))) {
+    current <- device_viewport(page)
+    state$base_width <- state$width %||% current$width
+    state$base_height <- state$height %||% current$height
+  }
+  eff_width <- state$width %||% state$base_width %||% 0
+  eff_height <- state$height %||% state$base_height %||% 0
+  eff_scale <- state$scale %||% 2
+  eff_mobile <- state$mobile %||% FALSE
+  if (viewport_zoom) {
+    eff_width <- eff_width / zoom
+    eff_height <- eff_height / zoom
+    eff_scale <- eff_scale * zoom
+  }
+  page$session$Emulation$setDeviceMetricsOverride(
+    width = round(eff_width),
+    height = round(eff_height),
+    deviceScaleFactor = eff_scale,
+    mobile = eff_mobile,
+    timeout_ = page$default_timeout
+  )
+  state$overridden <- TRUE
+  invisible(page)
+}
+# The CSS-zoom method: one style property on <html>, everything else
+# untouched. Only touched when the desired zoom differs from the one we
+# applied (a user's own html zoom style is overwritten while active,
+# but never added or removed otherwise).
+device_apply_css_zoom <- function(page, state) {
+  zoom <- state$zoom
+  method <- state$zoom_method %||% "viewport"
+  desired <- if (!is.null(zoom) && !isTRUE(zoom == 1) && identical(method, "css")) {
+    zoom
+  }
+  if (identical(desired, state$css_zoom)) {
+    return(invisible(page))
+  }
+  if (is.null(desired)) {
+    device_eval(page, "document.documentElement.style.removeProperty('zoom')")
+  } else {
+    device_eval(page, paste0("document.documentElement.style.zoom = ", format(zoom, trim = TRUE, digits = 15)))
+  }
+  state$css_zoom <- desired
+  invisible(page)
+}
+# Emulated media features. CDP replaces the whole features set on every
+# call (probed), so color scheme and reduced motion are tracked as one
+# pair and the union of the active ones is sent whenever either changes.
+# A "" value would clear a feature, but the API has no clear path yet.
+device_apply_media <- function(page, state, color_scheme, reduced_motion) {
+  changed <- (!is.null(color_scheme) && !identical(color_scheme, state$color_scheme)) ||
+    (!is.null(reduced_motion) && !identical(reduced_motion, state$reduced_motion))
+  state$color_scheme <- color_scheme %||% state$color_scheme
+  state$reduced_motion <- reduced_motion %||% state$reduced_motion
+  if (!changed) {
+    return(invisible(page))
+  }
+  features <- list()
+  if (!is.null(state$color_scheme)) {
+    features <- c(features, list(list(name = "prefers-color-scheme", value = state$color_scheme)))
+  }
+  if (!is.null(state$reduced_motion)) {
+    value <- if (isTRUE(state$reduced_motion)) "reduce" else "no-preference"
+    features <- c(features, list(list(name = "prefers-reduced-motion", value = value)))
+  }
+  page$session$Emulation$setEmulatedMedia(
+    features = features,
+    timeout_ = page$default_timeout
+  )
+  invisible(page)
+}
+# Evaluate with returnByValue; JS failures in these one-line scripts
+# surface as classed errors instead of raw chromote ones.
+device_eval <- function(page, expr, call = caller_env()) {
+  res <- tryCatch(
+    page$session$Runtime$evaluate(
+      expr,
+      returnByValue = TRUE,
+      timeout_ = page$default_timeout
+    ),
+    error = function(e) {
+      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+        cli::cli_abort(
+          "Timed out after {page$default_timeout}s evaluating JavaScript.",
+          class = "paparazzi_error_timeout",
+          call = call,
+          parent = e
+        )
+      }
+      stop(e)
+    }
+  )
+  err <- res$exceptionDetails
+  if (!is.null(err)) {
+    cli::cli_abort(
+      "JavaScript error: {err$exception$description %||% err$text %||% 'unknown error'}.",
+      class = "paparazzi_error_js",
+      call = call
+    )
+  }
+  invisible(res$result$value)
+}
+device_viewport <- function(page) {
+  jsonlite::fromJSON(
+    device_eval(page, "JSON.stringify({width: innerWidth, height: innerHeight})")
+  )
+}
