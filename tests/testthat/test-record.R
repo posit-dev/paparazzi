@@ -166,6 +166,36 @@ test_that("an immediate stop still writes a one-frame video", {
   expect_gte(recorded_video_info(out)$frames, 1)
 })
 
+test_that("stop captures a final frame after a late page change", {
+  page <- local_record_page()
+  skip_if_no_av()
+  testthat::skip_if_not_installed("png")
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
+  pz_wait(page, 0.4)
+  # A change right before stop must appear in the final frame; without
+  # the stop-time capture the video would end on an older one.
+  pz_js(
+    page,
+    "document.getElementById('box').style.backgroundColor = 'rgb(255, 0, 0)'"
+  )
+  page |> pz_record_stop()
+
+  files <- sort(list.files(frames_dir, full.names = TRUE, pattern = "[.]png$"))
+  expect_gte(length(files), 2L)
+  dpr <- pz_js(page, "window.devicePixelRatio")
+  # a pixel inside #box (CSS left 40, top 30, 100x60), in device pixels
+  pixel <- function(path) {
+    img <- png::readPNG(path)
+    unname(img[round(40 * dpr) + 1, round(50 * dpr) + 1, 1:3])
+  }
+  expect_false(isTRUE(all.equal(pixel(files[[1]]), c(1, 0, 0), tolerance = 0.05)))
+  expect_equal(pixel(files[[length(files)]]), c(1, 0, 0), tolerance = 0.05)
+})
+
 test_that("an immediate block error is not masked by the stop", {
   page <- local_record_page()
   skip_if_no_av()
@@ -178,17 +208,47 @@ test_that("an immediate block error is not masked by the stop", {
   )
 })
 
-test_that("closing the page tears down the recorder on the next tick", {
+test_that("a quick restart does not double the capture chain", {
   page <- local_record_page()
   skip_if_no_av()
 
+  out1 <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out1, fps = 2, hold = c(0, 0))
+  pz_wait(page, 0.3)
+  # a tick from the first recording is still scheduled when stop runs
+  page |> pz_record_stop()
+
+  out2 <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out2, fps = 2, hold = c(0, 0))
+  rec <- page_recorder(page)
+  pz_wait(page, 1.2)
+  ticks <- rec$ticks
+  page |> pz_record_stop()
+
+  # one chain at 2 fps over 1.2s: a tick every 0.5s, so 3 or so; a
+  # second chain left over from the first recording would double it
+  expect_gte(ticks, 2L)
+  expect_lte(ticks, 4L)
+})
+
+test_that("closing the page tears down the recorder synchronously", {
+  page <- local_record_page()
+
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  rec <- page_recorder(page)
+  expect_true(rec$active)
+  frames_dir <- rec$frames_dir
+  expect_true(dir.exists(frames_dir))
+
   pz_close(page)
-  # After close the child loop may never pump again, so the tick can't
-  # be relied on to fire on its own; invoke it directly.
-  record_tick(page)
+
+  # no tick involved: the close path itself clears the recorder slot,
+  # deactivates the recorder, and drops the temp frames dir -- the
+  # closed session's loop may never pump again
   expect_null(page_recorder(page))
+  expect_false(rec$active)
+  expect_false(dir.exists(frames_dir))
 })
 
 test_that("a frame crops the recording at encode time", {
@@ -248,6 +308,50 @@ test_that("frame when = start and stop measure at different times", {
   page |> pz_record_stop()
   # measured at the start: the original 100px-wide box
   expect_equal(recorded_video_info(out_start)$width, width_at(116))
+})
+
+test_that("a targetless stop frame crops from the start-time scope", {
+  page <- local_record_page()
+  skip_if_no_av()
+  dpr <- pz_js(page, "window.devicePixelRatio")
+  width_at <- function(css) floor(round(css * dpr) / 4) * 4
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |>
+    pz_find("#box") |>
+    pz_record_start(out, fps = 10, hold = c(0, 0), frame = pz_frame())
+  pz_wait(page, 0.2)
+  # stopping from the root context must not swap the crop to the
+  # viewport; it still covers the scope the recording started in
+  page |> pz_record_stop()
+
+  info <- recorded_video_info(out)
+  # #box is 100x60
+  expect_equal(info$width, width_at(100))
+  expect_equal(info$height, width_at(60))
+})
+
+test_that("the even crop rounds clamped edges inward, staying inside bounds", {
+  page <- local_record_page()
+
+  # Fractional bounds that clamp all four edges of #box (40,30 to
+  # 140,90): a left bound at 40.8 and a right bound at 101.2 would
+  # round to 40 and 102 under nearest-even -- outside the bounds.
+  pz_js(
+    page,
+    "const b = document.createElement('div');
+     b.id = 'frac';
+     b.style.cssText =
+       'position:absolute; left:40.8px; top:20px; width:60.4px; height:120px';
+     document.body.appendChild(b);"
+  )
+  crop <- record_crop_box(page, pz_frame("#box", bounds = "#frac"))
+
+  # pinned edges round inward: left up to 42, right down to 100
+  expect_equal(crop$x, 42)
+  expect_equal(crop$width, 58)
+  expect_gte(crop$x, 40.8)
+  expect_lte(crop$x + crop$width, 101.2)
 })
 
 test_that("keep_frames keeps the captured PNGs", {

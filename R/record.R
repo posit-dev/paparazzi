@@ -23,6 +23,10 @@
 #' between steps freezes the recording**: the timer can't fire while R
 #' is busy, and the missed stretch collapses to a held frame.
 #'
+#' Stopping always captures one final frame of the page state at
+#' `pz_record_stop()`, so a change made just before the stop still
+#' appears; the last-frame hold repeats that final frame.
+#'
 #' Cropping never happens at capture time. A [pz_frame()] spec (or the
 #' page default from [pz_stage_frame()]) is measured once -- at the
 #' start for `pz_frame(when = "start")`, at the end for the default
@@ -107,17 +111,25 @@ pz_record_start <- function(
     keep_frames = keep_frames,
     frame = frame
   )
+  # Retain the framing context the recording started in: a when =
+  # "stop" frame is measured against the final layout, but resolved
+  # from this ctx -- its scope -- not from wherever pz_record_stop()
+  # is called. An unscoped start context behaves exactly as before.
+  if (inherits(frame, "paparazzi_frame")) {
+    rec$frame_ctx <- ctx
+  }
   # Measured before the first frame for when = "start"; for "stop" the
   # crop is measured against the final layout in pz_record_stop().
   if (inherits(frame, "paparazzi_frame") && identical(frame$when, "start")) {
-    rec$crop <- record_crop_box(ctx, frame)
+    rec$crop <- record_crop_box(rec$frame_ctx, frame)
   }
   rec$frames_dir <- record_frames_dir(path, keep_frames)
 
   page_set_recorder(page, rec)
   # Fire the first tick as soon as the loop pumps so short recordings
-  # still get an early frame; ticks re-arm at 1/fps from then on.
-  later::later(function() record_tick(page), delay = 0, loop = page$child_loop)
+  # still get an early frame; ticks re-arm at 1/fps from then on. The
+  # tick closure carries its recorder so it can't adopt a later one.
+  later::later(function() record_tick(page, rec), delay = 0, loop = page$child_loop)
   invisible(ctx)
 }
 #' Stop a recording and write the video
@@ -141,29 +153,13 @@ pz_record_stop <- function(ctx) {
     }
   })
 
-  # The first tick is only scheduled at start; an immediate stop pumps
-  # the loop (still active, so the tick captures) until one capture
-  # settles, giving a one-frame video instead of no file at all.
-  if (length(rec$files) == 0L) {
-    ticks <- rec$ticks
-    tryCatch(
-      pz_poll(
-        function() {
-          length(rec$files) > 0L || (rec$ticks > ticks && !rec$in_flight)
-        },
-        timeout = min(page$default_timeout, 5),
-        loop = page$child_loop,
-        what = "the first frame capture"
-      ),
-      paparazzi_error_timeout = function(e) record_error(rec, e)
-    )
-  }
-
+  # Deactivate first so ticks scheduled by the recording stop re-arming
+  # and can't issue captures while the stop settles its own.
   rec$active <- FALSE
   rec$vt_end <- rec_vt(rec)
 
   # A capture issued before the stop may still be in flight; it belongs
-  # to the recording, so let it settle before encoding.
+  # to the recording, so let it settle before the final capture.
   if (rec$in_flight) {
     tryCatch(
       pz_poll(
@@ -179,6 +175,24 @@ pz_record_stop <- function(ctx) {
     )
   }
 
+  # Capture and await the page state at stop: the final state must be in
+  # the video (the last-frame hold repeats it, not an older frame), and
+  # an immediate stop gets its one frame here. vt is pinned to vt_end so
+  # the frame is kept (post-vt_end captures are dropped).
+  record_capture(rec, page, rec$vt_end)
+  tryCatch(
+    pz_poll(
+      function() !rec$in_flight,
+      timeout = min(page$default_timeout, 5),
+      loop = page$child_loop,
+      what = "the final frame capture"
+    ),
+    paparazzi_error_timeout = function(e) {
+      rec$in_flight <- FALSE
+      record_error(rec, e)
+    }
+  )
+
   if (length(rec$files) == 0L) {
     msg <- "No frames were captured."
     if (!is.null(rec$first_error)) {
@@ -190,7 +204,10 @@ pz_record_stop <- function(ctx) {
   if (
     inherits(rec$frame, "paparazzi_frame") && identical(rec$frame$when, "stop")
   ) {
-    rec$crop <- record_crop_box(ctx, rec$frame)
+    # The final-layout measurement resolves from the retained start
+    # context, so the crop covers the scope the recording began in
+    # even when stop is called from a different one.
+    rec$crop <- record_crop_box(rec$frame_ctx, rec$frame)
   }
   record_encode(rec)
   # The staging hook: an auto cursor under cursor = NULL belonged to the
@@ -323,6 +340,7 @@ new_recorder <- function(
     is.null(rec$frame) &&
     rlang::is_installed("gifski")
   rec$crop <- NULL
+  rec$frame_ctx <- NULL
   rec$frames_dir <- NULL
   rec$times <- numeric(0)
   rec$files <- character(0)
@@ -426,25 +444,19 @@ record_frames_dir <- function(path, keep_frames) {
 # skipped tick shows up as a repeated frame after resampling). The tick
 # runs inside run_now() during whatever pumped the loop, so its errors
 # are caught and counted on the recorder instead of escaping into an
-# unrelated call.
-record_tick <- function(page) {
-  rec <- page_recorder(page)
+# unrelated call. Each scheduled tick is bound to the recorder that
+# scheduled it: one identity check against the page's current recorder
+# kills ticks left behind by a stopped recording, which would otherwise
+# adopt a newer one and double the capture chain after a quick restart.
+record_tick <- function(page, rec = page_recorder(page)) {
   if (is.null(rec) || !rec$active) {
     return(invisible(FALSE))
   }
-  if (page$is_closed()) {
-    # page$close() can't stop the recorder (the page lifecycle lives in
-    # context.R), so a tick on a closed page tears the recorder down
-    # instead of re-arming forever and leaking the frames directory.
-    rec$active <- FALSE
-    page_set_recorder(page, NULL)
-    if (!rec$keep_frames && !is.null(rec$frames_dir)) {
-      unlink(rec$frames_dir, recursive = TRUE)
-    }
+  if (!identical(rec, page_recorder(page))) {
     return(invisible(FALSE))
   }
   later::later(
-    function() record_tick(page),
+    function() record_tick(page, rec),
     delay = 1 / rec$fps,
     loop = page$child_loop
   )
@@ -452,10 +464,37 @@ record_tick <- function(page) {
   if (rec$paused || rec$in_flight) {
     return(invisible(TRUE))
   }
+  record_capture(rec, page, rec_vt(rec))
+  invisible(TRUE)
+}
+# Synchronous teardown for the page-lifecycle close path (context.R):
+# the closed session's child loop may never pump again, so a later
+# tick can't be relied on to clean up. Deactivates the recorder,
+# clears the recorder slot, and drops the temp frames dir; kept frames
+# survive on purpose. An in-flight capture is left to resolve
+# harmlessly on the discarded recorder.
+record_page_closed <- function(page) {
+  rec <- page_recorder(page)
+  if (is.null(rec)) {
+    return(invisible(FALSE))
+  }
+  rec$active <- FALSE
+  page_set_recorder(page, NULL)
+  if (!rec$keep_frames && !is.null(rec$frames_dir)) {
+    unlink(rec$frames_dir, recursive = TRUE)
+  }
+  invisible(TRUE)
+}
+# Issue one async capture on the page: the tick's periodic capture and
+# the stop-time final frame both come through here. in_flight guards
+# against overlapping captures; the callbacks clear it when chromote
+# invokes them on the child loop. A synchronous failure (e.g. a closed
+# session) clears it and lands in the recorder's error tally instead.
+record_capture <- function(rec, page, vt) {
   rec$in_flight <- TRUE
   index <- length(rec$files) + 1L
   rec$pending <- list(
-    vt = rec_vt(rec),
+    vt = vt,
     file = file.path(rec$frames_dir, sprintf("frame-%06d.png", index))
   )
   tryCatch(
@@ -473,7 +512,7 @@ record_tick <- function(page) {
       record_error(rec, e)
     }
   )
-  invisible(TRUE)
+  invisible(rec)
 }
 # The capture callback: writes the PNG to the frame store at resolve
 # time. At most one capture is in flight, so issue order is resolve
@@ -511,8 +550,9 @@ record_error <- function(rec, e) {
 # The crop box in viewport-relative CSS pixels (the PNG's coordinate
 # space): the framing pipeline with the visible viewport as the clamp
 # -- not the document box frame_clip() uses, since the PNG holds only
-# the viewport -- and video-style even rounding. viewport_width is
-# kept for the CSS-to-pixel conversion at encode time.
+# the viewport -- and video-style even rounding of pinned edges
+# inward (see frame_clip()). viewport_width is kept for the
+# CSS-to-pixel conversion at encode time.
 record_crop_box <- function(ctx, spec, call = caller_env()) {
   # NULL means the frame falls back to the viewport; the box is
   # filled from the geometry read after resolution (auto-waits can
@@ -537,7 +577,20 @@ record_crop_box <- function(ctx, spec, call = caller_env()) {
     geometry$viewport_width,
     geometry$viewport_height
   )
-  box <- frame_round(frame_apply(spec, box, clamps, call = call), even = TRUE)
+  box <- frame_apply(spec, box, clamps, call = call)
+  # Which edges a clamp fixed in place, exactly as in frame_clip():
+  # a binding clamp assigned the edge its value, so the comparisons
+  # are bit-equal; coinciding values count as pinned, which errs on
+  # the safe side. Rounding a pinned edge to the nearest even CSS
+  # edge could leave the bounds (a left bound at 1 rounds to 0), so
+  # frame_round() rounds those inward.
+  pinned <- c(
+    any(vapply(clamps, function(clamp) clamp[1] >= box[1], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[2] >= box[2], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[3] <= box[3], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[4] <= box[4], logical(1)))
+  )
+  box <- frame_round(box, pinned = pinned, even = TRUE)
   width <- box[3] - box[1]
   height <- box[4] - box[2]
   if (width <= 0 || height <= 0) {

@@ -14,7 +14,8 @@ choices and session handoffs for recording only.
   `path`, `format` (`"mp4"`/`"webm"`/`"gif"`), `fps`, `scale`,
   `hold_first`/`hold_last`, `keep_frames`, `frames_dir`, parallel
   vectors `times`/`files`, `holds` (list of `list(vt, seconds)`),
-  `frame` (resolved spec or NULL), `when`, `crop` (measured CSS box +
+  `frame` (resolved spec or NULL), `frame_ctx` (the start-time framing
+  context for a frame spec), `when`, `crop` (measured CSS box +
   viewport width, computed at start or stop per `when`), the video
   clock (`vt_base`, `active_since`), `active`, `paused`, `in_flight`,
   `pending` (the in-flight capture's `vt` + file), `vt_end`, and
@@ -37,8 +38,10 @@ choices and session handoffs for recording only.
   which chromote invokes when the child loop pumps. The whole tick
   body is wrapped in tryCatch: callback errors must not escape into an
   unrelated `run_now()`; failures increment `n_errors` and keep the
-  first condition. A tick on a closed page deactivates the recorder
-  (context.R is untouched, so `page$close()` can't stop it).
+  first condition. `page$close()` tears the recorder down
+  synchronously (`record_page_closed()` in record.R, called from
+  context.R's close path) -- the closed session's loop may never pump
+  again, so a later tick can't be relied on.
   Consequence documented in `?pz_record_start`: the timer only fires
   when the child loop pumps -- synchronous chromote calls and
   `pz_wait()`/`pz_poll()` pump it, but long-running plain R between
@@ -114,10 +117,70 @@ choices and session handoffs for recording only.
   the same ingestion from `Page.screencastFrame` events (acking each
   frame) with no change to the clock, resample, or encode.
 
+## Review-fix round (roborev 1262)
+
+Mechanism decisions for the five accepted findings; landed as five
+commits, one per finding.
+
+- **Stop-time final frame (finding 1).** `pz_record_stop()` now issues
+  one capture itself instead of only rescuing the zero-frame case:
+  after deactivating and fixing `vt_end`, and letting an in-flight
+  capture settle, it issues an async capture with `vt` pinned to
+  `vt_end` and pumps until it settles (bounded by
+  `min(default_timeout, 5)`). `record_frame_done()` accepts it
+  (`pending$vt <= vt_end`), so the last captured frame is the page
+  state at stop and the last-frame hold repeats it, not an older
+  frame. The first-frame pump is subsumed: an immediate stop gets
+  exactly this one frame, so the pump (and its `ticks` counter bound)
+  is gone. Capture issuing is extracted into `record_capture(rec,
+  page, vt)`, shared by the tick and the stop path.
+- **Tick-to-recorder binding (finding 2).** Every scheduled tick
+  closure now carries its recorder; `record_tick(page, rec)` returns
+  when the recorder is inactive OR no longer the page's current one
+  (`identical()` against the slot -- a single identity check, not an
+  ordering system). A tick left scheduled by a stopped recording can
+  no longer adopt a restarted recording's recorder, so a quick
+  stop/restart can't run two polling chains.
+- **Start-time framing context (finding 3).** `pz_record_start()`
+  retains the ctx it was called on (`rec$frame_ctx`) whenever a
+  frame spec is in effect. The `when = "stop"` crop is still measured
+  at stop against the final layout, but resolved from that retained
+  ctx -- its scope -- instead of the scope in force where
+  `pz_record_stop()` happens to be called. Explicit targets and
+  bounds resolve the same way; a detached start-time scope still
+  raises the classed detach error at stop.
+- **Synchronous close teardown (finding 4).** `page$close()` (context.R)
+  calls `record_page_closed()` (record.R) before closing the session:
+  deactivate the recorder, clear the recorder slot, remove the temp
+  frames dir (unless `keep_frames`). The closed-page branch in
+  `record_tick()` is gone -- close is now the single teardown point,
+  reversing the earlier "context.R is untouched" decision. The
+  in-flight capture, if any, is left to resolve harmlessly on the
+  recorder (errors land in `first_error` of a discarded recorder).
+- **Pinned-edge even rounding (finding 5).** `record_crop_box()`
+  computes the pinned-edge vector exactly as `frame_clip()` does --
+  which edges a clamp fixed in place, exact bit-equal comparisons,
+  coinciding values treated as pinned -- and passes it to
+  `frame_round(even = TRUE)`, so clamped edges round inward and the
+  even crop stays inside explicit bounds (a left bound at 1 no longer
+  rounds to 0).
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (review): landed the roborev 1262 follow-up round as one
+  commit per finding (see Review-fix round above): stop-time final
+  capture (84c5eea), tick-to-recorder binding (afc2d75), start-time
+  framing context (85334a2), synchronous close teardown (f02030c),
+  pinned inward even-rounding of the crop (e0652da), plus the
+  pz_record_start doc paragraph (888288e). Full suite 1583 green on
+  the first run, staging/cursor tests included. Next: recording stays
+  done per acceptance; `method = "screencast"` remains the reserved
+  seam. Provisional: the stop-time capture can hold a stop up to 5s
+  when Chrome can't produce a frame (closed page) and then aborts
+  with the kept first_error; the final-frame test reads kept PNG
+  pixels via the png package (skipped where it isn't installed).
 - 2026-09-25 (finish): landed the previous session's three hardening
   fixes as four commits: closed-page tick teardown -- a tick on a
   closed page deactivates the recorder and removes the temp frames
