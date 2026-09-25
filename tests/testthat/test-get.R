@@ -31,6 +31,11 @@ test_that("pz_get_count validates its inputs", {
   expect_error(pz_get_count("not a page"), class = "paparazzi_error_context")
 })
 
+test_that("target-based getters validate context before reading the scope", {
+  expect_error(pz_get_text(1), class = "paparazzi_error_context")
+  expect_error(pz_get_attr(1, "id"), class = "paparazzi_error_context")
+})
+
 test_that("pz_get_text collapses and trims whitespace by default", {
   page <- local_getters_page()
   text <- pz_get_text(page, target = ".item")

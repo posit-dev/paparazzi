@@ -196,6 +196,7 @@ check_scope_single <- function(scoped, call = caller_env()) {
 # scope, not per CDP command (an action's scroll-rect-dispatch sequence
 # is one use).
 scope_root <- function(ctx, call = caller_env()) {
+  check_context(ctx, call = call)
   scoped <- scope_top(ctx)
   if (is.null(scoped)) {
     NULL

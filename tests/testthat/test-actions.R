@@ -194,6 +194,11 @@ test_that("pz_blur at the root with nothing focused is a no-op", {
   expect_equal(pz_js(page, "document.activeElement.tagName"), "BODY")
 })
 
+test_that("action element resolution validates context before reading the scope", {
+  expect_error(action_elements(1, NULL), class = "paparazzi_error_context")
+  expect_error(pz_click(1), class = "paparazzi_error_context")
+})
+
 test_that("element actions need a target at the root context", {
   page <- local_actions_page()
   expect_error(pz_click(page), class = "paparazzi_error_target")
