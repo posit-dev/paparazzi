@@ -2,7 +2,7 @@
 
 A "Playwright-lite" R package over chromote: smooth, pipeable browser driving, plus screenshots and screen recordings.
 
-Status: design discussion. Nothing implemented yet.
+Status: implemented. The API index below records the shipped signatures; phase notes in `.agents/phases/` hold mechanism decisions.
 
 ## Background
 
@@ -419,7 +419,7 @@ Cursor functions:
 
 ```r
 pz_cursor_show(ctx, target = NULL, ..., from = NULL)
-pz_cursor_hide(ctx)
+pz_cursor_hide(ctx, ...)
 pz_cursor_move(ctx, target, ..., duration = NULL)
 pz_cursor_leave(ctx, side = "right")
 ```
@@ -521,7 +521,7 @@ Shiny idle: `pz_wait_for_shiny_idle()` passes when `shiny:connected` has fired, 
 Escape hatches:
 
 - `pz_chromote(ctx)` returns the underlying `ChromoteSession` for raw CDP calls (not `pz_session()`, which could be confused with the page or Shiny's `session`).
-- `pz_js(ctx, expr, ..., await = TRUE)` evaluates JS, awaiting promises, and returns the value (ends the chain).
+- `pz_js(ctx, expr, ..., await = TRUE, timeout = NULL)` evaluates JS, awaiting promises, and returns the value (ends the chain). `timeout` bounds the evaluation; `NULL` uses the session default.
 
 Inspecting:
 
@@ -716,7 +716,7 @@ Arguments: the `pz_get_` prefix is confirmed.
 |---|---|---|
 | `pz_stage()` | `(ctx, ..., cursor, cursor_speed, enter, typing, typing_speed, pause)` | confirmed |
 | `pz_cursor_show()` | `(ctx, target = NULL, ..., from = NULL)` | confirmed |
-| `pz_cursor_hide()` | `(ctx)` | confirmed |
+| `pz_cursor_hide()` | `(ctx, ...)` | confirmed |
 | `pz_cursor_move()` | `(ctx, target, ..., duration = NULL)` | confirmed |
 | `pz_cursor_leave()` | `(ctx, side = "right")` | confirmed |
 
@@ -727,6 +727,6 @@ Arguments: `cursor_speed`, `typing_speed` and `pause` are confirmed.
 | Function | Signature | Name |
 |---|---|---|
 | `pz_chromote()` | `(ctx)` → `ChromoteSession` | confirmed |
-| `pz_js()` | `(ctx, expr, ..., await = TRUE)` → value | confirmed |
+| `pz_js()` | `(ctx, expr, ..., await = TRUE, timeout = NULL)` → value | confirmed |
 | `pz_inspect()` | `(ctx, target = NULL, ..., show = c("auto", "screenshot", "browser", "none"))` | confirmed |
 | `page$view()` | method: opens the live browser | confirmed |
