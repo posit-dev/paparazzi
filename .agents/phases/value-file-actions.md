@@ -94,6 +94,15 @@ Builds on the action pipeline from the pointer/keyboard phase
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-25 (jhrc review rounds): landed both review rounds --
+  1240's test gaps (setter-only trap with native getter, per-control
+  event order, pre-checked radio group, file.info() size) and 1241's
+  production fixes at set_value_js: radio peers identified by form
+  owner + tree (not DOM containment), rejected/clamped sets restore
+  the previous value before erroring, and file inputs reject values
+  with a pointer to pz_set_files. Suite green. Next: none -- closed.
+  Provisional: form-attribute radio and unowned-radio grouping follow
+  the HTML spec's radio button group definition.
 - 2026-09-24 (jhrc close): landed the phase note, form.html +
   helper-form.R, pz_set_value + pz_set_files in R/actions.R, and 55
   new test expectations in test-actions.R; suite 893 green. Mechanisms
