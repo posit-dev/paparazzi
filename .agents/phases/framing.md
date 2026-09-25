@@ -82,6 +82,44 @@ mechanism-level choices and session handoffs for framing only.
   `fixtures/screenshot.html` counts stay pinned; test-frame.R uses its
   own fixture.
 
+## Review fixes (roborev 1245)
+
+One commit per accepted finding. The document-vs-viewport clamp
+finding was declined (the document clamp for stills is intended; SPEC
+"Framing" step 4 amended on main to say "capture surface"), so the
+current clamp semantics stay.
+
+- **Geometry read order.** `frame_clip()` resolves and measures targets
+  and bounds first, then reads page geometry: resolution auto-waits,
+  so a target appearing mid-wait can expand the document, and the
+  clamp must see the expanded document. The viewport fallback box is
+  filled from that fresh read.
+- **RTL negative-scrollX narrowing.** Empirical Chrome model: an RTL
+  document wider than the viewport overflows to the LEFT, so the
+  scrollable canvas spans document coordinates `[-(scrollWidth -
+  innerWidth), innerWidth]`, not `[0, scrollWidth]`, and
+  `window.scrollX` goes negative to reveal it. Two changes in
+  `frame_clip()`: the page clamp anchors to the real document span (a
+  new `document_left` read in `page_geometry()`: `-(scrollWidth -
+  innerWidth)` when the root element is RTL and wider than the
+  viewport, else 0 -- LTR unchanged), and a clip whose document origin
+  went negative shifts to x = 0 preserving its size (CDP clip origins
+  must be non-negative; the region shifts with it, mirroring
+  `clip_viewport()`). Identity `pz_frame()` then matches the unframed
+  screenshot's dimensions. New fixture `frame-rtl.html`; dimension
+  assertions only -- Chrome's `captureBeyondViewport` resize
+  re-lays-out the page, so pixel placement in RTL captures is
+  browser-dependent and not asserted.
+- **Rounding vs fractional bounds.** Edges a clamp fixed in place
+  ("pinned") round INWARD (left/top up, right/bottom down; even mode
+  doubles the same rule) so the rounded pixel clip stays within the
+  CSS bounds; free edges keep nearest-pixel (stills) or nearest-even
+  (video) rounding, preserving the documented ratio-growth behavior.
+  Pinned-ness is derived in `frame_clip()` by comparing the clamped
+  edges with the clamp boxes (bit-equal when a clamp bound the edge;
+  conservative when the values merely coincide). A fractional
+  `#fractional` element joins `frame.html` as a bounds target.
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
