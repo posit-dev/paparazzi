@@ -27,6 +27,27 @@ test_that("pz_nav_reload restores the page", {
   expect_equal(js(root, "document.querySelectorAll('#added').length"), 0)
 })
 
+test_that("pz_nav_goto waits for a delayed destination to settle", {
+  # nav-slow.html keeps readyState below "complete" for well past a
+  # poll interval; the wait must settle on the destination document,
+  # not on the outgoing page's still-complete readyState.
+  ctx <- local_nav_page()
+  root <- pz_nav_goto(ctx, nav_fixture_url("slow"))
+  expect_identical(pz_js(root, "document.title"), "paparazzi nav slow")
+  expect_identical(pz_js(root, "document.readyState"), "complete")
+})
+
+test_that("pz_nav_goto handles a same-document fragment navigation", {
+  ctx <- local_nav_page()
+  # A fragment navigation commits no new document, so no
+  # frameNavigated ever fires; the wait must not wait on one.
+  root <- pz_nav_goto(ctx, paste0(nav_fixture_url("a"), "#page"))
+  expect_match(pz_js(root, "location.hash"), "#page", fixed = TRUE)
+  expect_identical(pz_js(root, "document.title"), "paparazzi nav A")
+  # ...while a full navigation to the same URL anchor-less still works.
+  expect_no_error(pz_nav_goto(root, nav_fixture_url("b")))
+})
+
 test_that("history traversal works: goto, back, forward", {
   ctx <- local_nav_page()
 

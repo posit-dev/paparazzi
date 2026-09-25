@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>paparazzi nav slow</title>
+  <script>
+    // Keep readyState below "complete" past any poll interval, so a
+    // wait anchored on the wrong document settles early.
+    const start = performance.now();
+    while (performance.now() - start < 700) {}
+  </script>
+</head>
+<body>
+  <p id="slow">Finally.</p>
+</body>
+</html>

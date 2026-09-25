@@ -32,10 +32,18 @@ pz_nav_goto <- function(ctx, url, ..., wait = c("auto", "load", "shiny", "none")
   wait <- nav_wait_arg(wait)
   root <- wait_nav_reset(ctx)
 
-  nav <- ctx$page$session$Page$navigate(
-    url,
-    timeout_ = ctx$page$default_timeout
-  )
+  page <- ctx$page
+  navigated <- if (identical(wait, "load")) {
+    # A cross-document navigation can return from Page.navigate while
+    # the outgoing document still reports readyState "complete", so
+    # the readyState wait alone would settle on the old page before
+    # the destination commits. frameNavigated fires at the commit --
+    # the reload path relies on the same event -- so the next
+    # occurrence is registered before the trigger and synchronized
+    # before the readyState wait.
+    page$session$Page$frameNavigated(wait_ = FALSE)
+  }
+  nav <- page$session$Page$navigate(url, timeout_ = page$default_timeout)
   # CDP reports navigation failures as `errorText`, not as errors.
   if (!is.null(nav$errorText) && nzchar(nav$errorText)) {
     cli::cli_abort(
@@ -43,11 +51,20 @@ pz_nav_goto <- function(ctx, url, ..., wait = c("auto", "load", "shiny", "none")
       class = "paparazzi_error_navigation"
     )
   }
-  nav_wait_load(ctx$page, wait)
-  # The settle point for the css zoom: the injected script covers only
-  # commits made while the Page domain stayed enabled.
   if (identical(wait, "load")) {
-    device_css_reapply(ctx$page)
+    # A same-document navigation (a URL fragment) never fires
+    # frameNavigated, but its navigate response also carries no
+    # loaderId while a cross-document one does -- so the anchor is
+    # skipped there: the document never changed and is already
+    # complete, and the readyState wait settling instantly is
+    # correct. A download aborts the navigation the same way.
+    if (!is.null(nav$loaderId)) {
+      nav_await(page, navigated, what = "page navigation")
+    }
+    wait_for_load(page, timeout = page$default_timeout)
+    # The settle point for the css zoom: the injected script covers only
+    # commits made while the Page domain stayed enabled.
+    device_css_reapply(page)
   }
   invisible(root)
 }
