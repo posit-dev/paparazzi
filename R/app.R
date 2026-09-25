@@ -109,17 +109,6 @@ app_start <- function(app_dir, envvars, shiny_options, timeout, call = caller_en
   max_attempts <- 5
   for (attempt in seq_len(max_attempts)) {
     port <- shiny_options$port %||% random_port()
-    if (app_port_connectable(port)) {
-      # Already listening. Never hand a busy port to the child: on
-      # platforms where SO_REUSEADDR lets a second specific-address
-      # bind succeed (macOS), the child would "start" while its
-      # connections go to the other listener.
-      if (attempt < max_attempts) {
-        shiny_options$port <- NULL
-        next
-      }
-      app_startup_error(list(kind = "exited", port_taken = TRUE, log = character()), app_dir, timeout, call = call)
-    }
     config <- c(
       list(appDir = app_dir),
       shiny_options,
@@ -127,6 +116,15 @@ app_start <- function(app_dir, envvars, shiny_options, timeout, call = caller_en
     )
     config <- config[!duplicated(names(config), fromLast = TRUE)]
     app <- new_app(config, port, envvars)
+    if (is.null(app)) {
+      # A preflight connect succeeded. On some platforms a second bind
+      # can also succeed, but traffic would reach the other listener.
+      if (attempt < max_attempts) {
+        shiny_options$port <- NULL
+        next
+      }
+      app_startup_error(list(kind = "exited", port_taken = TRUE, log = character()), app_dir, timeout, call = call)
+    }
     failure <- app_wait_ready(app, timeout)
     if (is.null(failure)) {
       return(app)
@@ -171,16 +169,17 @@ app_startup_error <- function(failure, app_dir, timeout, call) {
   what <- switch(
     if (failure$port_taken) "port_taken" else failure$kind,
     port_taken = "could not bind a port",
-    timeout = "did not start within {.val {timeout}} seconds",
+    timeout = cli::format_inline("did not start within {.val {timeout}} seconds"),
     exited = "exited during startup"
   )
   cli::cli_abort(
     c(
       "The Shiny app at {.path {app_dir}} {what}.",
-      if (!failure$port_taken && length(failure$log)) {
-        # Log output is opaque text that can contain braces (shiny's
-        # stacktrace wrapper prints `{`); cli would read them as glue.
-        c(x = cli_escape(paste(failure$log, collapse = "\n")))
+      if (length(failure$log)) {
+        # Tail and escape opaque child output before cli parses its braces.
+        log <- paste(tail(failure$log, 20L), collapse = "\n")
+        log <- substr(log, max(1L, nchar(log) - 3999L), nchar(log))
+        c(x = cli_escape(log))
       }
     ),
     class = "paparazzi_error_app_startup",
@@ -234,6 +233,10 @@ new_app <- function(config, port, envvars) {
   config_file <- tempfile(pattern = "paparazzi-app-", fileext = ".rds")
   saveRDS(config, config_file)
   log_file <- tempfile(pattern = "paparazzi-app-", fileext = ".log")
+  # The sole busy-port probe runs after serialization, just before spawn.
+  if (app_port_connectable(port)) {
+    return(NULL)
+  }
   process <- processx::process$new(
     file.path(R.home("bin"), "Rscript"),
     args = c(
@@ -243,7 +246,7 @@ new_app <- function(config, port, envvars) {
     ),
     # File, never a pipe: an undrained pipe blocks the app's writes.
     stdout = log_file,
-    stderr = log_file,
+    stderr = "2>&1",
     # "current" keeps the inherited environment; envvars override it.
     env = c("current", envvars),
     cleanup = TRUE,

@@ -20,11 +20,10 @@ integration with `pz_app()` handles belongs to a later task.
   covers `print()`. Private: `process_` (processx), `log_file_`,
   `stopped_` flag. `stop()` is the only mutator; idempotent.
 - **Process.** `processx::process$new(Rscript, c("-e", expr, config),
-  stdout = log_file, stderr = log_file, env = c("current", envvars),
+  stdout = log_file, stderr = "2>&1", env = c("current", envvars),
   cleanup = TRUE, cleanup_tree = TRUE)`. processx joins Imports (used
-  directly). One temp log file for both streams -- never pipes (the
-  known undrained-pipe Shiny bug class); `$logs()` `readLines()` it and
-  works after stop. The child runs
+  directly). Both streams share one fd into a temp log file -- never
+  pipes; `$logs()` `readLines()` it and works after stop. The child runs
   `do.call(shiny::runApp, readRDS(commandArgs(TRUE)[[1]]))` with the
   config saved to a tempfile, so arbitrary `shiny_options` survive
   without quoting games.
@@ -49,18 +48,22 @@ integration with `pz_app()` handles belongs to a later task.
   with the log tail in the error.
 - **Port-taken retry.** Two layers, both retry on a fresh port (5
   attempts total), unconditional (not only for user-specified ports):
-  1. **Pre-flight connect probe.** A port that already answers a
+  1. **Pre-flight connect probe.** After config serialization and
+     immediately before child spawn, a port that already answers a
      loopback connect is never handed to the child. Discovered during
      implementation: on macOS, SO_REUSEADDR lets a second
      specific-address bind *succeed* against a wildcard listener (and
      vice versa), so a busy port does not reliably kill the child --
      it would "start" while connections go to the other listener.
+     This single probe narrows, but cannot eliminate, the picker-to-bind
+     race; no ownership handshake or additional probe is planned.
   2. **Log-scrape.** If the child dies and the log matches "address
      already in use" or "failed to create server", retry. Covers the
      residual picker/bind race.
-- **Log text in errors.** Log output is brace-escaped (`cli_escape()`,
-  doubling) before going into `cli_abort()` bullets: shiny's
-  stacktrace wrapper prints a literal `{`, which cli reads as glue.
+- **Log text in errors.** Up to the last 20 lines / 4000 characters of
+  child output is brace-escaped (`cli_escape()`, doubling) before going
+  into `cli_abort()` bullets: shiny's stacktrace wrapper prints a literal
+  `{`, which cli reads as glue. Preflight exhaustion has no child log.
 - **Readiness probe warnings.** A refused `socketConnection()` warns
   as well as errors; the probe muffles warnings or each poll spams one.
 - **Shutdown ladder.** `stop()`: no-op if already stopped or the
@@ -108,8 +111,8 @@ Fixtures (all under `tests/testthat/fixtures/shiny-app-lifecycle/`):
   exhaustion (a genuinely occupied port can't force a child bind
   failure on macOS; see Decisions).
 
-Fixture markers use `message()` (stderr), not `cat()`: redirected
-stdout is block-buffered, so `cat()` output isn't readable mid-run.
+Fixture markers include explicitly flushed `cat()` stdout and
+`message()` stderr, so both can be asserted mid-run and after stop.
 
 Cases: dir and file forms start and serve (URL reachable);
 `print()` shows URL/port/status; `$logs()` readable mid-run (contains
@@ -124,6 +127,24 @@ validation errors.
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
+
+- 2026-09-25 (review-fix handoff): accepted 1267 #2–#4 and owner
+  disposition #1 on fix/k2dr-review: one fd for both logs, bounded
+  escaped bind-failure tail, formatted timeout, and sole preflight probe
+  just before spawn. Targeted app|open: 139 pass / 0 fail / 0 warn.
+  Next: coordinator handles merge/full-suite gate; issue stays open here.
+  Provisional: tiny picker-to-bind race deliberately remains; no extra
+  probe or ownership handshake. No generated docs changed.
+
+- 2026-09-25 (review-fix start): main 480f1e3, targeted app|open baseline
+  129 pass. Review 1267: merge child stdout/stderr into one fd; expose a
+  bounded, cli-escaped log tail on bind-failure exhaustion; interpolate
+  numeric timeout rather than printing cli markup.
+  Next: regressions for both streams mid-run/after stop, retry exhaustion,
+  and slow-app timeout; then implementation and targeted verification.
+  Provisional: move the sole preflight connect probe after config serialization
+  immediately before spawn, reusing existing retry handling. A tiny
+  picker-to-bind race remains; no ownership handshake or second probe.
 
 - 2026-09-25 (close of session): landed the task in three commits --
   80e7b89 (this note), eb52ae3 (tests + fixtures, verified red on the
