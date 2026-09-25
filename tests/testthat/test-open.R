@@ -54,6 +54,17 @@ test_that("new-session load waits anchor to the destination commit", {
   expect_identical(commits, rep(url, 2))
 })
 
+test_that("opening a same-document fragment leaves no pending load listener", {
+  skip_if_no_chrome()
+  child_loop <- NULL
+  pz_with_page("about:blank#fragment", function(page) {
+    child_loop <<- page$child_loop
+    expect_identical(pz_js(page, "location.href"), "about:blank#fragment")
+  }, wait = "load")
+  later::run_now(0, loop = child_loop)
+  later::run_now(0)
+})
+
 test_that("wait = 'none' and wait = 'load' both open", {
   for (w in c("none", "load", "auto")) {
     page <- local_page(wait = w)

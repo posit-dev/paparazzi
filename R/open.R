@@ -88,8 +88,18 @@ pz_open <- function(
   # first render.
   device_open(page, device_dots)
 
-  navigated <- if (wait %in% c("load", "shiny")) {
+  navigated <- if (identical(wait, "shiny")) {
     session$Page$frameNavigated(wait_ = FALSE)
+  } else if (identical(wait, "load")) {
+    resolve_navigated <- NULL
+    event <- promises::promise(function(resolve, reject) {
+      resolve_navigated <<- resolve
+    })
+    cancel_navigated <- session$Page$frameNavigated(callback_ = resolve_navigated)
+    # A same-document navigation emits no frameNavigated event; unlike the
+    # event promise, a callback can be removed before the session closes.
+    withr::defer(cancel_navigated())
+    event
   }
   # CDP reports navigation failures as `errorText`, not as errors.
   nav <- session$Page$navigate(url)
