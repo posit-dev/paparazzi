@@ -728,6 +728,30 @@ test_that("pz_select_text lets typing replace the selection", {
     pz_js(page, "document.getElementById('editor').textContent"),
     "penguins are playful"
   )
+  # Scoped too: the focusing click pz_type() makes would collapse the
+  # selection before the insert, so a scope element holding an active
+  # selection is typed into directly.
+  pz_js(page, "document.getElementById('editor').textContent = 'otters are playful'")
+  ctx <- pz_find(page, "#editor")
+  pz_select_text(ctx, "otters")
+  pz_type(ctx, "penguins")
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "penguins are playful"
+  )
+  # Without a selection, the scoped path still clicks to focus: a
+  # trusted mousedown on the editor, the insert at the click's caret.
+  pz_js(page, "document.getElementById('editor').textContent = 'otters are playful'")
+  ctx <- pz_find(page, "#editor")
+  pz_type(ctx, "x")
+  log <- adv_log(page)
+  expect_true(any(vapply(log, function(e) {
+    identical(e$type, "mousedown") && identical(e$id, "editor") && isTRUE(e$isTrusted)
+  }, logical(1))))
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "otters are playfulx"
+  )
 })
 
 test_that("pz_select_text errors on absent text, emptiness, and multiple matches", {

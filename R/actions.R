@@ -124,6 +124,17 @@ pz_type <- function(ctx, text, ..., target = NULL) {
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
   }
+  # The scoped select-then-type step: the scope element holds the
+  # page's real selection, and a keypress replaces it. The focusing
+  # click below would collapse the selection first, so a scoped
+  # element with an active selection is typed into directly (the
+  # element is focused in the probe). Only the no-target path: an
+  # explicit target keeps its click-to-focus.
+  if (is.null(target) && isTRUE(els_call(found$els, type_selection_js))) {
+    insert_text(ctx, found$els$description, text)
+    stage_action_pause(ctx)
+    return(invisible(ctx))
+  }
   point <- el_pointer_point(ctx, found$els)
   # Focus comes from the real click pipeline (not JS .focus()) so
   # pointer state stays real.
@@ -470,6 +481,26 @@ insert_text_once <- function(ctx, target, text, call = caller_env()) {
     )
   )
 }
+# Does the element hold the page's active selection (pz_select_text's
+# work), ready for a keypress to replace it? TRUE means the caller
+# skips the focusing click -- a click collapses the selection -- and
+# inserts instead; the focus the click would have produced is taken
+# here, which keeps the selection (it lives inside the element).
+type_selection_js <- "function() {
+  const el = this[0];
+  if (!el || !el.isContentEditable) {
+    return false;
+  }
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+    return false;
+  }
+  if (!el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+    return false;
+  }
+  el.focus();
+  return true;
+}"
 #' Set the value of a form control
 #'
 #' Auto-waits for a match, then sets the value instantly -- never staged
