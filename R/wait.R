@@ -262,26 +262,27 @@ pz_wait_for_stable <- function(
 #' Wait for a navigation to finish
 #'
 #' The explicit wait after an action that navigates -- a clicked link, a
-#' submitted form, a JS redirect. A navigation completed by the preceding
-#' user action is detected even if it finishes before this wait starts.
-#' Paparazzi never detects navigations on its own, so a wait marks
-#' exactly where one is expected. Call it immediately after the action:
-#' it waits for the document the action navigated to to finish loading
-#' and then hold still for a moment, so a navigation that is in flight
-#' when the wait starts is waited out, not raced. A navigation that begins while the wait is already running is
-#' caught too; one scheduled beyond the timeout can't be -- block on
-#' its trigger with [pz_wait_for_js()] first.
+#' submitted form, a JS redirect. Paparazzi never detects navigations on
+#' its own, so a wait marks exactly where one is expected. Call it
+#' immediately after the action. It waits for the new document to finish
+#' loading and then hold still for a moment. Three cases pass:
 #'
-#' The settled state alone is not enough: the wait snapshots the
-#' document it starts on and also checks whether the settled document
-#' was created after the last user action began. A page where nothing
-#' navigates still times out with a classed error rather than passing.
-#' The action-start comparison assumes R and the browser share a machine
-#' clock. A successful wait consumes the preceding action's navigation
-#' evidence, so a second wait without another action times out. On
-#' success it resets the scope to the root and releases every pinned
-#' scope object: contexts scoped before the navigation error on their
-#' next use instead of acting on a stale set.
+#' * the navigation finished before the wait started: the current document
+#'   was created after the preceding action began;
+#' * the navigation is in flight when the wait starts, and is waited out;
+#' * the navigation begins while the wait is running. One scheduled beyond
+#'   the timeout can't be caught -- block on its trigger with
+#'   [pz_wait_for_js()] first.
+#'
+#' A page where nothing navigates times out with a classed error rather
+#' than passing, and so does a second wait after the same action: a
+#' successful wait uses up the action's navigation. Comparing the
+#' document's creation time with the action's start assumes R and the
+#' browser run on the same machine, as they do with a local Chrome.
+#'
+#' On success the wait resets the scope to the root and releases every
+#' pinned scope object: contexts scoped before the navigation error on
+#' their next use instead of acting on a stale set.
 #'
 #' @inheritParams pz_click
 #' @param wait What to wait for: `"load"` settles the navigation;
@@ -319,10 +320,10 @@ pz_wait_for_navigation <- function(
   # The load and settle phases each get the full timeout, like
   # wait_for_stable's resolve and stability windows. The snapshot
   # precedes them both: a complete, settled page satisfies the settle
-  # check with nothing navigating, so the wait must hold the identity of the document it started on
-  # and only pass on a different document (a new timeOrigin), on a
-  # document created after the last action began, or on one it caught
-  # incomplete (the in-flight navigation this wait waits out).
+  # check with nothing navigating, so the wait holds the identity of the
+  # document it started on and passes only on a different document (a
+  # new timeOrigin), a document created after the last action began, or
+  # one it caught incomplete (the in-flight navigation it waits out).
   snapshot <- nav_snapshot(ctx, timeout)
   wait_for_load(ctx$page, timeout = timeout)
   nav_settle(
@@ -330,7 +331,7 @@ pz_wait_for_navigation <- function(
     settle = nav_settle_secs,
     timeout = timeout,
     snapshot = snapshot,
-    action_start = ctx$page$last_action_start
+    action_start = ctx$page$.__enclos_env__$private$last_action_start_
   )
   root <- wait_nav_reset(ctx)
   device_css_reapply(ctx$page)
@@ -514,7 +515,7 @@ stable_sample_js <- function(prop) {
 # returned context is back at the root. The caller's context is never
 # mutated.
 wait_nav_reset <- function(ctx) {
-  ctx$page$last_action_start <- NULL
+  ctx$page$.__enclos_env__$private$last_action_start_ <- NULL
   ctx$page$release_object_group()
   record_nav_rebased(ctx$page)
   # The inline css zoom dies with the document being left; its

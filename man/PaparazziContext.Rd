@@ -107,9 +107,6 @@ Waits must pump this loop so scheduled timers keep firing.}
 
     \item{\code{default_timeout}}{Session default timeout in seconds.}
 
-    \item{\code{last_action_start}}{Epoch milliseconds when the last user action began
-(internal; same-machine clock as Chrome's \code{performance.timeOrigin}).}
-
     \item{\code{object_group}}{The CDP object group holding every remote
 object a scope pinned (read-only; internal).}
   }

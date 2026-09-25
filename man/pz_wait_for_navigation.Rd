@@ -30,27 +30,30 @@ default.}
 }
 \description{
 The explicit wait after an action that navigates -- a clicked link, a
-submitted form, a JS redirect. A navigation completed by the preceding
-user action is detected even if it finishes before this wait starts.
-Paparazzi never detects navigations on its own, so a wait marks
-exactly where one is expected. Call it immediately after the action:
-it waits for the document the action navigated to to finish loading
-and then hold still for a moment, so a navigation that is in flight
-when the wait starts is waited out, not raced. A navigation that begins while the wait is already running is
-caught too; one scheduled beyond the timeout can't be -- block on
-its trigger with \code{\link[=pz_wait_for_js]{pz_wait_for_js()}} first.
+submitted form, a JS redirect. Paparazzi never detects navigations on
+its own, so a wait marks exactly where one is expected. Call it
+immediately after the action. It waits for the new document to finish
+loading and then hold still for a moment. Three cases pass:
 }
 \details{
-The settled state alone is not enough: the wait snapshots the
-document it starts on and also checks whether the settled document
-was created after the last user action began. A page where nothing
-navigates still times out with a classed error rather than passing.
-The action-start comparison assumes R and the browser share a machine
-clock. A successful wait consumes the preceding action's navigation
-evidence, so a second wait without another action times out. On
-success it resets the scope to the root and releases every pinned
-scope object: contexts scoped before the navigation error on their
-next use instead of acting on a stale set.
+\itemize{
+\item the navigation finished before the wait started: the current document
+was created after the preceding action began;
+\item the navigation is in flight when the wait starts, and is waited out;
+\item the navigation begins while the wait is running. One scheduled beyond
+the timeout can't be caught -- block on its trigger with
+\code{\link[=pz_wait_for_js]{pz_wait_for_js()}} first.
+}
+
+A page where nothing navigates times out with a classed error rather
+than passing, and so does a second wait after the same action: a
+successful wait uses up the action's navigation. Comparing the
+document's creation time with the action's start assumes R and the
+browser run on the same machine, as they do with a local Chrome.
+
+On success the wait resets the scope to the root and releases every
+pinned scope object: contexts scoped before the navigation error on
+their next use instead of acting on a stale set.
 }
 \examples{
 \dontrun{
