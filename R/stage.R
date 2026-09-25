@@ -168,6 +168,7 @@ stage_wheel_into_view <- function(ctx, els, call = caller_env()) {
     return(invisible(els))
   }
   prev <- c(Inf, Inf)
+  rounds <- 0L
   repeat {
     probe <- els_values(els, wheel_probe_js, call = call)
     if (is.null(probe)) {
@@ -177,7 +178,10 @@ stage_wheel_into_view <- function(ctx, els, call = caller_env()) {
     if (all(delta == 0)) {
       return(invisible(els))
     }
-    if (all(abs(delta - prev) < 0.5)) {
+    rounds <- rounds + 1L
+    if (all(abs(delta - prev) < 0.5) || rounds >= 5L) {
+      # Stalled (no progress) or oscillating (a page fighting the
+      # scroll): the instant scroll guarantees the final state.
       return(el_scroll_into_view(els, call = call))
     }
     prev <- delta
