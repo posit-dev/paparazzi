@@ -129,6 +129,16 @@ current clamp semantics stay.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-25 (r0zd review fixes): landed roborev 1245's three accepted
+  findings -- geometry read after resolution auto-waits (3b4e95f),
+  the page clamp anchored to the RTL document span with a
+  size-preserving origin shift (9c0f23e), and clamped edges rounding
+  inward within fractional bounds (9771193). The document-vs-viewport
+  clamp finding stays declined (SPEC step 4 amended on main). Frame
+  tests 120 green, full suite verified by the coordinator. Next: the
+  `when` field and recording's `even = TRUE` seam are unchanged and
+  still open. Provisional: pinned-edge rounding treats coinciding
+  free edges as pinned (errs safe).
 - 2026-09-24 (close): landed the phase note (7d8425b), framing specs
   `pz_frame()`/`pz_stage_frame()` + direction parser + page default
   (370f18a), the `pz_screenshot(frame =)` integration (fe60253), and
