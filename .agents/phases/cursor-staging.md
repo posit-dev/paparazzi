@@ -213,6 +213,15 @@ R/resolve.R).
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-25 (pause, mid-session): landed only the mechanism note
+  (22f319e); orientation and browser probes complete, NO package code
+  written yet -- R/stage.R, R/cursor.R, fixtures, and tests are all
+  still to do, and the full-suite baseline run had not reported back
+  when the session paused (main was green at ~1460). Next: keystone
+  first -- staging state + cursor overlay + one recorded animated
+  click end-to-end, then widen per the decisions above. Provisional:
+  drag/select_text endpoint-only staging in v1; nested-scroll
+  convergence falls back to instant after two wheel rounds.
 - 2026-09-25 (start): claimed rvj4; blockers 2fc0 and pat5 closed,
   baseline suite running green at ~1460. Probed CDP semantics before
   code: exact asynchronous wheel deltas with container latching,
