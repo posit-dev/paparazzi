@@ -19,6 +19,10 @@ shiny_app_fixture_slow <- function() {
   test_path("fixtures", "shiny-app-lifecycle", "app-slow")
 }
 
+shiny_app_fixture_port_taken <- function() {
+  test_path("fixtures", "shiny-app-lifecycle", "app-port-taken")
+}
+
 # A port nothing is listening on, found by trial bind. Used to hand
 # httpuv a known-free port when a test needs to occupy one.
 free_port <- function() {
@@ -44,10 +48,10 @@ local_shiny_app <- function(..., .env = parent.frame()) {
 # Loopback-connect probe matching the one pz_app() uses for readiness;
 # tests use it to observe stop/finalizer effects from the outside.
 app_port_reachable <- function(port, host = "127.0.0.1") {
-  con <- tryCatch(
+  con <- suppressWarnings(tryCatch(
     socketConnection(host = host, port = port, open = "r+", blocking = TRUE, timeout = 1),
     error = function(e) NULL
-  )
+  ))
   if (is.null(con)) {
     return(FALSE)
   }

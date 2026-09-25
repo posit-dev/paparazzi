@@ -106,8 +106,9 @@ test_that("a broken app fails loudly with its log output", {
 
 test_that("a taken port triggers a retry on a new port", {
   skip_if_no_shiny()
-  # Occupy the port with httpuv itself: bound to 127.0.0.1 exactly as
-  # the child will bind, so the child's bind deterministically fails.
+  # Occupy the port with a live listener. pz_app() must notice the port
+  # already answers and start on a new one -- relying on the child's
+  # bind failing is not portable (see app-port-taken's comment).
   taken_port <- free_port()
   server <- httpuv::startServer("127.0.0.1", taken_port, list())
   withr::defer(httpuv::stopServer(server))
@@ -118,6 +119,15 @@ test_that("a taken port triggers a retry on a new port", {
   )
   expect_false(identical(app$port, taken_port))
   expect_true(app_port_reachable(app$port))
+})
+
+test_that("a child that dies from a taken port exhausts its retries", {
+  skip_if_no_shiny()
+  expect_error(
+    pz_app(shiny_app_fixture_port_taken(), timeout = 5),
+    class = "paparazzi_error_app_startup",
+    regexp = "could not bind a port"
+  )
 })
 
 test_that("app_dir is validated", {
@@ -131,7 +141,7 @@ test_that("shiny_options, envvars, timeout, and dots are validated", {
   skip_if_no_shiny()
   expect_error(
     pz_app(shiny_app_fixture_dir(), shiny_options = "quiet"),
-    class = "paparazzi_error_input"
+    "must be a list"
   )
   expect_error(
     pz_app(shiny_app_fixture_dir(), envvars = "MOCK=1"),
@@ -143,9 +153,9 @@ test_that("shiny_options, envvars, timeout, and dots are validated", {
   )
   expect_error(
     pz_app(shiny_app_fixture_dir(), timeout = -1),
-    class = "paparazzi_error_input"
+    "must be a number"
   )
-  expect_error(pz_app(shiny_app_fixture_dir(), width = 390))
+  expect_error(pz_app(shiny_app_fixture_dir(), width = 390), "must be empty")
 })
 
 test_that("an app that never listens times out and is cleaned up", {
