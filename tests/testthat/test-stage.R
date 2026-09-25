@@ -1,3 +1,34 @@
+# Near-black ink count in a RECTANGLE of a captured frame (helper-
+# cursor.R's scan is full-width; the demo's text-growth check needs a
+# rect that excludes the cursor and the scroller's text). Same canvas
+# decode technique as helper-cursor.R.
+demo_rect_ink <- function(page, path, x0, x1, y0, y1, dpr = cursor_dpr(page)) {
+  raw <- readBin(path, "raw", n = file.info(path)$size)
+  b64 <- gsub("[\r\n]", "", jsonlite::base64_enc(raw))
+  js <- sprintf(
+    paste0(
+      "(async () => {",
+      "const img = new Image();",
+      "img.src = 'data:image/png;base64,%s';",
+      "await img.decode();",
+      "const c = document.createElement('canvas').getContext('2d');",
+      "c.canvas.width = img.width; c.canvas.height = img.height;",
+      "c.drawImage(img, 0, 0);",
+      "const d = c.getImageData(%d, %d, %d, %d).data;",
+      "let n = 0;",
+      "for (let p = 0; p < d.length; p += 4) {",
+      "  if (d[p] < 60 && d[p + 1] < 60 && d[p + 2] < 60 && d[p + 3] > 200) n++;",
+      "}",
+      "return n;",
+      "})()"
+    ),
+    b64,
+    round(x0 * dpr), round(y0 * dpr),
+    round((x1 - x0) * dpr), round((y1 - y0) * dpr)
+  )
+  pz_js(page, js)
+}
+
 test_that("pz_stage merges settings onto the defaults and validates", {
   page <- local_cursor_page()
 
@@ -316,8 +347,10 @@ test_that("recorded demo glides, presses, types, and scrolls on camera", {
   page <- local_cursor_page()
   out <- withr::local_tempfile(fileext = ".mp4")
 
+  # typing_speed = 6 spreads the characters over ~1-2s of frames, so
+  # the growth is observable on camera.
   page |>
-    pz_stage(enter = "left") |>
+    pz_stage(enter = "left", typing_speed = 6) |>
     pz_record_start(out, fps = 15, hold = c(0, 0.2), keep_frames = TRUE)
   page |>
     pz_click("#btn") |>
@@ -355,10 +388,43 @@ test_that("recorded demo glides, presses, types, and scrolls on camera", {
   expect_true(min(xs) < 200)
   expect_true(max(xs) > 550)
 
-  # The scroll: a fixed viewport point darkens as the gradient rises.
+  # The press: while the cursor is at the button, its ink shrinks
+  # under the press scale-down and recovers.
+  heights <- vapply(
+    inks,
+    function(ink) {
+      if (ink$count > 20 && abs(ink$x - 660) < 10) ink$height else NA_real_
+    },
+    numeric(1)
+  )
+  heights <- heights[!is.na(heights)]
+  expect_true(length(heights) >= 2)
+  expect_true(min(heights) < max(heights) * 0.9)
+
+  # The typing: near-black ink in the input's text rect (x 95-175;
+  # the cursor sits at x 200 and the scroller's text at x 450+) grows
+  # across frames as the characters land.
+  txt <- vapply(
+    frames,
+    function(f) demo_rect_ink(page, f, 95, 175, 55, 90),
+    numeric(1)
+  )
+  nz <- txt[txt > 0]
+  expect_true(length(nz) >= 4)
+  expect_true(length(unique(nz)) >= 3)
+  expect_true(sum(diff(nz) > 0) >= 2)
+
+  # The scroll: a fixed viewport point darkens as the gradient rises,
+  # through intermediate values rather than in one jump.
   first_px <- cursor_png_pixel(page, frames[[1]], 200, 1000)
   last_px <- cursor_png_pixel(page, frames[[length(frames)]], 200, 1000)
   expect_true(last_px[[1]] < first_px[[1]] - 50)
+  reds <- vapply(
+    frames,
+    function(f) cursor_png_pixel(page, f, 200, 1000)[[1]],
+    numeric(1)
+  )
+  expect_true(length(unique(reds[reds < reds[[1]] - 10])) >= 3)
 })
 
 test_that("without a recording the same chain runs straight to the final state", {
