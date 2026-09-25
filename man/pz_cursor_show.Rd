@@ -30,6 +30,18 @@ or glides in from \code{from} (or the \code{enter} side set with \code{\link[=pz
 when entering the frame. Without a recording the cursor appears
 statically, which is how a cursor lands in a screenshot.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+path <- file.path(tempdir(), "add-button.png")
+
+# Outside a recording the cursor appears at once, ready for a still
+page |>
+  pz_cursor_show("#add-task") |>
+  pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 24))
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_stage]{pz_stage()}} for cursor settings, \code{\link[=pz_cursor_hide]{pz_cursor_hide()}},
 \code{\link[=pz_cursor_move]{pz_cursor_move()}}, \code{\link[=pz_cursor_leave]{pz_cursor_leave()}}

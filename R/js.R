@@ -13,6 +13,17 @@
 #'
 #' @return The value produced by `expr` (converted to R), or `NULL`.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_js(page, "document.querySelectorAll('.task').length")
+#'
+#' # Arrays come back as lists
+#' pz_js(page, "[...document.querySelectorAll('.task-priority')].map(el => el.textContent)")
+#'
+#' # Returned promises are awaited
+#' pz_js(page, "new Promise(resolve => setTimeout(() => resolve('done'), 100))")
+#' pz_close(page)
+#'
 #' @export
 pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   check_context(ctx)
@@ -70,6 +81,17 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
 #' @inheritParams pz_click
 #'
 #' @return The `chromote::ChromoteSession` backing the page.
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' session <- pz_chromote(page)
+#'
+#' # Make raw Chrome DevTools Protocol calls
+#' session$Browser$getVersion()$product
+#' session$Performance$enable()
+#' metrics <- session$Performance$getMetrics()$metrics
+#' Filter(function(m) m$name == "Nodes", metrics)[[1]]$value
+#' pz_close(page)
 #'
 #' @export
 pz_chromote <- function(ctx) {

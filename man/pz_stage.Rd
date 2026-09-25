@@ -48,6 +48,32 @@ explicit \code{NULL} restores the default for that setting (so
 is skipped and the chain runs straight to its final state -- except
 \code{cursor = TRUE}, which shows a static cursor in screenshots too.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+
+# Staging settings stay on the page until you change them
+page |> pz_stage(enter = "left", cursor_speed = 1200, typing_speed = 20, pause = 0.3)
+
+path <- file.path(tempdir(), "add-task.mp4")
+page |>
+  pz_record(path, {
+    page |>
+      pz_type("Buy milk", target = "#task-title") |>
+      pz_click("#add-task")
+  })
+
+# NULL restores a setting's default
+page |> pz_stage(pause = NULL)
+
+# cursor = TRUE shows the cursor in screenshots too
+page |>
+  pz_stage(cursor = TRUE) |>
+  pz_hover("#add-task") |>
+  pz_screenshot(file.path(tempdir(), "cursor.png"), target = "#new-task")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_cursor_show]{pz_cursor_show()}}, \code{\link[=pz_record_start]{pz_record_start()}}
 }

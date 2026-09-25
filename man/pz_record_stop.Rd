@@ -16,3 +16,15 @@ pz_record_stop(ctx)
 Ends the recording started with \code{\link[=pz_record_start]{pz_record_start()}}, encodes the
 captured frames, and writes the file given to \code{pz_record_start()}.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+path <- file.path(tempdir(), "done.gif")
+page |>
+  pz_record_start(path, frame = pz_frame(".task-list", pad = 8)) |>
+  pz_click(pz_loc(".task-done", which = "first")) |>
+  pz_record_stop()
+file.exists(path)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

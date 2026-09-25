@@ -46,6 +46,30 @@
 #'
 #' @seealso [pz_cursor_show()], [pz_record_start()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # Staging settings stay on the page until you change them
+#' page |> pz_stage(enter = "left", cursor_speed = 1200, typing_speed = 20, pause = 0.3)
+#'
+#' path <- file.path(tempdir(), "add-task.mp4")
+#' page |>
+#'   pz_record(path, {
+#'     page |>
+#'       pz_type("Buy milk", target = "#task-title") |>
+#'       pz_click("#add-task")
+#'   })
+#'
+#' # NULL restores a setting's default
+#' page |> pz_stage(pause = NULL)
+#'
+#' # cursor = TRUE shows the cursor in screenshots too
+#' page |>
+#'   pz_stage(cursor = TRUE) |>
+#'   pz_hover("#add-task") |>
+#'   pz_screenshot(file.path(tempdir(), "cursor.png"), target = "#new-task")
+#' pz_close(page)
+#'
 #' @export
 pz_stage <- function(
   ctx,

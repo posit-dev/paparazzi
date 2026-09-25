@@ -54,7 +54,7 @@ An S3 object of class \code{paparazzi_frame}.
 \code{\link[=pz_frame]{pz_frame()}} builds a lazy framing spec for a capture: the region is
 computed at capture time, then padded, nudged, grown to an aspect
 ratio, and clamped. Screenshots take it through
-\code{pz_screenshot(frame =)}; recordings will take it through
+\code{pz_screenshot(frame =)}, recordings through
 \code{pz_record_start(frame =)}.
 
 The framed region is computed in this order:
@@ -68,8 +68,20 @@ shrink), placing the content by \code{anchor}.
 }
 }
 \examples{
+# Frames are specs: nothing is measured until a capture uses them
 pz_frame(pad = 32)
 pz_frame(ratio = 16/9, pad = 24, anchor = "top")
-pz_frame(".shiny-chat-container", ratio = 4/3, bounds = "#chat")
+pz_frame(".task-list", ratio = 4/3, bounds = "main")
 
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+path <- file.path(tempdir(), "tasks.png")
+
+# With no target of its own, the frame uses the screenshot's target
+page |> pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 16))
+
+# A frame target overrides it; a list frames the union of the boxes
+page |> pz_screenshot(path, frame = pz_frame(list("h1", ".filters"), pad = 16))
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }

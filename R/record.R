@@ -64,6 +64,19 @@
 #' @seealso [pz_record()], [pz_record_hold()], [pz_frame()],
 #'   [pz_stage_frame()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' page <- pz_open(pz_example("tasks"), width = 800, height = 600)
+#' path <- file.path(tempdir(), "help.mp4")
+#'
+#' # Record the help panel opening, cropped to the page's card
+#' page |>
+#'   pz_record_start(path, frame = pz_frame("main")) |>
+#'   pz_click("#toggle-help") |>
+#'   pz_expect_visible(target = "#help") |>
+#'   pz_record_stop()
+#' file.exists(path)
+#' pz_close(page)
+#'
 #' @export
 pz_record_start <- function(
   ctx,
@@ -140,6 +153,16 @@ pz_record_start <- function(
 #' @inheritParams pz_click
 #'
 #' @return `ctx`, invisibly.
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "done.gif")
+#' page |>
+#'   pz_record_start(path, frame = pz_frame(".task-list", pad = 8)) |>
+#'   pz_click(pz_loc(".task-done", which = "first")) |>
+#'   pz_record_stop()
+#' file.exists(path)
+#' pz_close(page)
 #'
 #' @export
 pz_record_stop <- function(ctx) {
@@ -226,6 +249,22 @@ pz_record_stop <- function(ctx) {
 #'
 #' @return `ctx`, invisibly.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "add-task.mp4")
+#' page |>
+#'   pz_record_start(path) |>
+#'   pz_click("#task-title") |>
+#'   pz_record_pause() |>
+#'   # Filling in the form is cut from the video
+#'   pz_set_value("Buy milk", target = "#task-title") |>
+#'   pz_set_value("high", target = "#task-priority") |>
+#'   pz_record_resume() |>
+#'   pz_click("#add-task") |>
+#'   pz_expect_count(8, target = ".task") |>
+#'   pz_record_stop()
+#' pz_close(page)
+#'
 #' @export
 pz_record_pause <- function(ctx) {
   check_context(ctx)
@@ -262,6 +301,21 @@ pz_record_resume <- function(ctx) {
 #'
 #' @return `ctx`, invisibly.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # Without a recording, pz_record_hold() returns straight away
+#' system.time(pz_record_hold(page, 2))
+#'
+#' path <- file.path(tempdir(), "help.mp4")
+#' page |>
+#'   pz_record_start(path) |>
+#'   pz_click("#toggle-help") |>
+#'   # Give viewers a second to read the help text
+#'   pz_record_hold(1) |>
+#'   pz_record_stop()
+#' pz_close(page)
+#'
 #' @export
 pz_record_hold <- function(ctx, seconds) {
   check_context(ctx)
@@ -286,6 +340,22 @@ pz_record_hold <- function(ctx, seconds) {
 #' @param ... Passed to [pz_record_start()].
 #'
 #' @return `ctx`, invisibly.
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "add-task.mp4")
+#'
+#' # The recording stops and is written when the block exits, even on error
+#' page |>
+#'   pz_record(path, {
+#'     page |>
+#'       pz_type("Buy milk", target = "#task-title") |>
+#'       pz_click("#add-task") |>
+#'       pz_expect_count(8, target = ".task")
+#'   }) |>
+#'   pz_screenshot(file.path(tempdir(), "after.png"))
+#' file.exists(path)
+#' pz_close(page)
 #'
 #' @export
 pz_record <- function(ctx, path, code, ...) {

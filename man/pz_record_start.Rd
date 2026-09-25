@@ -90,6 +90,21 @@ Encoding uses the \pkg{av} package (checked for at
 through \pkg{av}, which can crop.
 }
 
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"), width = 800, height = 600)
+path <- file.path(tempdir(), "help.mp4")
+
+# Record the help panel opening, cropped to the page's card
+page |>
+  pz_record_start(path, frame = pz_frame("main")) |>
+  pz_click("#toggle-help") |>
+  pz_expect_visible(target = "#help") |>
+  pz_record_stop()
+file.exists(path)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_record]{pz_record()}}, \code{\link[=pz_record_hold]{pz_record_hold()}}, \code{\link[=pz_frame]{pz_frame()}},
 \code{\link[=pz_stage_frame]{pz_stage_frame()}}

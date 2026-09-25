@@ -21,3 +21,20 @@ the video timeline at encode time. When the page is not recording
 this is a no-op, so debugging a chain with the recording commented
 out doesn't pay for video-only pauses.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+
+# Without a recording, pz_record_hold() returns straight away
+system.time(pz_record_hold(page, 2))
+
+path <- file.path(tempdir(), "help.mp4")
+page |>
+  pz_record_start(path) |>
+  pz_click("#toggle-help") |>
+  # Give viewers a second to read the help text
+  pz_record_hold(1) |>
+  pz_record_stop()
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

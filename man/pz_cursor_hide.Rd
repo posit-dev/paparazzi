@@ -24,6 +24,16 @@ setting brings it back. That is what distinguishes
 \code{pz_cursor_hide()} from \code{\link[=pz_cursor_leave]{pz_cursor_leave()}}, which keeps the cursor
 visible and glides back in on the next action.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |>
+  pz_cursor_show("#add-task") |>
+  pz_cursor_hide() |>
+  pz_screenshot(file.path(tempdir(), "no-cursor.png"))
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_cursor_show]{pz_cursor_show()}}, \code{\link[=pz_cursor_leave]{pz_cursor_leave()}}
 }

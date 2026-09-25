@@ -31,13 +31,31 @@ setting.}
 }
 \description{
 \code{\link[=pz_stage_frame]{pz_stage_frame()}} stores a default \code{\link[=pz_frame]{pz_frame()}} on the page, applied
-to every screenshot (and, later, recording) that doesn't pass its own
+to every screenshot and recording that doesn't pass its own
 \verb{frame =}. An explicit \code{\link[=pz_frame]{pz_frame()}} replaces the default entirely --
 settings are never merged -- and \code{frame = FALSE} disables framing for
 a single call.
 
-Unlike \code{pz_stage()}'s animation settings (not yet implemented),
+Unlike \code{\link[=pz_stage]{pz_stage()}}'s animation settings,
 framing applies to screenshots as well as recordings.
+}
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+path <- file.path(tempdir(), "tasks.png")
+
+page |>
+  pz_stage_frame(pad = 24) |>
+  # Framed by the default: the form plus 24px of padding
+  pz_screenshot(path, target = "#new-task") |>
+  # An explicit frame replaces the default, settings and all
+  pz_screenshot(path, target = "#new-task", frame = pz_frame(ratio = 16/9)) |>
+  # FALSE turns framing off for one call
+  pz_screenshot(path, frame = FALSE) |>
+  # NULL clears the default
+  pz_stage_frame(NULL)
+pz_close(page)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=pz_frame]{pz_frame()}}, \code{\link[=pz_screenshot]{pz_screenshot()}}

@@ -26,3 +26,21 @@ including on error, so a failed run still produces the video up to
 the failure. Returns \code{ctx} invisibly (not the block's value), so the
 chain continues after the recording.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+path <- file.path(tempdir(), "add-task.mp4")
+
+# The recording stops and is written when the block exits, even on error
+page |>
+  pz_record(path, {
+    page |>
+      pz_type("Buy milk", target = "#task-title") |>
+      pz_click("#add-task") |>
+      pz_expect_count(8, target = ".task")
+  }) |>
+  pz_screenshot(file.path(tempdir(), "after.png"))
+file.exists(path)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

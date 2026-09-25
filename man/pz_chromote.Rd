@@ -15,3 +15,16 @@ The \code{chromote::ChromoteSession} backing the page.
 \description{
 Escape hatch for raw Chrome DevTools Protocol calls.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+session <- pz_chromote(page)
+
+# Make raw Chrome DevTools Protocol calls
+session$Browser$getVersion()$product
+session$Performance$enable()
+metrics <- session$Performance$getMetrics()$metrics
+Filter(function(m) m$name == "Nodes", metrics)[[1]]$value
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

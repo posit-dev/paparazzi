@@ -4,7 +4,7 @@
 #' [pz_frame()] builds a lazy framing spec for a capture: the region is
 #' computed at capture time, then padded, nudged, grown to an aspect
 #' ratio, and clamped. Screenshots take it through
-#' `pz_screenshot(frame =)`; recordings will take it through
+#' `pz_screenshot(frame =)`, recordings through
 #' `pz_record_start(frame =)`.
 #'
 #' The framed region is computed in this order:
@@ -42,9 +42,21 @@
 #' @return An S3 object of class `paparazzi_frame`.
 #'
 #' @examples
+#' # Frames are specs: nothing is measured until a capture uses them
 #' pz_frame(pad = 32)
 #' pz_frame(ratio = 16/9, pad = 24, anchor = "top")
-#' pz_frame(".shiny-chat-container", ratio = 4/3, bounds = "#chat")
+#' pz_frame(".task-list", ratio = 4/3, bounds = "main")
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "tasks.png")
+#'
+#' # With no target of its own, the frame uses the screenshot's target
+#' page |> pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 16))
+#'
+#' # A frame target overrides it; a list frames the union of the boxes
+#' page |> pz_screenshot(path, frame = pz_frame(list("h1", ".filters"), pad = 16))
+#' pz_close(page)
 #'
 #' @export
 pz_frame <- function(
@@ -89,12 +101,12 @@ print.paparazzi_frame <- function(x, ...) {
 #'
 #' @description
 #' [pz_stage_frame()] stores a default [pz_frame()] on the page, applied
-#' to every screenshot (and, later, recording) that doesn't pass its own
+#' to every screenshot and recording that doesn't pass its own
 #' `frame =`. An explicit [pz_frame()] replaces the default entirely --
 #' settings are never merged -- and `frame = FALSE` disables framing for
 #' a single call.
 #'
-#' Unlike `pz_stage()`'s animation settings (not yet implemented),
+#' Unlike [pz_stage()]'s animation settings,
 #' framing applies to screenshots as well as recordings.
 #'
 #' @inheritParams pz_click
@@ -109,6 +121,22 @@ print.paparazzi_frame <- function(x, ...) {
 #' @return `ctx`, invisibly.
 #'
 #' @seealso [pz_frame()], [pz_screenshot()]
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "tasks.png")
+#'
+#' page |>
+#'   pz_stage_frame(pad = 24) |>
+#'   # Framed by the default: the form plus 24px of padding
+#'   pz_screenshot(path, target = "#new-task") |>
+#'   # An explicit frame replaces the default, settings and all
+#'   pz_screenshot(path, target = "#new-task", frame = pz_frame(ratio = 16/9)) |>
+#'   # FALSE turns framing off for one call
+#'   pz_screenshot(path, frame = FALSE) |>
+#'   # NULL clears the default
+#'   pz_stage_frame(NULL)
+#' pz_close(page)
 #'
 #' @export
 pz_stage_frame <- function(

@@ -30,6 +30,16 @@
 #' @seealso [pz_stage()] for cursor settings, [pz_cursor_hide()],
 #'   [pz_cursor_move()], [pz_cursor_leave()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "add-button.png")
+#'
+#' # Outside a recording the cursor appears at once, ready for a still
+#' page |>
+#'   pz_cursor_show("#add-task") |>
+#'   pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 24))
+#' pz_close(page)
+#'
 #' @export
 pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL) {
   check_context(ctx)
@@ -77,6 +87,14 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL) {
 #'
 #' @seealso [pz_cursor_show()], [pz_cursor_leave()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |>
+#'   pz_cursor_show("#add-task") |>
+#'   pz_cursor_hide() |>
+#'   pz_screenshot(file.path(tempdir(), "no-cursor.png"))
+#' pz_close(page)
+#'
 #' @export
 pz_cursor_hide <- function(ctx, ...) {
   check_context(ctx)
@@ -108,6 +126,20 @@ pz_cursor_hide <- function(ctx, ...) {
 #'
 #' @seealso [pz_cursor_show()], [pz_cursor_leave()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "tour.mp4")
+#'
+#' # While recording, the cursor glides between elements
+#' page |>
+#'   pz_record(path, {
+#'     page |>
+#'       pz_cursor_show(".filters", from = "left") |>
+#'       pz_cursor_move("#toggle-help", duration = 1) |>
+#'       pz_cursor_move("#add-task")
+#'   })
+#' pz_close(page)
+#'
 #' @export
 pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
   check_context(ctx)
@@ -135,6 +167,19 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
 #' @return `ctx`, invisibly.
 #'
 #' @seealso [pz_cursor_show()]
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "help.mp4")
+#' page |>
+#'   pz_record(path, {
+#'     page |>
+#'       pz_click("#toggle-help") |>
+#'       # Move the cursor out of the way so the help text is unobstructed
+#'       pz_cursor_leave("right") |>
+#'       pz_record_hold(1)
+#'   })
+#' pz_close(page)
 #'
 #' @export
 pz_cursor_leave <- function(ctx, side = "right") {

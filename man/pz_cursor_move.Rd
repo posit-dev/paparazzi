@@ -26,6 +26,22 @@ recording the move is a glide whose duration scales with distance
 (see \code{\link[=pz_stage]{pz_stage()}}); pass \code{duration} to override it. Without a
 recording the cursor jumps.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+path <- file.path(tempdir(), "tour.mp4")
+
+# While recording, the cursor glides between elements
+page |>
+  pz_record(path, {
+    page |>
+      pz_cursor_show(".filters", from = "left") |>
+      pz_cursor_move("#toggle-help", duration = 1) |>
+      pz_cursor_move("#add-task")
+  })
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_cursor_show]{pz_cursor_show()}}, \code{\link[=pz_cursor_leave]{pz_cursor_leave()}}
 }

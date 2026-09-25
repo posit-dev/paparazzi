@@ -21,6 +21,21 @@ glides out, otherwise it leaves immediately. The cursor is still
 visible (just off-frame); the next pointer action or cursor call
 glides it back in from that side.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+path <- file.path(tempdir(), "help.mp4")
+page |>
+  pz_record(path, {
+    page |>
+      pz_click("#toggle-help") |>
+      # Move the cursor out of the way so the help text is unobstructed
+      pz_cursor_leave("right") |>
+      pz_record_hold(1)
+  })
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_cursor_show]{pz_cursor_show()}}
 }
