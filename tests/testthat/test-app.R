@@ -49,6 +49,36 @@ test_that("shiny_options are passed to runApp", {
   expect_false(any(grepl("Listening on", app$logs(), fixed = TRUE)))
 })
 
+test_that("appDir in shiny_options is rejected before an app process can start", {
+  skip_if_no_shiny()
+  app_dir <- shiny_app_fixture_dir()
+  options_app <- shiny_app_fixture_file()
+  expect_false(identical(app_dir, options_app))
+  expect_true(any(grepl(
+    'message("PAPARAZZI_FIXTURE_APP")',
+    readLines(file.path(app_dir, "app.R")),
+    fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    "PAPARAZZI_FIXTURE_APP_FILE",
+    readLines(options_app),
+    fixed = TRUE
+  )))
+
+  spawn_calls <- 0L
+  local_mocked_bindings(new_app = function(...) {
+    spawn_calls <<- spawn_calls + 1L
+    NULL
+  })
+
+  err <- expect_error(
+    pz_app(app_dir, shiny_options = list(appDir = options_app)),
+    class = "paparazzi_error_input"
+  )
+  expect_match(conditionMessage(err), "appDir", fixed = TRUE)
+  expect_equal(spawn_calls, 0L)
+})
+
 test_that("print shows URL, port, and status", {
   app <- local_shiny_app(shiny_app_fixture_dir())
 
