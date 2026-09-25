@@ -11,6 +11,9 @@ Description: Drive web pages from R with a pipeable interface built on
     cursor and typing animations for demos. Works with any page, including
     Shiny apps.
 License: MIT + file LICENSE
+URL: https://posit-dev.github.io/paparazzi/,
+    https://github.com/posit-dev/paparazzi
+BugReports: https://github.com/posit-dev/paparazzi/issues
 Depends:
     R (>= 4.0.0)
 Imports:
@@ -32,6 +35,7 @@ Suggests:
     png,
     shiny,
     testthat (>= 3.2.0)
+Config/Needs/website: av, gifski, shiny
 Config/roxygen2/version: 8.1.0
 Config/testthat/edition: 3
 Config/testthat/parallel: true

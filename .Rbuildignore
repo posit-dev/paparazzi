@@ -11,3 +11,8 @@
 ^paparazzi\.Rcheck$
 ^paparazzi_.*\.tar\.gz$
 ^\.roborev\.toml$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^README\.Rmd$
+^vignettes/articles$

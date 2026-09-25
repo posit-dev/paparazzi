@@ -1,0 +1,106 @@
+url: https://posit-dev.github.io/paparazzi/
+
+template:
+  bootstrap: 5
+
+articles:
+  - title: Guides
+    navbar: ~
+    contents:
+      - articles/shiny
+
+reference:
+  - title: Pages, apps and navigation
+    desc: >
+      Open a page (or a Shiny app) to start a chain, emulate a device, and
+      move between pages.
+    contents:
+      - pz_open
+      - pz_close
+      - pz_with_page
+      - pz_app
+      - pz_nav_goto
+      - pz_device
+      - pz_example
+
+  - title: Finding elements
+    desc: >
+      Describe elements with reusable specs, and narrow a chain to part of the
+      page with scopes.
+    contents:
+      - pz_loc
+      - pz_find
+      - pz_find_first
+      - pz_find_last
+      - pz_find_nth
+      - pz_find_pop
+      - pz_find_reset
+
+  - title: Actions
+    desc: >
+      Click, type, set values, and take screenshots. Actions that interact
+      with an element wait for it to be visible first.
+    contents:
+      - pz_click
+      - pz_hover
+      - pz_type
+      - pz_press
+      - pz_focus
+      - pz_blur
+      - pz_scroll
+      - pz_drag
+      - pz_select_text
+      - pz_set_value
+      - pz_set_shiny_input
+      - pz_set_files
+      - pz_screenshot
+
+  - title: Expectations
+    desc: >
+      Check the page, retrying until the check passes or times out. Inside
+      testthat, expectations count as test expectations.
+    contents:
+      - starts_with("pz_expect_")
+
+  - title: Waits
+    desc: >
+      Wait for the page to settle when there's no specific value to expect.
+    contents:
+      - pz_wait
+      - starts_with("pz_wait_for_")
+
+  - title: Getters
+    desc: >
+      Read values from the page. Getters return values, so they end the chain.
+    contents:
+      - starts_with("pz_get_")
+
+  - title: Recording
+    desc: >
+      Record interactions as MP4, WebM, or GIF files, and frame screenshots and
+      recordings.
+    contents:
+      - pz_record
+      - pz_record_start
+      - pz_record_stop
+      - pz_record_pause
+      - pz_record_hold
+      - pz_frame
+      - pz_stage_frame
+
+  - title: Cursor and staging
+    desc: >
+      Animate the cursor and typing so recordings look like a person is using
+      the page.
+    contents:
+      - pz_stage
+      - pz_cursor_show
+      - pz_cursor_hide
+      - pz_cursor_move
+      - pz_cursor_leave
+
+  - title: Escape hatches and debugging
+    contents:
+      - pz_inspect
+      - pz_js
+      - pz_chromote
