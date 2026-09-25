@@ -16,6 +16,57 @@ pz_wait <- function(ctx, seconds) {
   pump_loop(ctx$page$child_loop, seconds)
   invisible(ctx)
 }
+#' Wait until a Shiny page is idle
+#'
+#' Waits for the Shiny connection, for `<html>` to lose `shiny-busy`, and
+#' for every `.recalculating` output to finish. All three conditions must
+#' hold for at least 200ms. A page without Shiny errors instead of waiting.
+#'
+#' @inheritParams pz_wait_for_js
+#' @return `ctx`, invisibly.
+#' @seealso [pz_open()]
+#' @export
+pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
+  check_dots_empty()
+  check_context(ctx)
+  timeout <- resolve_timeout(timeout, ctx$page)
+  deadline <- Sys.time() + timeout
+  remaining <- function() as.numeric(difftime(deadline, Sys.time(), units = "secs"))
+  wait_for_load(ctx$page, timeout = timeout)
+  if (!isTRUE(pz_js(
+    ctx, "!!window.Shiny?.shinyapp", timeout = max(0.1, remaining())
+  ))) {
+    cli::cli_abort(
+      "This is not a Shiny page; {.fn pz_wait_for_shiny_idle} requires a Shiny app.",
+      class = "paparazzi_error_unsupported"
+    )
+  }
+
+  stable_since <- NULL
+  pz_poll(
+    fn = function() {
+      idle <- isTRUE(pz_js(ctx, paste0(
+        "!!window.Shiny?.shinyapp?.$socket && ",
+        "Shiny.shinyapp.$socket.readyState === WebSocket.OPEN && ",
+        "!document.documentElement.classList.contains('shiny-busy') && ",
+        "!document.querySelector('.recalculating')"
+      ), timeout = max(0.1, remaining())))
+      if (!idle) {
+        stable_since <<- NULL
+        return(FALSE)
+      }
+      now <- Sys.time()
+      if (is.null(stable_since)) {
+        stable_since <<- now
+      }
+      as.numeric(difftime(now, stable_since, units = "secs")) >= 0.2
+    },
+    timeout = max(0, remaining()),
+    loop = ctx$page$child_loop,
+    what = "Shiny idle"
+  )
+  invisible(ctx)
+}
 #' Wait until a JavaScript condition holds
 #'
 #' Polls `expr` until it evaluates truthy, then returns `ctx` invisibly.

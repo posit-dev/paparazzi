@@ -32,9 +32,10 @@ process and pass its URL.}
 \item{...}{Forwarded to \code{\link[=pz_device]{pz_device()}} as device settings (e.g.
 \verb{width = 390, mobile = TRUE}); they must be named.}
 
-\item{wait}{What to wait for before returning. \code{"auto"} uses the load wait
-for now, including for Shiny apps; Shiny idle support arrives separately.
-Explicit \code{"shiny"} is not yet supported.}
+\item{wait}{What to wait for before returning. \code{"auto"} waits for Shiny
+idle on app paths and handles, and for load on other pages. \code{"shiny"}
+explicitly waits for Shiny to connect and become idle; non-Shiny pages
+error.}
 
 \item{timeout}{Session default timeout in seconds; \code{NULL} uses the package
 default (10 s). Per-call \code{timeout = NULL} means "session default".}
