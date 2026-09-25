@@ -331,6 +331,29 @@ test_that("a targetless stop frame crops from the start-time scope", {
   expect_equal(info$height, width_at(60))
 })
 
+test_that("the even crop rounds clamped edges inward, staying inside bounds", {
+  page <- local_record_page()
+
+  # Fractional bounds that clamp all four edges of #box (40,30 to
+  # 140,90): a left bound at 40.8 and a right bound at 101.2 would
+  # round to 40 and 102 under nearest-even -- outside the bounds.
+  pz_js(
+    page,
+    "const b = document.createElement('div');
+     b.id = 'frac';
+     b.style.cssText =
+       'position:absolute; left:40.8px; top:20px; width:60.4px; height:120px';
+     document.body.appendChild(b);"
+  )
+  crop <- record_crop_box(page, pz_frame("#box", bounds = "#frac"))
+
+  # pinned edges round inward: left up to 42, right down to 100
+  expect_equal(crop$x, 42)
+  expect_equal(crop$width, 58)
+  expect_gte(crop$x, 40.8)
+  expect_lte(crop$x + crop$width, 101.2)
+})
+
 test_that("keep_frames keeps the captured PNGs", {
   page <- local_record_page()
   skip_if_no_av()

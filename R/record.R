@@ -550,8 +550,9 @@ record_error <- function(rec, e) {
 # The crop box in viewport-relative CSS pixels (the PNG's coordinate
 # space): the framing pipeline with the visible viewport as the clamp
 # -- not the document box frame_clip() uses, since the PNG holds only
-# the viewport -- and video-style even rounding. viewport_width is
-# kept for the CSS-to-pixel conversion at encode time.
+# the viewport -- and video-style even rounding of pinned edges
+# inward (see frame_clip()). viewport_width is kept for the
+# CSS-to-pixel conversion at encode time.
 record_crop_box <- function(ctx, spec, call = caller_env()) {
   # NULL means the frame falls back to the viewport; the box is
   # filled from the geometry read after resolution (auto-waits can
@@ -576,7 +577,20 @@ record_crop_box <- function(ctx, spec, call = caller_env()) {
     geometry$viewport_width,
     geometry$viewport_height
   )
-  box <- frame_round(frame_apply(spec, box, clamps, call = call), even = TRUE)
+  box <- frame_apply(spec, box, clamps, call = call)
+  # Which edges a clamp fixed in place, exactly as in frame_clip():
+  # a binding clamp assigned the edge its value, so the comparisons
+  # are bit-equal; coinciding values count as pinned, which errs on
+  # the safe side. Rounding a pinned edge to the nearest even CSS
+  # edge could leave the bounds (a left bound at 1 rounds to 0), so
+  # frame_round() rounds those inward.
+  pinned <- c(
+    any(vapply(clamps, function(clamp) clamp[1] >= box[1], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[2] >= box[2], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[3] <= box[3], logical(1))),
+    any(vapply(clamps, function(clamp) clamp[4] <= box[4], logical(1)))
+  )
+  box <- frame_round(box, pinned = pinned, even = TRUE)
   width <- box[3] - box[1]
   height <- box[4] - box[2]
   if (width <= 0 || height <= 0) {
