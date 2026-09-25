@@ -263,3 +263,20 @@ test_that("a control inside a disabled fieldset reports disabled", {
   expect_match(got$out[[7]], "^     visible · disabled ·")
 })
 
+test_that("target outline numbering keeps hidden matches in the count", {
+  page <- local_inspect_page()
+  # #insp-ghost is hidden (zero-area) and matches first; the drawn badge
+  # must still carry the number the console summary gives #insp-real.
+  pz_inspect(page, ".insp-pair", show = "browser")
+  texts <- unlist(pz_js(
+    page,
+    paste0(
+      "(() => { const h = document.getElementById('paparazzi-overlay-root'); ",
+      "return Array.from(h.shadowRoot.querySelectorAll('.pz-inspect > div'))",
+      ".map((n) => n.textContent).filter((t) => t !== ''); })()"
+    )
+  ))
+  overlay_clear(page)
+  expect_identical(texts, "2")
+})
+

@@ -332,9 +332,23 @@ inspect_short_tag <- function(tag, width = 60) {
 # document-coordinate CDP clip. Drawing replaces the layer; clearing
 # removes it and leaves the host for reuse.
 overlay_draw <- function(ctx, scope_rects, target_rects) {
+  # Zero-area target matches can't be drawn, but each drawn rect keeps
+  # its original match number so badges agree with the console summary,
+  # which numbers every match including hidden ones.
+  keep <- if (is.null(target_rects)) {
+    integer()
+  } else {
+    which(target_rects$width > 0 & target_rects$height > 0)
+  }
+  targets <- if (length(keep) == 0L) {
+    list()
+  } else {
+    rects <- inspect_doc_rects(ctx, target_rects[keep, , drop = FALSE])
+    Map(function(rect, n) c(rect, n), rects, keep)
+  }
   data <- jsonlite::toJSON(list(
     scope = if (is.null(scope_rects)) list() else inspect_doc_rects(ctx, inspect_positive_rects(scope_rects)),
-    targets = if (is.null(target_rects)) list() else inspect_doc_rects(ctx, inspect_positive_rects(target_rects))
+    targets = targets
   ))
   pz_js(ctx, sprintf(overlay_draw_js, data), await = FALSE)
   invisible(TRUE)
@@ -363,10 +377,10 @@ overlay_draw_js <- "(function() {
   for (const r of data.scope) {
     box(r, 'border:2px dashed #f59e0b;');
   }
-  data.targets.forEach((r, i) => {
+  data.targets.forEach((r) => {
     box(r, 'border:2px solid #e11d48;');
     const b = document.createElement('div');
-    b.textContent = String(i + 1);
+    b.textContent = String(r[4]);
     b.style.cssText = 'position:absolute;box-sizing:border-box;pointer-events:none;' +
       'left:' + r[0] + 'px;top:' + Math.max(r[1] - 20, 0) + 'px;min-width:20px;height:20px;' +
       'padding:0 5px;background:#e11d48;color:#fff;font:600 12px/20px monospace;text-align:center;border-radius:4px;';
