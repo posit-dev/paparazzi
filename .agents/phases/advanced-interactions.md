@@ -103,6 +103,19 @@ triaged ACCEPTED. Fixes on fix/pat5-review, one commit each.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-26 (pat5 review round 2): landed all four roborev 1261
+  findings, one commit each on fix/pat5-review -- scoped
+  select-then-type keeps the selection (544b9da), pz_scroll by/to
+  error on a multi-match scope (e90bae4), integer offsets serialize
+  as JSON numbers and evaluate exceptions raise (34439e0), a failed
+  final drag probe errors instead of dropping at stale coordinates
+  (f79f0ac; fixture hides the zone synchronously via a scrollIntoView
+  wrap). Next: the parent runs the final full suite --
+  test-actions.R was green (217 pass / 0 fail) after each commit, but
+  the full run was handed off mid-flight under three-way machine
+  contention (treat chromote timeouts as the paparazzi#3tty flake).
+  Provisional: none.
+
 - 2026-09-25 (pat5): landed the phase note, fixture + helper, the
   three actions, and acceptance tests (f768367..b0d4c05); roborev 1250
   (codex) findings fixed: destination viewport check with a clear
