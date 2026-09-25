@@ -169,6 +169,18 @@ commits, one per finding.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-24 (review): landed the roborev 1262 follow-up round as one
+  commit per finding (see Review-fix round above): stop-time final
+  capture (84c5eea), tick-to-recorder binding (afc2d75), start-time
+  framing context (85334a2), synchronous close teardown (f02030c),
+  pinned inward even-rounding of the crop (e0652da), plus the
+  pz_record_start doc paragraph (888288e). Full suite 1583 green on
+  the first run, staging/cursor tests included. Next: recording stays
+  done per acceptance; `method = "screencast"` remains the reserved
+  seam. Provisional: the stop-time capture can hold a stop up to 5s
+  when Chrome can't produce a frame (closed page) and then aborts
+  with the kept first_error; the final-frame test reads kept PNG
+  pixels via the png package (skipped where it isn't installed).
 - 2026-09-25 (finish): landed the previous session's three hardening
   fixes as four commits: closed-page tick teardown -- a tick on a
   closed page deactivates the recorder and removes the temp frames
