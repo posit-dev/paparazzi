@@ -65,6 +65,9 @@ pz_inspect <- function(
     if (identical(show, "browser")) {
       ctx$page$view()
     } else {
+      # Best-effort cleanup on every exit path: a capture timeout or an
+      # unwritable path must not leave outlines in the live page.
+      withr::defer(try(overlay_clear(ctx), silent = TRUE))
       path <- path %||% tempfile(fileext = ".png")
       inspect_annotated_capture(ctx, scope_rects, target_rects, path)
       inspect_show(path)
@@ -123,7 +126,8 @@ inspect_resolve_matches <- function(ctx, target, call = caller_env()) {
 }
 # Per-match read: opening tag (attributes rendered, no children),
 # checkVisibility() with CSS checks (the pz_expect_visible() predicate),
-# enabled (no disabled property, no disabled attribute), and the box.
+# enabled (:disabled also covers controls disabled by an ancestor
+# <fieldset disabled>), and the box.
 inspect_match_js <- "function() {
   return this.map((el) => {
     const attrs = Array.from(el.attributes, (a) =>
@@ -134,7 +138,7 @@ inspect_match_js <- "function() {
     return [
       tag,
       el.checkVisibility({ checkVisibilityCSS: true }),
-      !(el.disabled === true || el.hasAttribute('disabled')),
+      !el.matches(':disabled'),
       r.x, r.y, r.width, r.height
     ];
   });
@@ -347,9 +351,23 @@ inspect_short_tag <- function(tag, width = 60) {
 # document-coordinate CDP clip. Drawing replaces the layer; clearing
 # removes it and leaves the host for reuse.
 overlay_draw <- function(ctx, scope_rects, target_rects) {
+  # Zero-area target matches can't be drawn, but each drawn rect keeps
+  # its original match number so badges agree with the console summary,
+  # which numbers every match including hidden ones.
+  keep <- if (is.null(target_rects)) {
+    integer()
+  } else {
+    which(target_rects$width > 0 & target_rects$height > 0)
+  }
+  targets <- if (length(keep) == 0L) {
+    list()
+  } else {
+    rects <- inspect_doc_rects(ctx, target_rects[keep, , drop = FALSE])
+    Map(function(rect, n) c(rect, n), rects, keep)
+  }
   data <- jsonlite::toJSON(list(
     scope = if (is.null(scope_rects)) list() else inspect_doc_rects(ctx, inspect_positive_rects(scope_rects)),
-    targets = if (is.null(target_rects)) list() else inspect_doc_rects(ctx, inspect_positive_rects(target_rects))
+    targets = targets
   ))
   pz_js(ctx, sprintf(overlay_draw_js, data), await = FALSE)
   invisible(TRUE)
@@ -378,10 +396,10 @@ overlay_draw_js <- "(function() {
   for (const r of data.scope) {
     box(r, 'border:2px dashed #f59e0b;');
   }
-  data.targets.forEach((r, i) => {
+  data.targets.forEach((r) => {
     box(r, 'border:2px solid #e11d48;');
     const b = document.createElement('div');
-    b.textContent = String(i + 1);
+    b.textContent = String(r[4]);
     b.style.cssText = 'position:absolute;box-sizing:border-box;pointer-events:none;' +
       'left:' + r[0] + 'px;top:' + Math.max(r[1] - 20, 0) + 'px;min-width:20px;height:20px;' +
       'padding:0 5px;background:#e11d48;color:#fff;font:600 12px/20px monospace;text-align:center;border-radius:4px;';
@@ -445,7 +463,8 @@ overlay_restore <- function(ctx, display) {
 # ── Annotated capture ───────────────────────────────────────────────
 # Drawn -> screenshot_capture() (the internal CDP call, NOT
 # pz_screenshot(), whose capture guard would hide the outlines) ->
-# clear, so the annotated image exists and the page returns to clean.
+# so the annotated image exists. Clearing happens in pz_inspect()'s
+# deferred cleanup, covering failed captures too.
 # The capture region follows pz_screenshot() conventions: the viewport
 # at the root, otherwise the union of scope and target rects padded so
 # outlines and badges aren't clipped.
@@ -467,7 +486,6 @@ inspect_annotated_capture <- function(ctx, scope_rects, target_rects, path) {
   }
   res <- screenshot_capture(ctx, clip)
   writeBin(jsonlite::base64_dec(res$data), path)
-  overlay_clear(ctx)
   invisible(path)
 }
 # The annotated PNG opens in the IDE viewer when rstudioapi is available;

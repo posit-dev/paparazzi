@@ -37,6 +37,11 @@
   <button id="insp-btn" class="insp-btn" aria-label="Actions">Actions</button>
   <button id="insp-disabled" disabled>Disabled</button>
   <div id="insp-hidden" class="insp-hidden">Hidden</div>
+  <fieldset disabled>
+    <button id="insp-fieldset-btn">Blocked</button>
+  </fieldset>
+  <div id="insp-ghost" class="insp-pair" style="display:none"></div>
+  <div id="insp-real" class="insp-pair" style="position:absolute;left:300px;top:360px;width:100px;height:40px"></div>
   <script>
     // Arrives after 5s: the no-auto-wait assertions must not wait for it.
     setTimeout(function () {
