@@ -7,10 +7,11 @@
 #' @param x What to open:
 #'   * a URL string (any scheme, including `file://`, `about:`, `data:`);
 #'   * a path to an existing local file (opened as `file://`);
-#'   * a Shiny app directory or app file (`app.R`, `ui.R`, `server.R`,
-#'     `app-*.R`, ...), started by this page and stopped when it closes;
+#'   * a Shiny app directory (including split `ui.R`/`server.R` apps) or
+#'     runnable app file (`app.R`, `app-*.R`, `*_app.R`, etc.), started by
+#'     this page and stopped when it closes;
 #'   * a [pz_app()] handle, shared across pages (closing the page leaves
-#'     the app running);
+#'     the app running); `ui.R` and `server.R` passed alone open as files;
 #'   * an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
 #'
 #'   Shiny app **objects** are not supported -- run the app in another
@@ -209,10 +210,10 @@ open_target_url <- function(x, call = caller_env()) {
     call = call
   )
 }
-# Conventional Shiny app file names: app.R/ui.R/server.R, and the variants
-# Shiny's editor tooling recognizes: app-*.R/app_*.R and *-app.R/*_app.R.
+# Standalone app files: app.R and the runnable app-*.R/app_*.R and
+# *-app.R/*_app.R variants. ui.R/server.R require their containing directory.
 is_shiny_app_file <- function(name) {
-  if (name %in% c("app.R", "app.r", "ui.R", "server.R")) {
+  if (name %in% c("app.R", "app.r")) {
     return(TRUE)
   }
 

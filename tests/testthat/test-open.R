@@ -298,8 +298,6 @@ test_that("is_shiny_app_file recognizes Shiny app file names", {
   shiny_files <- c(
     "app.R",
     "app.r",
-    "ui.R",
-    "server.R",
     "app-main.R",
     "app_ui.R",
     "app-old-server.R",
@@ -312,6 +310,8 @@ test_that("is_shiny_app_file recognizes Shiny app file names", {
   }
 
   plain_files <- c(
+    "ui.R",
+    "server.R",
     "webapp.R",
     "snapp.R",
     "utils.R",
@@ -342,6 +342,33 @@ test_that("pz_open starts recognized Shiny app file names", {
     pz_close(page)
     expect_true(wait_until(function() !app_port_reachable(port)), info = f)
   }
+})
+
+test_that("split app files open as files, while their directory runs as an app", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  dir <- withr::local_tempdir()
+  ui <- file.path(dir, "ui.R")
+  server <- file.path(dir, "server.R")
+  writeLines("shiny::fluidPage(shiny::textOutput('out'))", ui)
+  writeLines(paste(
+    "function(input, output, session) {",
+    "  output$out <- shiny::renderText('hello split app')",
+    "}"
+  ), server)
+
+  for (file in c(ui, server)) {
+    page <- pz_open(file)
+    expect_identical(pz_js(page, "location.protocol"), "file:")
+    pz_close(page)
+  }
+
+  page <- pz_open(dir)
+  withr::defer(pz_close(page))
+  expect_identical(pz_js(page, "location.protocol"), "http:")
+  expect_true(wait_until(function() {
+    grepl("hello split app", pz_js(page, "document.body.innerText"))
+  }))
 })
 
 test_that("files whose names end in app.R variants open fine", {
