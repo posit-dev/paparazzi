@@ -22,7 +22,8 @@ Every such `nav_await` then waited the full 10s and aborted -- matching
 
 Proven with protocol-level evidence (temporary per-worker trace setup
 patching chromote debug_log + a synchronize watchdog; preserved at
-/tmp/yytx/setup-yytx-trace.R): a serial nav run showing SEND navigate
+.agents/forensics/yytx/setup-yytx-trace.R, an untracked copy of the
+/tmp/yytx instrumentation): a serial nav run showing SEND navigate
 -> RECV frameNavigated + dispatch + once-deregister + nested
 Page.disable, all during the navigate synchronize, followed by a 10s
 protocol-silent hole (pz_poll pumping a child loop that never gets the
@@ -48,7 +49,8 @@ SYNCHRONOUS nested `Page.disable` (a nested synchronize inside the
 dispatch callback inside run_now -- any stall there blocks every outer
 deadline check). Post-fix: 0 wedges in 3 full-suite runs (was ~50%).
 Not conclusive; if it recurs, the watchdog setup at
-/tmp/yytx/setup-yytx-trace.R dumps the spinning stack and the full
+.agents/forensics/yytx/setup-yytx-trace.R (untracked copy of /tmp/yytx)
+dumps the spinning stack and the full
 SEND/RECV protocol log per worker (YYTX_TRACE_DIR env var).
 
 ### Remaining failures seen post-fix (NOT yytx's signature)
@@ -63,7 +65,7 @@ command's SEND never appeared in the protocol log and no message id was
 consumed, yet its synchronize waited the full 10s and hit
 promise_timeout -- i.e. the response-wait outlived a command that
 (apparently) never reached the wire. Unexplained; captured in
-/tmp/yytx/trace-89145.log.
+.agents/forensics/yytx/trace-89145.log (untracked copy of /tmp/yytx).
 
 ## Gate status
 
@@ -81,7 +83,8 @@ promise_timeout -- i.e. the response-wait outlived a command that
   default loop (protocol-log proof), fixed in ac20712 with a
   deterministic regression test (verified failing pre-fix). Wedge mode
   0/3 post-fix, mechanism open. Instrumentation NOT shipped; preserved
-  at /tmp/yytx/ (setup-yytx-trace.R, run*.log, trace-*.log, samples).
+  untracked at .agents/forensics/yytx/ (setup-yytx-trace.R, run*.log,
+  trace-*.log, samples).
   Next: orchestrator re-gates; if the wedge recurs, redeploy the
   watchdog setup and read the spin stack + protocol log.
 
@@ -90,8 +93,8 @@ promise_timeout -- i.e. the response-wait outlived a command that
 
 Root-caused with five live captures (watchdog + per-worker protocol
 log + heartbeat/queue traps + a trap logging any scheduling onto the
-default loop; instrumentation preserved at /tmp/yytx/, never
-committed).
+default loop; instrumentation preserved untracked at
+.agents/forensics/yytx/, never committed).
 
 **Chain:** new_pinned() (R/scope.R) registered a GC finalizer per
 pinned-elements wrapper that issued a SYNCHRONOUS
@@ -143,8 +146,9 @@ instrumentation) -- see handoff log.
 
 - Landed: ac20712 (nav_await loop pin, prior session) and 20781eb
   (finalizer fire-and-forget, this session) plus this note. Evidence
-  and instrumentation preserved at /tmp/yytx/ (setup-yytx-trace.R
-  redeployable; wedge-run*/ capture dirs; run*.log series).
+  and instrumentation preserved untracked at .agents/forensics/yytx/
+  (setup-yytx-trace.R redeployable; wedge-run*/ capture dirs; run*.log
+  series).
 - Gate: runs 39-41 green three consecutive, clean tree. Issue stays
   OPEN for orchestrator verification/merge; do not close from here.
 - Provisional: if any wedge ever recurs, first check for a new
