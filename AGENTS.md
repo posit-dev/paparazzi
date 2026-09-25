@@ -18,6 +18,13 @@
    only when the class is needed. Use paparazzi's own checkers in
    `R/utils-check.R` (e.g. `check_character()`, `check_page()`) where they
    fit; extend that file as new shared checkers come up.
+1. **Targeted tests verify branches; the full suite gates merges.** For
+   branch/task verification, run only the test files mirroring the changed
+   sources (`Rscript -e 'testthat::test_local(filter = "record|style")'`),
+   plus any files exercising cross-module seams the phase note names. The
+   full `btw pkg test` suite runs once on main as the merge gate —
+   integration breaks (internal-API signature changes across files)
+   surface there, not in filtered runs.
 
 ## Work Mechanics
 
