@@ -39,18 +39,57 @@ test_that("wait = 'none' and wait = 'load' both open", {
   }
 })
 
-test_that("Shiny auto wait uses the single load placeholder seam", {
-  expect_identical(open_wait_mode("auto", TRUE), "load")
+test_that("Shiny auto resolves at the open seam", {
+  expect_identical(open_wait_mode("auto", TRUE), "shiny")
   expect_identical(open_wait_mode("auto", FALSE), "load")
   expect_identical(open_wait_mode("none", TRUE), "none")
+  expect_identical(open_wait_mode("shiny", FALSE), "shiny")
 })
 
-test_that("wait = 'shiny' errors for now", {
+test_that("explicit Shiny wait rejects non-Shiny pages promptly", {
   skip_if_no_chrome()
+  start <- Sys.time()
   expect_error(
-    pz_open(fixture_file(), wait = "shiny"),
-    class = "paparazzi_error_unsupported"
+    pz_open(fixture_file(), wait = "shiny", timeout = 3),
+    "not a Shiny page", class = "paparazzi_error_unsupported"
   )
+  expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 2)
+})
+
+test_that("explicit Shiny wait on a wrapped non-Shiny session fails without closing it", {
+  skip_if_no_chrome()
+  session <- chromote::ChromoteSession$new()
+  withr::defer(session$close())
+  expect_error(pz_open(session, wait = "shiny", timeout = 2), "not a Shiny page")
+  expect_no_error(session$Runtime$evaluate("1 + 1"))
+})
+
+test_that("explicit and auto Shiny waits settle after the slow output", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  for (wait in c("shiny", "auto")) {
+    start <- Sys.time()
+    page <- pz_open(shiny_idle_fixture(), wait = wait, timeout = 5)
+    expect_true(shiny_idle_state(page)$connected)
+    expect_false(shiny_idle_state(page)$busy)
+    expect_equal(shiny_idle_state(page)$recalculating, 0)
+    expect_equal(shiny_idle_state(page)$text, "reactive ready")
+    expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.9)
+    pz_close(page)
+  }
+})
+
+test_that("auto routes Shiny app files and shared handles to idle wait", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  app_file <- file.path(shiny_idle_fixture(), "app.R")
+  app <- local_shiny_app(shiny_idle_fixture())
+  for (x in list(app_file, app)) {
+    page <- pz_open(x, timeout = 5)
+    expect_true(shiny_idle_state(page)$connected)
+    expect_equal(shiny_idle_state(page)$text, "reactive ready")
+    pz_close(page)
+  }
 })
 
 test_that("pz_open errors on a Shiny app object with advice", {
