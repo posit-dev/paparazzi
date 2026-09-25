@@ -16,11 +16,14 @@ pz_cursor_hide(ctx, ...)
 }
 \description{
 Hides the cursor set up by \code{\link[=pz_cursor_show]{pz_cursor_show()}} or shown implicitly
-while recording. The cursor keeps its last position; showing it again
-returns it there. Hiding does not change the \code{cursor} staging
-setting: with \code{cursor = NULL} (the default) the next recorded pointer
-action fades the cursor back in.
+while recording. The cursor keeps its last position; showing it
+again returns it there. The hide is explicit and sticky: the cursor
+stays hidden until \code{\link[=pz_cursor_show]{pz_cursor_show()}} or \code{\link[=pz_cursor_move]{pz_cursor_move()}} shows it
+again -- neither a recorded pointer action nor the \code{cursor} staging
+setting brings it back. That is what distinguishes
+\code{pz_cursor_hide()} from \code{\link[=pz_cursor_leave]{pz_cursor_leave()}}, which keeps the cursor
+visible and glides back in on the next action.
 }
 \seealso{
-\code{\link[=pz_cursor_show]{pz_cursor_show()}}
+\code{\link[=pz_cursor_show]{pz_cursor_show()}}, \code{\link[=pz_cursor_leave]{pz_cursor_leave()}}
 }

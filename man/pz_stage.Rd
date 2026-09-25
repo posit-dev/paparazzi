@@ -4,16 +4,7 @@
 \alias{pz_stage}
 \title{Stage the page for recording}
 \usage{
-pz_stage(
-  ctx,
-  ...,
-  cursor = NULL,
-  cursor_speed = NULL,
-  enter = NULL,
-  typing = NULL,
-  typing_speed = NULL,
-  pause = NULL
-)
+pz_stage(ctx, ..., cursor, cursor_speed, enter, typing, typing_speed, pause)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -22,23 +13,27 @@ pz_stage(
 
 \item{cursor}{Cursor visibility: \code{NULL} (the default) shows the
 cursor only while recording, \code{TRUE} shows it always (stills too),
-\code{FALSE} never shows it.}
+\code{FALSE} never shows it. Supply \code{NULL} to restore the default.}
 
 \item{cursor_speed}{Glide speed in pixels per second. Glide duration
-scales with distance: roughly \code{clamp(0.25 + distance / cursor_speed, 0.3, 1.2)} seconds.}
+scales with distance: roughly \code{clamp(0.25 + distance / cursor_speed, 0.3, 1.2)} seconds. Supply \code{NULL} to restore the
+default.}
 
 \item{enter}{Where a cursor that has never been shown first appears:
 \code{NULL} (the default) fades in on the target; a side (\code{"top"},
 \code{"bottom"}, \code{"left"}, \code{"right"}) starts off-frame on that side and
-glides in.}
+glides in. Supply \code{NULL} to restore the default.}
 
 \item{typing}{Typing style while recording: \code{"natural"} (the
 default) inserts one character at a time with randomized delays;
-\code{"instant"} inserts the whole string at once.}
+\code{"instant"} inserts the whole string at once. Supply \code{NULL} to
+restore the default.}
 
-\item{typing_speed}{Natural typing speed in characters per second.}
+\item{typing_speed}{Natural typing speed in characters per second.
+Supply \code{NULL} to restore the default.}
 
-\item{pause}{Seconds to hold after each action while recording.}
+\item{pause}{Seconds to hold after each action while recording.
+Supply \code{NULL} to restore the default.}
 }
 \value{
 \code{ctx}, invisibly.
@@ -46,7 +41,9 @@ default) inserts one character at a time with randomized delays;
 \description{
 Sets the staging options that animate pointer actions, typing, and
 scrolling while the page is recording. Only supplied arguments
-change; settings live on the page and persist across recordings, so
+change -- an omitted argument leaves its setting alone, while an
+explicit \code{NULL} restores the default for that setting (so
+\code{pz_stage(cursor = FALSE)} can be undone with \code{pz_stage(cursor = NULL)}). Settings live on the page and persist across recordings, so
 \code{\link[=pz_record_start]{pz_record_start()}} never repeats them. Without a recording, staging
 is skipped and the chain runs straight to its final state -- except
 \code{cursor = TRUE}, which shows a static cursor in screenshots too.

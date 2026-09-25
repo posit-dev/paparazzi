@@ -63,16 +63,19 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL) {
 #' Hide the overlay cursor
 #'
 #' Hides the cursor set up by [pz_cursor_show()] or shown implicitly
-#' while recording. The cursor keeps its last position; showing it again
-#' returns it there. Hiding does not change the `cursor` staging
-#' setting: with `cursor = NULL` (the default) the next recorded pointer
-#' action fades the cursor back in.
+#' while recording. The cursor keeps its last position; showing it
+#' again returns it there. The hide is explicit and sticky: the cursor
+#' stays hidden until [pz_cursor_show()] or [pz_cursor_move()] shows it
+#' again -- neither a recorded pointer action nor the `cursor` staging
+#' setting brings it back. That is what distinguishes
+#' `pz_cursor_hide()` from [pz_cursor_leave()], which keeps the cursor
+#' visible and glides back in on the next action.
 #'
 #' @inheritParams pz_click
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_cursor_show()]
+#' @seealso [pz_cursor_show()], [pz_cursor_leave()]
 #'
 #' @export
 pz_cursor_hide <- function(ctx, ...) {
