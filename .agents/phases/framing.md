@@ -40,13 +40,15 @@ mechanism-level choices and session handoffs for framing only.
      grows left, otherwise the extra width splits; `top` grows down,
      `bottom` grows up, otherwise the extra height splits.
   4. Clamp: intersect with the `bounds` box (resolved and unioned like
-     any target) and with the document box -- `[0, scrollWidth] x
-     `[0, scrollHeight]` in document coordinates, i.e. the
-     `(-scrollX, -scrollY)`-anchored region viewport-relative. The document
-     box, NOT the visible viewport: `captureBeyondViewport` renders the
-     whole document, so below-fold targets stay capturable, and
-     beyond-document growth would produce unrendered pixels. This is
-     the SPEC's "clamp to the viewport" step.
+     any target) and with the document box -- the document's REAL
+     span `[document_left, document_left + scrollWidth] x
+     `[0, scrollHeight]` in document coordinates (`document_left`
+     is 0 except on RTL pages wider than the viewport, where it is
+     negative), i.e. the scroll-anchored region viewport-relative. The
+     document box, NOT the visible viewport: `captureBeyondViewport`
+     renders the whole document, so below-fold targets stay
+     capturable, and beyond-document growth would produce unrendered
+     pixels. This is the SPEC's "clamp to the viewport" step.
   5. Round edges to whole pixels (stills); the recording task will pass
      an even-pixel rounding through the same step.
   Steps 2-4 are pure geometry (`frame_apply()`), unit-testable without

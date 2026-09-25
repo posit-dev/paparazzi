@@ -370,11 +370,13 @@ frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
   # The page's rendered area, in viewport coordinates. The document
   # box -- not the visible viewport: captureBeyondViewport renders the
   # whole document, so below-fold content stays capturable and
-  # beyond-document growth would be unrendered pixels.
+  # beyond-document growth would be unrendered pixels. The box anchors
+  # to the document's real span: an RTL document wider than the
+  # viewport overflows to the left, reaching negative document x.
   clamps[["the page"]] <- c(
-    -geometry$scroll_x,
+    geometry$document_left - geometry$scroll_x,
     -geometry$scroll_y,
-    -geometry$scroll_x + geometry$document_width,
+    geometry$document_left - geometry$scroll_x + geometry$document_width,
     -geometry$scroll_y + geometry$document_height
   )
   box <- frame_apply(spec, box, clamps, call = call)
@@ -385,6 +387,14 @@ frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
     geometry$scroll_x, geometry$scroll_y
   )
   box <- frame_round(box, even = even)
+  # Horizontal only: an RTL frame can resolve into the document's
+  # negative-x region, and CDP clip origins must be non-negative.
+  # Shift the origin to 0 preserving the size -- the captured region
+  # shifts with it, mirroring the unframed path (clip_viewport()).
+  if (box[1] < 0) {
+    box[3] <- box[3] - box[1]
+    box[1] <- 0
+  }
   width <- box[3] - box[1]
   height <- box[4] - box[2]
   if (width <= 0 || height <= 0) {
@@ -432,18 +442,31 @@ box_union <- function(rects, call = caller_env()) {
   )
 }
 # One JS read of the geometry framing needs: scroll offsets, viewport
-# size, and document size.
+# size, document size, and the document's left edge in document
+# coordinates.
 page_geometry <- function(ctx, call = caller_env()) {
   g <- pz_js(
     ctx,
     "[window.scrollX, window.scrollY, window.innerWidth, window.innerHeight,
       Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
-      Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)]"
+      Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+      (function() {
+        // An RTL document wider than the viewport overflows to the
+        // left: the scrollable canvas reaches negative document x,
+        // spanning [-(scrollWidth - innerWidth), innerWidth].
+        const vw = window.innerWidth;
+        const docW = Math.max(
+          document.documentElement.scrollWidth,
+          document.body.scrollWidth
+        );
+        return getComputedStyle(document.documentElement).direction === 'rtl' &&
+          docW > vw ? -(docW - vw) : 0;
+      })()]"
   )
   g <- unlist(g)
-  if (!is.numeric(g) || length(g) != 6) {
+  if (!is.numeric(g) || length(g) != 7) {
     cli::cli_abort(
-      "Internal error: the page geometry read returned {.obj_type_friendly {g}}, not six numbers.",
+      "Internal error: the page geometry read returned {.obj_type_friendly {g}}, not seven numbers.",
       class = "paparazzi_error_internal",
       call = call
     )
@@ -454,7 +477,8 @@ page_geometry <- function(ctx, call = caller_env()) {
     viewport_width = g[3],
     viewport_height = g[4],
     document_width = g[5],
-    document_height = g[6]
+    document_height = g[6],
+    document_left = g[7]
   )
 }
 # Pure framing geometry on a viewport-relative box

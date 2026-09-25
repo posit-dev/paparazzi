@@ -1,13 +1,13 @@
 # Fixture geometry (tests/testthat/fixtures/frame.html), all CSS px,
 # viewport-relative; the body is 2000px tall and nothing overlaps:
-#   #card     (100, 80)  120x90   rgb(200, 30, 30)
-#   #small    (400, 60)   60x45   rgb(30, 120, 200)
-#   #wide     (700, 200) 120x60   rgb(30, 200, 120)
-#   #corner   (10, 10)   100x50   rgb(120, 30, 200)
-#   #bound    (200, 200) 400x400  rgb(240, 240, 240)
-#   #inner-tr (520, 220)  40x40   rgb(200, 200, 30)
-#   #low      (50, 1500) 100x60   rgb(200, 120, 30)
-#   #deep     (100, 1940) 40x40   rgb(30, 200, 200)
+#   #card       (100, 80)   120x90    rgb(200, 30, 30)
+#   #small      (400, 60)    60x45    rgb(30, 120, 200)
+#   #wide       (700, 200)  120x60    rgb(30, 200, 120)
+#   #corner     (10, 10)    100x50    rgb(120, 30, 200)
+#   #bound      (200, 200)  400x400   rgb(240, 240, 240)
+#   #inner-tr   (520, 220)   40x40    rgb(200, 200, 30)
+#   #low        (50, 1500)  100x60    rgb(200, 120, 30)
+#   #deep       (100, 1940)  40x40    rgb(30, 200, 200)
 # PNG pixel dimensions are round(css_size * dpr); dpr is read live.
 
 test_that("pz_frame returns a normalized spec", {
@@ -424,6 +424,43 @@ test_that("an identity frame at the root captures the viewport", {
   pz_screenshot(page, plain)
   pz_screenshot(page, framed, frame = pz_frame())
   expect_identical(png_dimensions(framed), png_dimensions(plain))
+})
+
+test_that("an identity frame keeps the viewport on negative RTL scroll", {
+  page <- local_rtl_frame_page()
+  plain <- withr::local_tempfile(fileext = ".png")
+  framed <- withr::local_tempfile(fileext = ".png")
+
+  # The RTL fixture overflows left, so scrolling into it makes
+  # scrollX negative and the viewport's left portion sits at negative
+  # document x. The document clamp must anchor to the real document
+  # span, or an identity frame narrows by |scrollX|.
+  pz_js(page, "window.scrollTo(-100, 0)")
+  skip_if(pz_js(page, "window.scrollX") >= 0, "browser won't scroll negative in RTL")
+
+  pz_screenshot(page, plain)
+  pz_screenshot(page, framed, frame = pz_frame())
+  expect_identical(png_dimensions(framed), png_dimensions(plain))
+})
+
+test_that("a frame on RTL left-overflow content captures it", {
+  page <- local_rtl_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- frame_dpr(page)
+
+  # #mark sits in the left overflow, at negative document x
+  # (around [-1208, -1108] for a 992px viewport): clamping to
+  # [0, scrollWidth] would reject it as outside the page instead of
+  # capturing it.
+  skip_if(
+    pz_js(page, "document.body.getBoundingClientRect().left") >= 0,
+    "browser doesn't overflow RTL documents to the left"
+  )
+
+  pz_screenshot(page, path, target = "#mark", frame = pz_frame(pad = 10))
+  # #mark 100x60 + 10 on each side; the negative document origin
+  # shifts to 0 with the size preserved.
+  expect_identical(png_dimensions(path), as.integer(round(c(120, 80) * dpr)))
 })
 
 test_that("a frame on a scoped context uses the scope's box", {
