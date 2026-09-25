@@ -1,24 +1,28 @@
 #' Open a page
 #'
-#' Opens a URL, local file, or existing [chromote::ChromoteSession] as a
-#' paparazzi page: the root context that starts every `|>` chain.
+#' Opens a URL, local file, Shiny app, or existing
+#' [chromote::ChromoteSession] as a paparazzi page: the root context that
+#' starts every `|>` chain.
 #'
 #' @param x What to open:
 #'   * a URL string (any scheme, including `file://`, `about:`, `data:`);
 #'   * a path to an existing local file (opened as `file://`);
+#'   * a Shiny app directory or app file (`app.R`, `ui.R`, `server.R`,
+#'     `app-*.R`, ...), started by this page and stopped when it closes;
+#'   * a [pz_app()] handle, shared across pages (closing the page leaves
+#'     the app running);
 #'   * an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
 #'
-#'   Shiny app directories and app files (`app.R`, `ui.R`, `server.R`,
-#'   `app-*.R`, ...) and `pz_app()` handles are not yet supported; Shiny app
-#'   **objects** are never supported -- run the app in another process and
-#'   pass its URL.
+#'   Shiny app **objects** are not supported -- run the app in another
+#'   process and pass its URL.
 #' @param ... Forwarded to [pz_device()] as device settings (e.g.
 #'   `width = 390, mobile = TRUE`); they must be named.
-#' @param wait What to wait for before returning. `"auto"` currently resolves
-#'   to `"load"`; `"shiny"` arrives with the Shiny-integration task.
+#' @param wait What to wait for before returning. `"auto"` uses the load wait
+#'   for now, including for Shiny apps; Shiny idle support arrives separately.
+#'   Explicit `"shiny"` is not yet supported.
 #' @param timeout Session default timeout in seconds; `NULL` uses the package
 #'   default (10 s). Per-call `timeout = NULL` means "session default".
-#' @param shiny_options,envvars Reserved for Shiny app support.
+#' @param shiny_options,envvars Passed to [pz_app()] when opening an app path.
 #'
 #' @return A `PaparazziPage` (the root context).
 #'
@@ -40,9 +44,6 @@ pz_open <- function(
       class = "paparazzi_error_unsupported"
     )
   }
-  if (identical(wait, "auto")) {
-    wait <- "load"
-  }
   if (!is.list(shiny_options)) {
     stop_input_type(shiny_options, "a list")
   }
@@ -57,9 +58,23 @@ pz_open <- function(
     return(page)
   }
 
-  url <- open_target_url(x)
+  owned_app <- NULL
+  is_app <- inherits(x, "PaparazziApp") ||
+    (is_string(x) && file.exists(x) &&
+      (dir.exists(x) || is_shiny_app_file(basename(x))))
+  if (inherits(x, "PaparazziApp")) {
+    url <- x$url
+  } else if (is_app) {
+    owned_app <- pz_app(x, shiny_options = shiny_options, envvars = envvars, timeout = timeout)
+    withr::defer(if (!is.null(owned_app)) owned_app$stop())
+    url <- owned_app$url
+  } else {
+    url <- open_target_url(x)
+  }
+  wait <- open_wait_mode(wait, is_app)
   session <- chromote::ChromoteSession$new()
-  page <- PaparazziPage$new(session = session, timeout = timeout %||% 10)
+  page <- PaparazziPage$new(session = session, timeout = timeout %||% 10, owned_app = owned_app)
+  owned_app <- NULL
   # If device settings, navigation, or the load wait fail, don't leak
   # the browser this call just created. The wrap branch above must not
   # register this: the caller owns that session.
@@ -86,10 +101,22 @@ pz_open <- function(
   ok <- TRUE
   page
 }
+# Shiny auto currently shares load behavior; the Shiny idle task changes only
+# this resolution seam when its wait implementation lands.
+open_wait_mode <- function(wait, is_shiny_app) {
+  if (!identical(wait, "auto")) {
+    return(wait)
+  }
+  if (is_shiny_app) {
+    return("load")
+  }
+  "load"
+}
 #' Close a page
 #'
-#' Closes the page's browser session. Idempotent; closing an already-closed
-#' page is a no-op.
+#' Closes the page's browser session and, if the page started a Shiny app,
+#' stops that app. A page opened from a shared [pz_app()] handle leaves the
+#' app running. Idempotent; closing an already-closed page is a no-op.
 #'
 #' @param page A `PaparazziPage` from [pz_open()].
 #'
@@ -163,16 +190,6 @@ open_target_url <- function(x, call = caller_env()) {
   # file.exists() comes before the scheme regex: Windows drive paths like
   # "C:/..." look like a URL scheme to it.
   if (file.exists(x)) {
-    if (dir.exists(x) || is_shiny_app_file(basename(x))) {
-      cli::cli_abort(
-        c(
-          "Opening Shiny apps is not supported yet.",
-          i = "Start the app yourself in another process and pass its URL to {.fn pz_open}."
-        ),
-        class = "paparazzi_error_unsupported",
-        call = call
-      )
-    }
     return(file_url(x))
   }
   # Real schemes have 2+ characters; single-letter "schemes" are drive letters.

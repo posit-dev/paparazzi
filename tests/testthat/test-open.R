@@ -39,6 +39,12 @@ test_that("wait = 'none' and wait = 'load' both open", {
   }
 })
 
+test_that("Shiny auto wait uses the single load placeholder seam", {
+  expect_identical(open_wait_mode("auto", TRUE), "load")
+  expect_identical(open_wait_mode("auto", FALSE), "load")
+  expect_identical(open_wait_mode("none", TRUE), "none")
+})
+
 test_that("wait = 'shiny' errors for now", {
   skip_if_no_chrome()
   expect_error(
@@ -57,13 +63,123 @@ test_that("pz_open errors on a Shiny app object with advice", {
   )
 })
 
-test_that("pz_open errors on app directories and app.R", {
+test_that("pz_open owns an app started from a directory", {
   skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(
+    shiny_app_fixture_dir(),
+    width = 390,
+    shiny_options = list(quiet = TRUE),
+    envvars = c(PAPARAZZI_TEST_MARKER = "open-owned")
+  )
+  withr::defer(pz_close(page))
+  port <- as.integer(pz_js(page, "location.port"))
+  expect_true(app_port_reachable(port))
+  owned <- page$.__enclos_env__$private$owned_app_
+  expect_true(any(grepl("marker: open-owned", owned$logs(), fixed = TRUE)))
+  expect_false(any(grepl("Listening on", owned$logs(), fixed = TRUE)))
+  expect_equal(pz_js(page, "innerWidth"), 390)
+  expect_true(wait_until(function() {
+    grepl("hello paparazzi", pz_js(page, "document.body.innerText"))
+  }))
+  pz_close(page)
+  expect_true(page$is_closed())
+  expect_true(wait_until(function() !app_port_reachable(port)))
+  expect_no_error(pz_close(page))
+})
+
+test_that("pz_open owns an app.R file", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
   dir <- withr::local_tempdir()
-  expect_error(pz_open(dir), class = "paparazzi_error_unsupported")
-  app_r <- file.path(dir, "app.R")
-  file.create(app_r)
-  expect_error(pz_open(app_r), class = "paparazzi_error_unsupported")
+  app_file <- file.path(dir, "app.R")
+  file.copy(shiny_app_fixture_file(), app_file)
+  page <- pz_open(app_file)
+  withr::defer(pz_close(page))
+  port <- as.integer(pz_js(page, "location.port"))
+  expect_true(app_port_reachable(port))
+  pz_close(page)
+  expect_true(wait_until(function() !app_port_reachable(port)))
+})
+
+test_that("a page opened on a handle does not own the app", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  app <- local_shiny_app(shiny_app_fixture_dir())
+  page <- pz_open(app)
+  withr::defer(pz_close(page))
+  expect_true(wait_until(function() {
+    grepl("hello paparazzi", pz_js(page, "document.body.innerText"))
+  }))
+  pz_close(page)
+  expect_true(app$is_running())
+  expect_true(app_port_reachable(app$port))
+  second <- pz_open(app)
+  withr::defer(pz_close(second))
+  expect_true(wait_until(function() {
+    grepl("hello paparazzi", pz_js(second, "document.body.innerText"))
+  }))
+})
+
+test_that("an opening failure stops the newly owned app", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  port <- free_port()
+  expect_error(
+    pz_open(
+      shiny_app_fixture_dir(), shiny_options = list(port = port),
+      timezone = "Mars/Olympus"
+    ),
+    regexp = "Invalid timezone"
+  )
+  expect_true(wait_until(function() !app_port_reachable(port)))
+})
+
+test_that("an opening failure leaves a shared app running", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  app <- local_shiny_app(shiny_app_fixture_dir())
+  expect_error(pz_open(app, timezone = "Mars/Olympus"), regexp = "Invalid timezone")
+  expect_true(app$is_running())
+  expect_true(app_port_reachable(app$port))
+})
+
+test_that("block helpers close pages but not shared apps", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  app <- local_shiny_app(shiny_app_fixture_dir())
+  captured <- NULL
+  expect_error(pz_with_page(app, function(page) {
+    captured <<- page
+    stop("boom")
+  }), "boom")
+  expect_true(captured$is_closed())
+  expect_true(app$is_running())
+
+  local({
+    page <- pz_local_page(app)
+    captured <<- page
+    expect_false(page$is_closed())
+  })
+  expect_true(captured$is_closed())
+  expect_true(app_port_reachable(app$port))
+})
+
+test_that("block helpers stop owned apps on exit and error", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  port <- NULL
+  expect_error(pz_with_page(shiny_app_fixture_dir(), function(page) {
+    port <<- as.integer(pz_js(page, "location.port"))
+    stop("boom")
+  }), "boom")
+  expect_true(wait_until(function() !app_port_reachable(port)))
+  local({
+    page <- pz_local_page(shiny_app_fixture_dir())
+    port <<- as.integer(pz_js(page, "location.port"))
+    expect_true(app_port_reachable(port))
+  })
+  expect_true(wait_until(function() !app_port_reachable(port)))
 })
 
 test_that("pz_open errors on bad input", {
@@ -196,18 +312,18 @@ test_that("is_shiny_app_file recognizes Shiny app file names", {
   }
 })
 
-test_that("pz_open rejects Shiny app file names with advice", {
+test_that("pz_open starts recognized Shiny app file names", {
   skip_if_no_chrome()
+  skip_if_no_shiny()
   dir <- withr::local_tempdir()
-  for (f in c("ui.R", "server.R", "app-main.R")) {
+  for (f in c("app-main.R", "user_app.R")) {
     path <- file.path(dir, f)
-    file.create(path)
-    expect_error(
-      pz_open(path),
-      regexp = "another process",
-      class = "paparazzi_error_unsupported",
-      info = f
-    )
+    file.copy(shiny_app_fixture_file(), path)
+    page <- pz_open(path)
+    port <- as.integer(pz_js(page, "location.port"))
+    expect_true(app_port_reachable(port), info = f)
+    pz_close(page)
+    expect_true(wait_until(function() !app_port_reachable(port)), info = f)
   }
 })
 

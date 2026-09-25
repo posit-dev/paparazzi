@@ -18,29 +18,33 @@ pz_open(
 \itemize{
 \item a URL string (any scheme, including \verb{file://}, \verb{about:}, \verb{data:});
 \item a path to an existing local file (opened as \verb{file://});
+\item a Shiny app directory or app file (\code{app.R}, \code{ui.R}, \code{server.R},
+\verb{app-*.R}, ...), started by this page and stopped when it closes;
+\item a \code{\link[=pz_app]{pz_app()}} handle, shared across pages (closing the page leaves
+the app running);
 \item an existing \code{ChromoteSession} (wrapped as-is; nothing is navigated).
 }
 
-Shiny app directories and app files (\code{app.R}, \code{ui.R}, \code{server.R},
-\verb{app-*.R}, ...) and \code{pz_app()} handles are not yet supported; Shiny app
-\strong{objects} are never supported -- run the app in another process and
-pass its URL.}
+Shiny app \strong{objects} are not supported -- run the app in another
+process and pass its URL.}
 
 \item{...}{Forwarded to \code{\link[=pz_device]{pz_device()}} as device settings (e.g.
 \verb{width = 390, mobile = TRUE}); they must be named.}
 
-\item{wait}{What to wait for before returning. \code{"auto"} currently resolves
-to \code{"load"}; \code{"shiny"} arrives with the Shiny-integration task.}
+\item{wait}{What to wait for before returning. \code{"auto"} uses the load wait
+for now, including for Shiny apps; Shiny idle support arrives separately.
+Explicit \code{"shiny"} is not yet supported.}
 
 \item{timeout}{Session default timeout in seconds; \code{NULL} uses the package
 default (10 s). Per-call \code{timeout = NULL} means "session default".}
 
-\item{shiny_options, envvars}{Reserved for Shiny app support.}
+\item{shiny_options, envvars}{Passed to \code{\link[=pz_app]{pz_app()}} when opening an app path.}
 }
 \value{
 A \code{PaparazziPage} (the root context).
 }
 \description{
-Opens a URL, local file, or existing \link[chromote:ChromoteSession]{chromote::ChromoteSession} as a
-paparazzi page: the root context that starts every \verb{|>} chain.
+Opens a URL, local file, Shiny app, or existing
+\link[chromote:ChromoteSession]{chromote::ChromoteSession} as a paparazzi page: the root context that
+starts every \verb{|>} chain.
 }
