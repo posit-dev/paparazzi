@@ -18,6 +18,19 @@ popped pinned set is NOT released -- a context derived before the
 pop may still hold it -- and popping never mutates the context it
 was called on. At the root it is a no-op returning \code{ctx} unchanged.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |>
+  pz_find(".task-list") |>
+  pz_find_last(".task") |>
+  pz_click(".task-done") |>
+  # Back to the whole list, to check the result
+  pz_find_pop() |>
+  pz_expect_count(2, target = ".task.done")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_find]{pz_find()}}, \code{\link[=pz_find_reset]{pz_find_reset()}}
 }

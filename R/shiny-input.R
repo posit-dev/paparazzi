@@ -15,6 +15,18 @@
 #' @param wait If `TRUE`, call [pz_wait_for_shiny_idle()] after the change.
 #'   If `FALSE`, return immediately after dispatching the change.
 #' @return `ctx`, invisibly.
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")
+#' page <- pz_open(pz_example("tasks-app"))
+#'
+#' # Each call waits for Shiny to go idle, so the server has seen the value
+#' page |>
+#'   pz_set_shiny_input("title", "Buy milk") |>
+#'   pz_set_shiny_input("priority", "high") |>
+#'   pz_click("#add") |>
+#'   pz_expect_text("3 tasks", target = "#summary")
+#' pz_get_attr(page, "data-priority", target = ".task")
+#' pz_close(page)
+#'
 #' @export
 pz_set_shiny_input <- function(ctx, id, value, ..., wait = TRUE) {
   check_context(ctx)

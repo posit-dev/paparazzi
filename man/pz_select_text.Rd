@@ -35,6 +35,18 @@ A contenteditable target is focused too (dragging across editable
 text focuses it, and that focus is where the typing lands); a static
 target is not.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+
+# Typing replaces the selection
+page |>
+  pz_select_text("Friday", target = "#notes") |>
+  pz_type("Saturday")
+pz_get_text(page, target = "#notes")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_type]{pz_type()}}, \code{\link[=pz_set_value]{pz_set_value()}}
 }

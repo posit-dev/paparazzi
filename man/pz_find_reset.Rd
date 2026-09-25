@@ -18,6 +18,20 @@ pinned set is released -- contexts derived before the reset may
 still hold them -- and resetting never mutates the context it was
 called on. At the root it is a no-op returning \code{ctx} unchanged.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |>
+  pz_find(".task-list") |>
+  pz_find_first(".task") |>
+  pz_click(".task-done") |>
+  # The help toggle is outside the list, so start again from the root
+  pz_find_reset() |>
+  pz_click("#toggle-help") |>
+  pz_expect_visible(target = "#help")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_find]{pz_find()}}, \code{\link[=pz_find_pop]{pz_find_pop()}}
 }

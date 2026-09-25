@@ -30,6 +30,25 @@ Control+Shift+A.
 Keys only reach focused elements; call \code{\link[=pz_click]{pz_click()}} or \code{\link[=pz_focus]{pz_focus()}}
 first to focus the element you're typing into.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |>
+  pz_type("Buy milkk", target = "#task-title") |>
+  pz_press("Backspace")
+pz_get_value(page, target = "#task-title")
+
+# Enter submits the form; the page shows "Saving..." before the task appears
+page |> pz_press("Enter")
+pz_expect_text(page, "Saved", target = "#status")
+pz_get_text(page, target = pz_loc(".task-title", which = "first"))
+
+# A vector presses keys in sequence; + joins keys pressed together
+page |> pz_press(c("Tab", "Shift+Tab"))
+pz_expect_focused(page, target = "#task-title")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_type]{pz_type()}} to insert text.
 }

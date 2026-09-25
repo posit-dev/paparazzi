@@ -25,14 +25,22 @@
 #'
 #' @return An S3 object of class `paparazzi_loc`.
 #' @examples
-#' pz_loc("#chat_user_input .ProseMirror")
-#' pz_loc(".shiny-chat-assistant-message", which = "last")
-#' pz_loc(
-#'   ".shiny-tool-request",
-#'   has_text = "get_weather",
-#'   which = "last",
-#'   within = ".chat"
-#' )
+#' # A spec describes elements; nothing is looked up until you use it
+#' pz_loc(".task")
+#' pz_loc(".task", has_text = "passport")
+#' pz_loc(".task", which = "last")
+#' pz_loc(".task-done", within = pz_loc(".task", has_text = "dentist"))
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # Specs resolve each time they're used, so define them once and reuse them
+#' high <- pz_loc(".task-title", within = ".task[data-priority='high']")
+#' pz_get_text(page, target = high)
+#'
+#' # A list of specs and strings matches the elements of any member
+#' pz_get_count(page, target = list(".task.done", high))
+#' pz_close(page)
 #'
 #' @export
 pz_loc <- function(css, ..., has_text = NULL, which = NULL, within = NULL) {

@@ -27,6 +27,15 @@ A new context, invisibly.
 narrows the current scope to its last element: one eager slice of
 the pinned set, with no re-query and no waiting.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |>
+  pz_find_last(".task") |>
+  pz_get_text(target = ".task-title")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_find]{pz_find()}}, \code{\link[=pz_find_first]{pz_find_first()}}, \code{\link[=pz_find_nth]{pz_find_nth()}}
 }

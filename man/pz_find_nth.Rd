@@ -33,6 +33,18 @@ eager slice of the pinned set, and an out-of-range \code{n} errors
 immediately -- the set was fixed at pin time, so there is nothing to
 wait for.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+
+# Mark the second task as done
+page |>
+  pz_find_nth(2, target = ".task") |>
+  pz_click(".task-done")
+pz_get_text(page, target = pz_loc(".task.done .task-title"))
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_find]{pz_find()}}, \code{\link[=pz_find_first]{pz_find_first()}}, \code{\link[=pz_find_last]{pz_find_last()}}
 }

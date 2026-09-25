@@ -29,6 +29,20 @@ handlers all behave as they would live. While recording, the staging
 settings (\code{\link[=pz_stage]{pz_stage()}}) animate the scroll, the cursor glide, and
 the press; otherwise everything runs straight to the final state.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |> pz_click("#toggle-help")
+pz_get_text(page, target = "#toggle-help")
+
+# In a scoped context, target = NULL clicks the scope element
+page |>
+  pz_find(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank"))) |>
+  pz_click()
+pz_get_count(page, target = ".task.done")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_hover]{pz_hover()}}, \code{\link[=pz_type]{pz_type()}}, \code{\link[=pz_press]{pz_press()}}
 }

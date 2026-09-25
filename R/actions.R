@@ -27,6 +27,18 @@
 #'
 #' @seealso [pz_hover()], [pz_type()], [pz_press()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_click("#toggle-help")
+#' pz_get_text(page, target = "#toggle-help")
+#'
+#' # In a scoped context, target = NULL clicks the scope element
+#' page |>
+#'   pz_find(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank"))) |>
+#'   pz_click()
+#' pz_get_count(page, target = ".task.done")
+#' pz_close(page)
+#'
 #' @export
 pz_click <- function(ctx, target = NULL, ...) {
   check_context(ctx)
@@ -54,6 +66,16 @@ pz_click <- function(ctx, target = NULL, ...) {
 #' @return `ctx`, invisibly.
 #'
 #' @seealso [pz_click()]
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' passport <- pz_loc(".task", has_text = "passport")
+#'
+#' # Tasks change colour on :hover
+#' pz_get_style(page, "background-color", target = passport)
+#' page |> pz_hover(passport)
+#' pz_get_style(page, "background-color", target = passport)
+#' pz_close(page)
 #'
 #' @export
 pz_hover <- function(ctx, target = NULL, ...) {
@@ -107,6 +129,19 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #'
 #' @seealso [pz_press()] for key combos (Enter, Control+A, ...) and
 #'   [pz_click()].
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_type("Buy milk", target = "#task-title")
+#' pz_get_value(page, target = "#task-title")
+#'
+#' # Typing fires input events, so the page reacts: Add is now enabled
+#' pz_expect_enabled(page, target = "#add-task")
+#'
+#' # At the root, target = NULL types into the focused element
+#' page |> pz_type(" and eggs")
+#' pz_get_value(page, target = "#task-title")
+#' pz_close(page)
 #'
 #' @export
 pz_type <- function(ctx, text, ..., target = NULL) {
@@ -169,6 +204,23 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #'
 #' @seealso [pz_type()] to insert text.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |>
+#'   pz_type("Buy milkk", target = "#task-title") |>
+#'   pz_press("Backspace")
+#' pz_get_value(page, target = "#task-title")
+#'
+#' # Enter submits the form; the page shows "Saving..." before the task appears
+#' page |> pz_press("Enter")
+#' pz_expect_text(page, "Saved", target = "#status")
+#' pz_get_text(page, target = pz_loc(".task-title", which = "first"))
+#'
+#' # A vector presses keys in sequence; + joins keys pressed together
+#' page |> pz_press(c("Tab", "Shift+Tab"))
+#' pz_expect_focused(page, target = "#task-title")
+#' pz_close(page)
+#'
 #' @export
 pz_press <- function(ctx, key, ...) {
   check_context(ctx)
@@ -208,6 +260,12 @@ pz_press <- function(ctx, key, ...) {
 #'
 #' @seealso [pz_blur()], [pz_type()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_focus("#task-title")
+#' pz_expect_focused(page, target = "#task-title")
+#' pz_close(page)
+#'
 #' @export
 pz_focus <- function(ctx, target = NULL, ...) {
   check_context(ctx)
@@ -236,6 +294,15 @@ pz_focus <- function(ctx, target = NULL, ...) {
 #' @return `ctx`, invisibly.
 #'
 #' @seealso [pz_focus()]
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_focus("#task-title")
+#'
+#' # Remove the focus ring, e.g. before a screenshot
+#' page |> pz_blur()
+#' pz_expect_focused(page, target = "#task-title", not = TRUE)
+#' pz_close(page)
 #'
 #' @export
 pz_blur <- function(ctx, ...) {
@@ -538,6 +605,20 @@ type_selection_js <- "function() {
 #' @seealso [pz_type()] for visible, keystroke-by-keystroke input and
 #'   [pz_set_files()].
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |>
+#'   pz_set_value("Buy milk", target = "#task-title") |>
+#'   pz_set_value("high", target = "#task-priority") |>
+#'   pz_set_value(TRUE, target = "#task-urgent")
+#' pz_get_value(page, target = list("#task-title", "#task-priority"))
+#' pz_expect_checked(page, target = "#task-urgent")
+#'
+#' # An empty string clears a text input
+#' page |> pz_set_value("", target = "#task-title")
+#' pz_expect_enabled(page, target = "#add-task", not = TRUE)
+#' pz_close(page)
+#'
 #' @export
 pz_set_value <- function(ctx, value, ..., target = NULL) {
   check_context(ctx)
@@ -578,6 +659,15 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
 #' @return `ctx`, invisibly.
 #'
 #' @seealso [pz_set_value()]
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' notes <- file.path(tempdir(), "meeting-notes.txt")
+#' writeLines("Agenda: plants, parcel, passport", notes)
+#'
+#' page <- pz_open(pz_example("tasks"))
+#' page |> pz_set_files(notes, target = "#attachment")
+#' pz_get_text(page, target = "#attachment-name")
+#' pz_close(page)
 #'
 #' @export
 pz_set_files <- function(ctx, files, ..., target = NULL) {
@@ -878,6 +968,16 @@ select_all_js <- "function() {
 #'
 #' @seealso [pz_type()], [pz_set_value()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # Typing replaces the selection
+#' page |>
+#'   pz_select_text("Friday", target = "#notes") |>
+#'   pz_type("Saturday")
+#' pz_get_text(page, target = "#notes")
+#' pz_close(page)
+#'
 #' @export
 pz_select_text <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
@@ -988,6 +1088,24 @@ select_text_js <- "function(text) {
 #' @return `ctx`, invisibly.
 #'
 #' @seealso [pz_find()], [pz_click()]
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"), height = 600)
+#'
+#' # With a target, scroll it into view
+#' page |> pz_scroll("#toggle-help")
+#' pz_expect_in_viewport(page, target = "#toggle-help")
+#'
+#' # With `to` or `by`, scroll the current scope's container: here the list
+#' page |>
+#'   pz_find(".task-list") |>
+#'   pz_scroll(to = "bottom")
+#' pz_expect_in_viewport(page, target = pz_loc(".task", which = "last"))
+#'
+#' # At the root, the container is the page itself
+#' page |> pz_scroll(to = "top")
+#' pz_js(page, "window.scrollY")
+#' pz_close(page)
 #'
 #' @export
 pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
@@ -1158,6 +1276,19 @@ scroll_arg_json <- function(by = NULL, to = NULL) {
 #' @return `ctx`, invisibly.
 #'
 #' @seealso [pz_click()], [pz_hover()]
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' pz_get_text(page, target = ".task-title")
+#'
+#' # The tasks are HTML5 drag sources; drop "Water the plants" on the first task
+#' page |>
+#'   pz_drag(
+#'     pz_loc(".task", has_text = "plants"),
+#'     to = pz_loc(".task", which = "first")
+#'   )
+#' pz_get_text(page, target = ".task-title")
+#' pz_close(page)
 #'
 #' @export
 pz_drag <- function(ctx, target, to, ..., by = NULL) {

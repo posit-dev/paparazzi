@@ -37,6 +37,21 @@ with \code{typing = "natural"} (the default; see \code{\link[=pz_stage]{pz_stage
 value-setting primitive that works on selects, checkboxes, and range
 inputs, see \code{pz_set_value()} (a later task).
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |> pz_type("Buy milk", target = "#task-title")
+pz_get_value(page, target = "#task-title")
+
+# Typing fires input events, so the page reacts: Add is now enabled
+pz_expect_enabled(page, target = "#add-task")
+
+# At the root, target = NULL types into the focused element
+page |> pz_type(" and eggs")
+pz_get_value(page, target = "#task-title")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_press]{pz_press()}} for key combos (Enter, Control+A, ...) and
 \code{\link[=pz_click]{pz_click()}}.

@@ -25,6 +25,14 @@ enabled-input styles exactly as a user would see them. Focus is an
 element-state change, not an input event, so the direct method call
 is the faithful implementation (Playwright does the same).
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |> pz_focus("#task-title")
+pz_expect_focused(page, target = "#task-title")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_blur]{pz_blur()}}, \code{\link[=pz_type]{pz_type()}}
 }

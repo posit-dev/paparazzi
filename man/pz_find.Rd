@@ -42,6 +42,29 @@ The stack is immutable: \verb{pz_find*()} never mutate the context they
 are called on, and contexts derived from the same parent share its
 pinned sets.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+
+# Inside a scope, targets resolve among the scope's descendants
+page |>
+  pz_find(pz_loc(".task", has_text = "dentist")) |>
+  pz_click(".task-done")
+pz_get_attr(page, "class", target = pz_loc(".task", has_text = "dentist"))
+
+# Assign a scoped context to start more than one chain from it
+task_list <- pz_find(page, ".task-list")
+task_list
+pz_get_count(task_list, target = ".task.done")
+
+# from_root looks outside the current scope, but still pushes a new scope
+task_list |>
+  pz_find("#new-task", from_root = TRUE) |>
+  pz_type("Buy milk", target = "#task-title")
+pz_get_value(page, target = "#task-title")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_find_first]{pz_find_first()}}, \code{\link[=pz_find_pop]{pz_find_pop()}}, \code{\link[=pz_find_reset]{pz_find_reset()}}
 }

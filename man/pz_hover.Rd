@@ -25,6 +25,18 @@ pointer to the center of it with a real \code{mousemove} event, without
 pressing any button. This is what drives \verb{:hover} styles and
 \code{mouseenter}/\code{mouseover} handlers.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+passport <- pz_loc(".task", has_text = "passport")
+
+# Tasks change colour on :hover
+pz_get_style(page, "background-color", target = passport)
+page |> pz_hover(passport)
+pz_get_style(page, "background-color", target = passport)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_click]{pz_click()}}
 }

@@ -48,6 +48,24 @@ PNG's pixel dimensions are the captured CSS size multiplied by the
 dpr. A \code{\link[=pz_frame]{pz_frame()}} can frame the capture; the page's default framing
 is set with \code{pz_stage_frame()}.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+path <- file.path(tempdir(), "tasks.png")
+
+# At the root, target = NULL captures the viewport
+page |> pz_screenshot(path)
+
+# A target captures its box; a list captures the union of the boxes
+page |> pz_screenshot(path, target = ".task-list")
+page |> pz_screenshot(path, target = list("#new-task", ".filters"))
+
+# Padding, aspect ratio and anchoring come from pz_frame()
+page |> pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 16))
+file.exists(path)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_frame]{pz_frame()}}, \code{\link[=pz_stage_frame]{pz_stage_frame()}}
 }

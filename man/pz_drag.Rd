@@ -38,6 +38,21 @@ there), and the drop is delivered to the destination as trusted
 \code{to} names the element to drop onto; \code{by = c(x, y)} drops at that
 offset in pixels from the source's center. Supply exactly one.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+pz_get_text(page, target = ".task-title")
+
+# The tasks are HTML5 drag sources; drop "Water the plants" on the first task
+page |>
+  pz_drag(
+    pz_loc(".task", has_text = "plants"),
+    to = pz_loc(".task", which = "first")
+  )
+pz_get_text(page, target = ".task-title")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_click]{pz_click()}}, \code{\link[=pz_hover]{pz_hover()}}
 }

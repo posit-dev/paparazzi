@@ -43,6 +43,26 @@ container, so the video shows the scroll. Wheel scrolling is
 best-effort: if the page swallows the events, the instant scroll
 still guarantees the final position.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"), height = 600)
+
+# With a target, scroll it into view
+page |> pz_scroll("#toggle-help")
+pz_expect_in_viewport(page, target = "#toggle-help")
+
+# With `to` or `by`, scroll the current scope's container: here the list
+page |>
+  pz_find(".task-list") |>
+  pz_scroll(to = "bottom")
+pz_expect_in_viewport(page, target = pz_loc(".task", which = "last"))
+
+# At the root, the container is the page itself
+page |> pz_scroll(to = "top")
+pz_js(page, "window.scrollY")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_find]{pz_find()}}, \code{\link[=pz_click]{pz_click()}}
 }

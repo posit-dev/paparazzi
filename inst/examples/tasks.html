@@ -12,6 +12,7 @@
       --surface: #ffffff;
       --page: #f5f6f8;
       --text: #212529;
+      --hover: #eef4ff;
       color-scheme: light;
     }
     @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
         --page: #121417;
         --text: #e9ecef;
         --muted: #9aa3ab;
+        --hover: #1c2a3d;
         color-scheme: dark;
       }
     }
@@ -92,7 +94,7 @@
       border-bottom: 1px solid var(--border);
     }
     .task:last-child { border-bottom: 0; }
-    .task:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+    .task:hover { background: var(--hover); }
     .task.dragging { opacity: 0.4; }
     .task-title { flex: 1; }
     .task.done .task-title { color: var(--muted); text-decoration: line-through; }
@@ -213,6 +215,7 @@
       li.className = "task";
       li.draggable = true;
       li.dataset.priority = level;
+      ensureId(li);
       li.innerHTML =
         '<span class="task-title"></span>' +
         '<span class="task-priority"></span>' +
@@ -265,23 +268,29 @@
     window.addEventListener("hashchange", applyFilter);
     applyFilter();
 
-    let dragged = null;
+    // Drag and drop carries the dragged task's id in the drag data.
+    let nextId = 0;
+    const ensureId = (li) => li.dataset.id || (li.dataset.id = String(++nextId));
+    list.querySelectorAll(".task").forEach(ensureId);
     list.addEventListener("dragstart", (event) => {
-      dragged = event.target.closest(".task");
-      dragged.classList.add("dragging");
+      const li = event.target.closest(".task");
+      li.classList.add("dragging");
+      event.dataTransfer.setData("text/plain", ensureId(li));
       event.dataTransfer.effectAllowed = "move";
     });
-    list.addEventListener("dragend", () => {
-      if (dragged) dragged.classList.remove("dragging");
-      dragged = null;
+    list.addEventListener("dragend", (event) => {
+      event.target.closest(".task")?.classList.remove("dragging");
     });
     list.addEventListener("dragover", (event) => event.preventDefault());
     list.addEventListener("drop", (event) => {
       event.preventDefault();
+      const id = event.dataTransfer.getData("text/plain");
+      const dragged = list.querySelector('.task[data-id="' + id + '"]');
       const over = event.target.closest(".task");
       if (dragged && over && over !== dragged) {
         list.insertBefore(dragged, over);
       }
+      dragged?.classList.remove("dragging");
     });
 
     document.getElementById("attachment").addEventListener("change", (event) => {

@@ -31,3 +31,17 @@ module prefix (for example, \code{"mod-text"}); it is searched only in the
 current scope, including the scope element itself. This does not set
 unbound inputs, action buttons, or file inputs.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks-app"))
+
+# Each call waits for Shiny to go idle, so the server has seen the value
+page |>
+  pz_set_shiny_input("title", "Buy milk") |>
+  pz_set_shiny_input("priority", "high") |>
+  pz_click("#add") |>
+  pz_expect_text("3 tasks", target = "#summary")
+pz_get_attr(page, "data-priority", target = ".task")
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}

@@ -38,6 +38,27 @@
 #'
 #' @seealso [pz_find_first()], [pz_find_pop()], [pz_find_reset()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # Inside a scope, targets resolve among the scope's descendants
+#' page |>
+#'   pz_find(pz_loc(".task", has_text = "dentist")) |>
+#'   pz_click(".task-done")
+#' pz_get_attr(page, "class", target = pz_loc(".task", has_text = "dentist"))
+#'
+#' # Assign a scoped context to start more than one chain from it
+#' task_list <- pz_find(page, ".task-list")
+#' task_list
+#' pz_get_count(task_list, target = ".task.done")
+#'
+#' # from_root looks outside the current scope, but still pushes a new scope
+#' task_list |>
+#'   pz_find("#new-task", from_root = TRUE) |>
+#'   pz_type("Buy milk", target = "#task-title")
+#' pz_get_value(page, target = "#task-title")
+#' pz_close(page)
+#'
 #' @export
 pz_find <- function(ctx, target, ..., from_root = FALSE) {
   check_context(ctx)
@@ -72,6 +93,19 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_last()], [pz_find_nth()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |>
+#'   pz_find_first(".task") |>
+#'   pz_get_text(target = ".task-title")
+#'
+#' # Without a target, narrow the current scope to its first element
+#' page |>
+#'   pz_find(".task[data-priority='normal']") |>
+#'   pz_find_first() |>
+#'   pz_get_text(target = ".task-title")
+#' pz_close(page)
+#'
 #' @export
 pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
@@ -91,6 +125,13 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #' @return A new context, invisibly.
 #'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_nth()]
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |>
+#'   pz_find_last(".task") |>
+#'   pz_get_text(target = ".task-title")
+#' pz_close(page)
 #'
 #' @export
 pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
@@ -117,6 +158,16 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_last()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#'
+#' # Mark the second task as done
+#' page |>
+#'   pz_find_nth(2, target = ".task") |>
+#'   pz_click(".task-done")
+#' pz_get_text(page, target = pz_loc(".task.done .task-title"))
+#' pz_close(page)
+#'
 #' @export
 pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
   check_context(ctx)
@@ -138,6 +189,17 @@ pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_reset()]
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |>
+#'   pz_find(".task-list") |>
+#'   pz_find_last(".task") |>
+#'   pz_click(".task-done") |>
+#'   # Back to the whole list, to check the result
+#'   pz_find_pop() |>
+#'   pz_expect_count(2, target = ".task.done")
+#' pz_close(page)
+#'
 #' @export
 pz_find_pop <- function(ctx) {
   check_context(ctx)
@@ -158,6 +220,18 @@ pz_find_pop <- function(ctx) {
 #' @return A new context, invisibly.
 #'
 #' @seealso [pz_find()], [pz_find_pop()]
+#'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' page |>
+#'   pz_find(".task-list") |>
+#'   pz_find_first(".task") |>
+#'   pz_click(".task-done") |>
+#'   # The help toggle is outside the list, so start again from the root
+#'   pz_find_reset() |>
+#'   pz_click("#toggle-help") |>
+#'   pz_expect_visible(target = "#help")
+#' pz_close(page)
 #'
 #' @export
 pz_find_reset <- function(ctx) {

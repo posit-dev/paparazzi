@@ -37,6 +37,22 @@ in its group), and range, date, and number inputs. A contenteditable
 element (plain or framework-driven, e.g. ProseMirror) has its
 content replaced in one step.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |>
+  pz_set_value("Buy milk", target = "#task-title") |>
+  pz_set_value("high", target = "#task-priority") |>
+  pz_set_value(TRUE, target = "#task-urgent")
+pz_get_value(page, target = list("#task-title", "#task-priority"))
+pz_expect_checked(page, target = "#task-urgent")
+
+# An empty string clears a text input
+page |> pz_set_value("", target = "#task-title")
+pz_expect_enabled(page, target = "#add-task", not = TRUE)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_type]{pz_type()}} for visible, keystroke-by-keystroke input and
 \code{\link[=pz_set_files]{pz_set_files()}}.

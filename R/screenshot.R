@@ -35,6 +35,22 @@
 #'
 #' @return `ctx`, invisibly.
 #'
+#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "tasks.png")
+#'
+#' # At the root, target = NULL captures the viewport
+#' page |> pz_screenshot(path)
+#'
+#' # A target captures its box; a list captures the union of the boxes
+#' page |> pz_screenshot(path, target = ".task-list")
+#' page |> pz_screenshot(path, target = list("#new-task", ".filters"))
+#'
+#' # Padding, aspect ratio and anchoring come from pz_frame()
+#' page |> pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 16))
+#' file.exists(path)
+#' pz_close(page)
+#'
 #' @export
 pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   check_context(ctx)

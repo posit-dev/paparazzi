@@ -19,6 +19,17 @@ Removes focus from the current scope's element, or at the root
 context from whatever element currently has focus (\verb{document .activeElement}). A no-op when the body is focused. Useful to clear
 focus rings before a screenshot.
 }
+\examples{
+\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+page |> pz_focus("#task-title")
+
+# Remove the focus ring, e.g. before a screenshot
+page |> pz_blur()
+pz_expect_focused(page, target = "#task-title", not = TRUE)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_focus]{pz_focus()}}
 }
