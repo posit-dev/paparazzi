@@ -22,9 +22,12 @@ test_that("the console summary matches the spec format", {
   inner <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight, window.devicePixelRatio]"))
   dpr <- inner[[3]]
   scale <- if (dpr == round(dpr)) sprintf("%gx", as.integer(dpr)) else paste0(dpr, "x")
+  # The scheme is read live from the page (the host OS preference leaks
+  # through), so the expectation derives it the same way.
+  scheme <- if (isTRUE(pz_js(page, "matchMedia('(prefers-color-scheme: dark)').matches"))) "dark" else "light"
   expect_identical(
     got$out[[3]],
-    sprintf("%-11s%s × %s @%s · light", "Device", inner[[1]], inner[[2]], scale)
+    sprintf("%-11s%s × %s @%s · %s", "Device", inner[[1]], inner[[2]], scale, scheme)
   )
   expect_identical(got$out[[4]], "Scope      root")
   expect_identical(got$out[[5]], "Recording  off · cursor hidden")
