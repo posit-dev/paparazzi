@@ -236,7 +236,9 @@ pz_wait_for_navigation <- function(
     timeout = timeout,
     snapshot = snapshot
   )
-  invisible(wait_nav_reset(ctx))
+  root <- wait_nav_reset(ctx)
+  device_css_reapply(ctx$page)
+  invisible(root)
 }
 # The quiescence window for a navigation: how long the page's load state
 # must hold still before pz_wait_for_navigation() proceeds. A commit in
@@ -414,6 +416,12 @@ stable_sample_js <- function(prop) {
 # mutated.
 wait_nav_reset <- function(ctx) {
   ctx$page$release_object_group()
+  # The inline css zoom dies with the document being left; its
+  # "applied" cache dies with it, and the settle point re-applies.
+  state <- attr(ctx$page, "paparazzi_device")
+  if (!is.null(state)) {
+    state$css_zoom <- NULL
+  }
   if (length(ctx$scope) == 0) {
     ctx
   } else {

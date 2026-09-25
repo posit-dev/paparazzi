@@ -111,6 +111,28 @@ test_that("css zoom keeps layout but breaks vh", {
   )
 })
 
+test_that("css zoom survives navigation, reload, and disabling", {
+  # Applied through pz_open()'s dots: the destination document must
+  # arrive zoomed, not just the about:blank that was current at apply.
+  page <- local_page(nav_fixture_url("a"), zoom = 2, zoom_method = "css")
+  expect_identical(js(page, "document.title"), "paparazzi nav A")
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "2")
+
+  pz_nav_goto(page, nav_fixture_url("b"))
+  expect_identical(js(page, "document.title"), "paparazzi nav B")
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "2")
+
+  pz_nav_reload(page)
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "2")
+
+  # zoom = 1 removes the effect, including for future documents.
+  pz_device(page, zoom = 1)
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1")
+  pz_nav_goto(page, nav_fixture_url("a"))
+  expect_identical(js(page, "document.title"), "paparazzi nav A")
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1")
+})
+
 test_that("zoom defaults to the viewport method", {
   page <- local_device_page()
   pz_device(page, width = 800, height = 600, scale = 2)

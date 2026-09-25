@@ -11,10 +11,11 @@
 #' * `zoom_method = "viewport"` (the default) shrinks the CSS viewport
 #'   and raises the device scale factor, so `vh` stays correct but
 #'   media queries can start (or stop) matching.
-#' * `zoom_method = "css"` applies a CSS `zoom` to the page instead:
-#'   layout and media queries are untouched, but `vh`-sized elements no
-#'   longer fit the viewport (a 50vh element covers the whole viewport
-#'   at zoom 2).
+#' * `zoom_method = "css"` applies a CSS `zoom` to the page instead --
+#'   on every document, so it survives navigation and reload: layout
+#'   and media queries are untouched, but `vh`-sized elements no longer
+#'   fit the viewport (a 50vh element covers the whole viewport at
+#'   zoom 2).
 #'
 #' `reduced_motion = TRUE` gives deterministic stills (animations stop);
 #' it's opt-in because it's usually wrong for videos.
@@ -196,6 +197,7 @@ device_state <- function(page) {
     state$base_height <- NULL
     state$overridden <- FALSE
     state$css_zoom <- NULL
+    state$css_script <- NULL
     state$color_scheme <- NULL
     state$reduced_motion <- NULL
     attr(page, "paparazzi_device") <- state
@@ -253,10 +255,15 @@ device_apply_override <- function(page, state) {
   invisible(page)
 }
 # The CSS-zoom method: one style property on <html>, everything else
-# untouched. Only touched when the desired zoom differs from the one we
-# applied (a user's own html zoom style is overwritten while active,
-# but never added or removed otherwise).
-device_apply_css_zoom <- function(page, state) {
+# untouched. The style dies with its document, so the zoom is carried
+# by a script CDP evaluates on every NEW document (registered while a
+# css zoom is active, removed when it disables) and an inline
+# application covers the current one, which the registration alone
+# never touches. The script guards on the top frame so iframes keep
+# their own layout. Only touched when the desired zoom differs from
+# the one in effect; a user's own html zoom style is overwritten
+# while active, but never added or removed otherwise.
+device_apply_css_zoom <- function(page, state, register = TRUE) {
   zoom <- state$zoom
   method <- state$zoom_method %||% "viewport"
   desired <- if (!is.null(zoom) && !isTRUE(zoom == 1) && identical(method, "css")) {
@@ -266,12 +273,81 @@ device_apply_css_zoom <- function(page, state) {
     return(invisible(page))
   }
   if (is.null(desired)) {
+    # Disable: the injected script goes away with the effect, so
+    # future documents stay at their own size too.
+    if (!is.null(state$css_script)) {
+      page$session$Page$removeScriptToEvaluateOnNewDocument(
+        identifier = state$css_script,
+        timeout_ = page$default_timeout
+      )
+      state$css_script <- NULL
+    }
     device_eval(page, "document.documentElement.style.removeProperty('zoom')")
   } else {
-    device_eval(page, paste0("document.documentElement.style.zoom = ", format(zoom, trim = TRUE, digits = 15)))
+    # Reapply after a navigation skips the registration: the script
+    # in place already encodes the desired zoom (only pz_device()
+    # changes the factor, and it re-registers).
+    if (register || is.null(state$css_script)) {
+      if (!is.null(state$css_script)) {
+        page$session$Page$removeScriptToEvaluateOnNewDocument(
+          identifier = state$css_script,
+          timeout_ = page$default_timeout
+        )
+      }
+      # The script only runs on documents committed while the Page
+      # domain is enabled; chromote auto-enables a domain on its
+      # first event listener and auto-disables it when the last one
+      # releases, so the enable is requested explicitly here to
+      # cover commits no listener is waiting for.
+      page$session$Page$enable(timeout_ = page$default_timeout)
+      state$css_script <- page$session$Page$addScriptToEvaluateOnNewDocument(
+        source = device_zoom_script(desired),
+        timeout_ = page$default_timeout
+      )$identifier
+    }
+    device_eval(
+      page,
+      paste0(
+        "document.documentElement.style.zoom = ",
+        format(desired, trim = TRUE, digits = 15)
+      )
+    )
   }
   state$css_zoom <- desired
   invisible(page)
+}
+# The script that carries a css zoom onto every new document. The
+# top-frame guard keeps iframes at their own layout. The script runs
+# before the document has an <html> element, so the application waits
+# for readyState to move past "loading" in that case.
+device_zoom_script <- function(zoom) {
+  paste0(
+    "if (window === window.top) {",
+    "var z = ", format(zoom, trim = TRUE, digits = 15), ";",
+    "if (document.documentElement) {",
+    "document.documentElement.style.zoom = z;",
+    "} else {",
+    "document.addEventListener('readystatechange', function() {",
+    "document.documentElement.style.zoom = z;",
+    "}, { once: true });",
+    "}",
+    "}"
+  )
+}
+# Reapply the css zoom on the document a navigation just settled on.
+# The injected script covers commits while the Page domain is enabled,
+# but chromote auto-disables it once its last event listener releases
+# (a released frameNavigated promise), and a commit in that window
+# runs no script -- so every paparazzi settle point re-applies the
+# inline zoom instead. wait_nav_reset() clears the cache slot first:
+# the inline style died with the outgoing document.
+device_css_reapply <- function(page) {
+  state <- attr(page, "paparazzi_device")
+  if (is.null(state)) {
+    return(invisible(FALSE))
+  }
+  device_apply_css_zoom(page, state, register = FALSE)
+  invisible(TRUE)
 }
 # Emulated media features. CDP replaces the whole features set on every
 # call (probed), so color scheme and reduced motion are tracked as one

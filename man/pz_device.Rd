@@ -65,10 +65,11 @@ The two zoom methods trade off differently:
 \item \code{zoom_method = "viewport"} (the default) shrinks the CSS viewport
 and raises the device scale factor, so \code{vh} stays correct but
 media queries can start (or stop) matching.
-\item \code{zoom_method = "css"} applies a CSS \code{zoom} to the page instead:
-layout and media queries are untouched, but \code{vh}-sized elements no
-longer fit the viewport (a 50vh element covers the whole viewport
-at zoom 2).
+\item \code{zoom_method = "css"} applies a CSS \code{zoom} to the page instead --
+on every document, so it survives navigation and reload: layout
+and media queries are untouched, but \code{vh}-sized elements no longer
+fit the viewport (a 50vh element covers the whole viewport at
+zoom 2).
 }
 
 \code{reduced_motion = TRUE} gives deterministic stills (animations stop);

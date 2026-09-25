@@ -78,6 +78,7 @@ pz_open <- function(
   }
   if (identical(wait, "load")) {
     wait_for_load(page, timeout = page$default_timeout)
+    device_css_reapply(page)
   }
 
   ok <- TRUE

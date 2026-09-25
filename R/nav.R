@@ -44,6 +44,11 @@ pz_nav_goto <- function(ctx, url, ..., wait = c("auto", "load", "shiny", "none")
     )
   }
   nav_wait_load(ctx$page, wait)
+  # The settle point for the css zoom: the injected script covers only
+  # commits made while the Page domain stayed enabled.
+  if (identical(wait, "load")) {
+    device_css_reapply(ctx$page)
+  }
   invisible(root)
 }
 #' @rdname pz_nav_goto
@@ -68,6 +73,7 @@ pz_nav_reload <- function(ctx, ..., wait = c("auto", "load", "shiny", "none")) {
     page$session$Page$reload(timeout_ = page$default_timeout)
     nav_await(page, navigated, what = "page reload")
     wait_for_load(page, timeout = page$default_timeout)
+    device_css_reapply(page)
   } else {
     page$session$Page$reload(timeout_ = page$default_timeout)
   }
@@ -84,6 +90,9 @@ pz_nav_back <- function(ctx, ...) {
   if (nav_history(ctx$page, -1)) {
     wait_for_load(ctx$page, timeout = ctx$page$default_timeout)
   }
+  # Runs at the history boundary too: the cache was cleared in
+  # wait_nav_reset(), and re-setting the same zoom is harmless.
+  device_css_reapply(ctx$page)
   invisible(root)
 }
 #' @rdname pz_nav_goto
@@ -97,6 +106,7 @@ pz_nav_forward <- function(ctx, ...) {
   if (nav_history(ctx$page, 1)) {
     wait_for_load(ctx$page, timeout = ctx$page$default_timeout)
   }
+  device_css_reapply(ctx$page)
   invisible(root)
 }
 # Resolve pz_open()'s wait vocabulary for navigation: auto -> load,
