@@ -19,6 +19,7 @@ Imports:
     jsonlite,
     later,
     pillar,
+    processx,
     promises,
     R6,
     rlang (>= 1.2.0),
