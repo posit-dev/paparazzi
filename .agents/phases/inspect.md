@@ -140,3 +140,12 @@ Fixture additions (inspect.html only): #insp-ghost/#insp-real pair
 commits, kata ref paparazzi#5wdj + roborev 1249 in each body; full
 `btw pkg test` green (dark-mode summary failure and chromote flakes
 excepted per known issues).
+
+- 2026-09-25 (review-fix round, roborev 1249): landed the three accepted
+  fixes — `:disabled` predicate (01bee8c), original-number outline badges
+  (694ddc6), best-effort overlay cleanup on failed captures (a4b9fcb) —
+  plus fixture/tests; suite green except the known dark-mode summary
+  failure (fixed on main as 09dc4f1). Next: the declined tibble-row
+  claim needs no code; recording task still owns inspect_recording_state()
+  and the persistent overlay host. Provisional: the enabled predicate
+  remains inspect-local until pz_expect_enabled() lands.
