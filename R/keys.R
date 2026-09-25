@@ -38,7 +38,7 @@ key_table <- list(
   ArrowUp = list(key = "ArrowUp", code = "ArrowUp", keyCode = 38L),
   ArrowRight = list(key = "ArrowRight", code = "ArrowRight", keyCode = 39L),
   ArrowDown = list(key = "ArrowDown", code = "ArrowDown", keyCode = 40L),
-  # The one named key that produces a character.
+  # Space and Enter are the named keys that produce a character.
   Space = list(key = " ", code = "Space", keyCode = 32L, text = " "),
   # The modifier keys are pressable keys too (pz_press(ctx, "Control")
   # presses and releases Control itself).

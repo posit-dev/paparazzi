@@ -410,7 +410,9 @@ test_that("a completed link navigation is caught once after the click", {
   page <- local_nav_page()
   clicked <- pz_click(page, "#fast-link")
   # Ensure the new document has already completed before starting the wait.
-  clicked |> pz_expect_text("B", target = "#page", match = "exact")
+  clicked |>
+    pz_expect_text("B", target = "#page", match = "exact") |>
+    pz_wait_for_js("document.readyState === 'complete'")
   reset <- pz_wait_for_navigation(clicked, timeout = 2)
   expect_length(reset$scope, 0)
   expect_match(pz_get_url(reset), "nav-b.html", fixed = TRUE)
