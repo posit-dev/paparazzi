@@ -11,6 +11,13 @@ local_outside_testthat <- function(env = parent.frame()) {
   withr::defer(do.call(Sys.setenv, as.list(old)), envir = env)
 }
 
+test_that("pz_expect_text orders match before target like value and attr", {
+  expect_identical(
+    names(formals(pz_expect_text)),
+    c("ctx", "text", "...", "match", "target", "not", "timeout")
+  )
+})
+
 test_that("pz_expect_exists passes and returns ctx invisibly", {
   page <- local_elements_page()
   res <- withVisible(pz_expect_exists(page, target = ".btn"))

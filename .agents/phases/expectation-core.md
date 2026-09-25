@@ -54,16 +54,16 @@ resolve primitive).
   - `pz_expect_visible(ctx, ..., target = NULL, not = FALSE, timeout = NULL)`
   - `pz_expect_hidden(...)` — exactly `pz_expect_visible(not = TRUE)`
     (a thin wrapper, per SPEC).
-  - `pz_expect_text(ctx, text, ..., target = NULL,
-    match = c("contains", "exact", "regex"), not = FALSE,
-    timeout = NULL)` — whitespace collapsed on both sides before
-    comparing (same rule as `has_text`). `text` length 1 applies to
+  - `pz_expect_text(ctx, text, ..., match = c("contains", "exact", "regex"),
+    target = NULL, not = FALSE, timeout = NULL)` — whitespace collapsed on both
+    sides before comparing (same rule as `has_text`). `text` length 1 applies to
     every match; length n requires exactly n matches and compares
     pairwise in order. `regex` matches against the collapsed element
     text (R `grepl`). Negated vector text passes only when NO element
     satisfies its pairwise expectation (the SPEC's "no match
     satisfies" applied per pair); a count != length(text) mismatch
     passes the negation vacuously.
+    Order aligned with value/attr during the docs API cross-check.
 - **Multi-match semantics** (SPEC table, pinned by tests):
   - exists: pass if count >= 1; `not`: pass if count == 0.
   - count: pass if count satisfies n/min/max; `not`: inverse.

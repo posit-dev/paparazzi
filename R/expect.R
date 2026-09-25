@@ -211,9 +211,9 @@ pz_expect_hidden <- function(
 #' @inheritParams pz_click
 #' @param text A character vector of expected text: length 1 applies to
 #'   every match, length `n` is compared pairwise in order.
-#' @inheritParams pz_expect_exists
 #' @param match How to compare `text`: `"contains"` (substring),
 #'   `"exact"`, or `"regex"` (an R regex matched with [grepl()]).
+#' @inheritParams pz_expect_exists
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
@@ -237,8 +237,8 @@ pz_expect_text <- function(
   ctx,
   text,
   ...,
-  target = NULL,
   match = c("contains", "exact", "regex"),
+  target = NULL,
   not = FALSE,
   timeout = NULL
 ) {
