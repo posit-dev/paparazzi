@@ -16,10 +16,10 @@ pz_app(app_dir, ..., envvars = NULL, shiny_options = list(), timeout = NULL)
 the app process, on top of the inherited environment.}
 
 \item{shiny_options}{Additional options for \code{\link[shiny:runApp]{shiny::runApp()}}, e.g.
-\code{list(test.mode = TRUE)}. \code{host} and \code{port} are managed by
-paparazzi: \code{host} defaults to \code{"127.0.0.1"}, and \code{port} (default
-\code{NULL}) picks a random free port. If startup fails because the
-port was taken, a new port is tried.}
+\code{list(test.mode = TRUE)}. \code{appDir} is reserved; use \code{app_dir} to select
+the app. \code{host} and \code{port} are managed by paparazzi: \code{host} defaults
+to \code{"127.0.0.1"}, and \code{port} (default \code{NULL}) picks a random free port.
+If startup fails because the port was taken, a new port is tried.}
 
 \item{timeout}{Seconds to wait for the app to start listening;
 \code{NULL} allows 10 seconds.}

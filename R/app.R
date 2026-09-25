@@ -20,10 +20,10 @@
 #' @param envvars Named character vector of environment variables set in
 #'   the app process, on top of the inherited environment.
 #' @param shiny_options Additional options for [shiny::runApp()], e.g.
-#'   `list(test.mode = TRUE)`. `host` and `port` are managed by
-#'   paparazzi: `host` defaults to `"127.0.0.1"`, and `port` (default
-#'   `NULL`) picks a random free port. If startup fails because the
-#'   port was taken, a new port is tried.
+#'   `list(test.mode = TRUE)`. `appDir` is reserved; use `app_dir` to select
+#'   the app. `host` and `port` are managed by paparazzi: `host` defaults
+#'   to `"127.0.0.1"`, and `port` (default `NULL`) picks a random free port.
+#'   If startup fails because the port was taken, a new port is tried.
 #' @param timeout Seconds to wait for the app to start listening;
 #'   `NULL` allows 10 seconds.
 #'
