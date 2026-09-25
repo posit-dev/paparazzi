@@ -32,6 +32,35 @@ test_that("pz_open waits for load by default", {
   expect_true(pz_js(page, "window.fixtureReady"))
 })
 
+test_that("new-session load waits anchor to the destination commit", {
+  skip_if_no_chrome()
+  blank <- chromote::ChromoteSession$new()
+  withr::defer(blank$close())
+  expect_identical(blank$Runtime$evaluate("document.readyState")$result$value, "complete")
+
+  url <- nav_fixture_url("slow")
+  await <- nav_await
+  commits <- character()
+  local_mocked_bindings(nav_await = function(page, p, what, ...) {
+    await(page, p, what, ...)
+    hist <- page$session$Page$getNavigationHistory()
+    commits <<- c(commits, hist$entries[[hist$currentIndex + 1]]$url)
+  })
+  for (wait in c("load", "auto")) {
+    pz_with_page(url, function(page) {
+      expect_identical(pz_js(page, "document.readyState"), "complete")
+    }, wait = wait, timeout = 5)
+  }
+  expect_identical(commits, rep(url, 2))
+})
+
+test_that("opening a same-document fragment returns without a new commit", {
+  skip_if_no_chrome()
+  pz_with_page("about:blank#fragment", function(page) {
+    expect_identical(pz_js(page, "location.href"), "about:blank#fragment")
+  }, wait = "load")
+})
+
 test_that("wait = 'none' and wait = 'load' both open", {
   for (w in c("none", "load", "auto")) {
     page <- local_page(wait = w)
