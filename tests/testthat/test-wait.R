@@ -406,6 +406,29 @@ test_that("pz_wait_for_navigation times out when nothing navigates", {
   expect_lt(elapsed, 5)
 })
 
+test_that("a completed link navigation is caught once after the click", {
+  page <- local_nav_page()
+  clicked <- pz_click(page, "#fast-link")
+  # Ensure the new document has already completed before starting the wait.
+  clicked |> pz_expect_text("B", target = "#page", match = "exact")
+  reset <- pz_wait_for_navigation(clicked, timeout = 2)
+  expect_length(reset$scope, 0)
+  expect_match(pz_get_url(reset), "nav-b.html", fixed = TRUE)
+  expect_error(
+    pz_wait_for_navigation(reset, timeout = 0.8),
+    class = "paparazzi_error_timeout"
+  )
+})
+
+test_that("a non-navigating action does not satisfy the navigation wait", {
+  page <- local_nav_page()
+  pz_click(page, "#scope-target")
+  expect_error(
+    pz_wait_for_navigation(page, timeout = 0.8),
+    class = "paparazzi_error_timeout"
+  )
+})
+
 test_that("pz_wait_for_navigation catches a navigation that starts after the wait", {
   page <- local_waits_page()
   # The redirect fires 100ms in: after the wait starts, well inside
