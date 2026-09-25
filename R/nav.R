@@ -13,12 +13,13 @@
 #'
 #' @inheritParams pz_click
 #' @param url The URL to navigate to (any scheme, including `file://`).
-#' @param wait What to wait for before returning: `"auto"` (the default)
-#'   resolves to `"load"` (`document.readyState == "complete"`);
-#'   `"shiny"` is not supported yet; `"none"` returns immediately.
-#'   [pz_nav_back()]/[pz_nav_forward()] take no `wait` but always settle
-#'   the same way (instantly at a history boundary, where nothing
-#'   navigates).
+#' @param wait What to wait for before returning: `"load"` waits for the
+#'   document to finish loading; `"shiny"` also waits for Shiny idle.
+#'   `"auto"` (the default) uses `"shiny"` when the page was opened on an
+#'   app handle or app path and lands on that app's origin, `"load"`
+#'   otherwise. `"none"` returns without settling. [pz_nav_back()]/
+#'   [pz_nav_forward()] take no `wait` but use `"auto"` after navigation
+#'   (instantly at a history boundary, where nothing navigates).
 #'
 #' @return The root context, invisibly.
 #'
@@ -29,11 +30,11 @@ pz_nav_goto <- function(ctx, url, ..., wait = c("auto", "load", "shiny", "none")
   check_context(ctx)
   check_dots_empty()
   check_string(url)
-  wait <- nav_wait_arg(wait)
+  wait <- arg_match(wait)
   root <- wait_nav_reset(ctx)
 
   page <- ctx$page
-  navigated <- if (identical(wait, "load")) {
+  navigated <- if (!identical(wait, "none")) {
     # A cross-document navigation can return from Page.navigate while
     # the outgoing document still reports readyState "complete", so
     # the readyState wait alone would settle on the old page before
@@ -51,7 +52,7 @@ pz_nav_goto <- function(ctx, url, ..., wait = c("auto", "load", "shiny", "none")
       class = "paparazzi_error_navigation"
     )
   }
-  if (identical(wait, "load")) {
+  if (!identical(wait, "none")) {
     # A same-document navigation (a URL fragment) never fires
     # frameNavigated, but its navigate response also carries no
     # loaderId while a cross-document one does -- so the anchor is
@@ -65,6 +66,7 @@ pz_nav_goto <- function(ctx, url, ..., wait = c("auto", "load", "shiny", "none")
     # The settle point for the css zoom: the injected script covers only
     # commits made while the Page domain stayed enabled.
     device_css_reapply(page)
+    nav_settle_shiny(page, wait, page$default_timeout)
   }
   invisible(root)
 }
@@ -74,11 +76,11 @@ pz_nav_goto <- function(ctx, url, ..., wait = c("auto", "load", "shiny", "none")
 pz_nav_reload <- function(ctx, ..., wait = c("auto", "load", "shiny", "none")) {
   check_context(ctx)
   check_dots_empty()
-  wait <- nav_wait_arg(wait)
+  wait <- arg_match(wait)
   root <- wait_nav_reset(ctx)
 
   page <- ctx$page
-  if (identical(wait, "load")) {
+  if (!identical(wait, "none")) {
     # A reload leaves the history index where it was, so the index
     # anchor used by back/forward can't settle this one. frameNavigated
     # fires on reloads, full navigations, and bfcache restores alike
@@ -91,6 +93,7 @@ pz_nav_reload <- function(ctx, ..., wait = c("auto", "load", "shiny", "none")) {
     nav_await(page, navigated, what = "page reload")
     wait_for_load(page, timeout = page$default_timeout)
     device_css_reapply(page)
+    nav_settle_shiny(page, wait, page$default_timeout)
   } else {
     page$session$Page$reload(timeout_ = page$default_timeout)
   }
@@ -106,6 +109,7 @@ pz_nav_back <- function(ctx, ...) {
 
   if (nav_history(ctx$page, -1)) {
     wait_for_load(ctx$page, timeout = ctx$page$default_timeout)
+    nav_settle_shiny(ctx$page, "auto", ctx$page$default_timeout)
   }
   # Runs at the history boundary too: the cache was cleared in
   # wait_nav_reset(), and re-setting the same zoom is harmless.
@@ -122,35 +126,25 @@ pz_nav_forward <- function(ctx, ...) {
 
   if (nav_history(ctx$page, 1)) {
     wait_for_load(ctx$page, timeout = ctx$page$default_timeout)
+    nav_settle_shiny(ctx$page, "auto", ctx$page$default_timeout)
   }
   device_css_reapply(ctx$page)
   invisible(root)
 }
-# Resolve pz_open()'s wait vocabulary for navigation: auto -> load,
-# shiny errors for now (the Shiny-integration task adds it), none
-# means the caller settles nothing.
-nav_wait_arg <- function(wait, call = caller_env()) {
-  wait <- arg_match(
-    wait,
-    values = c("auto", "load", "shiny", "none"),
-    error_call = call
-  )
-  if (identical(wait, "shiny")) {
-    cli::cli_abort(
-      '{.code wait = "shiny"} is not supported yet; use {.code wait = "load"} for now.',
-      class = "paparazzi_error_unsupported",
-      call = call
-    )
-  }
+# Called after the navigation's existing load settle, on the landed document.
+nav_settle_shiny <- function(page, wait, timeout) {
   if (identical(wait, "auto")) {
-    "load"
-  } else {
-    wait
+    private <- page$.__enclos_env__$private
+    app <- private$owned_app_ %||% private$shared_app_
+    if (is.null(app)) return(invisible(page))
+    # pz_app() URLs are root URLs ending in a slash.
+    app_origin <- sub("/$", "", app$url)
+    if (!identical(pz_js(page, "location.origin", timeout = timeout), app_origin)) {
+      return(invisible(page))
+    }
   }
-}
-nav_wait_load <- function(page, wait) {
-  if (identical(wait, "load")) {
-    wait_for_load(page, timeout = page$default_timeout)
+  if (!identical(wait, "load")) {
+    pz_wait_for_shiny_idle(page, timeout = timeout)
   }
   invisible(page)
 }

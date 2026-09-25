@@ -279,9 +279,11 @@ pz_wait_for_stable <- function(
 #' a stale set.
 #'
 #' @inheritParams pz_click
-#' @param wait What to wait for: `"auto"` resolves to `"load"` (the
-#'   document finishes loading, like [pz_open()]); `"none"` skips the
-#'   wait and only resets the scope.
+#' @param wait What to wait for: `"load"` settles the navigation;
+#'   `"shiny"` also waits for Shiny idle after load. `"auto"` uses
+#'   `"shiny"` only when the page was opened on an app handle or app path
+#'   and lands on that app's origin; otherwise it uses `"load"`.
+#'   `"none"` skips settling and only resets the scope.
 #' @param timeout Seconds before giving up; `NULL` uses the session
 #'   default.
 #'
@@ -298,7 +300,7 @@ pz_wait_for_stable <- function(
 pz_wait_for_navigation <- function(
   ctx,
   ...,
-  wait = c("auto", "load", "none"),
+  wait = c("auto", "load", "shiny", "none"),
   timeout = NULL
 ) {
   check_dots_empty()
@@ -309,10 +311,9 @@ pz_wait_for_navigation <- function(
   if (identical(wait, "none")) {
     return(invisible(wait_nav_reset(ctx)))
   }
-  # "auto" waits for what pz_open() does; other resolutions (shiny)
-  # arrive with the Shiny-integration task. Both phases share the
-  # budget: each gets the full timeout, like wait_for_stable's resolve
-  # and stability windows. The snapshot precedes them both: a complete,
+  # The load and settle phases each get the full timeout, like
+  # wait_for_stable's resolve and stability windows. The snapshot
+  # precedes them both: a complete,
   # settled page satisfies the settle check with nothing navigating,
   # so the wait must hold the identity of the document it started on
   # and only pass on a different document (a new timeOrigin) -- or on
@@ -326,6 +327,7 @@ pz_wait_for_navigation <- function(
     timeout = timeout,
     snapshot = snapshot
   )
+  nav_settle_shiny(ctx$page, wait, timeout)
   root <- wait_nav_reset(ctx)
   device_css_reapply(ctx$page)
   invisible(root)

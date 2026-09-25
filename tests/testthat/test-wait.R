@@ -456,7 +456,27 @@ test_that("pz_wait_for_navigation(wait = 'none') resets without waiting", {
 
 test_that("pz_wait_for_navigation validates its inputs", {
   page <- local_waits_page()
-  expect_error(pz_wait_for_navigation(page, wait = "shiny"), "auto")
   expect_error(pz_wait_for_navigation(page, extra = 1), "empty")
   expect_error(pz_wait_for_navigation(page, timeout = -1), "timeout")
+})
+
+test_that("explicit post-action navigation waits for Shiny output", {
+  app <- local_shiny_app(shiny_idle_fixture())
+  page <- local_nav_page()
+  pz_js(page, paste0("setTimeout(() => location.href = '", app$url, "', 100)"), await = FALSE)
+  pz_wait_for_navigation(page, wait = "shiny", timeout = 5)
+  expect_identical(shiny_idle_state(page)$text, "reactive ready")
+})
+
+test_that("post-action auto waits for app-backed Shiny but not a different origin", {
+  skip_if_no_shiny()
+  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  withr::defer(pz_close(page))
+  pz_js(page, "setTimeout(() => location.reload(), 100)", await = FALSE)
+  pz_wait_for_navigation(page, timeout = 5)
+  expect_identical(shiny_idle_state(page)$text, "reactive ready")
+
+  pz_js(page, "setTimeout(() => location.href = 'about:blank', 100)", await = FALSE)
+  pz_wait_for_navigation(page, timeout = 5)
+  expect_identical(pz_js(page, "location.href"), "about:blank")
 })
