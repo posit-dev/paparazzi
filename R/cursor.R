@@ -124,7 +124,6 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
 #' @export
 pz_cursor_leave <- function(ctx, side = "right") {
   check_context(ctx)
-  check_dots_empty()
   side <- parse_direction(side, valid = STAGE_SIDES, arg = "side")
   check_cursor_enabled(ctx)
   page <- ctx$page
@@ -134,8 +133,10 @@ pz_cursor_leave <- function(ctx, side = "right") {
   duration <- if (!is.null(cur$x)) {
     stage_glide_duration(c(x = cur$x, y = cur$y), point, page_stage(page)$cursor_speed)
   }
-  cur$off_frame <- side
   cursor_apply(ctx, point, duration = duration %||% 0)
+  # Set after cursor_apply(), which clears it: the cursor stays visible
+  # but off-frame, and the next action glides back in from this side.
+  cur$off_frame <- side
   invisible(ctx)
 }
 # The sides-only subset of the direction vocabulary, for pz_stage(enter
@@ -283,7 +284,8 @@ cursor_apply <- function(ctx, point, duration = 0, from = NULL, fade = FALSE) {
     pressed = FALSE,
     duration = if (recording) duration else 0,
     from = if (recording && !is.null(from)) unname(from),
-    fade = recording && fade
+    fade = recording && fade,
+    anim = recording
   )
   cursor_command(ctx, state)
   cur$x <- state$x
@@ -309,7 +311,8 @@ cursor_draw <- function(ctx, visible, pressed = FALSE) {
     visible = visible,
     shape = "auto",
     pressed = pressed,
-    duration = 0
+    duration = 0,
+    anim = stage_recording(ctx$page)
   ))
   cursor_register_init(ctx)
   invisible(ctx)
@@ -400,7 +403,11 @@ cursor_command_js <- r"(function(state) {
     ? 'transform ' + state.duration + 's cubic-bezier(0.42,0,0.58,1)'
     : 'none';
   glide.style.transform = 'translate(' + state.x + 'px,' + state.y + 'px)';
-  inner.style.transition = 'opacity 0.25s ease, transform 0.12s ease';
+  // Opacity/press transitions only run for animated (recording) states;
+  // a static draw must land at full opacity in the very next capture.
+  inner.style.transition = state.anim
+    ? 'opacity 0.25s ease, transform 0.12s ease'
+    : 'none';
   inner.style.opacity = state.visible ? '1' : '0';
   inner.style.transform = state.pressed ? 'scale(0.8)' : 'scale(1)';
   return true;
@@ -435,11 +442,19 @@ cursor_register_init <- function(ctx) {
     visible = cursor_visible(page) && !is.null(cur$x),
     shape = "auto",
     pressed = FALSE,
-    duration = 0
+    duration = 0,
+    anim = FALSE
   )
   json <- jsonlite::toJSON(state, auto_unbox = TRUE, null = "null")
+  # New-document scripts run before the document element exists, so the
+  # boot waits for it; the overlay then reappears at its last position.
+  source <- paste0(
+    "(function() { const boot = function() { (", cursor_command_js, ")(", json, "); };",
+    "if (document.documentElement) { boot(); }",
+    "else { document.addEventListener('DOMContentLoaded', boot, { once: true }); } })();"
+  )
   res <- session$Page$addScriptToEvaluateOnNewDocument(
-    source = paste0("(", cursor_command_js, ")(", json, ");"),
+    source = source,
     timeout_ = timeout
   )
   cur$init_id <- res$identifier

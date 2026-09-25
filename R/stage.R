@@ -228,6 +228,12 @@ stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
 # onto a nested scroller under the container center) falls back to the
 # instant application so the final scroll position is always exact.
 scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
+  # A wheel only lands on a container the cursor point is actually
+  # over; a scoped container outside the viewport is first brought into
+  # view (a no-op when it already is).
+  if (!is.null(scoped)) {
+    el_scroll_into_view(scoped, call = call)
+  }
   probe <- if (!is.null(scoped)) {
     els_values(scoped, wheel_container_js, call = call)
   } else {
@@ -334,8 +340,8 @@ wheel_container_js <- "function() {
     ? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }
     : container.getBoundingClientRect();
   return {
-    x: cr.left + cr.width / 2,
-    y: cr.top + cr.height / 2,
+    x: Math.min(Math.max(cr.left + cr.width / 2, 1), window.innerWidth - 1),
+    y: Math.min(Math.max(cr.top + cr.height / 2, 1), window.innerHeight - 1),
     top: container.scrollTop,
     left: container.scrollLeft,
     maxTop: container.scrollHeight - container.clientHeight,
@@ -381,8 +387,8 @@ wheel_probe_js <- "function() {
   dy = Math.min(Math.max(c.scrollTop + dy, 0), maxTop) - c.scrollTop;
   dx = Math.min(Math.max(c.scrollLeft + dx, 0), maxLeft) - c.scrollLeft;
   return {
-    x: cr.left + cr.width / 2,
-    y: cr.top + cr.height / 2,
+    x: Math.min(Math.max(cr.left + cr.width / 2, 1), window.innerWidth - 1),
+    y: Math.min(Math.max(cr.top + cr.height / 2, 1), window.innerHeight - 1),
     dx: dx,
     dy: dy
   };

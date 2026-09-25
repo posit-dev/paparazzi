@@ -1,0 +1,193 @@
+test_that("pz_stage merges settings onto the defaults and validates", {
+  page <- local_cursor_page()
+
+  expect_identical(page_stage(page), STAGE_DEFAULTS)
+
+  page |> pz_stage(cursor_speed = 800, typing_speed = 30, pause = 0.5)
+  stage <- page_stage(page)
+  expect_equal(stage$cursor_speed, 800)
+  expect_equal(stage$typing_speed, 30)
+  expect_equal(stage$pause, 0.5)
+  # Only supplied arguments change.
+  expect_null(stage$cursor)
+  expect_null(stage$enter)
+  expect_identical(stage$typing, "natural")
+
+  page |> pz_stage(enter = "left", typing = "instant", cursor = TRUE)
+  stage <- page_stage(page)
+  expect_identical(stage$enter, "left")
+  expect_identical(stage$typing, "instant")
+  expect_true(stage$cursor)
+  expect_equal(stage$cursor_speed, 800)
+
+  expect_error(pz_stage(page, cursor = "yes"), class = "rlang_error")
+  expect_error(pz_stage(page, cursor_speed = 0), class = "rlang_error")
+  expect_error(pz_stage(page, enter = "up"), class = "paparazzi_error_input")
+  expect_error(pz_stage(page, typing = "slow"), class = "rlang_error")
+  expect_error(pz_stage(page, typing_speed = -1), class = "rlang_error")
+  expect_error(pz_stage(page, pause = -1), class = "rlang_error")
+  expect_error(pz_stage(page, bogus = 1), class = "rlang_error")
+})
+
+test_that("natural typing is per-character while recording, instant otherwise", {
+  skip_if_no_av()
+  out <- withr::local_tempfile(fileext = ".mp4")
+
+  page <- local_cursor_page()
+  page |> pz_stage()
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  page |>
+    pz_type("otters", target = "#name") |>
+    pz_type("abc", target = "#bio") |>
+    pz_type("xy", target = "#edit")
+  page |> pz_record_stop()
+
+  expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
+  expect_equal(pz_js(page, "document.getElementById('bio').value"), "abc")
+  expect_equal(pz_js(page, "document.getElementById('edit').textContent"), "xy")
+  expect_equal(pz_js(page, "window.__log.inputs.name"), 6)
+  expect_equal(pz_js(page, "window.__log.inputs.bio"), 3)
+  expect_equal(pz_js(page, "window.__log.inputs.edit"), 2)
+
+  # typing = "instant" is one insertion even while recording.
+  page2 <- local_cursor_page()
+  page2 |> pz_stage(typing = "instant")
+  page2 |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page2 |> pz_type("otters", target = "#name")
+  page2 |> pz_record_stop()
+  expect_equal(pz_js(page2, "window.__log.inputs.name"), 1)
+  expect_equal(pz_js(page2, "document.getElementById('name').value"), "otters")
+
+  # Not recording: instant whatever the setting.
+  page3 <- local_cursor_page()
+  page3 |> pz_stage()
+  page3 |> pz_type("otters", target = "#name")
+  expect_equal(pz_js(page3, "window.__log.inputs.name"), 1)
+})
+
+test_that("smooth scrolling uses real wheel events while recording", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage()
+  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+
+  page |> pz_scroll(by = c(0, 600))
+  expect_equal(pz_js(page, "window.scrollY"), 600)
+  expect_true(pz_js(page, "window.__log.wheels") > 0)
+  expect_true(pz_js(page, "window.__log.wheelsTrusted"))
+
+  page |> pz_scroll(to = "bottom")
+  expect_equal(
+    pz_js(page, "window.scrollY"),
+    pz_js(page, "document.scrollingElement.scrollHeight - window.innerHeight")
+  )
+
+  # A scoped scroll wheels the scope's container, not the page.
+  wheels <- pz_js(page, "window.__log.wheels")
+  page |> pz_find("#scroller") |> pz_scroll(to = "bottom")
+  expect_equal(pz_js(page, "document.getElementById('scroller').scrollTop"), 650)
+  expect_true(pz_js(page, "window.__log.wheels") > wheels)
+
+  page |> pz_record_stop()
+})
+
+test_that("the auto-scroll before actions is the same staged wheel scroll", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage()
+  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |> pz_click("#below")
+  page |> pz_record_stop()
+
+  expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
+  expect_true(pz_js(page, "window.__log.wheels") > 0)
+  expect_true(pz_js(page, "window.scrollY") > 500)
+})
+
+test_that("the stage pause holds after each action only while recording", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(pause = 0.5)
+  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_click("#btn")
+  recorded <- proc.time()[["elapsed"]] - t0
+  page |> pz_record_stop()
+  expect_true(recorded >= 0.45)
+
+  page2 <- local_cursor_page()
+  page2 |> pz_stage(pause = 0.5)
+  page2 |> pz_click("#btn")
+  expect_equal(pz_js(page2, "window.__log.clicks"), 1)
+})
+
+test_that("recorded demo glides, presses, types, and scrolls on camera", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+
+  page |>
+    pz_stage(enter = "left") |>
+    pz_record_start(out, fps = 15, hold = c(0, 0.2), keep_frames = TRUE)
+  page |>
+    pz_click("#btn") |>
+    pz_type("otters", target = "#name") |>
+    pz_click("#below") |>
+    pz_record_stop()
+
+  # The final state is the chain's real work.
+  expect_equal(pz_js(page, "window.__log.clicks"), 1)
+  expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
+  expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
+  expect_equal(pz_js(page, "window.__log.inputs.name"), 6)
+  expect_true(pz_js(page, "window.__log.wheels") > 0)
+  # The auto cursor belonged to the recording and left with it.
+  expect_equal(cursor_overlay_state(page)[[1]], 0)
+
+  info <- recorded_video_info(out)
+  expect_true(info$duration >= 1.5)
+
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
+  frames <- list.files(frames_dir, full.names = TRUE)
+  expect_true(length(frames) >= 10)
+
+  # The glide: cursor ink in the button's band enters from the left
+  # (enter = "left") and travels to the button at x = 660.
+  inks <- lapply(frames, function(f) cursor_png_ink(page, f, band = c(290, 360)))
+  xs <- vapply(
+    inks,
+    function(ink) if (ink$count > 20) ink$x else NA_real_,
+    numeric(1)
+  )
+  xs <- xs[!is.na(xs)]
+  expect_true(length(xs) >= 2)
+  expect_true(min(xs) < 200)
+  expect_true(max(xs) > 550)
+
+  # The scroll: a fixed viewport point darkens as the gradient rises.
+  first_px <- cursor_png_pixel(page, frames[[1]], 200, 1000)
+  last_px <- cursor_png_pixel(page, frames[[length(frames)]], 200, 1000)
+  expect_true(last_px[[1]] < first_px[[1]] - 50)
+})
+
+test_that("without a recording the same chain runs straight to the final state", {
+  page <- local_cursor_page()
+
+  t0 <- proc.time()[["elapsed"]]
+  page |>
+    pz_stage(enter = "left") |>
+    pz_click("#btn") |>
+    pz_type("otters", target = "#name") |>
+    pz_click("#below")
+  elapsed <- proc.time()[["elapsed"]] - t0
+
+  expect_true(elapsed < 5)
+  expect_equal(pz_js(page, "window.__log.clicks"), 1)
+  expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
+  expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
+  # No staging happened: one insertion, no wheels, no cursor layer.
+  expect_equal(pz_js(page, "window.__log.inputs.name"), 1)
+  expect_equal(pz_js(page, "window.__log.wheels"), 0)
+  expect_null(cursor_overlay_state(page))
+})

@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>paparazzi cursor fixture</title>
+<style>
+  body { margin: 0; font-family: sans-serif; background: #fff; }
+  /* Inputs sit at the top; the wide band around y = 300 stays free of
+     dark content so recorded frames can locate the (near-black) cursor
+     ink by pixel scan. */
+  #name { position: absolute; left: 100px; top: 60px; width: 200px; font-size: 16px; }
+  #bio { position: absolute; left: 100px; top: 100px; width: 200px; height: 40px; font-size: 16px; }
+  #edit { position: absolute; left: 100px; top: 160px; width: 200px; height: 40px; font-size: 16px; border: 1px solid #ccc; }
+  /* #plain and #btn share the clean glide band at y = 300. */
+  #plain { position: absolute; left: 100px; top: 300px; width: 120px; height: 44px; background: #eee; }
+  #btn { position: absolute; left: 600px; top: 300px; width: 120px; height: 44px;
+         background: steelblue; color: #fff; border: 0; border-radius: 6px;
+         font-size: 16px; cursor: pointer; }
+  #scroller { position: absolute; left: 450px; top: 60px; width: 200px; height: 150px;
+              overflow: auto; border: 2px solid steelblue; }
+  #scroller > div { height: 800px; background: linear-gradient(#efe, #cfc); }
+  /* The gradient darkens the viewport as the page scrolls, so frames
+     show the scroll position at a fixed viewport point. */
+  #spacer { position: absolute; top: 400px; left: 0; width: 100%; height: 2200px;
+            background: linear-gradient(#ffffff, #1e3a8a); }
+  #below { position: absolute; top: 2400px; left: 600px; width: 120px; height: 44px;
+           background: steelblue; color: #fff; border: 0; cursor: pointer; }
+</style>
+</head>
+<body>
+<input id="name" type="text">
+<textarea id="bio"></textarea>
+<div id="edit" contenteditable="true"></div>
+<div id="plain"></div>
+<button id="btn">Go</button>
+<div id="scroller"><div>inner</div></div>
+<div id="spacer"></div>
+<button id="below">Below</button>
+<script>
+window.__log = { clicks: 0, belowClicks: 0, wheels: 0, wheelsTrusted: true,
+                 inputs: { name: 0, bio: 0, edit: 0 } };
+document.getElementById("btn").addEventListener("click", () => window.__log.clicks++);
+document.getElementById("below").addEventListener("click", () => window.__log.belowClicks++);
+for (const id of ["name", "bio", "edit"]) {
+  document.getElementById(id).addEventListener("input", () => window.__log.inputs[id]++);
+}
+window.addEventListener("wheel", (e) => {
+  window.__log.wheels++;
+  if (!e.isTrusted) window.__log.wheelsTrusted = false;
+}, { passive: true });
+</script>
+</body>
+</html>
