@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Late Shiny initialization</title></head>
+<body>
+<script>
+  window.Shiny = {};
+  // The idle wait only uses jQuery's document event registration/removal.
+  window.jQuery = (target) => ({
+    on(events, handler) {
+      events.split(' ').forEach((event) => target.addEventListener(event, handler));
+    },
+    off(events, handler) {
+      events.split(' ').forEach((event) => target.removeEventListener(event, handler));
+    }
+  });
+</script>
+</body>
+</html>

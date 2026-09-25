@@ -21,7 +21,8 @@ default.}
 Waits for the Shiny connection, for \verb{<html>} to lose \code{shiny-busy}, and
 for every \code{.recalculating} output to finish. All three conditions must
 hold continuously for at least 200ms, including brief busy/recalculating
-transitions. A page without Shiny errors instead of waiting.
+transitions. A page without the Shiny global errors instead of waiting;
+a page whose Shiny app never connects times out.
 }
 \seealso{
 \code{\link[=pz_open]{pz_open()}}

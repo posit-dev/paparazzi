@@ -21,7 +21,8 @@ pz_wait <- function(ctx, seconds) {
 #' Waits for the Shiny connection, for `<html>` to lose `shiny-busy`, and
 #' for every `.recalculating` output to finish. All three conditions must
 #' hold continuously for at least 200ms, including brief busy/recalculating
-#' transitions. A page without Shiny errors instead of waiting.
+#' transitions. A page without the Shiny global errors instead of waiting;
+#' a page whose Shiny app never connects times out.
 #'
 #' @inheritParams pz_wait_for_js
 #' @return `ctx`, invisibly.
@@ -35,7 +36,7 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
   remaining <- function() as.numeric(difftime(deadline, Sys.time(), units = "secs"))
   wait_for_load(ctx$page, timeout = timeout)
   if (!isTRUE(pz_js(
-    ctx, "!!window.Shiny?.shinyapp", timeout = max(0.1, remaining())
+    ctx, "!!window.Shiny", timeout = max(0.1, remaining())
   ))) {
     cli::cli_abort(
       "This is not a Shiny page; {.fn pz_wait_for_shiny_idle} requires a Shiny app.",

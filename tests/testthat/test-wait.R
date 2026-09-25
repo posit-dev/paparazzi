@@ -134,6 +134,29 @@ test_that("Shiny idle deadline cleans page listeners and observer", {
   expect_no_error(pz_wait_for_shiny_idle(page, timeout = 2))
 })
 
+test_that("Shiny idle waits for a late shinyapp after the Shiny global loads", {
+  skip_if_no_chrome()
+  page <- local_page(test_path("fixtures", "shiny-late-init.html"))
+  pz_js(page, paste0(
+    "setTimeout(() => {",
+    "  Shiny.shinyapp = {$socket: {readyState: WebSocket.OPEN}};",
+    "  document.dispatchEvent(new Event('shiny:connected'));",
+    "}, 150)"
+  ))
+  expect_no_error(pz_wait_for_shiny_idle(page, timeout = 2))
+  expect_true(pz_js(page, "!!Shiny.shinyapp"))
+})
+
+test_that("Shiny global without an app times out waiting for idle", {
+  skip_if_no_chrome()
+  page <- local_page(test_path("fixtures", "shiny-late-init.html"))
+  expect_error(
+    pz_wait_for_shiny_idle(page, timeout = 0.35),
+    "Timed out.*waiting for Shiny idle",
+    class = "paparazzi_error_timeout"
+  )
+})
+
 test_that("Shiny idle on non-Shiny pages fails clearly", {
   page <- local_waits_page()
   expect_error(pz_wait_for_shiny_idle(page, timeout = 1), "not a Shiny page", class = "paparazzi_error_unsupported")

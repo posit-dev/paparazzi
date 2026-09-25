@@ -42,6 +42,10 @@ Deterministic tests first: on an already-idle fixture, schedule a brief html bus
 
 Signed off: teammate-3, before tests and feature code, paparazzi#njfj.
 
+## g6xa amendment
+
+The post-load gate is the Shiny global, not `shinyapp`. A late `shinyapp` assignment is picked up by the existing `shiny:connected` listener after the socket opens; a page with the global but no app reaches the idle timeout. No change to the open/init window or the idle promise.
+
 ## njfj handoff
 
 - Landed: one awaited browser Promise replaces R sampled Shiny hold, tracks socket and Shiny events plus relevant DOM mutations, drains pending records at expiry, and removes observer/listeners/timers on success, browser deadline, or pagehide. Existing open routing, load check, non-Shiny error, and shared R timeout budget remain unchanged.
