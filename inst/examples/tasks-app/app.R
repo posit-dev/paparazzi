@@ -2,6 +2,7 @@ library(shiny)
 
 ui <- fluidPage(
   title = "Tasks",
+  tags$style("body { max-width: 36rem; margin: 2rem auto; }"),
   tags$h1("Tasks"),
   textInput("title", "New task", placeholder = "What needs doing?"),
   selectInput("priority", "Priority", c("low", "normal", "high"), "normal"),
