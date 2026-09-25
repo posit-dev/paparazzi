@@ -273,8 +273,18 @@ pz_record <- function(ctx, path, code, ...) {
   expr <- substitute(code)
   env <- parent.frame()
   pz_record_start(ctx, path, ...)
-  withr::defer(pz_record_stop(ctx))
-  eval(expr, env)
+  # Stop on any exit; an error from the block wins over a stop error
+  # (e.g. a run that failed before the first frame was captured).
+  code_error <- NULL
+  withr::defer({
+    stop_error <- tryCatch(pz_record_stop(ctx), error = function(e) e)
+    if (!is.null(code_error)) {
+      stop(code_error)
+    } else if (inherits(stop_error, "error")) {
+      stop(stop_error)
+    }
+  })
+  tryCatch(eval(expr, env), error = function(e) code_error <<- e)
   invisible(ctx)
 }
 # The recorder state lives in the page's reserved private$recorder_

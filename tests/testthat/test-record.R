@@ -160,6 +160,18 @@ test_that("an immediate stop still writes a one-frame video", {
   expect_gte(recorded_video_info(out)$frames, 1)
 })
 
+test_that("an immediate block error is not masked by the stop", {
+  page <- local_record_page()
+  skip_if_no_av()
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  expect_error(
+    pz_record(page, out, stop("boom")),
+    "boom",
+    class = "simpleError"
+  )
+})
+
 test_that("closing the page tears down the recorder on the next tick", {
   page <- local_record_page()
   skip_if_no_av()
