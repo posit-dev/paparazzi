@@ -46,12 +46,16 @@ library(paparazzi)
 page <- pz_open(pz_example("tasks"), width = 600, height = 480, color_scheme = "light")
 
 page |>
-  pz_record("man/figures/README-add-task.gif", scale = 0.6, {
+  pz_record("add-task.gif", scale = 0.6, {
     page |>
       pz_type("Buy milk", target = "#task-title") |>
       pz_click("#add-task") |>
       pz_expect_text("Buy milk", target = pz_loc(".task-title", which = "first"))
   })
+```
+
+```{r, include = FALSE}
+file.rename("add-task.gif", "man/figures/README-add-task.gif")
 ```
 
 <img src="man/figures/README-add-task.gif" alt="A cursor moves to the task form, types &quot;Buy milk&quot;, and clicks Add. After a moment, &quot;Buy milk&quot; appears at the top of the task list." />
@@ -66,9 +70,13 @@ You can also narrow a chain to part of the page. `pz_find()` makes the matched e
 page |>
   pz_find(pz_loc(".task", has_text = "dentist")) |>
   pz_click(".task-done") |>
-  pz_screenshot("man/figures/README-done.png", frame = pz_frame(pad = 8))
+  pz_screenshot("done.png", frame = pz_frame(pad = 8))
 
 pz_close(page)
+```
+
+```{r, include = FALSE}
+file.rename("done.png", "man/figures/README-done.png")
 ```
 
 <img src="man/figures/README-done.png" alt="The &quot;Book dentist appointment&quot; task, crossed out." />

@@ -50,7 +50,7 @@ library(paparazzi)
 page <- pz_open(pz_example("tasks"), width = 600, height = 480, color_scheme = "light")
 
 page |>
-  pz_record("man/figures/README-add-task.gif", scale = 0.6, {
+  pz_record("add-task.gif", scale = 0.6, {
     page |>
       pz_type("Buy milk", target = "#task-title") |>
       pz_click("#add-task") |>
@@ -80,7 +80,7 @@ inside it. Here we mark one task as done and take a screenshot of it:
 page |>
   pz_find(pz_loc(".task", has_text = "dentist")) |>
   pz_click(".task-done") |>
-  pz_screenshot("man/figures/README-done.png", frame = pz_frame(pad = 8))
+  pz_screenshot("done.png", frame = pz_frame(pad = 8))
 
 pz_close(page)
 ```
