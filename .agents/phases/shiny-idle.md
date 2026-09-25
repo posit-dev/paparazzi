@@ -2,7 +2,7 @@
 
 Source: .agents/SPEC.md, Sessions and apps / Shiny idle; base main 54f0741.
 
-## Mechanism and ownership
+## Initial mechanism and ownership (sampled hold, superseded by njfj below)
 
 - Shiny's `shiny:connected` fires synchronously in the WebSocket `onopen` callback, after the socket changes to OPEN. A post-navigation listener misses events that fired during `pz_open()`. Sample the live Shiny socket (`window.Shiny.shinyapp.$socket.readyState === WebSocket.OPEN`) instead: it is durable evidence of the connected state across the listener race. Require this state continuously through the 200ms hold; by the next poll after an OPEN sample the onopen callback has fired. Do not install listeners in the init/restore window, add flags, or alter page state.
 - After document load, a page lacking `Shiny.shinyapp` is not a Shiny page: fail immediately with a clear classed error, both in the direct wait and explicit `pz_open(wait = 'shiny')`. Poll the trio (open connection, no `shiny-busy` on html, zero `.recalculating`) in a single JS sample and reset the stable-since timestamp on any false sample. The existing `pz_poll()` pumps the child loop at 100ms intervals and enforces the session/default or per-call timeout; no new timer mechanism. Window must finish within the same timeout budget.
