@@ -570,10 +570,16 @@ record_capture <- function(rec, page, vt) {
     vt = vt,
     file = file.path(rec$frames_dir, sprintf("frame-%06d.png", index))
   )
+  # Both stages share one timeout budget, the same budget
+  # pz_record_stop() allows an in-flight capture to settle.
+  deadline <- Sys.time() + page$default_timeout
+  remaining <- function() {
+    max(0.1, as.numeric(difftime(deadline, Sys.time(), units = "secs")))
+  }
   tryCatch(
     page$session$Page$getLayoutMetrics(
       wait_ = FALSE,
-      timeout_ = page$default_timeout,
+      timeout_ = remaining(),
       callback_ = function(metrics) {
         tryCatch({
           v <- metrics$cssVisualViewport
@@ -589,7 +595,7 @@ record_capture <- function(rec, page, vt) {
             clip = clip,
             fromSurface = TRUE,
             wait_ = FALSE,
-            timeout_ = page$default_timeout,
+            timeout_ = remaining(),
             callback_ = function(res) record_frame_done(rec, res = res),
             error_ = function(err) record_frame_done(rec, err = err)
           )
