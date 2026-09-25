@@ -29,13 +29,17 @@ choices and session handoffs for recording only.
   scheduled when stop runs fires once, sees the inactive recorder, and
   does not re-arm). A tick does nothing but re-arm when `paused` or
   when `in_flight` -- that skip is the SPEC's in-flight guard, the only
-  ordering flag. Captures are ASYNC:
-  `session$Page$captureScreenshot(format = "png", fromSurface = TRUE,
-  wait_ = FALSE, timeout_ = page$default_timeout, callback_ =, error_
-  =)`, so `synchronize()` is never nested inside a callback; the
-  `timeout_` promise rejection clears `in_flight` if Chrome wedges.
-  `in_flight` is set at issue and cleared in `callback_`/`error_`,
-  which chromote invokes when the child loop pumps. The whole tick
+  ordering flag. Captures are ASYNC: `record_capture()` chains
+  `session$Page$getLayoutMetrics(wait_ = FALSE, timeout_ =,
+  callback_ =, error_ =)` into
+  `session$Page$captureScreenshot(format = "png", clip = current
+  cssVisualViewport in document coordinates with scale = 1,
+  fromSurface = TRUE, wait_ = FALSE, timeout_ =, callback_ =,
+  error_ =)`. `in_flight` stays set through both calls; callback and
+  timeout errors clear it through `record_frame_done()`. This avoids
+  the DPR-2 input-coordinate mismatch seen with un-clipped surface
+  captures, without changing input/capture ordering. `synchronize()`
+  is never nested inside a callback. The whole tick
   body is wrapped in tryCatch: callback errors must not escape into an
   unrelated `run_now()`; failures increment `n_errors` and keep the
   first condition. `page$close()` tears the recorder down

@@ -8,17 +8,17 @@ Reproduced with `pz_open('/tmp/v56x/tasks.html', width = 800, height = 600)`, a 
 
 Critically, pre-scrolling the button **before** starting the recording still missed on 4 of 6 runs. This rules out a stale rect caused by the staged scroll. The failure appears to be intermittent CDP input coordinate scaling during recording (possibly concurrent screenshot capture), not the ordering of scroll and point measurement. That inference needs investigation; the event log establishes the mismatch, not its underlying browser cause.
 
-## Fix and tests
+## Initial diagnosis (before authorization)
 
-No fix or red-first test was built. Moving point measurement after the scroll cannot correct a point that was already correct when CDP mapped the press to half its coordinates. Correcting the mismatch may require changes to the recorder/capture or input dispatch pipeline, outside the pre-approved ordering change. Stop for direction rather than adding a timer, queue, ordering flag, init/restore change, or guard. A future regression test should use a small below-fold button fixture at a viewport where halved coordinates hit BODY, assert a recorded click reaches the button, and check `pz_hover()` / targeted `pz_type()` because they share `el_pointer_point()` and mouse dispatch. The existing target-visible/non-empty actionability check does not hit-test the final press location.
+No fix or red-first test was built at this stage. Moving point measurement after the scroll cannot correct a point that was already correct when CDP mapped the press to half its coordinates. Correcting the mismatch may require changes to the recorder/capture or input dispatch pipeline, outside the pre-approved ordering change. Stop for direction rather than adding a timer, queue, ordering flag, init/restore change, or guard. A future regression test should use a small below-fold button fixture at a viewport where halved coordinates hit BODY, assert a recorded click reaches the button, and check `pz_hover()` / targeted `pz_type()` because they share `el_pointer_point()` and mouse dispatch. The existing target-visible/non-empty actionability check does not hit-test the final press location.
 
 Baseline targeted suite (`testthat::test_local(filter = "record|actions|cursor|stage")`): FAIL 0, WARN 0, SKIP 0, PASS 431. No post-fix run applies.
 
-## Handoff
+## Initial handoff (superseded by the implementation below)
 
 Landed: diagnosis and reproduction evidence only; no production or test changes.
 Next: decide whether to authorize investigation of CDP coordinate mapping during concurrent recording capture, then add a red-first fixture and fix.
-Provisional: screenshot/input concurrency is a hypothesis, not proven; scroll/rect ordering is ruled out by the pre-scroll reproduction.
+Provisional: screenshot/input concurrency was a hypothesis; scroll/rect ordering was ruled out by the pre-scroll reproduction.
 
 ## Follow-up diagnosis: DPR-2 screenshot/input interaction (2026-09-25)
 
@@ -45,8 +45,22 @@ In the first run of the 30-fps baseline, for example, the first press was issued
 
 A regression should run at scale 2 with above- and below-fold targets while recording, assert actual `mousedown` coordinates/targets (not just no error), and exercise both unframed and framed recording. Add an independent video frame-content/dimensions check if capture parameters change. A final-point DOM hit-test is useful to detect some misses but cannot correct Chrome's remapping of a correctly computed point.
 
-## Handoff update
+## Investigation handoff (superseded by the implementation below)
 
 Landed: evidence and options only; no package code or tests changed.
 Next: obtain human choice/sign-off for the capture strategy (mandatory if input/capture ordering is proposed), then implement a red-first DPR-2 regression and verify frame fidelity.
-Provisional: explicit scroll-aware viewport clipping is promising on this Chrome build, but viewport/zoom/frame behavior remains unproven.
+Provisional: explicit scroll-aware viewport clipping was promising; viewport/zoom/frame behavior needed verification.
+
+## Implementation: current viewport clip per capture
+
+Signed off: orchestrator (capture-parameter fix; no ordering mechanism)
+
+`record_capture()` now keeps the existing single `in_flight` slot occupied through an asynchronous `Page.getLayoutMetrics` followed by an asynchronous `Page.captureScreenshot`. Each capture uses `cssVisualViewport`'s `pageX`, `pageY`, `clientWidth`, and `clientHeight`, clamps negative origins as `clip_viewport()` does, and supplies `scale = 1` and `fromSurface = TRUE`. The capture retains the default `captureBeyondViewport = FALSE`: enabling it was not pixel-identical in the scroll experiment. Both CDP stages use the page timeout and send errors to `record_frame_done()` for the recorder's existing error tally. Stop-time captures follow the same path. No input dispatch, timers, queues, or ordering flags changed. The still screenshot path retains its synchronous `clip_viewport()`/`captureBeyondViewport = TRUE` behavior.
+
+The new recording tests failed on the old code: 8 alternating above/below-fold clicks mostly reached BODY, and 8 framed clicks mostly missed. With the clip, both page-side `mousedown` logs contain exactly the target sequence. Kept PNGs remain 1280 × 1120 for a 640 × 560 viewport at DPR 2, including framed recordings; the video crop remains at encode time. Additional captured-PNG checks verify horizontal and vertical scroll (red background changes to green at the scrolled origin), CSS zoom and viewport zoom at factor 2, and a mid-recording resize from 640 × 560 to 800 × 600 (new frames 1600 × 1200). The final targeted run (`record|actions|cursor|stage|screenshot|frame`) reported FAIL 0, WARN 0, SKIP 0, PASS 891. An earlier targeted run reported FAIL 1, WARN 0, SKIP 0, PASS 890: the resize test sampled a still-in-flight pre-resize capture; polling for the first resized frame fixed the test. A separate `record` run hit a transient `Target.createTarget` timeout (FAIL 1, WARN 0, SKIP 0, PASS 362); its serial rerun passed (FAIL 0, WARN 0, SKIP 0, PASS 371).
+
+## Final handoff
+
+Landed: red-first click regressions and per-capture async visual viewport clip, with zoom/scroll/resize/frame PNG checks.
+Next: orchestrator may review/merge; this branch is not merged or pushed.
+Provisional: the precise Chrome internal screenshot/input race remains unknown; the tested clip avoids it on this build.
