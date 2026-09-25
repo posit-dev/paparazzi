@@ -89,12 +89,21 @@ test_that("Shiny idle resets the hold on Shiny connection events", {
   page <- pz_open(shiny_idle_fixture(), wait = "shiny")
   withr::defer(pz_close(page))
   pz_js(page, paste0(
-    "window.__idleEventEnd = null;",
+    "window.__idleEventEnd = null; window.__idleEventArmed = false;",
+    "window.__idleQuery = document.querySelector;",
+    "document.querySelector = function(selector) {",
+    "const result = window.__idleQuery.call(this, selector);",
+    "if (selector === '.recalculating' && !window.__idleEventArmed) {",
+    "window.__idleEventArmed = true;",
     "setTimeout(() => window.jQuery(document).trigger('shiny:disconnected'), 35);",
     "setTimeout(() => { window.jQuery(document).trigger('shiny:connected');",
-    "window.__idleEventEnd = performance.now(); }, 65);"
+    "window.__idleEventEnd = performance.now(); }, 65);",
+    "}",
+    "return result; };"
   ))
+  withr::defer(pz_js(page, "document.querySelector = window.__idleQuery"))
   pz_wait_for_shiny_idle(page, timeout = 3)
+  expect_true(pz_js(page, "window.__idleEventArmed"))
   expect_true(pz_js(page, "window.__idleEventEnd !== null"))
   expect_gte(pz_js(page, "performance.now() - window.__idleEventEnd"), 200)
 })
