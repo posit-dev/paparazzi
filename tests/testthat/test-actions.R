@@ -969,3 +969,16 @@ test_that("pz_drag review fixes: NULL to, uppercase draggable, viewport", {
     class = "paparazzi_error_target"
   )
 })
+
+test_that("pz_drag errors when the destination hides after the source's scroll", {
+  page <- local_advanced_page()
+  # The fixture hides #vanishing-zone the moment #tall-bottom is
+  # scrolled into view, so the final destination probe fails; the
+  # drag errors instead of dropping at the zone's earlier point.
+  expect_error(
+    pz_drag(page, "#tall-bottom", "#vanishing-zone"),
+    class = "paparazzi_error_target"
+  )
+  # Nothing was dispatched: the error fires before any press.
+  expect_false("mousedown" %in% adv_log_types(adv_log(page)))
+})

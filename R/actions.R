@@ -1202,6 +1202,18 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
         )
       }
       to_point <- drop
+    } else {
+      # The source's scroll hid or emptied the destination: its
+      # earlier point is stale, so dropping there lands on whatever
+      # moved in -- a failed final probe is a non-actionable
+      # destination, not a fall-through.
+      cli::cli_abort(
+        c(
+          "The drag destination is no longer visible with a non-empty box after bringing the source into view.",
+          i = "Both endpoints must stay actionable at once, like a real drag; scroll or scope so they do."
+        ),
+        class = "paparazzi_error_target"
+      )
     }
   }
 

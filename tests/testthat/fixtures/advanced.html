@@ -27,6 +27,10 @@
        on opposite sides of the tall spacer below can't share one
        viewport, and neither can a real user's single drag. -->
   <div id="dragbox">drag me</div>
+  <!-- A destination that disappears the moment the source below the
+       fold is scrolled into view: the final destination probe must
+       fail the drag instead of dropping at the zone's stale point. -->
+  <div id="vanishing-zone">vanishing destination</div>
   <div id="draggable" draggable="true">html5 drag me</div>
   <div id="draggable-uc" draggable="TRUE">uppercase drag me</div>
   <div id="dropzone">drop here</div>
@@ -101,6 +105,19 @@
       e.preventDefault();
       zone.textContent = "got:" + e.dataTransfer.getData("text/plain");
     });
+
+    // #vanishing-zone hides exactly when #tall-bottom is scrolled
+    // into view -- synchronously, by wrapping the scrollIntoView the
+    // drag pipeline uses, so the final probe's read can't race a
+    // scroll event. The real scroll still runs first.
+    var vanish = document.getElementById("vanishing-zone");
+    var realScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function () {
+      realScrollIntoView.apply(this, arguments);
+      if (this.id === "tall-bottom") {
+        vanish.style.display = "none";
+      }
+    };
   </script>
 </body>
 </html>
