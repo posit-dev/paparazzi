@@ -19,4 +19,4 @@ Signed off by teammate-1, 2026-09-25, before code changes. Requirements: `.agent
 - Prepared before release: issue claimed and branch stamped; no production code or tests run during main baseline. Coordinator then reported main `btw pkg test` green (1974 passes) and released implementation.
 - Red: `Rscript -e 'testthat::test_local(filter = "get|actions", reporter = "summary")'` failed at `pz_get_text(1)` and `action_elements(1, NULL)` with the raw `ctx$scope` error (exit 1). The other assertions in those tests were behind the first failures.
 - Green: after adding `check_context()` before `scope_top()` in `scope_root()`, `Rscript -e 'testthat::test_local(filter = "get|actions|scope", reporter = "summary")'` passed (exit 0). No full suite run on the task branch.
-- Next: one scoped conventional commit and kata evidence handoff; coordinator owns main gate. No merge, review request, issue close or push here.
+- Landed: `85f4fa2` merged as `3bd111a`. Independent targeted `btw pkg test -f 'get|actions|scope'` passed (404); main `btw pkg test` passed (1978). Roborev 1274 found no issues and is closed; `paparazzi#dbzt` is closed with evidence.
