@@ -767,7 +767,7 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
     # scroll, so it can't shift back). Both endpoints must then share
     # the viewport -- a real drag can't span two screens of a tall
     # page, and a drop dispatched off-screen lands on nothing.
-    to_point <- el_pointer_point(ctx, dest)
+    to_point <- el_actionable_point(ctx, dest)
     from <- el_pointer_point(ctx, found$els)
     probe <- els_values(dest, dest_point_js)
     if (isTRUE(probe$visible) && probe$width > 0 && probe$height > 0) {
@@ -926,6 +926,12 @@ format_pointer_blocker <- function(blocker) {
 # scrolls first, then probes. The scroll and the post-poll cursor move
 # are the staging seams (stage_scroll_into_view(), stage_move_cursor()).
 el_pointer_point <- function(ctx, els, call = caller_env()) {
+  point <- el_actionable_point(ctx, els, call = call)
+  stage_move_cursor(ctx, point)
+  point
+}
+
+el_actionable_point <- function(ctx, els, call = caller_env()) {
   point <- NULL
   blocker <- NULL
   timeout <- ctx$page$default_timeout
@@ -965,7 +971,6 @@ el_pointer_point <- function(ctx, els, call = caller_env()) {
       )
     }
   )
-  stage_move_cursor(ctx, point)
   point
 }
 

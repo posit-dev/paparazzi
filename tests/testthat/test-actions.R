@@ -1067,6 +1067,35 @@ test_that("pz_drag moves a mouse-dragged element onto the destination", {
   expect_false("dragstart" %in% adv_log_types(log))
 })
 
+test_that("pz_drag moves the cursor to the source before the destination", {
+  page <- local_advanced_page()
+  center <- function(selector) {
+    unlist(pz_js(
+      page,
+      paste0(
+        "(() => { const r = document.querySelector('",
+        selector,
+        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+      )
+    ))
+  }
+  source <- center("#dragbox")
+  destination <- center("#dropzone")
+  seen <- list()
+  local_mocked_bindings(
+    stage_move_cursor = function(ctx, point) {
+      seen <<- c(seen, list(point))
+      invisible(ctx)
+    }
+  )
+
+  pz_drag(page, "#dragbox", to = "#dropzone")
+
+  expect_false(isTRUE(all.equal(source, destination, check.attributes = FALSE)))
+  expect_equal(unname(seen[[1]]), unname(source))
+  expect_equal(length(seen), 1L)
+})
+
 test_that("pz_drag drops at a by offset from the source", {
   page <- local_advanced_page()
   before <- pz_js(
