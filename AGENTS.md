@@ -25,6 +25,15 @@
    full `btw pkg test` suite runs once on main as the merge gate —
    integration breaks (internal-API signature changes across files)
    surface there, not in filtered runs.
+1. **Serialize Chrome-heavy test runs with `.agents/chrome-lock.sh`.**
+   Wrap every `test_local()` and `btw pkg test` run in it, for example
+   `.agents/chrome-lock.sh Rscript -e 'testthat::test_local(filter = "nav")'`.
+   Parallel worktrees running 5-worker suites at once overload the machine
+   and cause chromote command timeouts that look like real failures. The
+   script waits on a shared `mkdir` lock in `/tmp` and reclaims it when the
+   holder has died. Read the reported `[ FAIL … | WARN … ]` totals, not
+   the exit code. PASS counts vary between runs because some expectations
+   run in loops.
 
 ## Work Mechanics
 
