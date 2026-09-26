@@ -20,7 +20,11 @@ test_that("app stdout and stderr share readable logs mid-run and after stop", {
   app <- local_shiny_app(shiny_app_fixture_dir())
   markers <- c("PAPARAZZI_FIXTURE_STDOUT", "PAPARAZZI_FIXTURE_STDERR")
   has_markers <- function(logs) {
-    all(vapply(markers, function(marker) any(grepl(marker, logs, fixed = TRUE)), logical(1)))
+    all(vapply(
+      markers,
+      function(marker) any(grepl(marker, logs, fixed = TRUE)),
+      logical(1)
+    ))
   }
 
   expect_true(wait_until(function() has_markers(app$logs())))
@@ -43,7 +47,10 @@ test_that("envvars reach the app process", {
 test_that("shiny_options are passed to runApp", {
   # quiet = TRUE suppresses shiny's "Listening on" banner; the app must
   # still start, proving readiness doesn't depend on log scraping.
-  app <- local_shiny_app(shiny_app_fixture_dir(), shiny_options = list(quiet = TRUE))
+  app <- local_shiny_app(
+    shiny_app_fixture_dir(),
+    shiny_options = list(quiet = TRUE)
+  )
 
   expect_true(app_port_reachable(app$port))
   expect_false(any(grepl("Listening on", app$logs(), fixed = TRUE)))
@@ -137,7 +144,11 @@ test_that("a broken app fails loudly with its log output", {
     pz_app(shiny_app_fixture_broken()),
     class = "paparazzi_error_app_startup"
   )
-  expect_match(conditionMessage(err), "boom: fixture app refuses to start", fixed = TRUE)
+  expect_match(
+    conditionMessage(err),
+    "boom: fixture app refuses to start",
+    fixed = TRUE
+  )
 })
 
 test_that("a taken port triggers a retry on a new port", {
@@ -186,14 +197,25 @@ test_that("startup error only includes an escaped, bounded log tail", {
   err <- expect_error(
     app_startup_error(
       list(
-        kind = "exited", port_taken = TRUE,
-        log = c("OLD_SENTINEL", rep("padding", 2000), "Failed to create server {tail}")
+        kind = "exited",
+        port_taken = TRUE,
+        log = c(
+          "OLD_SENTINEL",
+          rep("padding", 2000),
+          "Failed to create server {tail}"
+        )
       ),
-      "fixture", 1, call = current_env()
+      "fixture",
+      1,
+      call = current_env()
     ),
     class = "paparazzi_error_app_startup"
   )
-  expect_match(conditionMessage(err), "Failed to create server {tail}", fixed = TRUE)
+  expect_match(
+    conditionMessage(err),
+    "Failed to create server {tail}",
+    fixed = TRUE
+  )
   expect_false(grepl("OLD_SENTINEL", conditionMessage(err), fixed = TRUE))
   expect_lt(nchar(conditionMessage(err)), 4200)
 })

@@ -37,7 +37,12 @@ check_which <- function(
         call = call
       )
     }
-    return(arg_match(which, values = c("first", "last"), error_arg = arg, error_call = call))
+    return(arg_match(
+      which,
+      values = c("first", "last"),
+      error_arg = arg,
+      error_call = call
+    ))
   }
   check_number_whole(which, min = 1, arg = arg, call = call)
   which

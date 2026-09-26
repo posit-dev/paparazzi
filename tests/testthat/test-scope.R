@@ -1,21 +1,25 @@
 # Read the textContent of every element in a pinned or resolved set, so
 # tests can assert *which* elements a scope holds.
 scope_texts <- function(els) {
-  unlist(els$page$session$Runtime$callFunctionOn(
-    "function() { return this.map((el) => el.textContent.trim()); }",
-    objectId = els$object_id,
-    returnByValue = TRUE
-  )$result$value)
+  unlist(
+    els$page$session$Runtime$callFunctionOn(
+      "function() { return this.map((el) => el.textContent.trim()); }",
+      objectId = els$object_id,
+      returnByValue = TRUE
+    )$result$value
+  )
 }
 
 # The id of every element in a set: a stable, whitespace-free way to
 # assert *which* elements a scope holds.
 scope_ids <- function(els) {
-  unlist(els$page$session$Runtime$callFunctionOn(
-    "function() { return this.map((el) => el.id); }",
-    objectId = els$object_id,
-    returnByValue = TRUE
-  )$result$value)
+  unlist(
+    els$page$session$Runtime$callFunctionOn(
+      "function() { return this.map((el) => el.id); }",
+      objectId = els$object_id,
+      returnByValue = TRUE
+    )$result$value
+  )
 }
 
 test_that("pz_find pins the matched set and pushes it immutably", {
@@ -62,7 +66,10 @@ test_that("all find variants return visibly, including root no-ops", {
 
 test_that("pz_find auto-waits for a match and times out with no match", {
   page <- local_elements_page()
-  err <- expect_error(pz_find(page, ".never"), class = "paparazzi_error_timeout")
+  err <- expect_error(
+    pz_find(page, ".never"),
+    class = "paparazzi_error_timeout"
+  )
   expect_match(conditionMessage(err), "`\\.never`")
 
   late <- pz_find(page, ".late-text", from_root = TRUE)
@@ -98,7 +105,10 @@ test_that("pz_find_first/last/nth with a target pin the picked match", {
   expect_identical(scope_texts(first$scope[[1]]), "Save")
   expect_identical(scope_texts(nth$scope[[1]]), "Save   now")
   # An out-of-range which on a target keeps auto-waiting: no match.
-  expect_error(pz_find_nth(page, 99, target = ".btn"), class = "paparazzi_error_timeout")
+  expect_error(
+    pz_find_nth(page, 99, target = ".btn"),
+    class = "paparazzi_error_timeout"
+  )
 })
 
 test_that("narrowing slices the current scope eagerly", {
@@ -133,7 +143,10 @@ test_that("narrowing a union scope keeps the match in the description", {
   ctx <- pz_find(page, list(".panel", "#messages"))
   narrowed <- pz_find_nth(ctx, 2)
   expect_identical(narrowed$scope[[2]]$count, 1L)
-  expect_identical(narrowed$scope[[2]]$description, "`.panel` | `#messages` (match: 2)")
+  expect_identical(
+    narrowed$scope[[2]]$description,
+    "`.panel` | `#messages` (match: 2)"
+  )
   # A union can't take a which, so its locs pass through unchanged.
   expect_identical(narrowed$scope[[2]]$locs, ctx$scope[[1]]$locs)
 })
@@ -143,10 +156,16 @@ test_that("narrowing errors are classed and immediate", {
   ctx <- pz_find(page, ".btn")
 
   err <- expect_error(pz_find_nth(ctx, 7), class = "paparazzi_error_scope")
-  expect_match(conditionMessage(err), "The current scope has 6 elements; there is no match 7\\.")
+  expect_match(
+    conditionMessage(err),
+    "The current scope has 6 elements; there is no match 7\\."
+  )
 
   expect_error(pz_find_first(page), class = "paparazzi_error_scope")
-  expect_error(pz_find_nth(page, 2, from_root = TRUE), class = "paparazzi_error_scope")
+  expect_error(
+    pz_find_nth(page, 2, from_root = TRUE),
+    class = "paparazzi_error_scope"
+  )
 })
 
 test_that("the find family validates its inputs", {
@@ -174,7 +193,10 @@ test_that("the find family validates its inputs", {
   expect_error(pz_find_nth(page, 0), class = "rlang_error")
   expect_error(pz_find_nth(page, 1.5), class = "rlang_error")
 
-  expect_error(pz_find("not a context", ".btn"), class = "paparazzi_error_context")
+  expect_error(
+    pz_find("not a context", ".btn"),
+    class = "paparazzi_error_context"
+  )
 })
 
 test_that("lazy targets resolve inside the pinned scope at use time", {
@@ -187,7 +209,10 @@ test_that("lazy targets resolve inside the pinned scope at use time", {
 
   # Re-renders within the scope are fine: the lazy target follows the
   # DOM, only the pinned set itself is frozen.
-  pz_js(page, 'document.getElementById("messages").innerHTML = \'<li class="message user">new</li>\'')
+  pz_js(
+    page,
+    'document.getElementById("messages").innerHTML = \'<li class="message user">new</li>\''
+  )
   again <- loc_resolve(ctx, ".message", multiple = "all")
   withr::defer(release_elements(again))
   expect_identical(again$count, 1L)
@@ -266,9 +291,15 @@ test_that("scoped contexts print their stack", {
 
   out <- capture.output(print(ctx2))
   expect_match(out[[1]], "── paparazzi scope")
-  expect_match(out[[2]], "^Scope      root › `\\.panel` \\(3\\) › `\\.panel` #2 \\(1\\)$")
+  expect_match(
+    out[[2]],
+    "^Scope      root › `\\.panel` \\(3\\) › `\\.panel` #2 \\(1\\)$"
+  )
 
-  expect_match(capture.output(print(ctx))[[2]], "^Scope      root › `\\.panel` \\(3\\)$")
+  expect_match(
+    capture.output(print(ctx))[[2]],
+    "^Scope      root › `\\.panel` \\(3\\)$"
+  )
   root_out <- capture.output(print(pz_find_reset(ctx2)))
   expect_match(root_out[[1]], "── paparazzi page")
   expect_length(root_out, 4L)
@@ -314,7 +345,10 @@ test_that("narrowing keeps a loc's original which", {
 
   # An element-column entry from a which-loc names its original match,
   # not match 1 of the array.
-  rects <- pz_get_rect(page, target = pz_loc("#scope-a .sc-item", which = "last"))
+  rects <- pz_get_rect(
+    page,
+    target = pz_loc("#scope-a .sc-item", which = "last")
+  )
   expect_identical(
     rects$element[[1]]$scope[[1]]$description,
     "`#scope-a .sc-item` (which: last)"
@@ -326,6 +360,9 @@ test_that("narrowing keeps a loc's original which", {
   scoped <- pz_find_nth(page, 2, target = "#scope-a .sc-item")
   narrowed <- pz_find_first(scoped)
   expect_identical(narrowed$scope[[2]]$count, 1L)
-  expect_identical(narrowed$scope[[2]]$description, "`#scope-a .sc-item` (which: 2)")
+  expect_identical(
+    narrowed$scope[[2]]$description,
+    "`#scope-a .sc-item` (which: 2)"
+  )
   expect_identical(scope_texts(narrowed$scope[[2]]), "A2")
 })

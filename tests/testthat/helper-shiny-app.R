@@ -49,7 +49,13 @@ local_shiny_app <- function(..., .env = parent.frame()) {
 # tests use it to observe stop/finalizer effects from the outside.
 app_port_reachable <- function(port, host = "127.0.0.1") {
   con <- suppressWarnings(tryCatch(
-    socketConnection(host = host, port = port, open = "r+", blocking = TRUE, timeout = 1),
+    socketConnection(
+      host = host,
+      port = port,
+      open = "r+",
+      blocking = TRUE,
+      timeout = 1
+    ),
     error = function(e) NULL
   ))
   if (is.null(con)) {

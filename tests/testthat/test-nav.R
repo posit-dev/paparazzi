@@ -19,7 +19,10 @@ test_that("pz_nav_goto navigates and returns the root context", {
 
 test_that("pz_nav_reload restores the page", {
   ctx <- local_nav_page()
-  pz_js(ctx, "document.body.appendChild(document.createElement('div')).id = 'added'")
+  pz_js(
+    ctx,
+    "document.body.appendChild(document.createElement('div')).id = 'added'"
+  )
   expect_equal(js(ctx, "document.querySelectorAll('#added').length"), 1)
 
   root <- pz_nav_reload(ctx)
@@ -111,13 +114,19 @@ test_that("pz_nav_goto fails cleanly on navigation errors", {
 test_that("nav functions validate their inputs", {
   ctx <- local_nav_page()
 
-  expect_error(pz_nav_goto(42, "about:blank"), class = "paparazzi_error_context")
+  expect_error(
+    pz_nav_goto(42, "about:blank"),
+    class = "paparazzi_error_context"
+  )
   expect_error(pz_nav_reload(42), class = "paparazzi_error_context")
   expect_error(pz_nav_back(42), class = "paparazzi_error_context")
   expect_error(pz_nav_forward(42), class = "paparazzi_error_context")
 
   expect_error(pz_nav_goto(ctx, 42), regexp = "single string")
-  expect_error(pz_nav_goto(ctx, "about:blank", bogus = 1), class = "rlib_error_dots_nonempty")
+  expect_error(
+    pz_nav_goto(ctx, "about:blank", bogus = 1),
+    class = "rlib_error_dots_nonempty"
+  )
 
   expect_error(
     pz_nav_goto(ctx, "about:blank", wait = "eternal"),
@@ -193,7 +202,10 @@ test_that("plain-URL pages use load even when navigating to an app URL", {
   expect_identical(pz_js(page, "document.readyState"), "complete")
   pz_js(page, "document.documentElement.classList.add('shiny-busy')")
   pz_nav_goto(page, paste0(app$url, "#plain"))
-  expect_true(pz_js(page, "document.documentElement.classList.contains('shiny-busy')"))
+  expect_true(pz_js(
+    page,
+    "document.documentElement.classList.contains('shiny-busy')"
+  ))
   pz_nav_reload(page)
   expect_identical(pz_js(page, "document.readyState"), "complete")
 })

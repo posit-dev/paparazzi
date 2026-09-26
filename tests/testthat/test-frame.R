@@ -60,7 +60,7 @@ test_that("pz_frame validates its inputs", {
 
 test_that("print.paparazzi_frame shows the spec", {
   expect_output(
-    print(pz_frame("#card", ratio = 16/9, pad = 32)),
+    print(pz_frame("#card", ratio = 16 / 9, pad = 32)),
     "paparazzi_frame"
   )
 })
@@ -124,15 +124,15 @@ test_that("frame_apply pads, offsets, grows and clamps", {
 test_that("frame_apply grows the shorter side to reach the ratio by anchor", {
   box <- c(400, 60, 460, 105) # 60x45 (4:3)
   expect_identical(
-    frame_apply(pz_frame(ratio = 16/9, anchor = "left"), box),
+    frame_apply(pz_frame(ratio = 16 / 9, anchor = "left"), box),
     c(400, 60, 480, 105)
   )
   expect_identical(
-    frame_apply(pz_frame(ratio = 16/9, anchor = "right"), box),
+    frame_apply(pz_frame(ratio = 16 / 9, anchor = "right"), box),
     c(380, 60, 460, 105)
   )
   expect_identical(
-    frame_apply(pz_frame(ratio = 16/9), box),
+    frame_apply(pz_frame(ratio = 16 / 9), box),
     c(390, 60, 470, 105)
   )
 
@@ -151,13 +151,13 @@ test_that("frame_apply grows the shorter side to reach the ratio by anchor", {
   )
   # A corner anchors both axes: growing width pins to the left edge.
   expect_identical(
-    frame_apply(pz_frame(ratio = 16/9, anchor = "top left"), box),
+    frame_apply(pz_frame(ratio = 16 / 9, anchor = "top left"), box),
     c(400, 60, 480, 105)
   )
 
   # Never shrinks: a box already at the ratio is unchanged.
   expect_identical(
-    frame_apply(pz_frame(ratio = 4/3), box),
+    frame_apply(pz_frame(ratio = 4 / 3), box),
     box
   )
 })
@@ -169,7 +169,11 @@ test_that("frame_apply errors on empty or out-of-clamp regions", {
     class = "paparazzi_error_frame"
   )
   expect_error(
-    frame_apply(pz_frame(), c(0, 0, 10, 10), list(bounds = c(50, 50, 100, 100))),
+    frame_apply(
+      pz_frame(),
+      c(0, 0, 10, 10),
+      list(bounds = c(50, 50, 100, 100))
+    ),
     "outside",
     class = "paparazzi_error_frame"
   )
@@ -276,7 +280,7 @@ test_that("ratio grows the shorter side, placing content by anchor", {
     page,
     path,
     target = "#small",
-    frame = pz_frame(ratio = 16/9, anchor = "left")
+    frame = pz_frame(ratio = 16 / 9, anchor = "left")
   )
   expect_identical(png_dimensions(path), as.integer(round(c(80, 45) * dpr)))
   expect_frame_pixel(page, path, 30, 22, dpr, c(30, 120, 200))
@@ -288,7 +292,7 @@ test_that("ratio grows the shorter side, placing content by anchor", {
     page,
     path,
     target = "#small",
-    frame = pz_frame(ratio = 16/9, anchor = "top right")
+    frame = pz_frame(ratio = 16 / 9, anchor = "top right")
   )
   expect_identical(png_dimensions(path), as.integer(round(c(80, 45) * dpr)))
   expect_frame_pixel(page, path, 50, 22, dpr, c(30, 120, 200))
@@ -316,7 +320,7 @@ test_that("ratio + pad compose in order, and anchor spellings are equivalent", {
   # 165.33, centered horizontally: (347.33, 36) -- whole-pixel rounding
   # gives a 166x93 capture. anchor = "top" only matters vertically,
   # so the horizontal placement is centered.
-  spec_a <- pz_frame(ratio = 16/9, pad = 24, anchor = "top")
+  spec_a <- pz_frame(ratio = 16 / 9, pad = 24, anchor = "top")
   pz_screenshot(page, path, target = "#small", frame = spec_a)
   expect_identical(png_dimensions(path), as.integer(round(c(166, 93) * dpr)))
   expect_frame_pixel(page, path, 80, 46, dpr, c(30, 120, 200))
@@ -324,8 +328,8 @@ test_that("ratio + pad compose in order, and anchor spellings are equivalent", {
 
   # Spellings of the same anchor build identical specs.
   expect_identical(
-    pz_frame(ratio = 16/9, anchor = "right-top"),
-    pz_frame(ratio = 16/9, anchor = "top-right")
+    pz_frame(ratio = 16 / 9, anchor = "right-top"),
+    pz_frame(ratio = 16 / 9, anchor = "top-right")
   )
 })
 
@@ -487,7 +491,10 @@ test_that("an identity frame keeps the viewport on negative RTL scroll", {
   # document x. The document clamp must anchor to the real document
   # span, or an identity frame narrows by |scrollX|.
   pz_js(page, "window.scrollTo(-100, 0)")
-  skip_if(pz_js(page, "window.scrollX") >= 0, "browser won't scroll negative in RTL")
+  skip_if(
+    pz_js(page, "window.scrollX") >= 0,
+    "browser won't scroll negative in RTL"
+  )
 
   pz_screenshot(page, plain)
   pz_screenshot(page, framed, frame = pz_frame())
@@ -540,7 +547,9 @@ test_that("pz_stage_frame sets the page's default framing", {
   expect_identical(png_dimensions(path), as.integer(round(c(184, 154) * dpr)))
 
   # Ratio-only defaults grow their target.
-  page |> pz_stage_frame(ratio = 16/9) |> pz_screenshot(path, target = "#small")
+  page |>
+    pz_stage_frame(ratio = 16 / 9) |>
+    pz_screenshot(path, target = "#small")
   expect_identical(png_dimensions(path), as.integer(round(c(80, 45) * dpr)))
 })
 

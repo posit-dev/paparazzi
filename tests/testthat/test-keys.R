@@ -1,9 +1,21 @@
 test_that("key_parse resolves named keys from the key table", {
   keys <- c(
-    Enter = 13L, Tab = 9L, Escape = 27L, Backspace = 8L, Delete = 46L,
-    Insert = 45L, Home = 36L, End = 35L, PageUp = 33L, PageDown = 34L,
-    ArrowLeft = 37L, ArrowUp = 38L, ArrowRight = 39L, ArrowDown = 40L,
-    F1 = 112L, F12 = 123L
+    Enter = 13L,
+    Tab = 9L,
+    Escape = 27L,
+    Backspace = 8L,
+    Delete = 46L,
+    Insert = 45L,
+    Home = 36L,
+    End = 35L,
+    PageUp = 33L,
+    PageDown = 34L,
+    ArrowLeft = 37L,
+    ArrowUp = 38L,
+    ArrowRight = 39L,
+    ArrowDown = 40L,
+    F1 = 112L,
+    F12 = 123L
   )
   for (name in names(keys)) {
     parsed <- key_parse(name)
@@ -88,7 +100,10 @@ test_that("key_parse parses modifier combos", {
   meta_enter <- key_parse("Meta+Enter")
   expect_identical(meta_enter$modifiers, "Meta")
   expect_identical(meta_enter$modifier_keys, "Meta")
-  expect_identical(meta_enter$key, list(key = "Enter", code = "Enter", keyCode = 13L, text = "\r"))
+  expect_identical(
+    meta_enter$key,
+    list(key = "Enter", code = "Enter", keyCode = 13L, text = "\r")
+  )
 
   # Explicit Shift doesn't double up with an implied one.
   shift_tab <- key_parse("Shift+Tab")
@@ -135,7 +150,10 @@ test_that("key_parse rejects bad specs with paparazzi_error_key", {
   # Duplicate modifier (implied Shift from "A" doesn't count).
   expect_error(key_parse("Control+Control+A"), class = "paparazzi_error_key")
   expect_error(key_parse("Shift+Shift+Tab"), class = "paparazzi_error_key")
-  expect_false(inherits(tryCatch(key_parse("Shift+A"), error = identity), "error"))
+  expect_false(inherits(
+    tryCatch(key_parse("Shift+A"), error = identity),
+    "error"
+  ))
 
   # Empty spec.
   expect_error(key_parse(""), class = "paparazzi_error_key")
@@ -229,7 +247,10 @@ test_that("key_modifiers_mask maps modifiers to their CDP bits", {
   expect_identical(key_modifiers_mask("Shift"), 8L)
   expect_identical(key_modifiers_mask(c("Control", "Shift")), 10L)
   expect_identical(key_modifiers_mask(character(0)), 0L)
-  expect_identical(key_modifiers_mask(c("Alt", "Control", "Meta", "Shift")), 15L)
+  expect_identical(
+    key_modifiers_mask(c("Alt", "Control", "Meta", "Shift")),
+    15L
+  )
 })
 
 test_that("key_events produces a down/up pair for a plain text key", {
@@ -248,7 +269,13 @@ test_that("key_events produces a down/up pair for a plain text key", {
   )
   expect_identical(
     events[[2]],
-    list(type = "keyUp", modifiers = 0L, windowsVirtualKeyCode = 65L, key = "a", code = "KeyA")
+    list(
+      type = "keyUp",
+      modifiers = 0L,
+      windowsVirtualKeyCode = 65L,
+      key = "a",
+      code = "KeyA"
+    )
   )
 })
 
@@ -287,22 +314,46 @@ test_that("key_events wraps the main key with modifier down/up events", {
   expect_length(events, 4)
   expect_identical(
     events[[1]],
-    list(type = "rawKeyDown", modifiers = 2L, windowsVirtualKeyCode = 17L, key = "Control", code = "ControlLeft")
+    list(
+      type = "rawKeyDown",
+      modifiers = 2L,
+      windowsVirtualKeyCode = 17L,
+      key = "Control",
+      code = "ControlLeft"
+    )
   )
   # The main events carry the full mask, implied Shift included: 2 + 8.
   expect_identical(
     events[[2]],
-    list(type = "rawKeyDown", modifiers = 10L, windowsVirtualKeyCode = 65L, key = "A", code = "KeyA")
+    list(
+      type = "rawKeyDown",
+      modifiers = 10L,
+      windowsVirtualKeyCode = 65L,
+      key = "A",
+      code = "KeyA"
+    )
   )
   expect_identical(
     events[[3]],
-    list(type = "keyUp", modifiers = 10L, windowsVirtualKeyCode = 65L, key = "A", code = "KeyA")
+    list(
+      type = "keyUp",
+      modifiers = 10L,
+      windowsVirtualKeyCode = 65L,
+      key = "A",
+      code = "KeyA"
+    )
   )
   # Control's keyUp no longer reports its own bit, like a real browser
   # keyup (ctrlKey false once the key is up).
   expect_identical(
     events[[4]],
-    list(type = "keyUp", modifiers = 0L, windowsVirtualKeyCode = 17L, key = "Control", code = "ControlLeft")
+    list(
+      type = "keyUp",
+      modifiers = 0L,
+      windowsVirtualKeyCode = 17L,
+      key = "Control",
+      code = "ControlLeft"
+    )
   )
 })
 
@@ -325,7 +376,13 @@ test_that("explicit Shift gets real down/up events", {
   expect_length(events, 4)
   expect_identical(
     events[[1]],
-    list(type = "rawKeyDown", modifiers = 8L, windowsVirtualKeyCode = 16L, key = "Shift", code = "ShiftLeft")
+    list(
+      type = "rawKeyDown",
+      modifiers = 8L,
+      windowsVirtualKeyCode = 16L,
+      key = "Shift",
+      code = "ShiftLeft"
+    )
   )
   # Tab produces no text, so the main event is raw even with Shift held.
   expect_identical(events[[2]]$type, "rawKeyDown")

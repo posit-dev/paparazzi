@@ -4,6 +4,7 @@
 ^\.agents$
 ^LICENSE\.md$
 ^[.]?air[.]toml$
+^jarl[.]toml$
 ^\.vscode$
 ^\.github$
 ^\.kata\.toml$

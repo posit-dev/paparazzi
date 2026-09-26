@@ -121,8 +121,12 @@ test_that("pz_get_rect returns one row per match with scoped element entries", {
   # One scoped context per match: the element column is live.
   expect_type(rects$element, "list")
   expect_identical(length(rects$element), nrow(rects))
-  expect_true(all(vapply(rects$element, inherits, logical(1), "PaparazziContext"))
-  )
+  expect_true(all(vapply(
+    rects$element,
+    inherits,
+    logical(1),
+    "PaparazziContext"
+  )))
 })
 
 test_that("pz_get_elements summarizes every match", {
@@ -283,7 +287,9 @@ test_that("the element column holds one scoped context per match", {
   expect_identical(nrow(rects), 6L)
   entries <- rects$element
   expect_true(all(vapply(entries, inherits, logical(1), "PaparazziContext")))
-  expect_true(all(vapply(entries, function(ctx) length(ctx$scope), integer(1)) == 1L))
+  expect_true(all(
+    vapply(entries, function(ctx) length(ctx$scope), integer(1)) == 1L
+  ))
   # One single-element pinned set per match, each its own array.
   expect_identical(
     vapply(entries, function(ctx) ctx$scope[[1]]$count, integer(1)),
@@ -307,7 +313,10 @@ test_that("the element column continues the chain from one match", {
   expect_identical(pz_get_text(second), "A2")
   expect_invisible(pz_hover(second))
   expect_identical(
-    pz_js(page, "document.querySelector('#scope-a .sc-item:hover').textContent"),
+    pz_js(
+      page,
+      "document.querySelector('#scope-a .sc-item:hover').textContent"
+    ),
     "A2"
   )
 })
@@ -336,7 +345,10 @@ test_that("a detached element-column context names its row", {
 
 test_that("a which-loc's element entry names its original match when detached", {
   page <- local_scopes_page()
-  els <- pz_get_elements(page, target = pz_loc("#scope-a .sc-item", which = "last"))
+  els <- pz_get_elements(
+    page,
+    target = pz_loc("#scope-a .sc-item", which = "last")
+  )
   ctx <- els$element[[1]]
 
   # The target already picked its match, so the entry keeps that
@@ -357,7 +369,10 @@ test_that("target = NULL on a scope narrows the scope's own locs", {
   entry <- rects$element[[2]]
   expect_identical(length(entry$scope), 2L)
   expect_identical(entry$scope[[1]]$description, "`#scope-b .sc-item`")
-  expect_identical(entry$scope[[2]]$description, "`#scope-b .sc-item` (which: 2)")
+  expect_identical(
+    entry$scope[[2]]$description,
+    "`#scope-b .sc-item` (which: 2)"
+  )
 })
 
 test_that("the element column renders its contexts through pillar", {

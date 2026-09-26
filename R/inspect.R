@@ -106,7 +106,12 @@ inspect_resolve_matches <- function(ctx, target, call = caller_env()) {
   withr::defer(release_elements(els))
 
   rows <- list()
-  rects <- tibble::tibble(x = numeric(), y = numeric(), width = numeric(), height = numeric())
+  rects <- tibble::tibble(
+    x = numeric(),
+    y = numeric(),
+    width = numeric(),
+    height = numeric()
+  )
   if (els$count > 0L) {
     raw <- els_values(els, inspect_match_js, call = call)
     rows <- lapply(raw, function(v) {
@@ -174,11 +179,21 @@ inspect_doc_rects <- function(ctx, rects) {
 inspect_scope_rects <- function(ctx) {
   scoped <- scope_top(ctx)
   if (is.null(scoped) || is.null(scoped$object_id)) {
-    return(tibble::tibble(x = numeric(), y = numeric(), width = numeric(), height = numeric()))
+    return(tibble::tibble(
+      x = numeric(),
+      y = numeric(),
+      width = numeric(),
+      height = numeric()
+    ))
   }
   rects <- tryCatch(el_rects(scoped), error = function(e) NULL)
   if (is.null(rects) || nrow(rects) == 0L) {
-    return(tibble::tibble(x = numeric(), y = numeric(), width = numeric(), height = numeric()))
+    return(tibble::tibble(
+      x = numeric(),
+      y = numeric(),
+      width = numeric(),
+      height = numeric()
+    ))
   }
   rects[rects$width > 0 & rects$height > 0, ]
 }
@@ -186,7 +201,12 @@ inspect_scope_rects <- function(ctx) {
 # would collapse the annotated capture's union clip.
 inspect_positive_rects <- function(rects) {
   if (is.null(rects) || nrow(rects) == 0L) {
-    return(tibble::tibble(x = numeric(), y = numeric(), width = numeric(), height = numeric()))
+    return(tibble::tibble(
+      x = numeric(),
+      y = numeric(),
+      width = numeric(),
+      height = numeric()
+    ))
   }
   rects[rects$width > 0 & rects$height > 0, ]
 }
@@ -226,7 +246,13 @@ inspect_header <- function(label = "page") {
 inspect_summary_print <- function(ctx, matches = NULL) {
   scoped <- length(ctx$scope) > 0L
   if (ctx$page$is_closed()) {
-    cli::cat_line(if (scoped) "<paparazzi scope> (page closed)" else "<paparazzi page> (closed)")
+    cli::cat_line(
+      if (scoped) {
+        "<paparazzi scope> (page closed)"
+      } else {
+        "<paparazzi page> (closed)"
+      }
+    )
     return(invisible(NULL))
   }
   # pz_js() converts a JS array to an R list (mixed types, so no unlist).
@@ -245,13 +271,24 @@ inspect_summary_print <- function(ctx, matches = NULL) {
   cli::cat_line(inspect_header(if (scoped) "scope" else "page"))
   if (scoped) {
     scope <- inspect_scope_entries(ctx)
-    cli::cat_line(sprintf("%-11s%s", "Scope", paste(c("root", scope$entries), collapse = " \u203a ")))
+    cli::cat_line(sprintf(
+      "%-11s%s",
+      "Scope",
+      paste(c("root", scope$entries), collapse = " \u203a ")
+    ))
     for (msg in scope$warnings) {
       cli::cli_inform(c("!" = "{msg}"), msg = msg)
     }
   }
   cli::cat_line(sprintf("%-11s%s", "URL", v[[1]]))
-  cli::cat_line(sprintf("%-11s%s \u00d7 %s @%s \u00b7 %s", "Device", v[[2]], v[[3]], scale, scheme))
+  cli::cat_line(sprintf(
+    "%-11s%s \u00d7 %s @%s \u00b7 %s",
+    "Device",
+    v[[2]],
+    v[[3]],
+    scale,
+    scheme
+  ))
 
   if (!is.null(matches)) {
     inspect_target_print(matches)
@@ -259,7 +296,9 @@ inspect_summary_print <- function(ctx, matches = NULL) {
 
   cli::cat_line(sprintf(
     "%-11s%s \u00b7 cursor %s",
-    "Recording", rec$recording, rec$cursor
+    "Recording",
+    rec$recording,
+    rec$cursor
   ))
   invisible(NULL)
 }
@@ -276,17 +315,32 @@ inspect_scope_entries <- function(ctx) {
     state <- inspect_scope_live(pinned)
     if (state$gone) {
       entries <- c(entries, paste0(desc, " (gone)"))
-      warnings <- c(warnings, paste0(
-        "The scope ", desc, " no longer resolves; its pinned elements are gone ",
-        "(probably after a navigation)."
-      ))
+      warnings <- c(
+        warnings,
+        paste0(
+          "The scope ",
+          desc,
+          " no longer resolves; its pinned elements are gone ",
+          "(probably after a navigation)."
+        )
+      )
     } else if (state$live < pinned$count) {
-      entries <- c(entries, paste0(desc, " (", state$live, " of ", pinned$count, ")"))
-      warnings <- c(warnings, paste0(
-        pinned$count - state$live, if (pinned$count - state$live == 1L) " element" else " elements",
-        " in the scope ", desc, " ", if (pinned$count - state$live == 1L) "is" else " are",
-        " no longer in the page (probably re-rendered)."
-      ))
+      entries <- c(
+        entries,
+        paste0(desc, " (", state$live, " of ", pinned$count, ")")
+      )
+      warnings <- c(
+        warnings,
+        paste0(
+          pinned$count - state$live,
+          if (pinned$count - state$live == 1L) " element" else " elements",
+          " in the scope ",
+          desc,
+          " ",
+          if (pinned$count - state$live == 1L) "is" else " are",
+          " no longer in the page (probably re-rendered)."
+        )
+      )
     } else {
       entries <- c(entries, paste0(desc, " (", state$live, ")"))
     }
@@ -331,7 +385,12 @@ inspect_target_print <- function(matches) {
   } else {
     paste0(matches$count, " matches")
   }
-  cli::cat_line(sprintf("%-11s%s \u2192 %s", "Target", matches$description, phrase))
+  cli::cat_line(sprintf(
+    "%-11s%s \u2192 %s",
+    "Target",
+    matches$description,
+    phrase
+  ))
   shown <- utils::head(matches$rows, 10)
   for (i in seq_along(shown)) {
     row <- shown[[i]]
@@ -340,7 +399,12 @@ inspect_target_print <- function(matches) {
     cli::cat_line(sprintf("  %d  %s", i, inspect_short_tag(row$tag)))
     cli::cat_line(sprintf(
       "     %s \u00b7 %s \u00b7 at %.0f,%.0f \u00b7 %.0f \u00d7 %.0f",
-      visible, enabled, row$x, row$y, row$width, row$height
+      visible,
+      enabled,
+      row$x,
+      row$y,
+      row$width,
+      row$height
     ))
   }
   if (matches$count > length(shown)) {
@@ -381,7 +445,11 @@ overlay_draw <- function(ctx, scope_rects, target_rects) {
     Map(function(rect, n) c(rect, n), rects, keep)
   }
   data <- jsonlite::toJSON(list(
-    scope = if (is.null(scope_rects)) list() else inspect_doc_rects(ctx, inspect_positive_rects(scope_rects)),
+    scope = if (is.null(scope_rects)) {
+      list()
+    } else {
+      inspect_doc_rects(ctx, inspect_positive_rects(scope_rects))
+    },
     targets = targets
   ))
   pz_js(ctx, sprintf(overlay_draw_js, data), await = FALSE)
@@ -467,7 +535,9 @@ overlay_restore <- function(ctx, display) {
     paste0(
       "(() => { const h = document.getElementById('paparazzi-overlay-root'); ",
       "if (!h || !h.shadowRoot) return; ",
-      "const prev = ", values, "; ",
+      "const prev = ",
+      values,
+      "; ",
       "h.shadowRoot.querySelectorAll('.pz-inspect').forEach((n, i) => { n.style.display = prev[i]; }); ",
       "})()"
     ),
@@ -492,12 +562,15 @@ inspect_annotated_capture <- function(ctx, scope_rects, target_rects, path) {
     clip_viewport(ctx)
   } else {
     pad <- 16
-    clip_rects_union(ctx, tibble::tibble(
-      x = rects$x - pad,
-      y = rects$y - pad,
-      width = rects$width + 2 * pad,
-      height = rects$height + 2 * pad
-    ))
+    clip_rects_union(
+      ctx,
+      tibble::tibble(
+        x = rects$x - pad,
+        y = rects$y - pad,
+        width = rects$width + 2 * pad,
+        height = rects$height + 2 * pad
+      )
+    )
   }
   res <- screenshot_capture(ctx, clip)
   writeBin(jsonlite::base64_dec(res$data), path)

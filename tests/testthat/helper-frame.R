@@ -54,7 +54,8 @@ expect_frame_pixel <- function(page, path, css_x, css_y, dpr, expected) {
     all(abs(got[1:3] - expected) <= 2),
     info = sprintf(
       "pixel at css (%g, %g): got [%s], expected [%s]",
-      css_x, css_y,
+      css_x,
+      css_y,
       paste(got[1:3], collapse = ", "),
       paste(expected, collapse = ", ")
     )

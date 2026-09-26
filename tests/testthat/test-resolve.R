@@ -1,11 +1,13 @@
 # Read the textContent of every element in a resolved set (trimmed), so
 # tests can assert *which* elements matched, not just how many.
 elements_text <- function(els) {
-  unlist(els$page$session$Runtime$callFunctionOn(
-    "function() { return this.map((el) => el.textContent.trim()); }",
-    objectId = els$object_id,
-    returnByValue = TRUE
-  )$result$value)
+  unlist(
+    els$page$session$Runtime$callFunctionOn(
+      "function() { return this.map((el) => el.textContent.trim()); }",
+      objectId = els$object_id,
+      returnByValue = TRUE
+    )$result$value
+  )
 }
 
 test_that("loc_resolve promotes a bare string", {
@@ -97,20 +99,32 @@ test_that("an out-of-range which means no match, checked once", {
 
 test_that("loc_resolve scopes within a container, recursively", {
   page <- local_elements_page()
-  els <- loc_resolve(page, pz_loc(".btn", within = "#panel-inner"), multiple = "all")
+  els <- loc_resolve(
+    page,
+    pz_loc(".btn", within = "#panel-inner"),
+    multiple = "all"
+  )
   withr::defer(release_elements(els))
   expect_identical(els$count, 2L)
   expect_identical(elements_text(els), c("Save   now", "Reset"))
 
   # Nested containers: descendants of any .panel, deduped across roots.
-  nested <- loc_resolve(page, pz_loc(".btn", within = ".panel"), multiple = "all")
+  nested <- loc_resolve(
+    page,
+    pz_loc(".btn", within = ".panel"),
+    multiple = "all"
+  )
   withr::defer(release_elements(nested))
   expect_identical(nested$count, 6L)
 
   # A fully qualified within spec resolves recursively.
   qualified <- loc_resolve(
     page,
-    pz_loc(".btn", within = pz_loc(".panel", has_text = "Delete"), which = "last")
+    pz_loc(
+      ".btn",
+      within = pz_loc(".panel", has_text = "Delete"),
+      which = "last"
+    )
   )
   withr::defer(release_elements(qualified))
   expect_identical(qualified$count, 1L)
@@ -132,14 +146,20 @@ test_that("loc_resolve accepts a union of specs and strings", {
   )
   withr::defer(release_elements(els))
   expect_identical(els$count, 5L)
-  expect_identical(elements_text(els), c(
-    "What's the weather?",
-    "The weather is sunny.",
-    "Bring a hat.",
-    "Save   now",
-    "Reset"
-  ))
-  expect_identical(els$description, "`.message` | `.btn` (within: `#panel-inner`)")
+  expect_identical(
+    elements_text(els),
+    c(
+      "What's the weather?",
+      "The weather is sunny.",
+      "Bring a hat.",
+      "Save   now",
+      "Reset"
+    )
+  )
+  expect_identical(
+    els$description,
+    "`.message` | `.btn` (within: `#panel-inner`)"
+  )
 })
 
 test_that("resolution ignores elements inside #paparazzi-overlay-root", {

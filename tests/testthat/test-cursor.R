@@ -50,8 +50,14 @@ test_that("cursor function and stage validation is classed", {
   page <- local_cursor_page()
 
   expect_error(pz_cursor_leave(page, "up"), class = "paparazzi_error_input")
-  expect_error(pz_cursor_show(page, from = "middle"), class = "paparazzi_error_input")
-  expect_error(pz_cursor_move(page, "#btn", duration = -1), class = "rlang_error")
+  expect_error(
+    pz_cursor_show(page, from = "middle"),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_cursor_move(page, "#btn", duration = -1),
+    class = "rlang_error"
+  )
   expect_error(pz_cursor_hide(page, 1), class = "rlang_error")
 
   page |> pz_stage(cursor = FALSE)

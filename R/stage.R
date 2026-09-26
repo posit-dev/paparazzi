@@ -108,7 +108,11 @@ pz_stage <- function(
     if (is.null(enter)) {
       overrides[["enter"]] <- NULL
     } else {
-      overrides$enter <- parse_direction(enter, valid = STAGE_SIDES, arg = "enter")
+      overrides$enter <- parse_direction(
+        enter,
+        valid = STAGE_SIDES,
+        arg = "enter"
+      )
     }
   }
   if (!missing(typing)) {
@@ -332,7 +336,9 @@ scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
       pz_js(
         ctx,
         paste0(
-          "(", wheel_container_js, ").call([]",
+          "(",
+          wheel_container_js,
+          ").call([]",
           if (is.null(aim)) "" else paste0(", ", jsonlite::toJSON(unname(aim))),
           ")"
         )
@@ -343,16 +349,25 @@ scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
   # scrolls to the target exactly.
   apply_instant <- function(actual) {
     arg <- scroll_arg_json(
-      by = if (!is.null(by)) c(target$left - actual$left, target$top - actual$top),
+      by = if (!is.null(by)) {
+        c(target$left - actual$left, target$top - actual$top)
+      },
       to = to
     )
     if (!is.null(scoped)) {
       arg_list <- if (!is.null(by)) {
-        list(by = as.list(c(target$left - actual$left, target$top - actual$top)))
+        list(
+          by = as.list(c(target$left - actual$left, target$top - actual$top))
+        )
       } else {
         list(to = as.list(to))
       }
-      els_arg_values(scoped, scroll_apply_js, list(list(value = arg_list)), call = call)
+      els_arg_values(
+        scoped,
+        scroll_apply_js,
+        list(list(value = arg_list)),
+        call = call
+      )
     } else {
       action_cdp(
         ctx,
@@ -388,9 +403,7 @@ scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
   # Verify and repair: wheels are best-effort (clamping, canceling),
   # the recorded end state must match the instant path.
   actual <- wheel_container()
-  if (
-    abs(actual$top - target$top) > 2 || abs(actual$left - target$left) > 2
-  ) {
+  if (abs(actual$top - target$top) > 2 || abs(actual$left - target$left) > 2) {
     apply_instant(actual)
   }
   invisible(ctx)
@@ -406,11 +419,21 @@ scroll_wheel_target <- function(probe, by, to) {
     top <- top + by[[2]]
   } else {
     center <- identical(to, "center")
-    if ("left" %in% to) left <- 0
-    if ("right" %in% to) left <- probe$maxLeft
-    if (center) left <- probe$maxLeft / 2
-    if ("top" %in% to) top <- 0
-    if ("bottom" %in% to) top <- probe$maxTop
+    if ("left" %in% to) {
+      left <- 0
+    }
+    if ("right" %in% to) {
+      left <- probe$maxLeft
+    }
+    if (center) {
+      left <- probe$maxLeft / 2
+    }
+    if ("top" %in% to) {
+      top <- 0
+    }
+    if ("bottom" %in% to) {
+      top <- probe$maxTop
+    }
     if (center) top <- probe$maxTop / 2
   }
   list(
@@ -522,7 +545,9 @@ wheel_probe_js <- paste0(
     }
     return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
   };
-  ", wheel_hit_js, "
+  ",
+  wheel_hit_js,
+  "
   const clip = (c) => c === document.scrollingElement
     ? { top: 0, left: 0, bottom: window.innerHeight, right: window.innerWidth,
         width: window.innerWidth, height: window.innerHeight }

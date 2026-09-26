@@ -191,16 +191,44 @@ style_check_shorthand <- function(props, call = caller_env()) {
   )
 }
 style_shorthand_props <- c(
-  "animation", "background", "border", "border-block",
-  "border-block-color", "border-block-style", "border-block-width",
-  "border-bottom", "border-image", "border-inline",
-  "border-inline-color", "border-inline-style", "border-inline-width",
-  "border-left", "border-right", "border-top",
-  "column-rule", "columns", "flex", "flex-flow",
-  "font", "gap", "grid", "inset", "list-style", "margin", "mask",
-  "outline", "overscroll-behavior", "padding", "place-content",
-  "place-items", "place-self", "scroll-margin", "scroll-padding",
-  "text-decoration", "text-emphasis", "transition"
+  "animation",
+  "background",
+  "border",
+  "border-block",
+  "border-block-color",
+  "border-block-style",
+  "border-block-width",
+  "border-bottom",
+  "border-image",
+  "border-inline",
+  "border-inline-color",
+  "border-inline-style",
+  "border-inline-width",
+  "border-left",
+  "border-right",
+  "border-top",
+  "column-rule",
+  "columns",
+  "flex",
+  "flex-flow",
+  "font",
+  "gap",
+  "grid",
+  "inset",
+  "list-style",
+  "margin",
+  "mask",
+  "outline",
+  "overscroll-behavior",
+  "padding",
+  "place-content",
+  "place-items",
+  "place-self",
+  "scroll-margin",
+  "scroll-padding",
+  "text-decoration",
+  "text-emphasis",
+  "transition"
 )
 style_shorthand_longhands <- c(
   animation = "animation-name, animation-duration",
@@ -256,7 +284,7 @@ style_expect_pairs <- function(dots, call = caller_env()) {
     )
   }
   nms <- names(dots)
-  if (is.null(nms) || any(!nzchar(nms))) {
+  if (is.null(nms) || !all(nzchar(nms))) {
     cli::cli_abort(
       "Every style pair must be named, like {.code color = \"red\"}.",
       class = "paparazzi_error_input",
@@ -314,7 +342,7 @@ check_style <- function(pairs, not, normalize, call = caller_env()) {
 # verdict on a declaration never changes. Acceptance is a property of
 # the (property, value) pair, so the verdict vector is per pair.
 style_abort_invalid <- function(accepted, pairs, call = caller_env()) {
-  if (any(!accepted)) {
+  if (!all(accepted)) {
     p <- which(!accepted)[[1]]
     cli::cli_abort(
       "Invalid CSS: the browser rejects {.val {pairs[[p]]}} for {.val {names(pairs)[[p]]}}.",
@@ -366,7 +394,11 @@ style_hits <- function(vals, pairs, normalize) {
   for (e in seq_along(vals)) {
     for (p in seq_along(pairs)) {
       actual <- vals[[e]][[p]]$actual %||% ""
-      expected <- if (normalize) vals[[e]][[p]]$normalized %||% "" else pairs[[p]]
+      expected <- if (normalize) {
+        vals[[e]][[p]]$normalized %||% ""
+      } else {
+        pairs[[p]]
+      }
       out[e, p] <- style_compare(actual, expected)
     }
   }
@@ -414,8 +446,12 @@ expect_headline_style <- function(pairs, not) {
 style_expect_js <- function(pairs, normalize) {
   paste0(
     "function() {\n",
-    "const pairs = ", style_pairs_json(pairs), ";\n",
-    "const normalize = ", if (normalize) "true" else "false", ";\n",
+    "const pairs = ",
+    style_pairs_json(pairs),
+    ";\n",
+    "const normalize = ",
+    if (normalize) "true" else "false",
+    ";\n",
     style_probe_js,
     "}"
   )
@@ -425,7 +461,9 @@ style_expect_js <- function(pairs, normalize) {
 style_invalid_js <- function(pairs) {
   paste0(
     "function() {
-      const pairs = ", style_pairs_json(pairs), ";
+      const pairs = ",
+    style_pairs_json(pairs),
+    ";
       const probe = document.createElement('div');
       return pairs.map((p) => {
         probe.style.setProperty(p.prop, p.value);
@@ -540,7 +578,9 @@ style_get_js <- function(props) {
   props_json <- if (is.null(props)) "null" else jsonlite::toJSON(props)
   paste0(
     "function() {
-      const props = ", props_json, ";
+      const props = ",
+    props_json,
+    ";
       return this.map((el) => {
         const cs = getComputedStyle(el);
         const out = {};

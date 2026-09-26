@@ -390,7 +390,10 @@ pointer_hit_test_js <- "const pointerHitTest = (target, x, y) => {
   } : { tag: '', id: '', classes: [] };
 };"
 # A single post-scroll probe reads the center and verifies its event receiver.
-pointer_actionable_js <- paste0("function() {\n", pointer_hit_test_js, "
+pointer_actionable_js <- paste0(
+  "function() {\n",
+  pointer_hit_test_js,
+  "
   if (!this.length) return { status: 'unavailable' };
   const el = this[0];
   const r = el.getBoundingClientRect();
@@ -400,9 +403,12 @@ pointer_actionable_js <- paste0("function() {\n", pointer_hit_test_js, "
   const y = r.y + r.height / 2;
   const blocker = pointerHitTest(el, x, y);
   return blocker ? { status: 'blocked', blocker } : { status: 'ok', x, y };
-}")
+}"
+)
 format_pointer_blocker <- function(blocker) {
-  if (!nzchar(blocker$tag)) return("<none>")
+  if (!nzchar(blocker$tag)) {
+    return("<none>")
+  }
   classes <- unlist(blocker$classes, use.names = FALSE)
   paste0(
     blocker$tag,
@@ -432,7 +438,9 @@ el_pointer_point <- function(ctx, els, call = caller_env()) {
           blocker <<- probe$blocker
           return(FALSE)
         }
-        if (!identical(probe$status, "ok")) return(FALSE)
+        if (!identical(probe$status, "ok")) {
+          return(FALSE)
+        }
         point <<- c(x = probe$x, y = probe$y)
         TRUE
       },
@@ -445,7 +453,9 @@ el_pointer_point <- function(ctx, els, call = caller_env()) {
       call = call
     ),
     paparazzi_error_timeout = function(e) {
-      if (is.null(blocker)) stop(e)
+      if (is.null(blocker)) {
+        stop(e)
+      }
       blocker_name <- format_pointer_blocker(blocker)
       cli::cli_abort(
         "Timed out after {timeout}s waiting for {els$description} to receive pointer events; blocked by {blocker_name}.",
@@ -1200,7 +1210,9 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
       "scrolling",
       cmd = ctx$page$session$Runtime$evaluate(
         paste0(
-          "(", scroll_apply_js, ").call([], ",
+          "(",
+          scroll_apply_js,
+          ").call([], ",
           scroll_arg_json(by, to),
           ")"
         ),
@@ -1383,8 +1395,12 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
         x = probe$x + probe$width / 2,
         y = probe$y + probe$height / 2
       )
-      if (drop[[1]] < 0 || drop[[1]] > probe$viewportWidth ||
-        drop[[2]] < 0 || drop[[2]] > probe$viewportHeight) {
+      if (
+        drop[[1]] < 0 ||
+          drop[[1]] > probe$viewportWidth ||
+          drop[[2]] < 0 ||
+          drop[[2]] > probe$viewportHeight
+      ) {
         cli::cli_abort(
           c(
             "The drag destination is outside the viewport after bringing the source into view.",
@@ -1435,7 +1451,10 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
 }
 # The destination's final point after the source settles: visibility,
 # box, viewport, and the receiver at the box center.
-dest_point_js <- paste0("function() {\n", pointer_hit_test_js, "
+dest_point_js <- paste0(
+  "function() {\n",
+  pointer_hit_test_js,
+  "
   const el = this[0];
   const r = el.getBoundingClientRect();
   const visible = el.checkVisibility({ checkVisibilityCSS: true });
@@ -1446,7 +1465,8 @@ dest_point_js <- paste0("function() {\n", pointer_hit_test_js, "
       ? pointerHitTest(el, r.x + r.width / 2, r.y + r.height / 2)
       : null
   };
-}")
+}"
+)
 # Is the source a real HTML5 drag source? Own or inherited draggable
 # attribute (the IDL property only reflects the element's own
 # attribute, so inheritance needs the closest() walk; an explicit
@@ -1470,33 +1490,77 @@ draggable_js <- "function() {
 # the cursor glide; press and release stay. A dispatch error between
 # press and release leaves the button held, so the release is
 # re-attempted on exit until the normal path completes it.
-dispatch_mouse_drag <- function(ctx, action, target, from, to, call = caller_env()) {
+dispatch_mouse_drag <- function(
+  ctx,
+  action,
+  target,
+  from,
+  to,
+  call = caller_env()
+) {
   pressed <- FALSE
-  withr::defer(if (pressed) {
-    try(
-      dispatch_mouse(
-        ctx, action, target, "mouseReleased", to,
-        button = "left", buttons = 0, clickCount = 1, call = call
-      ),
-      silent = TRUE
-    )
-  })
-  dispatch_mouse(
-    ctx, action, target, "mouseMoved", from,
-    button = "none", buttons = 0, clickCount = 0, call = call
+  withr::defer(
+    if (pressed) {
+      try(
+        dispatch_mouse(
+          ctx,
+          action,
+          target,
+          "mouseReleased",
+          to,
+          button = "left",
+          buttons = 0,
+          clickCount = 1,
+          call = call
+        ),
+        silent = TRUE
+      )
+    }
   )
   dispatch_mouse(
-    ctx, action, target, "mousePressed", from,
-    button = "left", buttons = 1, clickCount = 1, call = call
+    ctx,
+    action,
+    target,
+    "mouseMoved",
+    from,
+    button = "none",
+    buttons = 0,
+    clickCount = 0,
+    call = call
+  )
+  dispatch_mouse(
+    ctx,
+    action,
+    target,
+    "mousePressed",
+    from,
+    button = "left",
+    buttons = 1,
+    clickCount = 1,
+    call = call
   )
   pressed <- TRUE
   dispatch_mouse(
-    ctx, action, target, "mouseMoved", to,
-    button = "left", buttons = 1, clickCount = 0, call = call
+    ctx,
+    action,
+    target,
+    "mouseMoved",
+    to,
+    button = "left",
+    buttons = 1,
+    clickCount = 0,
+    call = call
   )
   dispatch_mouse(
-    ctx, action, target, "mouseReleased", to,
-    button = "left", buttons = 0, clickCount = 1, call = call
+    ctx,
+    action,
+    target,
+    "mouseReleased",
+    to,
+    button = "left",
+    buttons = 0,
+    clickCount = 1,
+    call = call
   )
   pressed <- FALSE
 }
@@ -1524,35 +1588,68 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   # on -- a CDP error mid-sequence, or a dragstart the page cancels (the
   # interception event never fires, so the poll times out). Both are
   # undone here; the latch drops once the normal path has released.
-  withr::defer(if (!settled) {
-    try(
-      session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout),
-      silent = TRUE
-    )
-    try(
-      dispatch_mouse(
-        ctx, "dragging", els$description, "mouseReleased", to,
-        button = "left", buttons = 0, clickCount = 1, call = call
-      ),
-      silent = TRUE
-    )
-  })
+  withr::defer(
+    if (!settled) {
+      try(
+        session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout),
+        silent = TRUE
+      )
+      try(
+        dispatch_mouse(
+          ctx,
+          "dragging",
+          els$description,
+          "mouseReleased",
+          to,
+          button = "left",
+          buttons = 0,
+          clickCount = 1,
+          call = call
+        ),
+        silent = TRUE
+      )
+    }
+  )
 
   action_cdp(
-    ctx, "dragging", els$description, call = call,
+    ctx,
+    "dragging",
+    els$description,
+    call = call,
     cmd = session$Input$setInterceptDrags(enabled = TRUE, timeout_ = timeout)
   )
   dispatch_mouse(
-    ctx, "dragging", els$description, "mouseMoved", from,
-    button = "none", buttons = 0, clickCount = 0, call = call
+    ctx,
+    "dragging",
+    els$description,
+    "mouseMoved",
+    from,
+    button = "none",
+    buttons = 0,
+    clickCount = 0,
+    call = call
   )
   dispatch_mouse(
-    ctx, "dragging", els$description, "mousePressed", from,
-    button = "left", buttons = 1, clickCount = 1, call = call
+    ctx,
+    "dragging",
+    els$description,
+    "mousePressed",
+    from,
+    button = "left",
+    buttons = 1,
+    clickCount = 1,
+    call = call
   )
   dispatch_mouse(
-    ctx, "dragging", els$description, "mouseMoved", to,
-    button = "left", buttons = 1, clickCount = 0, call = call
+    ctx,
+    "dragging",
+    els$description,
+    "mouseMoved",
+    to,
+    button = "left",
+    buttons = 1,
+    clickCount = 0,
+    call = call
   )
   pz_poll(
     fn = function() !is.null(data),
@@ -1563,17 +1660,30 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   )
 
   action_cdp(
-    ctx, "dragging", els$description, call = call,
+    ctx,
+    "dragging",
+    els$description,
+    call = call,
     cmd = session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout)
   )
   dispatch_mouse(
-    ctx, "dragging", els$description, "mouseReleased", to,
-    button = "left", buttons = 0, clickCount = 1, call = call
+    ctx,
+    "dragging",
+    els$description,
+    "mouseReleased",
+    to,
+    button = "left",
+    buttons = 0,
+    clickCount = 1,
+    call = call
   )
   settled <- TRUE
   for (type in c("dragEnter", "dragOver", "drop")) {
     action_cdp(
-      ctx, "dragging", els$description, call = call,
+      ctx,
+      "dragging",
+      els$description,
+      call = call,
       cmd = session$Input$dispatchDragEvent(
         type = type,
         x = to[["x"]],

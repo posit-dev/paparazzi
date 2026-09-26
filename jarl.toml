@@ -1,0 +1,4 @@
+[lint]
+# Every hit is deliberate: `<<-` inside callback lambdas, or assignment
+# inside capture.output()/withCallingHandlers().
+ignore = ["implicit_assignment"]

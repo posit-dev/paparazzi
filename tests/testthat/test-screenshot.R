@@ -41,7 +41,8 @@ expect_pixel <- function(page, path, css_x, css_y, dpr, expected) {
     all(abs(got[1:3] - expected) <= 2),
     info = sprintf(
       "pixel at css (%g, %g): got [%s], expected [%s]",
-      css_x, css_y,
+      css_x,
+      css_y,
       paste(got[1:3], collapse = ", "),
       paste(expected, collapse = ", ")
     )
@@ -148,7 +149,10 @@ test_that("pz_screenshot clamps the viewport clip origin on negative RTL scroll"
   pz_js(page, "document.documentElement.dir = 'rtl'")
   pz_js(page, "document.body.style.width = '3000px'")
   pz_js(page, "window.scrollTo(-100, 0)")
-  skip_if(pz_js(page, "window.scrollX") >= 0, "browser won't scroll negative in RTL")
+  skip_if(
+    pz_js(page, "window.scrollX") >= 0,
+    "browser won't scroll negative in RTL"
+  )
 
   expect_no_error(pz_screenshot(page, path))
   inner <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))

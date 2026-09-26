@@ -405,7 +405,10 @@ test_that("obscured click and hover wait without dispatching to the cover", {
   page <- local_actionability_page()
   page$default_timeout <- 0.5
   for (action in list(pz_click, pz_hover)) {
-    err <- expect_error(action(page, "#hit-target"), class = "paparazzi_error_obstructed")
+    err <- expect_error(
+      action(page, "#hit-target"),
+      class = "paparazzi_error_obstructed"
+    )
     expect_s3_class(err, "paparazzi_error_timeout")
     expect_match(conditionMessage(err), "#hit-target", fixed = TRUE)
     expect_match(conditionMessage(err), "div#hit-cover.scrim", fixed = TRUE)
@@ -418,7 +421,10 @@ test_that("the obstruction description omits a class suffix when none exists", {
   page <- local_actionability_page()
   page$default_timeout <- 0.5
   pz_js(page, "document.getElementById('hit-cover').className = ''")
-  err <- expect_error(pz_click(page, "#hit-target"), class = "paparazzi_error_obstructed")
+  err <- expect_error(
+    pz_click(page, "#hit-target"),
+    class = "paparazzi_error_obstructed"
+  )
   expect_match(conditionMessage(err), "blocked by div#hit-cover.", fixed = TRUE)
   expect_false(grepl("div#hit-cover..", conditionMessage(err), fixed = TRUE))
   expect_length(hit_pointer_log(page), 0)
@@ -443,13 +449,19 @@ test_that("targeted type and drag refuse a covered source", {
   )
   expect_match(conditionMessage(err), "div#input-cover.scrim", fixed = TRUE)
   expect_equal(pz_js(page, "document.getElementById('hit-input').value"), "")
-  expect_error(pz_drag(page, "#hit-target", by = c(20, 0)), class = "paparazzi_error_obstructed")
+  expect_error(
+    pz_drag(page, "#hit-target", by = c(20, 0)),
+    class = "paparazzi_error_obstructed"
+  )
   expect_length(hit_pointer_log(page), 0)
 })
 
 test_that("shadow children, pointer-transparent overlays and labels receive events", {
   page <- local_actionability_page()
-  pz_js(page, "document.getElementById('hit-cover').style.pointerEvents = 'none'")
+  pz_js(
+    page,
+    "document.getElementById('hit-cover').style.pointerEvents = 'none'"
+  )
   expect_invisible(pz_click(page, "#hit-target"))
   expect_length(log_ids(log_entries(page), "hit-target", "click"), 1)
   expect_invisible(pz_click(page, "#shadow-host"))
@@ -464,7 +476,10 @@ test_that("the hit test runs after scrolling a target under a fixed cover", {
   page <- local_actionability_page()
   page$default_timeout <- 0.5
   pz_js(page, "document.getElementById('fixed-cover').style.display = 'block'")
-  err <- expect_error(pz_click(page, "#below-hit"), class = "paparazzi_error_obstructed")
+  err <- expect_error(
+    pz_click(page, "#below-hit"),
+    class = "paparazzi_error_obstructed"
+  )
   expect_match(conditionMessage(err), "div#fixed-cover.scrim", fixed = TRUE)
   expect_length(log_entries(page), 0)
   expect_length(hit_pointer_log(page), 0)
@@ -819,7 +834,10 @@ test_that("pz_select_text selects an exact substring across inline tags", {
   )
   # The window selection is the real thing: the match starts inside the
   # <em> and ends inside the <strong>, and reads back as one string.
-  expect_equal(pz_js(page, "window.getSelection().toString()"), "galapagos penguins")
+  expect_equal(
+    pz_js(page, "window.getSelection().toString()"),
+    "galapagos penguins"
+  )
   expect_equal(
     pz_js(page, "window.getSelection().anchorNode.parentElement.tagName"),
     "EM"
@@ -841,7 +859,10 @@ test_that("pz_select_text lets typing replace the selection", {
   # Scoped too: the focusing click pz_type() makes would collapse the
   # selection before the insert, so a scope element holding an active
   # selection is typed into directly.
-  pz_js(page, "document.getElementById('editor').textContent = 'otters are playful'")
+  pz_js(
+    page,
+    "document.getElementById('editor').textContent = 'otters are playful'"
+  )
   ctx <- pz_find(page, "#editor")
   pz_select_text(ctx, "otters")
   pz_type(ctx, "penguins")
@@ -851,13 +872,22 @@ test_that("pz_select_text lets typing replace the selection", {
   )
   # Without a selection, the scoped path still clicks to focus: a
   # trusted mousedown on the editor, the insert at the click's caret.
-  pz_js(page, "document.getElementById('editor').textContent = 'otters are playful'")
+  pz_js(
+    page,
+    "document.getElementById('editor').textContent = 'otters are playful'"
+  )
   ctx <- pz_find(page, "#editor")
   pz_type(ctx, "x")
   log <- adv_log(page)
-  expect_true(any(vapply(log, function(e) {
-    identical(e$type, "mousedown") && identical(e$id, "editor") && isTRUE(e$isTrusted)
-  }, logical(1))))
+  expect_true(any(vapply(
+    log,
+    function(e) {
+      identical(e$type, "mousedown") &&
+        identical(e$id, "editor") &&
+        isTRUE(e$isTrusted)
+    },
+    logical(1)
+  )))
   expect_equal(
     pz_js(page, "document.getElementById('editor').textContent"),
     "otters are playfulx"
@@ -893,7 +923,8 @@ test_that("pz_scroll scrolls the page by, to a direction, and a target into view
 
   # to: the direction vocabulary, straight to the edge.
   pz_scroll(page, to = "bottom")
-  expect_true(pz_js(page,
+  expect_true(pz_js(
+    page,
     "window.scrollY === document.documentElement.scrollHeight - window.innerHeight"
   ))
   pz_scroll(page, to = "top")
@@ -901,7 +932,10 @@ test_that("pz_scroll scrolls the page by, to a direction, and a target into view
 
   # target: auto-scrolls a below-fold element into view.
   pz_scroll(page, target = "#tall-bottom")
-  y <- pz_js(page, "document.getElementById('tall-bottom').getBoundingClientRect().y")
+  y <- pz_js(
+    page,
+    "document.getElementById('tall-bottom').getBoundingClientRect().y"
+  )
   expect_true(y >= 0 && y < pz_js(page, "window.innerHeight"))
 })
 
@@ -911,13 +945,19 @@ test_that("pz_scroll by and to act on the scope's scroll container", {
   # The scope element itself is scrollable: it is the container.
   ctx <- pz_find(page, "#scroller")
   ctx <- expect_invisible(pz_scroll(ctx, by = c(0, 120)))
-  expect_equal(pz_js(page, "document.getElementById('scroller').scrollTop"), 120)
+  expect_equal(
+    pz_js(page, "document.getElementById('scroller').scrollTop"),
+    120
+  )
   pz_scroll(ctx, to = "bottom")
-  expect_true(pz_js(page, paste(
-    "document.getElementById('scroller').scrollTop ===",
-    "document.getElementById('scroller').scrollHeight -",
-    "document.getElementById('scroller').clientHeight"
-  )))
+  expect_true(pz_js(
+    page,
+    paste(
+      "document.getElementById('scroller').scrollTop ===",
+      "document.getElementById('scroller').scrollHeight -",
+      "document.getElementById('scroller').clientHeight"
+    )
+  ))
 
   # A scope inside a scrollable container resolves up to it, and the
   # page never moves.
@@ -941,11 +981,17 @@ test_that("pz_scroll validates its modes", {
   )
   # by and to reuse the shared offset and direction checkers.
   expect_error(pz_scroll(page, by = "lots"), class = "paparazzi_error_input")
-  expect_error(pz_scroll(page, to = "sideways"), class = "paparazzi_error_input")
+  expect_error(
+    pz_scroll(page, to = "sideways"),
+    class = "paparazzi_error_input"
+  )
   # A multi-match scope has no single container to scroll: both
   # modes error instead of acting on the first match.
   ctx <- pz_find(page, ".dup-select")
-  expect_error(pz_scroll(ctx, by = c(0, 50)), class = "paparazzi_error_multiple")
+  expect_error(
+    pz_scroll(ctx, by = c(0, 50)),
+    class = "paparazzi_error_multiple"
+  )
   expect_error(pz_scroll(ctx, to = "top"), class = "paparazzi_error_multiple")
   # The page never moved.
   expect_equal(pz_js(page, "window.scrollY"), 0)
@@ -973,10 +1019,14 @@ test_that("pz_drag moves a mouse-dragged element onto the destination", {
   # The fixture's box follows the pointer while held, so it ends
   # centered where the drag dropped it.
   centers <- function(sel) {
-    pz_js(page, paste0(
-      "(() => { const r = document.querySelector('", sel,
-      "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
-    ))
+    pz_js(
+      page,
+      paste0(
+        "(() => { const r = document.querySelector('",
+        sel,
+        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+      )
+    )
   }
   box <- centers("#dragbox")
   zone <- centers("#dropzone")
@@ -985,17 +1035,23 @@ test_that("pz_drag moves a mouse-dragged element onto the destination", {
 
   # Real, trusted pointer input in order: down on the box, a move, up.
   log <- adv_log(page)
-  expect_true(all(adv_log_types(log) %in%
-    c("mousemove", "mousedown", "mouseup")))
+  expect_true(all(
+    adv_log_types(log) %in%
+      c("mousemove", "mousedown", "mouseup")
+  ))
   box_types <- adv_log_types(log, "dragbox")
   expect_true("mousedown" %in% box_types)
   expect_lt(
     match("mousedown", box_types),
     match("mouseup", box_types)
   )
-  moused <- log[vapply(log, function(e) {
-    identical(e$type, "mousedown") && identical(e$id, "dragbox")
-  }, logical(1))][[1]]
+  moused <- log[vapply(
+    log,
+    function(e) {
+      identical(e$type, "mousedown") && identical(e$id, "dragbox")
+    },
+    logical(1)
+  )][[1]]
   expect_true(moused$isTrusted)
   # A non-draggable source never starts an HTML5 drag.
   expect_false("dragstart" %in% adv_log_types(log))
@@ -1003,15 +1059,21 @@ test_that("pz_drag moves a mouse-dragged element onto the destination", {
 
 test_that("pz_drag drops at a by offset from the source", {
   page <- local_advanced_page()
-  before <- pz_js(page, paste(
-    "(() => { const r = document.getElementById('dragbox').getBoundingClientRect();",
-    "return [r.x + r.width / 2, r.y + r.height / 2]; })()"
-  ))
+  before <- pz_js(
+    page,
+    paste(
+      "(() => { const r = document.getElementById('dragbox').getBoundingClientRect();",
+      "return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+    )
+  )
   pz_drag(page, "#dragbox", by = c(80, 0))
-  after <- pz_js(page, paste(
-    "(() => { const r = document.getElementById('dragbox').getBoundingClientRect();",
-    "return [r.x + r.width / 2, r.y + r.height / 2]; })()"
-  ))
+  after <- pz_js(
+    page,
+    paste(
+      "(() => { const r = document.getElementById('dragbox').getBoundingClientRect();",
+      "return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+    )
+  )
   expect_lt(abs(after[[1]] - (before[[1]] + 80)), 2)
   expect_lt(abs(after[[2]] - before[[2]]), 2)
 })
@@ -1031,13 +1093,21 @@ test_that("pz_drag routes an HTML5 source through the drag pipeline", {
   expect_true("dragstart" %in% types)
   expect_true("dragend" %in% types)
   expect_true("drop" %in% types)
-  starts <- log[vapply(log, function(e) {
-    identical(e$type, "dragstart") && identical(e$id, "draggable")
-  }, logical(1))][[1]]
+  starts <- log[vapply(
+    log,
+    function(e) {
+      identical(e$type, "dragstart") && identical(e$id, "draggable")
+    },
+    logical(1)
+  )][[1]]
   expect_true(starts$isTrusted)
-  drops <- log[vapply(log, function(e) {
-    identical(e$type, "drop") && identical(e$id, "dropzone")
-  }, logical(1))][[1]]
+  drops <- log[vapply(
+    log,
+    function(e) {
+      identical(e$type, "drop") && identical(e$id, "dropzone")
+    },
+    logical(1)
+  )][[1]]
   expect_true(drops$isTrusted)
 })
 
@@ -1083,8 +1153,13 @@ test_that("pz_drag review fixes: NULL to, uppercase draggable, viewport", {
 test_that("pz_drag refuses a destination clipped by the source's scroll", {
   for (html5 in c(TRUE, FALSE)) {
     page <- local_page(test_path("fixtures", "drag-clipped.html"))
-    if (!html5) pz_js(page, "document.querySelector('#last').draggable = false")
-    expect_identical(pz_js(page, "document.querySelector('#last').draggable"), html5)
+    if (!html5) {
+      pz_js(page, "document.querySelector('#last').draggable = false")
+    }
+    expect_identical(
+      pz_js(page, "document.querySelector('#last').draggable"),
+      html5
+    )
 
     error <- expect_error(
       pz_drag(page, "#last", "#first"),

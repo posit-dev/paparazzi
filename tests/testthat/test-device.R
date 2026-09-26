@@ -7,14 +7,20 @@ test_that("pz_device validates its inputs", {
 
   expect_error(pz_device(42), class = "paparazzi_error_context")
   expect_error(pz_device(page, widht = 390), class = "rlib_error_dots_nonempty")
-  expect_error(pz_device(page, width = -1), regexp = "larger than or equal to 0")
+  expect_error(
+    pz_device(page, width = -1),
+    regexp = "larger than or equal to 0"
+  )
   expect_error(pz_device(page, width = 0), class = "paparazzi_error_input")
   expect_error(pz_device(page, height = 0), class = "paparazzi_error_input")
   expect_error(pz_device(page, scale = 0), class = "paparazzi_error_input")
   expect_error(pz_device(page, zoom = 0), class = "paparazzi_error_input")
   expect_error(pz_device(page, mobile = "yes"), regexp = "TRUE.+or.+FALSE")
   expect_error(pz_device(page, zoom_method = "lens"), regexp = "must be one of")
-  expect_error(pz_device(page, color_scheme = "sepia"), regexp = "must be one of")
+  expect_error(
+    pz_device(page, color_scheme = "sepia"),
+    regexp = "must be one of"
+  )
   expect_error(pz_device(page, reduced_motion = 1), regexp = "TRUE.+or.+FALSE")
   expect_error(pz_device(page, locale = 42), regexp = "single string")
   expect_error(pz_device(page, timezone = 42), regexp = "single string")
@@ -95,7 +101,10 @@ test_that("css zoom keeps layout but breaks vh", {
   # Layout sizes are preserved pre-zoom...
   expect_equal(js(page, "document.getElementById('px').offsetWidth"), 100)
   # ...rendered (rect) sizes carry the factor.
-  expect_equal(js(page, "document.getElementById('px').getBoundingClientRect().width"), 200)
+  expect_equal(
+    js(page, "document.getElementById('px').getBoundingClientRect().width"),
+    200
+  )
   # A 50vh box now renders across the full viewport: vh is broken.
   expect_equal(
     js(page, "document.getElementById('vh').getBoundingClientRect().height"),
@@ -148,7 +157,10 @@ test_that("disabling css zoom restores the page's own inline zoom", {
 
   pz_device(page, zoom = 1)
   expect_equal(js(page, "document.documentElement.style.zoom"), "1.5")
-  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1.5")
+  expect_equal(
+    js(page, "getComputedStyle(document.documentElement).zoom"),
+    "1.5"
+  )
 })
 
 test_that("zoom defaults to the viewport method", {
@@ -165,11 +177,17 @@ test_that("color scheme emulation is observable in matchMedia and styles", {
 
   pz_device(page, color_scheme = "light")
   expect_true(js(page, "matchMedia('(prefers-color-scheme: light)').matches"))
-  expect_equal(js(page, "getComputedStyle(document.body).backgroundColor"), "rgb(255, 255, 255)")
+  expect_equal(
+    js(page, "getComputedStyle(document.body).backgroundColor"),
+    "rgb(255, 255, 255)"
+  )
 
   pz_device(page, color_scheme = "dark")
   expect_true(js(page, "matchMedia('(prefers-color-scheme: dark)').matches"))
-  expect_equal(js(page, "getComputedStyle(document.body).backgroundColor"), "rgb(34, 34, 34)")
+  expect_equal(
+    js(page, "getComputedStyle(document.body).backgroundColor"),
+    "rgb(34, 34, 34)"
+  )
 })
 
 test_that("reduced motion emulation is observable in matchMedia and styles", {
@@ -177,12 +195,24 @@ test_that("reduced motion emulation is observable in matchMedia and styles", {
 
   # Emulate explicitly: the host OS could already prefer reduced motion.
   pz_device(page, reduced_motion = FALSE)
-  expect_false(js(page, "matchMedia('(prefers-reduced-motion: reduce)').matches"))
-  expect_equal(js(page, "getComputedStyle(document.getElementById('spin')).animationName"), "spin")
+  expect_false(js(
+    page,
+    "matchMedia('(prefers-reduced-motion: reduce)').matches"
+  ))
+  expect_equal(
+    js(page, "getComputedStyle(document.getElementById('spin')).animationName"),
+    "spin"
+  )
 
   pz_device(page, reduced_motion = TRUE)
-  expect_true(js(page, "matchMedia('(prefers-reduced-motion: reduce)').matches"))
-  expect_equal(js(page, "getComputedStyle(document.getElementById('spin')).animationName"), "none")
+  expect_true(js(
+    page,
+    "matchMedia('(prefers-reduced-motion: reduce)').matches"
+  ))
+  expect_equal(
+    js(page, "getComputedStyle(document.getElementById('spin')).animationName"),
+    "none"
+  )
 })
 
 test_that("color scheme and reduced motion emulations coexist", {
@@ -193,7 +223,10 @@ test_that("color scheme and reduced motion emulations coexist", {
   pz_device(page, reduced_motion = TRUE)
 
   expect_true(js(page, "matchMedia('(prefers-color-scheme: dark)').matches"))
-  expect_true(js(page, "matchMedia('(prefers-reduced-motion: reduce)').matches"))
+  expect_true(js(
+    page,
+    "matchMedia('(prefers-reduced-motion: reduce)').matches"
+  ))
 })
 
 test_that("locale and timezone overrides apply", {

@@ -7,7 +7,8 @@
 # callers never see an expression, only the function.
 loc_resolver_js <- function(locs) {
   specs <- jsonlite::toJSON(lapply(locs, loc_spec_fields), auto_unbox = TRUE)
-  sprintf(r"(function() {
+  sprintf(
+    r"(function() {
 const specs = %s;
 const collapse = (s) => s.replace(/\s+/g, ' ');
 const matchesText = (el, text) =>
@@ -62,7 +63,9 @@ for (const spec of specs) {
 // Null (not an empty array) on no match, so the caller can skip the
 // count read entirely and never holds an empty remote object.
 return out.length ? out : null;
-})", specs)
+})",
+    specs
+  )
 }
 
 # The target = NULL seam, shared by expect_impl() and get_impl(): NULL

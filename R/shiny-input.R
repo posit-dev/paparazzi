@@ -34,22 +34,56 @@ pz_set_shiny_input <- function(ctx, id, value, ..., wait = TRUE) {
   check_string(id)
   check_bool(wait)
   if (!nzchar(id)) {
-    cli::cli_abort("{.arg id} must not be empty.", class = "paparazzi_error_input")
+    cli::cli_abort(
+      "{.arg id} must not be empty.",
+      class = "paparazzi_error_input"
+    )
   }
-  if (is.null(value) || !(is.atomic(value) || is.list(value)) ||
-      (is.atomic(value) && anyNA(value))) {
+  if (
+    is.null(value) ||
+      !(is.atomic(value) || is.list(value)) ||
+      (is.atomic(value) && anyNA(value))
+  ) {
     stop_input_type(value, "a non-missing atomic vector or list")
   }
   action_start(ctx)
   scoped <- scope_root(ctx)
   scope <- if (is.null(scoped)) "document" else scoped$description
   id_json <- as.character(jsonlite::toJSON(id, auto_unbox = TRUE))
-  value_json <- as.character(jsonlite::toJSON(value, auto_unbox = TRUE, null = "null", digits = NA))
-  invocation <- paste0("(", shiny_input_set_js, ").call(this, ", id_json, ", ", value_json, ")")
+  value_json <- as.character(jsonlite::toJSON(
+    value,
+    auto_unbox = TRUE,
+    null = "null",
+    digits = NA
+  ))
+  invocation <- paste0(
+    "(",
+    shiny_input_set_js,
+    ").call(this, ",
+    id_json,
+    ", ",
+    value_json,
+    ")"
+  )
   result <- if (is.null(scoped)) {
-    pz_js(ctx, paste0("(", shiny_input_set_js, ").call([document], ", id_json, ", ", value_json, ")"))
+    pz_js(
+      ctx,
+      paste0(
+        "(",
+        shiny_input_set_js,
+        ").call([document], ",
+        id_json,
+        ", ",
+        value_json,
+        ")"
+      )
+    )
   } else {
-    els_arg_values(scoped, paste0("function() { return ", invocation, "; }"), list())
+    els_arg_values(
+      scoped,
+      paste0("function() { return ", invocation, "; }"),
+      list()
+    )
   }
   if (identical(result, "invalid-date-range")) {
     cli::cli_abort(
@@ -58,13 +92,19 @@ pz_set_shiny_input <- function(ctx, id, value, ..., wait = TRUE) {
     )
   }
   if (!identical(result, "ok")) {
-    why <- if (identical(result, "unsupported")) "does not support binding-based setting" else "has no bound Shiny input binding"
+    why <- if (identical(result, "unsupported")) {
+      "does not support binding-based setting"
+    } else {
+      "has no bound Shiny input binding"
+    }
     cli::cli_abort(
       "Input {.val {id}} in scope {.val {scope}} {why}.",
       class = "paparazzi_error_binding"
     )
   }
-  if (wait) pz_wait_for_shiny_idle(ctx)
+  if (wait) {
+    pz_wait_for_shiny_idle(ctx)
+  }
   invisible(ctx)
 }
 

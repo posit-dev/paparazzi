@@ -154,7 +154,7 @@ key_parse <- function(spec, call = caller_env()) {
   tokens <- if (nchar(spec) == 1L) {
     spec
   } else {
-    if (substr(spec, nchar(spec), nchar(spec)) == "+") {
+    if (endsWith(spec, "+")) {
       cli::cli_abort(
         c(
           "{.val {spec}} ends with {.val +} but no key follows it.",
