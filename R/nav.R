@@ -8,7 +8,7 @@
 #' an empty scope stack, and the pinned scope objects are released, so a
 #' context scoped **before** the navigation raises a detach error if used
 #' afterwards -- re-scope with [pz_find()] on the returned root context.
-#' Session-level state (timeout, and later staging and recording) is
+#' Session-level state (timeout, staging and recording) is
 #' untouched.
 #'
 #' @inheritParams pz_click

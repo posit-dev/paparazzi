@@ -82,17 +82,17 @@ digit_keys <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
 digit_symbols <- c("!", "@", "#", "$", "%", "^", "&", "*", "(", ")")
 for (i in seq_along(digit_keys)) {
   code <- paste0("Digit", digit_keys[i])
-  keyCode <- utf8ToInt(digit_keys[i])
+  key_code <- utf8ToInt(digit_keys[i])
   key_table[[digit_keys[i]]] <- list(
     key = digit_keys[i],
     code = code,
-    keyCode = keyCode,
+    keyCode = key_code,
     text = digit_keys[i]
   )
   key_table[[digit_symbols[i]]] <- list(
     key = digit_symbols[i],
     code = code,
-    keyCode = keyCode,
+    keyCode = key_code,
     text = digit_symbols[i],
     implied_shift = TRUE
   )
@@ -114,17 +114,17 @@ punctuation_keys <- list(
 )
 for (punctuation in punctuation_keys) {
   code <- punctuation[3]
-  keyCode <- as.integer(punctuation[4])
+  key_code <- as.integer(punctuation[4])
   key_table[[punctuation[1]]] <- list(
     key = punctuation[1],
     code = code,
-    keyCode = keyCode,
+    keyCode = key_code,
     text = punctuation[1]
   )
   key_table[[punctuation[2]]] <- list(
     key = punctuation[2],
     code = code,
-    keyCode = keyCode,
+    keyCode = key_code,
     text = punctuation[2],
     implied_shift = TRUE
   )

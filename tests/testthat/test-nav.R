@@ -8,7 +8,6 @@ test_that("pz_nav_goto navigates and returns the root context", {
 
   root <- pz_nav_goto(ctx, nav_fixture_url("b"))
   expect_s3_class(root, "PaparazziContext")
-  # At root, the returned context is the page itself.
   expect_identical(root, ctx)
   expect_equal(length(root$scope), 0L)
   expect_identical(pz_js(root, "document.title"), "paparazzi nav B")
@@ -77,10 +76,8 @@ test_that("navigation resets scope and releases pinned objects", {
   expect_equal(length(scoped$scope), 1L)
 
   root <- pz_nav_goto(scoped, nav_fixture_url("b"))
-  # The returned context is at the root...
   expect_equal(length(root$scope), 0L)
   expect_no_error(pz_find(root, "#scope-target"))
-  # ...while the pre-nav scoped context is dead: its pins were released.
   expect_error(pz_click(scoped), class = "paparazzi_error_detached")
   expect_error(pz_find_first(scoped), class = "paparazzi_error_detached")
 })
@@ -99,7 +96,6 @@ test_that("pz_nav_reload and back/forward also reset scope", {
   expect_equal(length(root2$scope), 0L)
   expect_error(pz_click(scoped2), class = "paparazzi_error_detached")
 
-  # The page itself (already at root) is returned unchanged.
   expect_identical(pz_nav_forward(root2), root2)
 })
 
