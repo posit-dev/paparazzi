@@ -25,9 +25,11 @@ single number for both axes).}
 \code{ctx}, invisibly.
 }
 \description{
-Auto-waits for the source (and, with \code{to}, the destination) to be
-actionable, then drags with real mouse input: press at the source's
-center, move to the destination, release. When the source is a
+Auto-waits for the source to be actionable: visible, non-empty, and
+receiving pointer events at its center (not covered by another element).
+With \code{to}, the destination is also checked when brought into view.
+It then drags with real mouse input: press at the source's center,
+move to the destination, release. When the source is a
 real HTML5 drag source (\code{draggable}, including inherited
 \code{draggable} or the image/\verb{<a href>} defaults), the drag runs through
 the browser's drag pipeline instead: the press and move start a

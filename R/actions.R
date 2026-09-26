@@ -7,11 +7,11 @@
 # DOM.setFileInputFiles (pz_set_files()).
 #' Click an element
 #'
-#' Auto-waits for the element to be actionable -- visible with a
-#' non-empty box, the same "visible" [pz_expect_visible()] uses -- then
-#' scrolls it into view and clicks the center of it with real browser
-#' input events: a mouse move to the point, then a left-button press
-#' and release. The page sees a trusted pointer sequence -- exactly
+#' Auto-waits for the element to be actionable: visible (as in
+#' [pz_expect_visible()]), with a non-empty box, and receiving pointer
+#' events at its center (not covered by another element). After scrolling
+#' it into view, clicks its center with real browser input events: a mouse
+#' move to the point, then a left-button press and release. The page sees a trusted pointer sequence -- exactly
 #' what a user's click produces -- so `:hover` state, focus, and click
 #' handlers all behave as they would live. While recording, the staging
 #' settings ([pz_stage()]) animate the scroll, the cursor glide, and
@@ -56,7 +56,8 @@ pz_click <- function(ctx, target = NULL, ...) {
 #' Hover the pointer over an element
 #'
 #' Auto-waits for the element to be actionable -- visible with a
-#' non-empty box -- then scrolls it into view (instantly) and moves the
+#' non-empty box and receiving pointer events at its center (not covered
+#' by another element) -- then scrolls it into view and moves the
 #' pointer to the center of it with a real `mousemove` event, without
 #' pressing any button. This is what drives `:hover` styles and
 #' `mouseenter`/`mouseover` handlers.
@@ -104,7 +105,8 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #'
 #' @description
 #' With a `target`, auto-waits for the element to be actionable --
-#' visible with a non-empty box -- then scrolls it into view, clicks
+#' visible with a non-empty box and receiving pointer events at its center
+#' (not covered by another element) -- then scrolls it into view, clicks
 #' the center of it (real mouse events, so the element genuinely gains
 #' focus), and inserts `text` at the caret -- the caret lands where the
 #' click lands, just like a real user. With `target = NULL` at the
@@ -364,56 +366,85 @@ action_elements <- function(ctx, target, call = caller_env()) {
     pinned = FALSE
   )
 }
-# One actionability probe: [visible, x, y, width, height] for the
-# first element. Visible is checkVisibility() with checkVisibilityCSS,
-# the same definition pz_expect_visible() uses, so "visible" means one
-# thing across actions and expectations. A zero-size probe means there
-# is no point to dispatch at (the center of an empty box is its corner).
-pointer_actionable_js <- "function() {
-  if (!this.length) return null;
+# Given a target and a viewport CSS point, return the receiving element's
+# raw identity when it is not in the target's composed subtree. Keeping
+# this separate lets destination probes use the same rule after source scroll.
+pointer_hit_test_js <- "const pointerHitTest = (target, x, y) => {
+  let hit = document.elementFromPoint(x, y);
+  while (hit && hit.shadowRoot) {
+    const inner = hit.shadowRoot.elementFromPoint(x, y);
+    if (!inner || inner === hit) break;
+    hit = inner;
+  }
+  for (let node = hit; node; node = node.parentNode || node.host) {
+    if (node === target) return null;
+  }
+  return hit ? {
+    tag: hit.tagName.toLowerCase(),
+    id: hit.id,
+    classes: Array.from(hit.classList)
+  } : { tag: '', id: '', classes: [] };
+};"
+# A single post-scroll probe reads the center and verifies its event receiver.
+pointer_actionable_js <- paste0("function() {\n", pointer_hit_test_js, "
+  if (!this.length) return { status: 'unavailable' };
   const el = this[0];
   const r = el.getBoundingClientRect();
-  return [
-    el.checkVisibility({ checkVisibilityCSS: true }) ? 1 : 0,
-    r.x, r.y, r.width, r.height
-  ];
-}"
-# Scroll the first element into view and return the center of its
-# bounding rect as c(x, y) (viewport CSS pixels, matching
-# getBoundingClientRect), auto-waiting until the element is
-# actionable: visible and with a non-empty box. Resolution auto-wait
-# only covers ">= 1 match", so without this wait a hidden or zero-sized
-# match would dispatch at (0, 0) and hit whatever sits there. Rects are
-# viewport-relative and go stale after the scroll, so each attempt
-# scrolls first, then reads. The scroll and the post-poll cursor move
-# are the staging seams: stage_scroll_into_view() wheels the scroll
-# while recording (instant otherwise), stage_move_cursor() glides or
-# jumps the cursor to the point; keep scroll + rect + center together.
+  if (!el.checkVisibility({ checkVisibilityCSS: true }) ||
+      r.width <= 0 || r.height <= 0) return { status: 'unavailable' };
+  const x = r.x + r.width / 2;
+  const y = r.y + r.height / 2;
+  const blocker = pointerHitTest(el, x, y);
+  return blocker ? { status: 'blocked', blocker } : { status: 'ok', x, y };
+}")
+format_pointer_blocker <- function(blocker) {
+  if (!nzchar(blocker$tag)) return("<none>")
+  classes <- unlist(blocker$classes, use.names = FALSE)
+  paste0(
+    blocker$tag,
+    if (nzchar(blocker$id)) paste0("#", blocker$id),
+    if (length(classes)) paste0(".", classes, collapse = "")
+  )
+}
+# Scroll and sample in the same poll; after a blocked sample, retry until
+# the page's existing actionability budget expires.
 el_pointer_point <- function(ctx, els, call = caller_env()) {
   point <- NULL
-  pz_poll(
-    fn = function() {
-      stage_scroll_into_view(ctx, els, call = call)
-      probe <- els_call(els, pointer_actionable_js, call = call)
-      if (
-        length(probe) == 5L && probe[1] == 1 && probe[4] > 0 && probe[5] > 0
-      ) {
-        point <<- c(
-          x = probe[2] + probe[4] / 2,
-          y = probe[3] + probe[5] / 2
-        )
+  blocker <- NULL
+  timeout <- ctx$page$default_timeout
+  tryCatch(
+    pz_poll(
+      fn = function() {
+        blocker <<- NULL
+        stage_scroll_into_view(ctx, els, call = call)
+        probe <- els_values(els, pointer_actionable_js, call = call)
+        if (identical(probe$status, "blocked")) {
+          blocker <<- probe$blocker
+          return(FALSE)
+        }
+        if (!identical(probe$status, "ok")) return(FALSE)
+        point <<- c(x = probe$x, y = probe$y)
         TRUE
-      } else {
-        FALSE
-      }
-    },
-    timeout = ctx$page$default_timeout,
-    loop = ctx$page$child_loop,
-    what = paste0(els$description, " to become visible with a non-empty box"),
-    call = call
+      },
+      timeout = timeout,
+      loop = ctx$page$child_loop,
+      what = paste0(
+        els$description,
+        " to become visible with a non-empty box and receive pointer events"
+      ),
+      call = call
+    ),
+    paparazzi_error_timeout = function(e) {
+      if (is.null(blocker)) stop(e)
+      blocker_name <- format_pointer_blocker(blocker)
+      cli::cli_abort(
+        "Timed out after {timeout}s waiting for {els$description} to receive pointer events; blocked by {blocker_name}.",
+        class = c("paparazzi_error_obstructed", "paparazzi_error_timeout"),
+        call = call,
+        parent = e
+      )
+    }
   )
-  # The staging seam: with a visible cursor this glides (recording) or
-  # jumps (stills) the cursor to the click point; otherwise a no-op.
   stage_move_cursor(ctx, point)
   point
 }
@@ -1251,9 +1282,11 @@ scroll_arg_json <- function(by = NULL, to = NULL) {
 #' Drag an element to another element or by an offset
 #'
 #' @description
-#' Auto-waits for the source (and, with `to`, the destination) to be
-#' actionable, then drags with real mouse input: press at the source's
-#' center, move to the destination, release. When the source is a
+#' Auto-waits for the source to be actionable: visible, non-empty, and
+#' receiving pointer events at its center (not covered by another element).
+#' With `to`, the destination is also checked when brought into view.
+#' It then drags with real mouse input: press at the source's center,
+#' move to the destination, release. When the source is a
 #' real HTML5 drag source (`draggable`, including inherited
 #' `draggable` or the image/`<a href>` defaults), the drag runs through
 #' the browser's drag pipeline instead: the press and move start a

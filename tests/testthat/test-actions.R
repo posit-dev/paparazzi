@@ -414,6 +414,16 @@ test_that("obscured click and hover wait without dispatching to the cover", {
   expect_length(hit_pointer_log(page), 0)
 })
 
+test_that("the obstruction description omits a class suffix when none exists", {
+  page <- local_actionability_page()
+  page$default_timeout <- 0.5
+  pz_js(page, "document.getElementById('hit-cover').className = ''")
+  err <- expect_error(pz_click(page, "#hit-target"), class = "paparazzi_error_obstructed")
+  expect_match(conditionMessage(err), "blocked by div#hit-cover.", fixed = TRUE)
+  expect_false(grepl("div#hit-cover..", conditionMessage(err), fixed = TRUE))
+  expect_length(hit_pointer_log(page), 0)
+})
+
 test_that("click retries the blocked center until the cover disappears", {
   page <- local_actionability_page()
   pz_js(page, "window.__pzUncover()")
@@ -442,7 +452,7 @@ test_that("shadow children, pointer-transparent overlays and labels receive even
   expect_length(log_ids(log_entries(page), "hit-target", "click"), 1)
   expect_invisible(pz_click(page, "#shadow-host"))
   expect_invisible(pz_click(page, "#hit-label"))
-  expect_length(log_ids(log_entries(page), "hit-label", "click"), 1)
+  expect_length(log_ids(log_entries(page), "label-child", "click"), 1)
 })
 
 test_that("the hit test runs after scrolling a target under a fixed cover", {

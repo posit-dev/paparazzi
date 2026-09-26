@@ -20,7 +20,8 @@ scope; at the root context a target is required.}
 }
 \description{
 Auto-waits for the element to be actionable -- visible with a
-non-empty box -- then scrolls it into view (instantly) and moves the
+non-empty box and receiving pointer events at its center (not covered
+by another element) -- then scrolls it into view and moves the
 pointer to the center of it with a real \code{mousemove} event, without
 pressing any button. This is what drives \verb{:hover} styles and
 \code{mouseenter}/\code{mouseover} handlers.
