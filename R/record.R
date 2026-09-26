@@ -431,7 +431,6 @@ new_recorder <- function(
   rec$first_error <- NULL
   rec
 }
-# Monotonic clock for the video timeline.
 rec_now <- function() {
   unname(proc.time()[["elapsed"]])
 }
@@ -772,7 +771,6 @@ record_output_spec <- function(rec, png_size, call = caller_env()) {
   }
   aligned_width <- floor(width / align) * align
   aligned_height <- floor(height / align) * align
-  # Center the alignment trim within the crop.
   x <- x + floor((width - aligned_width) / 2)
   y <- y + floor((height - aligned_height) / 2)
   width <- aligned_width

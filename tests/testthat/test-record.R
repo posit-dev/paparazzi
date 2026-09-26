@@ -72,7 +72,6 @@ test_that("pz_record encodes on error and returns ctx invisibly", {
     "boom",
     class = "simpleError"
   )
-  # the recording up to the error was still encoded and written
   expect_true(file.exists(out))
   expect_gt(recorded_video_info(out)$duration, 0)
 
@@ -834,6 +833,5 @@ test_that("recording input and lifecycle errors are classed", {
   )
   pz_wait(page, 0.2)
   page |> pz_record_stop()
-  # the recorder is cleared after a stop
   expect_error(pz_record_stop(page), class = "paparazzi_error_record")
 })

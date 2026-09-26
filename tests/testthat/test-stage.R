@@ -434,7 +434,6 @@ test_that("recorded demo glides, presses, types, and scrolls on camera", {
     pz_click("#below") |>
     pz_record_stop()
 
-  # The final state is the chain's real work.
   expect_equal(pz_js(page, "window.__log.clicks"), 1)
   expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
   expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
