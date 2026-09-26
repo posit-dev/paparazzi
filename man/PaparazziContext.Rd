@@ -5,8 +5,9 @@
 \alias{PaparazziPage}
 \title{Paparazzi contexts and pages}
 \description{
-A \strong{context} is the first argument and invisible return value of every
-\verb{pz_*()} function, enabling \verb{|>} chains. A context is either the root (a
+A \strong{context} is the first argument of \verb{pz_*()} functions, enabling \verb{|>}
+chains. \verb{pz_find*()} return contexts visibly; chainable actions return
+them invisibly. A context is either the root (a
 \code{PaparazziPage}) or a scoped context created by \verb{pz_find*()}: a context
 holding an immutable stack of pinned element sets. The stack is never
 mutated in place -- \verb{pz_find*()} derive a new context sharing the

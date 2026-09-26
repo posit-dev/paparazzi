@@ -10,7 +10,7 @@ pz_find_reset(ctx)
 \item{ctx}{A paparazzi context.}
 }
 \value{
-A new context, invisibly.
+A new root context, or \code{ctx} itself at the root.
 }
 \description{
 \code{pz_find_reset()} returns a context with an empty scope stack. No

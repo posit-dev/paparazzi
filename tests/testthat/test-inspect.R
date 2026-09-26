@@ -16,8 +16,9 @@ test_that("the console summary matches the spec format", {
   withr::local_options(cli.width = 400)
   got <- inspect_capture(function() pz_inspect(page))
 
-  expect_length(got$out, 5L)
+  expect_length(got$out, 4L)
   expect_match(got$out[[1]], "^── paparazzi page ─+$")
+  expect_identical(nchar(got$out[[1]]), getOption("width"))
   expect_match(got$out[[2]], "^URL        file:")
   inner <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight, window.devicePixelRatio]"))
   dpr <- inner[[3]]
@@ -29,8 +30,8 @@ test_that("the console summary matches the spec format", {
     got$out[[3]],
     sprintf("%-11s%s × %s @%s · %s", "Device", inner[[1]], inner[[2]], scale, scheme)
   )
-  expect_identical(got$out[[4]], "Scope      root")
-  expect_identical(got$out[[5]], "Recording  off · cursor hidden")
+  expect_identical(got$out[[4]], "Recording  off · cursor hidden")
+  expect_false(any(grepl("^Scope ", got$out)))
   # No target, no warnings, no visuals by default (tests aren't interactive).
   expect_length(got$msgs, 0L)
 })
@@ -40,15 +41,18 @@ test_that("the scope stack renders with live match counts", {
   ctx <- page |> pz_find("#insp-list") |> pz_find(".insp-item")
   got <- inspect_capture(function() pz_inspect(ctx))
 
+  expect_match(got$out[[1]], "^── paparazzi scope ─+$")
+  expect_identical(nchar(got$out[[1]]), getOption("width"))
   expect_identical(
-    got$out[[4]],
+    got$out[[2]],
     "Scope      root › `#insp-list` (1) › `.insp-item` (12)"
   )
   # A narrowed scope compacts its which-qualifier for display.
   narrow <- pz_find_nth(ctx, 2)
   got <- inspect_capture(function() pz_inspect(narrow))
+  expect_match(got$out[[1]], "^── paparazzi scope ─+$")
   expect_identical(
-    got$out[[4]],
+    got$out[[2]],
     "Scope      root › `#insp-list` (1) › `.insp-item` (12) › `.insp-item` #2 (1)"
   )
 })
@@ -61,7 +65,7 @@ test_that("stale pinned elements warn without aborting", {
   # Detached, but the pinned set still resolves: (live of pinned) + warning.
   pz_js(page, "document.getElementById('insp-btn').remove()")
   got <- inspect_capture(function() pz_inspect(ctx))
-  expect_identical(got$out[[4]], "Scope      root › `#insp-btn` (0 of 1)")
+  expect_identical(got$out[[2]], "Scope      root › `#insp-btn` (0 of 1)")
   expect_identical(got$value, ctx)
   expect_length(got$msgs, 1L)
   expect_match(got$msgs[[1]], "no longer in the page")
@@ -72,7 +76,7 @@ test_that("stale pinned elements warn without aborting", {
   ctx <- pz_find(page, "#insp-list")
   page$release_object_group()
   got <- inspect_capture(function() pz_inspect(ctx))
-  expect_identical(got$out[[4]], "Scope      root › `#insp-list` (gone)")
+  expect_identical(got$out[[2]], "Scope      root › `#insp-list` (gone)")
   expect_length(got$msgs, 1L)
   expect_match(got$msgs[[1]], "no longer resolves")
 })
@@ -81,8 +85,8 @@ test_that("target matches resolve once, without auto-waiting", {
   page <- local_inspect_page()
   # .insp-late arrives after 5s; auto-waiting would hold the call for it.
   got <- inspect_capture(function() pz_inspect(page, ".insp-late"))
-  expect_identical(got$out[[5]], "Target     `.insp-late` → no matches")
-  expect_length(got$out, 6L)
+  expect_identical(got$out[[4]], "Target     `.insp-late` → no matches")
+  expect_length(got$out, 5L)
   expect_identical(got$value, page)
 })
 
@@ -100,25 +104,25 @@ test_that("targets resolve relative to the current scope", {
 test_that("each match shows a short tag and its state", {
   page <- local_inspect_page()
   got <- inspect_capture(function() pz_inspect(page, "#insp-btn"))
-  expect_identical(got$out[[5]], "Target     `#insp-btn` → 1 match")
+  expect_identical(got$out[[4]], "Target     `#insp-btn` → 1 match")
   expect_identical(
-    got$out[[6]],
+    got$out[[5]],
     '  1  <button id="insp-btn" class="insp-btn" aria-label="Actions">'
   )
-  expect_identical(got$out[[7]], "     visible · enabled · at 300,300 · 80 × 30")
+  expect_identical(got$out[[6]], "     visible · enabled · at 300,300 · 80 × 30")
 
   got <- inspect_capture(function() pz_inspect(page, "#insp-hidden"))
-  expect_identical(got$out[[6]], '  1  <div id="insp-hidden" class="insp-hidden">')
-  expect_identical(got$out[[7]], "     hidden · enabled · at 0,0 · 0 × 0")
+  expect_identical(got$out[[5]], '  1  <div id="insp-hidden" class="insp-hidden">')
+  expect_identical(got$out[[6]], "     hidden · enabled · at 0,0 · 0 × 0")
 
   got <- inspect_capture(function() pz_inspect(page, "#insp-disabled"))
-  expect_match(got$out[[7]], "^     visible · disabled ·")
+  expect_match(got$out[[6]], "^     visible · disabled ·")
 })
 
 test_that("long match lists are truncated", {
   page <- local_inspect_page()
   got <- inspect_capture(function() pz_inspect(page, ".insp-item"))
-  expect_identical(got$out[[5]], "Target     `.insp-item` → 12 matches")
+  expect_identical(got$out[[4]], "Target     `.insp-item` → 12 matches")
   rows <- grep("^  [0-9]+  ", got$out)
   expect_length(rows, 10L)
   expect_true(any(grepl("^  10  ", got$out)))
@@ -223,26 +227,32 @@ test_that("the overlay host is invisible to resolution and drawing replaces it",
 test_that("print() shows the summary without the target section or visuals", {
   page <- local_inspect_page()
   got <- inspect_capture(function() print(page))
-  expect_length(got$out, 5L)
+  expect_length(got$out, 4L)
   expect_match(got$out[[1]], "^── paparazzi page ─+$")
   expect_match(got$out[[2]], "^URL        file:")
   expect_match(got$out[[3]], "^Device     ")
-  expect_identical(got$out[[4]], "Scope      root")
-  expect_identical(got$out[[5]], "Recording  off · cursor hidden")
+  expect_identical(got$out[[4]], "Recording  off · cursor hidden")
+  expect_false(any(grepl("^Scope ", got$out)))
   expect_false(any(grepl("Target", got$out)))
 
   ctx <- page |> pz_find("#insp-list") |> pz_find(".insp-item")
   got <- inspect_capture(function() print(ctx))
+  expect_match(got$out[[1]], "^── paparazzi scope ─+$")
   expect_identical(
-    got$out[[4]],
+    got$out[[2]],
     "Scope      root › `#insp-list` (1) › `.insp-item` (12)"
   )
   expect_false(any(grepl("Target", got$out)))
 
+  root <- pz_find_reset(ctx)
   # A closed page stays a one-liner.
   pz_close(page)
   got <- inspect_capture(function() print(page))
-  expect_identical(got$out, "<PaparazziPage: closed>")
+  expect_identical(got$out, "<paparazzi page> (closed)")
+  got <- inspect_capture(function() print(ctx))
+  expect_identical(got$out, "<paparazzi scope> (page closed)")
+  got <- inspect_capture(function() print(root))
+  expect_identical(got$out, "<paparazzi page> (closed)")
 })
 
 test_that("pz_inspect validates its input", {
@@ -263,7 +273,7 @@ test_that("pz_inspect validates its input", {
 test_that("a control inside a disabled fieldset reports disabled", {
   page <- local_inspect_page()
   got <- inspect_capture(function() pz_inspect(page, "#insp-fieldset-btn"))
-  expect_match(got$out[[7]], "^     visible · disabled ·")
+  expect_match(got$out[[6]], "^     visible · disabled ·")
 })
 
 test_that("target outline numbering keeps hidden matches in the count", {

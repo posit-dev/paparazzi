@@ -214,13 +214,15 @@ inspect_recording_state <- function(page) {
 # would break cli templates, so page-derived content interpolates as
 # values, never templates. Labels pad to an 11-char column, matching the
 # SPEC's example output.
-inspect_header <- function() {
+inspect_header <- function(label = "page") {
   width <- getOption("width", 80L)
-  paste0("\u2500\u2500 paparazzi page ", strrep("\u2500", max(1, as.integer(width) - 18)))
+  prefix <- paste0("\u2500\u2500 paparazzi ", label, " ")
+  paste0(prefix, strrep("\u2500", max(1, as.integer(width) - nchar(prefix))))
 }
 inspect_summary_print <- function(ctx, matches = NULL) {
+  scoped <- length(ctx$scope) > 0L
   if (ctx$page$is_closed()) {
-    cli::cat_line("<paparazzi context> (page closed)")
+    cli::cat_line(if (scoped) "<paparazzi scope> (page closed)" else "<paparazzi page> (closed)")
     return(invisible(NULL))
   }
   # pz_js() converts a JS array to an R list (mixed types, so no unlist).
@@ -236,15 +238,16 @@ inspect_summary_print <- function(ctx, matches = NULL) {
   }
   rec <- inspect_recording_state(ctx$page)
 
-  cli::cat_line(inspect_header())
+  cli::cat_line(inspect_header(if (scoped) "scope" else "page"))
+  if (scoped) {
+    scope <- inspect_scope_entries(ctx)
+    cli::cat_line(sprintf("%-11s%s", "Scope", paste(c("root", scope$entries), collapse = " \u203a ")))
+    for (msg in scope$warnings) {
+      cli::cli_inform(c("!" = "{msg}"), msg = msg)
+    }
+  }
   cli::cat_line(sprintf("%-11s%s", "URL", v[[1]]))
   cli::cat_line(sprintf("%-11s%s \u00d7 %s @%s \u00b7 %s", "Device", v[[2]], v[[3]], scale, scheme))
-
-  scope <- inspect_scope_entries(ctx)
-  cli::cat_line(sprintf("%-11s%s", "Scope", paste(c("root", scope$entries), collapse = " \u203a ")))
-  for (msg in scope$warnings) {
-    cli::cli_inform(c("!" = "{msg}"), msg = msg)
-  }
 
   if (!is.null(matches)) {
     inspect_target_print(matches)

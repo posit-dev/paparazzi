@@ -20,7 +20,7 @@ scope_ids <- function(els) {
 
 test_that("pz_find pins the matched set and pushes it immutably", {
   page <- local_elements_page()
-  ctx <- expect_invisible(pz_find(page, ".panel"))
+  ctx <- expect_visible(pz_find(page, ".panel"))
 
   expect_s3_class(ctx, "PaparazziContext")
   expect_false(inherits(ctx, "PaparazziPage"))
@@ -42,6 +42,22 @@ test_that("pz_find pins the matched set and pushes it immutably", {
   expect_identical(length(ctx2$scope), 2L)
   expect_identical(ctx2$scope[[1]], pinned)
   expect_identical(ctx2$scope[[2]]$count, 6L)
+})
+
+test_that("all find variants return visibly, including root no-ops", {
+  page <- local_elements_page()
+  expect_visible(pz_find(page, ".panel"))
+  expect_visible(pz_find_first(page, ".panel"))
+  expect_visible(pz_find_last(page, ".panel"))
+  expect_visible(pz_find_nth(page, 2, target = ".panel"))
+  ctx <- pz_find(page, ".panel")
+  expect_visible(pz_find_pop(ctx))
+  expect_visible(pz_find_reset(ctx))
+  expect_visible(pz_find_pop(page))
+  expect_visible(pz_find_reset(page))
+  root <- pz_find_pop(ctx)
+  expect_visible(pz_find_pop(root))
+  expect_visible(pz_find_reset(root))
 })
 
 test_that("pz_find auto-waits for a match and times out with no match", {
@@ -249,11 +265,14 @@ test_that("scoped contexts print their stack", {
   ctx2 <- pz_find_nth(ctx, 2)
 
   out <- capture.output(print(ctx2))
-  expect_match(out[[1]], "── paparazzi page")
-  expect_match(out[[4]], "^Scope      root › `\\.panel` \\(3\\) › `\\.panel` #2 \\(1\\)$")
+  expect_match(out[[1]], "── paparazzi scope")
+  expect_match(out[[2]], "^Scope      root › `\\.panel` \\(3\\) › `\\.panel` #2 \\(1\\)$")
 
-  expect_match(capture.output(print(ctx))[[4]], "^Scope      root › `\\.panel` \\(3\\)$")
-  expect_match(capture.output(print(pz_find_reset(ctx2)))[[4]], "^Scope      root$")
+  expect_match(capture.output(print(ctx))[[2]], "^Scope      root › `\\.panel` \\(3\\)$")
+  root_out <- capture.output(print(pz_find_reset(ctx2)))
+  expect_match(root_out[[1]], "── paparazzi page")
+  expect_length(root_out, 4L)
+  expect_false(any(grepl("^Scope ", root_out)))
 })
 
 test_that("pillar renders contexts compactly", {

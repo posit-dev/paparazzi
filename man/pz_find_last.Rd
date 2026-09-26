@@ -19,7 +19,7 @@ position, and a spec that already carries \code{which} is an error.}
 the current scope? Requires a \code{target}.}
 }
 \value{
-A new context, invisibly.
+A new context.
 }
 \description{
 \code{\link[=pz_find_last]{pz_find_last()}} is \code{\link[=pz_find]{pz_find()}} with \code{which = "last"}. With a
