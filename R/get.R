@@ -234,7 +234,8 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
         tag = field("tag"),
         id = field("id"),
         class = field("class"),
-        text = collapse_ws(field("text"))
+        text = collapse_ws(field("text")),
+        call = call
       )
     }
   )
