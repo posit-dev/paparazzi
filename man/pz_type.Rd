@@ -22,7 +22,8 @@ scope or, at the root context, the focused element.}
 }
 \description{
 With a \code{target}, auto-waits for the element to be actionable --
-visible with a non-empty box -- then scrolls it into view, clicks
+visible with a non-empty box and receiving pointer events at its center
+(not covered by another element) -- then scrolls it into view, clicks
 the center of it (real mouse events, so the element genuinely gains
 focus), and inserts \code{text} at the caret -- the caret lands where the
 click lands, just like a real user. With \code{target = NULL} at the

@@ -397,6 +397,79 @@ test_that("pz_type with a hidden target times out before typing", {
   expect_length(log_entries(page), 0)
 })
 
+hit_pointer_log <- function(page) {
+  pz_js(page, "window.__pzPointerLog")
+}
+
+test_that("obscured click and hover wait without dispatching to the cover", {
+  page <- local_actionability_page()
+  page$default_timeout <- 0.5
+  for (action in list(pz_click, pz_hover)) {
+    err <- expect_error(action(page, "#hit-target"), class = "paparazzi_error_obstructed")
+    expect_s3_class(err, "paparazzi_error_timeout")
+    expect_match(conditionMessage(err), "#hit-target", fixed = TRUE)
+    expect_match(conditionMessage(err), "div#hit-cover.scrim", fixed = TRUE)
+  }
+  expect_length(log_entries(page), 0)
+  expect_length(hit_pointer_log(page), 0)
+})
+
+test_that("the obstruction description omits a class suffix when none exists", {
+  page <- local_actionability_page()
+  page$default_timeout <- 0.5
+  pz_js(page, "document.getElementById('hit-cover').className = ''")
+  err <- expect_error(pz_click(page, "#hit-target"), class = "paparazzi_error_obstructed")
+  expect_match(conditionMessage(err), "blocked by div#hit-cover.", fixed = TRUE)
+  expect_false(grepl("div#hit-cover..", conditionMessage(err), fixed = TRUE))
+  expect_length(hit_pointer_log(page), 0)
+})
+
+test_that("click retries the blocked center until the cover disappears", {
+  page <- local_actionability_page()
+  pz_js(page, "window.__pzUncover()")
+  expect_invisible(pz_click(page, "#hit-target"))
+  clicks <- log_ids(log_entries(page), "hit-target", "click")
+  expect_length(clicks, 1)
+  expect_true(clicks[[1]]$isTrusted)
+  expect_length(log_ids(hit_pointer_log(page), "hit-cover"), 0)
+})
+
+test_that("targeted type and drag refuse a covered source", {
+  page <- local_actionability_page()
+  page$default_timeout <- 0.5
+  err <- expect_error(
+    pz_type(page, "Ada", target = "#hit-input"),
+    class = "paparazzi_error_obstructed"
+  )
+  expect_match(conditionMessage(err), "div#input-cover.scrim", fixed = TRUE)
+  expect_equal(pz_js(page, "document.getElementById('hit-input').value"), "")
+  expect_error(pz_drag(page, "#hit-target", by = c(20, 0)), class = "paparazzi_error_obstructed")
+  expect_length(hit_pointer_log(page), 0)
+})
+
+test_that("shadow children, pointer-transparent overlays and labels receive events", {
+  page <- local_actionability_page()
+  pz_js(page, "document.getElementById('hit-cover').style.pointerEvents = 'none'")
+  expect_invisible(pz_click(page, "#hit-target"))
+  expect_length(log_ids(log_entries(page), "hit-target", "click"), 1)
+  expect_invisible(pz_click(page, "#shadow-host"))
+  shadow_clicks <- log_ids(log_entries(page), "shadow-child", "click")
+  expect_length(shadow_clicks, 1)
+  expect_true(shadow_clicks[[1]]$isTrusted)
+  expect_invisible(pz_click(page, "#hit-label"))
+  expect_length(log_ids(log_entries(page), "label-child", "click"), 1)
+})
+
+test_that("the hit test runs after scrolling a target under a fixed cover", {
+  page <- local_actionability_page()
+  page$default_timeout <- 0.5
+  pz_js(page, "document.getElementById('fixed-cover').style.display = 'block'")
+  err <- expect_error(pz_click(page, "#below-hit"), class = "paparazzi_error_obstructed")
+  expect_match(conditionMessage(err), "div#fixed-cover.scrim", fixed = TRUE)
+  expect_length(log_entries(page), 0)
+  expect_length(hit_pointer_log(page), 0)
+})
+
 # The form fixture (form.html) exercises value setting end to end: a
 # form with every control pz_set_value() covers, a framework-style
 # controlled input whose instance-level value SETTER is trapped

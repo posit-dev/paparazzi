@@ -20,11 +20,12 @@ scope; at the root context a target is required.}
 }
 \description{
 Auto-waits for the element to be actionable -- visible with a
-non-empty box, the same "visible" \code{\link[=pz_expect_visible]{pz_expect_visible()}} uses -- then
-scrolls it into view and clicks the center of it with real browser
-input events: a mouse move to the point, then a left-button press
-and release. The page sees a trusted pointer sequence -- exactly
-what a user's click produces -- so \verb{:hover} state, focus, and click
+non-empty box, the same "visible" \code{\link[=pz_expect_visible]{pz_expect_visible()}} uses, and
+receiving pointer events at its center (not covered by another
+element) -- then scrolls it into view and clicks the center of it
+with real browser input events: a mouse move to the point, then a
+left-button press and release. The page sees a trusted pointer
+sequence -- exactly what a user's click produces -- so \verb{:hover} state, focus, and click
 handlers all behave as they would live. While recording, the staging
 settings (\code{\link[=pz_stage]{pz_stage()}}) animate the scroll, the cursor glide, and
 the press; otherwise everything runs straight to the final state.
