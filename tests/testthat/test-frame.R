@@ -94,8 +94,7 @@ test_that("parse_direction rejects invalid tokens and combinations", {
 })
 
 test_that("parse_direction takes a restricted valid set", {
-  # The cursor and staging arguments later reuse the parser with a
-  # subset of the vocabulary.
+  # Cursor and staging restrict the shared parser to a subset of directions.
   sides <- list(c("left"), c("right"))
   expect_identical(parse_direction("right", valid = sides), "right")
   expect_error(parse_direction("top", valid = sides), '"left"')

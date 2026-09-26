@@ -213,8 +213,7 @@ direction_labels <- function(valid = DIRECTIONS) {
 # Normalize a direction string to its sorted token set: lowercase,
 # split on spaces or hyphens, sort, dedupe. Tokens outside the
 # vocabulary and combinations outside `valid` abort with the valid
-# values listed. Shared by pz_frame(anchor =) and, later, the cursor
-# and staging arguments that use the same vocabulary.
+# values listed. Shared by framing, cursor, staging, and action directions.
 parse_direction <- function(
   x,
   valid = DIRECTIONS,
@@ -342,8 +341,8 @@ check_offset <- function(
   )
 }
 # The page-level default framing: one field in the page's reserved
-# staging state (private in R/context.R), read by screenshots and the
-# recorder to come. R6 private fields are reachable only through the
+# staging state (private in R/context.R), read by screenshots and
+# recordings. R6 private fields are reachable only through the
 # object's enclos environment; these helpers are the single access
 # point, so promoting the field to an active binding later touches
 # one place.
@@ -476,8 +475,7 @@ frame_content_box <- function(ctx, target, spec, call = caller_env()) {
   NULL
 }
 # The union of element rects, as a viewport-relative box
-# c(left, top, right, bottom). The four edges are pure reductions over
-# the tibble columns -- no rect is ever mutated mid-computation.
+# c(left, top, right, bottom).
 box_union <- function(rects, call = caller_env()) {
   if (nrow(rects) == 0L) {
     cli::cli_abort(

@@ -1,4 +1,3 @@
-# pz_get_style() / pz_expect_style() read and check computed styles.
 # Everything runs against style.html: a #sizes parent with a #half
 # child sized in %, an #em-parent/#em-child pair sized in em, an
 # #em-margin element with a 1em margin, a #current element using

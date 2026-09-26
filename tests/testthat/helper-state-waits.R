@@ -1,6 +1,5 @@
-# Pages for the expectation/waits catalog (kata expectations-waits):
-# state.html holds the state and content fixtures, waits.html the
-# animating and navigation ones, nav-target.html the navigation landing.
+# Shared state and wait fixtures: state.html covers state/content;
+# waits.html covers animations/navigation; nav-target.html is the landing page.
 
 state_fixture_file <- function() {
   test_path("fixtures", "state.html")
