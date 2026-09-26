@@ -130,6 +130,21 @@ test_that("pz_get_elements summarizes every match", {
   expect_type(els$element, "list")
 })
 
+test_that("pz_get_elements attributes pinning errors to the getter", {
+  page <- local_getters_page()
+  local_mocked_bindings(
+    pin_match = function(ctx, els, locs, i, call = rlang::caller_env()) {
+      cli::cli_abort("Pinned match failed.", call = call)
+    }
+  )
+
+  err <- tryCatch(pz_get_elements(page, target = ".item"), error = identity)
+  expect_identical(
+    err$call,
+    quote(pz_get_elements(page, target = ".item"))
+  )
+})
+
 test_that("pz_get_elements reads tag, id, and class from a form control", {
   page <- local_getters_page()
   el <- pz_get_elements(page, target = "#field-a")
