@@ -143,7 +143,11 @@ pz_record_start <- function(
   # Fire the first tick as soon as the loop pumps so short recordings
   # still get an early frame; ticks re-arm at 1/fps from then on. The
   # tick closure carries its recorder so it can't adopt a later one.
-  later::later(function() record_tick(page, rec), delay = 0, loop = page$child_loop)
+  later::later(
+    function() record_tick(page, rec),
+    delay = 0,
+    loop = page$child_loop
+  )
   invisible(ctx)
 }
 #' Stop a recording and write the video
@@ -573,25 +577,30 @@ record_capture <- function(rec, page, vt) {
       wait_ = FALSE,
       timeout_ = remaining(),
       callback_ = function(metrics) {
-        tryCatch({
-          v <- metrics$cssVisualViewport
-          clip <- list(
-            x = max(v$pageX, 0),
-            y = max(v$pageY, 0),
-            width = v$clientWidth,
-            height = v$clientHeight,
-            scale = 1
-          )
-          page$session$Page$captureScreenshot(
-            format = "png",
-            clip = clip,
-            fromSurface = TRUE,
-            wait_ = FALSE,
-            timeout_ = remaining(),
-            callback_ = function(res) record_frame_done(rec, pending, res = res),
-            error_ = function(err) record_frame_done(rec, pending, err = err)
-          )
-        }, error = function(e) record_frame_done(rec, pending, err = e))
+        tryCatch(
+          {
+            v <- metrics$cssVisualViewport
+            clip <- list(
+              x = max(v$pageX, 0),
+              y = max(v$pageY, 0),
+              width = v$clientWidth,
+              height = v$clientHeight,
+              scale = 1
+            )
+            page$session$Page$captureScreenshot(
+              format = "png",
+              clip = clip,
+              fromSurface = TRUE,
+              wait_ = FALSE,
+              timeout_ = remaining(),
+              callback_ = function(res) {
+                record_frame_done(rec, pending, res = res)
+              },
+              error_ = function(err) record_frame_done(rec, pending, err = err)
+            )
+          },
+          error = function(e) record_frame_done(rec, pending, err = e)
+        )
       },
       error_ = function(err) record_frame_done(rec, pending, err = err)
     ),
@@ -779,9 +788,16 @@ record_output_spec <- function(rec, png_size, call = caller_env()) {
   }
   filters <- character(0)
   if (!is.null(crop)) {
-    filters <- c(filters, sprintf(
-      "crop=%d:%d:%d:%d", crop$width, crop$height, crop$x, crop$y
-    ))
+    filters <- c(
+      filters,
+      sprintf(
+        "crop=%d:%d:%d:%d",
+        crop$width,
+        crop$height,
+        crop$x,
+        crop$y
+      )
+    )
   }
   if (!is.null(rec$scale)) {
     if (rec$scale <= 4) {
@@ -867,11 +883,15 @@ record_encode <- function(rec, call = caller_env()) {
       box <- out$crop
       for (i in seq_along(sources)) {
         image <- png::readPNG(sources[[i]])
-        png::writePNG(image[
-          seq.int(box$y + 1L, length.out = box$height),
-          seq.int(box$x + 1L, length.out = box$width),
-          , drop = FALSE
-        ], cropped[[i]])
+        png::writePNG(
+          image[
+            seq.int(box$y + 1L, length.out = box$height),
+            seq.int(box$x + 1L, length.out = box$width),
+            ,
+            drop = FALSE
+          ],
+          cropped[[i]]
+        )
       }
       files <- cropped[match(files, sources)]
     }

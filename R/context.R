@@ -66,7 +66,12 @@ PaparazziPage <- R6::R6Class(
     #' @param timeout Default timeout in seconds for this session.
     #' @param owned_app App started by this page, if any.
     #' @param shared_app Caller-owned app handle kept alive while the page lives.
-    initialize = function(session, timeout = 10, owned_app = NULL, shared_app = NULL) {
+    initialize = function(
+      session,
+      timeout = 10,
+      owned_app = NULL,
+      shared_app = NULL
+    ) {
       stopifnot(inherits(session, "ChromoteSession"))
       private$chromote_ <- session
       private$default_timeout_ <- timeout

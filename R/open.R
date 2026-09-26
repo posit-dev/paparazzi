@@ -78,12 +78,18 @@ pz_open <- function(
   owned_app <- NULL
   shared_app <- if (inherits(x, "PaparazziApp")) x else NULL
   is_app <- inherits(x, "PaparazziApp") ||
-    (is_string(x) && file.exists(x) &&
+    (is_string(x) &&
+      file.exists(x) &&
       (dir.exists(x) || is_shiny_app_file(basename(x))))
   if (inherits(x, "PaparazziApp")) {
     url <- x$url
   } else if (is_app) {
-    owned_app <- pz_app(x, shiny_options = shiny_options, envvars = envvars, timeout = timeout)
+    owned_app <- pz_app(
+      x,
+      shiny_options = shiny_options,
+      envvars = envvars,
+      timeout = timeout
+    )
     withr::defer(if (!is.null(owned_app)) owned_app$stop())
     url <- owned_app$url
   } else {
@@ -92,8 +98,10 @@ pz_open <- function(
   wait <- open_wait_mode(wait, is_app)
   session <- chromote::ChromoteSession$new()
   page <- PaparazziPage$new(
-    session = session, timeout = timeout %||% 10,
-    owned_app = owned_app, shared_app = shared_app
+    session = session,
+    timeout = timeout %||% 10,
+    owned_app = owned_app,
+    shared_app = shared_app
   )
   owned_app <- NULL
   # If device settings, navigation, or the load wait fail, don't leak
@@ -113,7 +121,9 @@ pz_open <- function(
     event <- promises::promise(function(resolve, reject) {
       resolve_navigated <<- resolve
     })
-    cancel_navigated <- session$Page$frameNavigated(callback_ = resolve_navigated)
+    cancel_navigated <- session$Page$frameNavigated(
+      callback_ = resolve_navigated
+    )
     # A same-document navigation emits no frameNavigated event; unlike the
     # event promise, a callback can be removed before the session closes.
     withr::defer(cancel_navigated())

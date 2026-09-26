@@ -23,8 +23,10 @@ demo_rect_ink <- function(page, path, x0, x1, y0, y1, dpr = cursor_dpr(page)) {
       "})()"
     ),
     b64,
-    round(x0 * dpr), round(y0 * dpr),
-    round((x1 - x0) * dpr), round((y1 - y0) * dpr)
+    round(x0 * dpr),
+    round(y0 * dpr),
+    round((x1 - x0) * dpr),
+    round((y1 - y0) * dpr)
   )
   pz_js(page, js)
 }
@@ -53,10 +55,15 @@ test_that("pz_stage merges settings onto the defaults and validates", {
 
   # An explicit NULL removes the override (back to the default);
   # only omitted arguments leave a setting alone.
-  page |> pz_stage(
-    cursor = NULL, cursor_speed = NULL, enter = NULL,
-    typing = NULL, typing_speed = NULL, pause = NULL
-  )
+  page |>
+    pz_stage(
+      cursor = NULL,
+      cursor_speed = NULL,
+      enter = NULL,
+      typing = NULL,
+      typing_speed = NULL,
+      pause = NULL
+    )
   expect_identical(page_stage(page), STAGE_DEFAULTS)
 
   expect_error(pz_stage(page, cursor = "yes"), class = "rlang_error")
@@ -91,7 +98,12 @@ test_that("natural typing is per-character while recording, instant otherwise", 
   # typing = "instant" is one insertion even while recording.
   page2 <- local_cursor_page()
   page2 |> pz_stage(typing = "instant")
-  page2 |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page2 |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
   page2 |> pz_type("otters", target = "#name")
   page2 |> pz_record_stop()
   expect_equal(pz_js(page2, "window.__log.inputs.name"), 1)
@@ -108,7 +120,12 @@ test_that("smooth scrolling uses real wheel events while recording", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |> pz_stage()
-  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
 
   page |> pz_scroll(by = c(0, 600))
   expect_equal(pz_js(page, "window.scrollY"), 600)
@@ -124,7 +141,10 @@ test_that("smooth scrolling uses real wheel events while recording", {
   # A scoped scroll wheels the scope's container, not the page.
   wheels <- pz_js(page, "window.__log.wheels")
   page |> pz_find("#scroller") |> pz_scroll(to = "bottom")
-  expect_equal(pz_js(page, "document.getElementById('scroller').scrollTop"), 650)
+  expect_equal(
+    pz_js(page, "document.getElementById('scroller').scrollTop"),
+    650
+  )
   expect_true(pz_js(page, "window.__log.wheels") > wheels)
 
   page |> pz_record_stop()
@@ -134,7 +154,12 @@ test_that("the auto-scroll before actions is the same staged wheel scroll", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |> pz_stage()
-  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
   page |> pz_click("#below")
   page |> pz_record_stop()
 
@@ -150,27 +175,35 @@ test_that("a target visible in a below-the-fold container is wheeled into view",
   # clip: the target is visible to the container yet off-screen, so the
   # auto-scroll must reach past the nearest scrollable ancestor to the
   # document.
-  pz_js(page, paste0(
-    "(() => {",
-    "const d = document.createElement('div');",
-    "d.id = 'deep';",
-    "d.style.cssText = 'position:absolute;left:100px;",
-    "top:calc(100vh + 300px);width:300px;height:250px;",
-    "overflow:auto;border:1px solid #ccc;';",
-    "const b = document.createElement('button');",
-    "b.id = 'deep-btn';",
-    "b.textContent = 'deep';",
-    "b.style.cssText = 'margin-top:20px;width:120px;height:40px;';",
-    "const tall = document.createElement('div');",
-    "tall.style.cssText = 'height:900px;background:#f8f8f8;';",
-    "d.appendChild(b); d.appendChild(tall);",
-    "document.body.appendChild(d);",
-    "b.addEventListener('click',", 
-    "  () => window.__log.deepClicks = (window.__log.deepClicks || 0) + 1);",
-    "})()"
-  ))
+  pz_js(
+    page,
+    paste0(
+      "(() => {",
+      "const d = document.createElement('div');",
+      "d.id = 'deep';",
+      "d.style.cssText = 'position:absolute;left:100px;",
+      "top:calc(100vh + 300px);width:300px;height:250px;",
+      "overflow:auto;border:1px solid #ccc;';",
+      "const b = document.createElement('button');",
+      "b.id = 'deep-btn';",
+      "b.textContent = 'deep';",
+      "b.style.cssText = 'margin-top:20px;width:120px;height:40px;';",
+      "const tall = document.createElement('div');",
+      "tall.style.cssText = 'height:900px;background:#f8f8f8;';",
+      "d.appendChild(b); d.appendChild(tall);",
+      "document.body.appendChild(d);",
+      "b.addEventListener('click',",
+      "  () => window.__log.deepClicks = (window.__log.deepClicks || 0) + 1);",
+      "})()"
+    )
+  )
   page |> pz_stage()
-  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
   page |> pz_click("#deep-btn")
   page |> pz_record_stop()
 
@@ -186,7 +219,12 @@ test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |> pz_stage(cursor = FALSE)
-  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
   page |> pz_click("#btn")
   # cursor = FALSE never draws, even while recording.
   expect_null(cursor_overlay_state(page))
@@ -209,37 +247,51 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
   # application must run before any wheel fires, so recorded and
   # unrecorded chains end in the identical state.
   cover_center <- function(page) {
-    pz_js(page, paste0(
-      "(() => {",
-      "const d = document.createElement('div');",
-      "d.id = 'center-scroller';",
-      "d.style.cssText = 'position:fixed;",
-      "left:calc(50% - 150px);top:calc(50% - 100px);",
-      "width:300px;height:200px;overflow:auto;';",
-      "const tall = document.createElement('div');",
-      "tall.style.cssText = 'height:2000px;background:#f8f8f8;';",
-      "d.appendChild(tall);",
-      "document.body.appendChild(d);",
-      "})()"
-    ))
+    pz_js(
+      page,
+      paste0(
+        "(() => {",
+        "const d = document.createElement('div');",
+        "d.id = 'center-scroller';",
+        "d.style.cssText = 'position:fixed;",
+        "left:calc(50% - 150px);top:calc(50% - 100px);",
+        "width:300px;height:200px;overflow:auto;';",
+        "const tall = document.createElement('div');",
+        "tall.style.cssText = 'height:2000px;background:#f8f8f8;';",
+        "d.appendChild(tall);",
+        "document.body.appendChild(d);",
+        "})()"
+      )
+    )
   }
 
   page <- local_cursor_page()
   cover_center(page)
   page |> pz_stage()
-  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
   page |> pz_scroll(by = c(0, 400))
   expect_equal(pz_js(page, "window.scrollY"), 400)
   # Not one wheel fired: the scroll was applied instantly, and the
   # covering scroller is untouched.
   expect_equal(pz_js(page, "window.__log.wheels"), 0)
-  expect_equal(pz_js(page, "document.getElementById('center-scroller').scrollTop"), 0)
+  expect_equal(
+    pz_js(page, "document.getElementById('center-scroller').scrollTop"),
+    0
+  )
   # The auto-scroll before an action hits the same fallback: the fixed
   # scroller still covers every root wheel point.
   page |> pz_click("#below")
   expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
   expect_equal(pz_js(page, "window.__log.wheels"), 0)
-  expect_equal(pz_js(page, "document.getElementById('center-scroller').scrollTop"), 0)
+  expect_equal(
+    pz_js(page, "document.getElementById('center-scroller').scrollTop"),
+    0
+  )
   page |> pz_record_stop()
   recorded <- c(
     scrollY = pz_js(page, "window.scrollY"),
@@ -252,7 +304,10 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
   page2 |> pz_click("#below")
   unrecorded <- c(
     scrollY = pz_js(page2, "window.scrollY"),
-    scoped = pz_js(page2, "document.getElementById('center-scroller').scrollTop")
+    scoped = pz_js(
+      page2,
+      "document.getElementById('center-scroller').scrollTop"
+    )
   )
 
   expect_equal(recorded, unrecorded)
@@ -261,21 +316,29 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
 test_that("an off-screen scope is brought into view with staged wheels too", {
   skip_if_no_av()
   page <- local_cursor_page()
-  pz_js(page, paste0(
-    "(() => {",
-    "const d = document.createElement('div');",
-    "d.id = 'deep-scope';",
-    "d.style.cssText = 'position:absolute;left:100px;",
-    "top:calc(100vh + 300px);width:300px;height:250px;",
-    "overflow:auto;border:1px solid #ccc;';",
-    "const tall = document.createElement('div');",
-    "tall.style.cssText = 'height:900px;background:#f8f8f8;';",
-    "d.appendChild(tall);",
-    "document.body.appendChild(d);",
-    "})()"
-  ))
+  pz_js(
+    page,
+    paste0(
+      "(() => {",
+      "const d = document.createElement('div');",
+      "d.id = 'deep-scope';",
+      "d.style.cssText = 'position:absolute;left:100px;",
+      "top:calc(100vh + 300px);width:300px;height:250px;",
+      "overflow:auto;border:1px solid #ccc;';",
+      "const tall = document.createElement('div');",
+      "tall.style.cssText = 'height:900px;background:#f8f8f8;';",
+      "d.appendChild(tall);",
+      "document.body.appendChild(d);",
+      "})()"
+    )
+  )
   page |> pz_stage()
-  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
   # The scope's container is already at its target (top), so every
   # wheel has to come from the into-view: a recorded scoped scroll
   # must animate the scope on screen, not jump it with scrollIntoView.
@@ -283,7 +346,10 @@ test_that("an off-screen scope is brought into view with staged wheels too", {
   page |> pz_record_stop()
 
   expect_true(pz_js(page, "window.__log.wheels") > 0)
-  expect_equal(pz_js(page, "document.getElementById('deep-scope').scrollTop"), 0)
+  expect_equal(
+    pz_js(page, "document.getElementById('deep-scope').scrollTop"),
+    0
+  )
   expect_true(pz_js(page, "window.scrollY") > 0)
 })
 
@@ -291,7 +357,12 @@ test_that("the stage pause holds after each action only while recording", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |> pz_stage(pause = 0.5)
-  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
   t0 <- proc.time()[["elapsed"]]
   page |> pz_click("#btn")
   recorded <- proc.time()[["elapsed"]] - t0
@@ -308,7 +379,12 @@ test_that("the stage pause holds after press, select_text, and drag too", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |> pz_stage(pause = 0.5)
-  page |> pz_record_start(withr::local_tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0))
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
 
   # Focus the field for the keypress (the click's own hold is outside
   # the timed stretch).
@@ -377,7 +453,9 @@ test_that("recorded demo glides, presses, types, and scrolls on camera", {
 
   # The glide: cursor ink in the button's band enters from the left
   # (enter = "left") and travels to the button at x = 660.
-  inks <- lapply(frames, function(f) cursor_png_ink(page, f, band = c(290, 360)))
+  inks <- lapply(frames, function(f) {
+    cursor_png_ink(page, f, band = c(290, 360))
+  })
   xs <- vapply(
     inks,
     function(ink) if (ink$count > 20) ink$x else NA_real_,

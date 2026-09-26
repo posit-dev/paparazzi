@@ -47,7 +47,12 @@
 #' pz_close(page)
 #'
 #' @export
-pz_nav_goto <- function(ctx, url, ..., wait = c("auto", "load", "shiny", "none")) {
+pz_nav_goto <- function(
+  ctx,
+  url,
+  ...,
+  wait = c("auto", "load", "shiny", "none")
+) {
   check_context(ctx)
   check_dots_empty()
   check_string(url)
@@ -155,10 +160,14 @@ nav_settle_shiny <- function(page, wait, timeout) {
   if (identical(wait, "auto")) {
     private <- page$.__enclos_env__$private
     app <- private$owned_app_ %||% private$shared_app_
-    if (is.null(app)) return(invisible(page))
+    if (is.null(app)) {
+      return(invisible(page))
+    }
     # pz_app() URLs are root URLs ending in a slash.
     app_origin <- sub("/$", "", app$url)
-    if (!identical(pz_js(page, "location.origin", timeout = timeout), app_origin)) {
+    if (
+      !identical(pz_js(page, "location.origin", timeout = timeout), app_origin)
+    ) {
       return(invisible(page))
     }
   }

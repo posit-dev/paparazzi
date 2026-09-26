@@ -69,7 +69,10 @@ test_that("pz_expect_count validates its inputs", {
   expect_error(pz_expect_count(page), "range")
   expect_error(pz_expect_count(page, n = 1, min = 1), "combine")
   expect_error(pz_expect_count(page, n = 1, max = 1), "combine")
-  expect_error(pz_expect_count(page, min = 3, max = 2), class = "paparazzi_error_input")
+  expect_error(
+    pz_expect_count(page, min = 3, max = 2),
+    class = "paparazzi_error_input"
+  )
   expect_error(pz_expect_count(page, n = 1.5), "whole")
   expect_error(pz_expect_count(page, n = -1), "whole")
   expect_error(pz_expect_count(page, n = 1, extra = 1), "empty")
@@ -139,11 +142,21 @@ test_that("pz_expect_hidden is pz_expect_visible(not = TRUE)", {
 test_that("pz_expect_text contains, exact, and regex, whitespace-collapsed", {
   page <- local_elements_page()
   pz_expect_text(page, "otters", target = ".story")
-  pz_expect_text(page, "Once there were otters.", target = ".story", match = "exact")
+  pz_expect_text(
+    page,
+    "Once there were otters.",
+    target = ".story",
+    match = "exact"
+  )
   pz_expect_text(page, "ott+ers", target = ".story", match = "regex")
   # The fixture text runs "  Once   there were   otters.  "; both sides
   # collapse before comparing.
-  pz_expect_text(page, "Once   there were otters.", target = ".story", match = "exact")
+  pz_expect_text(
+    page,
+    "Once   there were otters.",
+    target = ".story",
+    match = "exact"
+  )
   # A single value applies to every match.
   pz_expect_text(page, "same words", target = ".twin", match = "exact")
 })
@@ -152,18 +165,35 @@ test_that("pz_expect_text compares vectors pairwise in order", {
   page <- local_elements_page()
   texts <- c("What's the weather?", "The weather is sunny.", "Bring a hat.")
   pz_expect_text(page, texts, target = ".message", match = "exact")
-  pz_expect_text(page, c("same words", "same words"), target = ".twin", match = "exact")
+  pz_expect_text(
+    page,
+    c("same words", "same words"),
+    target = ".twin",
+    match = "exact"
+  )
 
   local_outside_testthat()
   # Wrong order: pairwise comparison fails.
   expect_error(
-    pz_expect_text(page, rev(texts), target = ".message", match = "exact", timeout = 0),
+    pz_expect_text(
+      page,
+      rev(texts),
+      target = ".message",
+      match = "exact",
+      timeout = 0
+    ),
     class = "paparazzi_expectation_failure"
   )
   # Length n requires exactly n matches: two values against three
   # elements never passes.
   expect_error(
-    pz_expect_text(page, texts[1:2], target = ".message", match = "exact", timeout = 0),
+    pz_expect_text(
+      page,
+      texts[1:2],
+      target = ".message",
+      match = "exact",
+      timeout = 0
+    ),
     class = "paparazzi_expectation_failure"
   )
 })
@@ -282,7 +312,10 @@ test_that("outside of testthat, failures abort with the classed error", {
 test_that("expectations validate their inputs", {
   page <- local_elements_page()
   expect_error(pz_expect_exists(page, extra = 1), "empty")
-  expect_error(pz_expect_exists(1, target = ".btn"), class = "paparazzi_error_context")
+  expect_error(
+    pz_expect_exists(1, target = ".btn"),
+    class = "paparazzi_error_context"
+  )
   expect_error(pz_expect_exists(page, target = ".btn", not = "yes"), "yes")
   expect_error(pz_expect_hidden(page, target = ".btn", not = 1), "not")
   expect_error(pz_expect_exists(page, target = ".btn", timeout = -1), "timeout")
@@ -291,7 +324,10 @@ test_that("expectations validate their inputs", {
     pz_expect_text(page, "x", target = ".btn", match = "near"),
     "contains"
   )
-  expect_error(pz_expect_visible(page, target = list()), class = "paparazzi_error_target")
+  expect_error(
+    pz_expect_visible(page, target = list()),
+    class = "paparazzi_error_target"
+  )
 })
 
 test_that("expect_retry returns the last failure without aborting", {
@@ -456,9 +492,13 @@ test_that("pz_expect_enabled requires every match to be enabled", {
 
 test_that("pz_expect_enabled retries until a control is enabled", {
   page <- local_state_page()
-  pz_js(page, "setTimeout(function () {
+  pz_js(
+    page,
+    "setTimeout(function () {
     document.getElementById('btn-disabled').disabled = false;
-  }, 300)", await = FALSE)
+  }, 300)",
+    await = FALSE
+  )
   pz_expect_enabled(page, target = "#btn-disabled", timeout = 5)
 })
 
@@ -547,7 +587,12 @@ test_that("pz_expect_value compares the value property", {
 test_that("pz_expect_value collapses whitespace on both sides", {
   page <- local_state_page()
   # The textarea holds "line one\nline two"; both sides collapse.
-  pz_expect_value(page, "line one line two", target = "#val-area", match = "exact")
+  pz_expect_value(
+    page,
+    "line one line two",
+    target = "#val-area",
+    match = "exact"
+  )
   pz_expect_value(page, "line   one", target = "#val-area")
 })
 
@@ -558,12 +603,24 @@ test_that("pz_expect_value compares vectors pairwise in order", {
 
   local_outside_testthat()
   expect_error(
-    pz_expect_value(page, rev(values), target = ".val-line", match = "exact", timeout = 0),
+    pz_expect_value(
+      page,
+      rev(values),
+      target = ".val-line",
+      match = "exact",
+      timeout = 0
+    ),
     class = "paparazzi_expectation_failure"
   )
   # Length n requires exactly n matches.
   expect_error(
-    pz_expect_value(page, values[1:2], target = ".val-line", match = "exact", timeout = 0),
+    pz_expect_value(
+      page,
+      values[1:2],
+      target = ".val-line",
+      match = "exact",
+      timeout = 0
+    ),
     class = "paparazzi_expectation_failure"
   )
 })
@@ -571,7 +628,13 @@ test_that("pz_expect_value compares vectors pairwise in order", {
 test_that("pz_expect_value treats a missing value property as unsatisfied", {
   page <- local_state_page()
   # #val-none is a <p>: no value property, reads as NA.
-  pz_expect_value(page, "anything", target = "#val-none", not = TRUE, timeout = 0)
+  pz_expect_value(
+    page,
+    "anything",
+    target = "#val-none",
+    not = TRUE,
+    timeout = 0
+  )
   # NA never satisfies the positive form.
   testthat::expect_failure(
     pz_expect_value(page, "anything", target = "#val-none", timeout = 0)
@@ -582,7 +645,11 @@ test_that("pz_expect_value treats a missing value property as unsatisfied", {
     pz_expect_value(page, "anything", target = "#val-none", timeout = 0),
     class = "paparazzi_expectation_failure"
   )
-  expect_match(conditionMessage(err), 'Expected value to contain "anything"', fixed = TRUE)
+  expect_match(
+    conditionMessage(err),
+    'Expected value to contain "anything"',
+    fixed = TRUE
+  )
   expect_match(conditionMessage(err), 'Last seen: "NA"', fixed = TRUE)
 })
 
@@ -591,21 +658,57 @@ test_that("pz_expect_value follows a typed value", {
   pz_js(page, "document.getElementById('val-text').value = 'typed otters'")
   pz_expect_value(page, "typed otters", target = "#val-text", match = "exact")
   # And it retries: the input only carries the text after a timer.
-  pz_js(page, "setTimeout(function () {
+  pz_js(
+    page,
+    "setTimeout(function () {
     document.getElementById('val-line-1').value = 'later';
-  }, 300)", await = FALSE)
-  pz_expect_value(page, "later", target = "#val-line-1", match = "exact", timeout = 5)
+  }, 300)",
+    await = FALSE
+  )
+  pz_expect_value(
+    page,
+    "later",
+    target = "#val-line-1",
+    match = "exact",
+    timeout = 5
+  )
 })
 
 test_that("pz_expect_attr defaults to an exact comparison", {
   page <- local_state_page()
   pz_expect_attr(page, "href", "https://example.com/page", target = "#link-one")
   # Non-default modes are still available.
-  pz_expect_attr(page, "href", "example.com", target = "#link-one", match = "contains")
-  pz_expect_attr(page, "href", "^https://", target = "#link-one", match = "regex")
+  pz_expect_attr(
+    page,
+    "href",
+    "example.com",
+    target = "#link-one",
+    match = "contains"
+  )
+  pz_expect_attr(
+    page,
+    "href",
+    "^https://",
+    target = "#link-one",
+    match = "regex"
+  )
   # A missing attribute satisfies nothing, so not covers absence.
-  pz_expect_attr(page, "href", "whatever", target = "#no-href", not = TRUE, timeout = 0)
-  pz_expect_attr(page, "target", "_blank", target = "#link-two", not = TRUE, timeout = 0)
+  pz_expect_attr(
+    page,
+    "href",
+    "whatever",
+    target = "#no-href",
+    not = TRUE,
+    timeout = 0
+  )
+  pz_expect_attr(
+    page,
+    "target",
+    "_blank",
+    target = "#link-two",
+    not = TRUE,
+    timeout = 0
+  )
 })
 
 test_that("pz_expect_attr compares vectors pairwise in order", {
@@ -615,7 +718,13 @@ test_that("pz_expect_attr compares vectors pairwise in order", {
 
   local_outside_testthat()
   err <- expect_error(
-    pz_expect_attr(page, "href", rev(hrefs), target = ".attr-line", timeout = 0),
+    pz_expect_attr(
+      page,
+      "href",
+      rev(hrefs),
+      target = ".attr-line",
+      timeout = 0
+    ),
     class = "paparazzi_expectation_failure"
   )
   expect_match(
@@ -632,9 +741,13 @@ test_that("pz_expect_attr compares vectors pairwise in order", {
 
 test_that("pz_expect_attr retries until the attribute lands", {
   page <- local_state_page()
-  pz_js(page, "setTimeout(function () {
+  pz_js(
+    page,
+    "setTimeout(function () {
     document.getElementById('btn-one').setAttribute('data-state', 'ready');
-  }, 300)", await = FALSE)
+  }, 300)",
+    await = FALSE
+  )
   pz_expect_attr(page, "data-state", "ready", target = "#btn-one", timeout = 5)
 })
 
@@ -659,7 +772,10 @@ test_that("pz_expect_class checks class membership", {
 
 test_that("pz_expect_class validates its input", {
   page <- local_state_page()
-  expect_error(pz_expect_class(page, "btn btn", target = ".cls"), "single class name")
+  expect_error(
+    pz_expect_class(page, "btn btn", target = ".cls"),
+    "single class name"
+  )
   expect_error(pz_expect_class(page, 1, target = ".cls"), "string")
 })
 
@@ -676,14 +792,24 @@ test_that("pz_expect_js maps the predicate over every match", {
 
   pz_js(page, "document.getElementById('scroll-box').scrollTop = 50")
   pz_expect_js(page, "el => el.scrollTop > 0", target = "#scroll-box")
-  pz_expect_js(page, "el => el.scrollTop === 0", target = "#scroll-box", not = TRUE)
+  pz_expect_js(
+    page,
+    "el => el.scrollTop === 0",
+    target = "#scroll-box",
+    not = TRUE
+  )
 })
 
 test_that("pz_expect_js failure shows the predicate and the count", {
   page <- local_state_page()
   local_outside_testthat()
   err <- expect_error(
-    pz_expect_js(page, "el => el.scrollTop > 0", target = "#scroll-box", timeout = 0),
+    pz_expect_js(
+      page,
+      "el => el.scrollTop > 0",
+      target = "#scroll-box",
+      timeout = 0
+    ),
     class = "paparazzi_expectation_failure"
   )
   msg <- conditionMessage(err)
@@ -704,7 +830,12 @@ test_that("pz_expect_js failure shows the predicate and the count", {
 test_that("pz_expect_js retries until the predicate holds", {
   page <- local_state_page()
   # The fixture sets #late-flag's dataset after 300 ms.
-  pz_expect_js(page, "el => el.dataset.ready === 'yes'", target = "#late-flag", timeout = 5)
+  pz_expect_js(
+    page,
+    "el => el.dataset.ready === 'yes'",
+    target = "#late-flag",
+    timeout = 5
+  )
 })
 
 test_that("pz_expect_js surfaces a throwing predicate as a JS error", {
@@ -749,7 +880,11 @@ test_that("pz_expect_title failure uses the classed format", {
 
 test_that("pz_expect_title retries until the title changes", {
   page <- local_state_page()
-  pz_js(page, "setTimeout(function () { document.title = 'renamed title'; }, 300)", await = FALSE)
+  pz_js(
+    page,
+    "setTimeout(function () { document.title = 'renamed title'; }, 300)",
+    await = FALSE
+  )
   pz_expect_title(page, "renamed title", timeout = 5)
 })
 
@@ -770,14 +905,22 @@ test_that("pz_expect_url failure uses the classed format", {
     class = "paparazzi_expectation_failure"
   )
   msg <- conditionMessage(err)
-  expect_match(msg, 'Expected URL to contain "https://example.com"', fixed = TRUE)
+  expect_match(
+    msg,
+    'Expected URL to contain "https://example.com"',
+    fixed = TRUE
+  )
   expect_match(msg, "Target: the page", fixed = TRUE)
   expect_match(msg, "Last seen: ", fixed = TRUE)
 })
 
 test_that("pz_expect_url retries until the hash lands", {
   page <- local_state_page()
-  pz_js(page, "setTimeout(function () { location.hash = 'later'; }, 300)", await = FALSE)
+  pz_js(
+    page,
+    "setTimeout(function () { location.hash = 'later'; }, 300)",
+    await = FALSE
+  )
   pz_expect_url(page, "#later", timeout = 5)
 })
 

@@ -84,7 +84,11 @@ cursor_png_ink <- function(page, path, band = NULL, dpr = cursor_dpr(page)) {
       "return [n, sx / n / %s, sy / n / %s, (maxY - minY + 1) / %s];",
       "})()"
     ),
-    b64, region, dpr, dpr, dpr
+    b64,
+    region,
+    dpr,
+    dpr,
+    dpr
   )
   v <- unlist(pz_js(page, js))
   list(count = v[[1]], x = v[[2]], y = v[[3]], height = v[[4]])

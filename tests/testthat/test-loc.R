@@ -82,7 +82,12 @@ test_that("format_loc renders css and qualifiers in fixed order", {
   expect_identical(format_loc(pz_loc(".btn")), "`.btn`")
   expect_identical(
     format_loc(
-      pz_loc(".shiny-tool-request", has_text = "get_weather", which = "last", within = ".chat")
+      pz_loc(
+        ".shiny-tool-request",
+        has_text = "get_weather",
+        which = "last",
+        within = ".chat"
+      )
     ),
     '`.shiny-tool-request` (has_text: "get_weather", which: last, within: `.chat`)'
   )

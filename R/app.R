@@ -123,7 +123,13 @@ check_app_envvars <- function(
 # The picker races the actual bind (the probe socket closes before
 # httpuv takes the port), so a taken port is a normal startup failure,
 # retried on a fresh port.
-app_start <- function(app_dir, envvars, shiny_options, timeout, call = caller_env()) {
+app_start <- function(
+  app_dir,
+  envvars,
+  shiny_options,
+  timeout,
+  call = caller_env()
+) {
   max_attempts <- 5
   for (attempt in seq_len(max_attempts)) {
     port <- shiny_options$port %||% random_port()
@@ -141,7 +147,12 @@ app_start <- function(app_dir, envvars, shiny_options, timeout, call = caller_en
         shiny_options$port <- NULL
         next
       }
-      app_startup_error(list(kind = "exited", port_taken = TRUE, log = character()), app_dir, timeout, call = call)
+      app_startup_error(
+        list(kind = "exited", port_taken = TRUE, log = character()),
+        app_dir,
+        timeout,
+        call = call
+      )
     }
     failure <- app_wait_ready(app, timeout)
     if (is.null(failure)) {
@@ -187,7 +198,9 @@ app_startup_error <- function(failure, app_dir, timeout, call) {
   what <- switch(
     if (failure$port_taken) "port_taken" else failure$kind,
     port_taken = "could not bind a port",
-    timeout = cli::format_inline("did not start within {.val {timeout}} seconds"),
+    timeout = cli::format_inline(
+      "did not start within {.val {timeout}} seconds"
+    ),
     exited = "exited during startup"
   )
   cli::cli_abort(
@@ -237,7 +250,13 @@ app_port_connectable <- function(port, host = "127.0.0.1") {
   # A refused connection warns as well as errors; the polls below would
   # otherwise spam a warning per attempt.
   con <- suppressWarnings(tryCatch(
-    socketConnection(host = host, port = port, open = "r+", blocking = TRUE, timeout = 1),
+    socketConnection(
+      host = host,
+      port = port,
+      open = "r+",
+      blocking = TRUE,
+      timeout = 1
+    ),
     error = function(e) NULL
   ))
   if (is.null(con)) {

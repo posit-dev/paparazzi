@@ -118,7 +118,9 @@ pz_get_value <- function(ctx, ..., target = NULL) {
     ctx = ctx,
     target = target,
     timeout = NULL,
-    read = function(els, call) chr_or_na(els_values(els, get_value_js, call = call))
+    read = function(els, call) {
+      chr_or_na(els_values(els, get_value_js, call = call))
+    }
   )
 }
 #' Read an attribute of matching elements

@@ -20,15 +20,35 @@ test_that("the console summary matches the spec format", {
   expect_match(got$out[[1]], "^── paparazzi page ─+$")
   expect_identical(nchar(got$out[[1]]), getOption("width"))
   expect_match(got$out[[2]], "^URL        file:")
-  inner <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight, window.devicePixelRatio]"))
+  inner <- unlist(pz_js(
+    page,
+    "[window.innerWidth, window.innerHeight, window.devicePixelRatio]"
+  ))
   dpr <- inner[[3]]
-  scale <- if (dpr == round(dpr)) sprintf("%gx", as.integer(dpr)) else paste0(dpr, "x")
+  scale <- if (dpr == round(dpr)) {
+    sprintf("%gx", as.integer(dpr))
+  } else {
+    paste0(dpr, "x")
+  }
   # The scheme is read live from the page (the host OS preference leaks
   # through), so the expectation derives it the same way.
-  scheme <- if (isTRUE(pz_js(page, "matchMedia('(prefers-color-scheme: dark)').matches"))) "dark" else "light"
+  scheme <- if (
+    isTRUE(pz_js(page, "matchMedia('(prefers-color-scheme: dark)').matches"))
+  ) {
+    "dark"
+  } else {
+    "light"
+  }
   expect_identical(
     got$out[[3]],
-    sprintf("%-11s%s × %s @%s · %s", "Device", inner[[1]], inner[[2]], scale, scheme)
+    sprintf(
+      "%-11s%s × %s @%s · %s",
+      "Device",
+      inner[[1]],
+      inner[[2]],
+      scale,
+      scheme
+    )
   )
   expect_identical(got$out[[4]], "Recording  off · cursor hidden")
   expect_false(any(grepl("^Scope ", got$out)))
@@ -109,10 +129,16 @@ test_that("each match shows a short tag and its state", {
     got$out[[5]],
     '  1  <button id="insp-btn" class="insp-btn" aria-label="Actions">'
   )
-  expect_identical(got$out[[6]], "     visible · enabled · at 300,300 · 80 × 30")
+  expect_identical(
+    got$out[[6]],
+    "     visible · enabled · at 300,300 · 80 × 30"
+  )
 
   got <- inspect_capture(function() pz_inspect(page, "#insp-hidden"))
-  expect_identical(got$out[[5]], '  1  <div id="insp-hidden" class="insp-hidden">')
+  expect_identical(
+    got$out[[5]],
+    '  1  <div id="insp-hidden" class="insp-hidden">'
+  )
   expect_identical(got$out[[6]], "     hidden · enabled · at 0,0 · 0 × 0")
 
   got <- inspect_capture(function() pz_inspect(page, "#insp-disabled"))
@@ -292,4 +318,3 @@ test_that("target outline numbering keeps hidden matches in the count", {
   overlay_clear(page)
   expect_identical(texts, "2")
 })
-

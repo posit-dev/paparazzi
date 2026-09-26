@@ -404,7 +404,11 @@ scope_slice_js <- function(which) {
   } else if (identical(which, "last")) {
     "function() { return [this[this.length - 1]].filter((el) => el != null); }"
   } else {
-    paste0("function() { return [this[", which, " - 1]].filter((el) => el != null); }")
+    paste0(
+      "function() { return [this[",
+      which,
+      " - 1]].filter((el) => el != null); }"
+    )
   }
 }
 # A narrowed scope's description: a single loc takes `which` directly
@@ -532,5 +536,8 @@ find_push <- function(ctx, locs, from_root, call = caller_env()) {
     from_root = from_root,
     call = call
   )
-  push_scope(ctx, new_pinned(ctx$page, els$object_id, els$count, els$description, locs))
+  push_scope(
+    ctx,
+    new_pinned(ctx$page, els$object_id, els$count, els$description, locs)
+  )
 }

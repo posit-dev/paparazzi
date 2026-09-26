@@ -51,7 +51,11 @@ pz_expect_exists <- function(
     not = not,
     timeout = timeout,
     check = check_exists(not),
-    description = if (not) "Expected no element to match" else "Expected an element to match"
+    description = if (not) {
+      "Expected no element to match"
+    } else {
+      "Expected an element to match"
+    }
   )
 }
 #' Expect a number of matching elements
@@ -188,7 +192,11 @@ pz_expect_visible <- function(
     not = not,
     timeout = timeout,
     check = check_visible(not),
-    description = if (not) "Expected no element to be visible" else "Expected all elements to be visible"
+    description = if (not) {
+      "Expected no element to be visible"
+    } else {
+      "Expected all elements to be visible"
+    }
   )
 }
 #' @rdname pz_expect_visible
@@ -317,7 +325,11 @@ pz_expect_enabled <- function(
     not = not,
     timeout = timeout,
     check = check_state(expect_enabled_js, not, "enabled"),
-    description = if (not) "Expected no element to be enabled" else "Expected all elements to be enabled"
+    description = if (not) {
+      "Expected no element to be enabled"
+    } else {
+      "Expected all elements to be enabled"
+    }
   )
 }
 #' Expect elements to be focused
@@ -362,7 +374,11 @@ pz_expect_focused <- function(
     not = not,
     timeout = timeout,
     check = check_state(expect_focused_js, not, "focused"),
-    description = if (not) "Expected no element to be focused" else "Expected all elements to be focused"
+    description = if (not) {
+      "Expected no element to be focused"
+    } else {
+      "Expected all elements to be focused"
+    }
   )
 }
 #' Expect elements to be checked
@@ -404,7 +420,11 @@ pz_expect_checked <- function(
     not = not,
     timeout = timeout,
     check = check_state(expect_checked_js, not, "checked"),
-    description = if (not) "Expected no element to be checked" else "Expected all elements to be checked"
+    description = if (not) {
+      "Expected no element to be checked"
+    } else {
+      "Expected all elements to be checked"
+    }
   )
 }
 #' Expect elements to be in the viewport
@@ -450,7 +470,11 @@ pz_expect_in_viewport <- function(
     not = not,
     timeout = timeout,
     check = check_state(expect_viewport_js, not, "in viewport"),
-    description = if (not) "Expected no element to be in the viewport" else "Expected all elements to be in the viewport"
+    description = if (not) {
+      "Expected no element to be in the viewport"
+    } else {
+      "Expected all elements to be in the viewport"
+    }
   )
 }
 #' Expect element values
@@ -563,7 +587,12 @@ pz_expect_attr <- function(
     target = target,
     not = not,
     timeout = timeout,
-    check = check_text_like(expect_attr_js(name), collapse_ws(value), match, not),
+    check = check_text_like(
+      expect_attr_js(name),
+      collapse_ws(value),
+      match,
+      not
+    ),
     description = expect_headline_text(
       value,
       match,
@@ -626,7 +655,11 @@ pz_expect_class <- function(
     target = target,
     not = not,
     timeout = timeout,
-    check = check_state(expect_class_js(class), not, paste0("with class \"", class, "\"")),
+    check = check_state(
+      expect_class_js(class),
+      not,
+      paste0("with class \"", class, "\"")
+    ),
     description = if (not) {
       paste0("Expected no element to have class \"", class, "\"")
     } else {
@@ -884,7 +917,14 @@ expect_impl <- function(
 # cli VALUES, never pasted into templates: cli only evaluates the
 # template, so braces inside a value stay literal and can't inject markup
 # or code.
-expect_report <- function(ctx, result, description, target, waited, call = caller_env()) {
+expect_report <- function(
+  ctx,
+  result,
+  description,
+  target,
+  waited,
+  call = caller_env()
+) {
   headline <- description
   observed <- result$observed
   msg_template <- c(
@@ -945,7 +985,9 @@ expect_page_impl <- function(
 # reported through testthat::expect(); anywhere else, the caller gets the
 # classed error instead. Returns FALSE when the bridge is inactive.
 expect_bridge <- function(ok, msg) {
-  if (!requireNamespace("testthat", quietly = TRUE) || !testthat::is_testing()) {
+  if (
+    !requireNamespace("testthat", quietly = TRUE) || !testthat::is_testing()
+  ) {
     return(FALSE)
   }
   testthat::expect(ok, paste(msg, collapse = "\n"))
@@ -1039,7 +1081,9 @@ expect_class_js <- function(class) {
 expect_js_predicate <- function(expr) {
   paste0(
     "function() {\n",
-    "  const predicate = ", expr, ";\n",
+    "  const predicate = ",
+    expr,
+    ";\n",
     "  return this.map((el) => !!predicate(el));\n",
     "}"
   )
@@ -1109,7 +1153,13 @@ check_text_like <- function(js, values, match, not) {
     vals <- collapse_ws(chr_or_na(els_values(els, js)))
     if (length(values) == 1L) {
       # A single value applies to every match; at least one is required.
-      hits <- vapply(vals, expect_text_hit, logical(1), pattern = values, match = match)
+      hits <- vapply(
+        vals,
+        expect_text_hit,
+        logical(1),
+        pattern = values,
+        match = match
+      )
       # Negated passes only when NO match satisfies (SPEC), which is
       # stronger than "not all": partial satisfaction fails both forms.
       pass <- if (not) !any(hits) else all(hits)
@@ -1169,7 +1219,13 @@ expect_headline_count <- function(n, min, max, not) {
   }
   paste0("Expected count ", if (not) "not " else "", "to be ", what)
 }
-expect_headline_text <- function(text, match, not, label = "text", plural = paste0(label, "s")) {
+expect_headline_text <- function(
+  text,
+  match,
+  not,
+  label = "text",
+  plural = paste0(label, "s")
+) {
   what <- switch(
     match,
     contains = paste0('"', text, '"', collapse = ", "),

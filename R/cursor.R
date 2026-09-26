@@ -191,7 +191,11 @@ pz_cursor_leave <- function(ctx, side = "right") {
 
   point <- cursor_off_frame_point(ctx, side, cursor_current_point(ctx))
   duration <- if (!is.null(cur$x)) {
-    stage_glide_duration(c(x = cur$x, y = cur$y), point, page_stage(page)$cursor_speed)
+    stage_glide_duration(
+      c(x = cur$x, y = cur$y),
+      point,
+      page_stage(page)$cursor_speed
+    )
   }
   cursor_apply(ctx, point, duration = duration %||% 0)
   # Set after cursor_apply(), which clears it: the cursor stays visible
@@ -300,9 +304,10 @@ cursor_show_at <- function(ctx, point, duration = NULL, from = NULL) {
   cur <- page_cursor(page)
   stage <- page_stage(page)
   has_pos <- !is.null(cur$x)
-  entry <- from %||% if (!has_pos || !is.null(cur$off_frame)) {
-    cur$off_frame %||% stage$enter
-  }
+  entry <- from %||%
+    if (!has_pos || !is.null(cur$off_frame)) {
+      cur$off_frame %||% stage$enter
+    }
   if (!is.null(entry)) {
     start <- cursor_off_frame_point(ctx, entry, point)
     cursor_apply(
@@ -365,15 +370,18 @@ cursor_apply <- function(ctx, point, duration = 0, from = NULL, fade = FALSE) {
 # animate the change while the caller pumps.
 cursor_draw <- function(ctx, visible, pressed = FALSE) {
   cur <- page_cursor(ctx$page)
-  cursor_command(ctx, list(
-    x = cur$x %||% 0,
-    y = cur$y %||% 0,
-    visible = visible,
-    shape = "auto",
-    pressed = pressed,
-    duration = 0,
-    anim = stage_recording(ctx$page)
-  ))
+  cursor_command(
+    ctx,
+    list(
+      x = cur$x %||% 0,
+      y = cur$y %||% 0,
+      visible = visible,
+      shape = "auto",
+      pressed = pressed,
+      duration = 0,
+      anim = stage_recording(ctx$page)
+    )
+  )
   cursor_register_init(ctx)
   invisible(ctx)
 }
@@ -509,7 +517,11 @@ cursor_register_init <- function(ctx) {
   # New-document scripts run before the document element exists, so the
   # boot waits for it; the overlay then reappears at its last position.
   source <- paste0(
-    "(function() { const boot = function() { (", cursor_command_js, ")(", json, "); };",
+    "(function() { const boot = function() { (",
+    cursor_command_js,
+    ")(",
+    json,
+    "); };",
     "if (document.documentElement) { boot(); }",
     "else { document.addEventListener('DOMContentLoaded', boot, { once: true }); } })();"
   )

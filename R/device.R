@@ -146,7 +146,7 @@ device_check_dots <- function(dots, call = caller_env()) {
       c(
         "Unknown device setting in {.arg ...}: {.arg {bad}}.",
         if (length(near)) {
-          i = cli::format_inline("Did you mean {.arg {near}}?")
+          i <- cli::format_inline("Did you mean {.arg {near}}?")
         }
       ),
       class = "paparazzi_error_input",
@@ -225,12 +225,10 @@ device_apply_override <- function(page, state) {
   method <- state$zoom_method %||% "viewport"
   zoom_on <- !is.null(zoom) && !isTRUE(zoom == 1)
   viewport_zoom <- zoom_on && identical(method, "viewport")
-  base_set <- !(
-    is.null(state$width) &&
-      is.null(state$height) &&
-      is.null(state$scale) &&
-      is.null(state$mobile)
-  )
+  base_set <- !(is.null(state$width) &&
+    is.null(state$height) &&
+    is.null(state$scale) &&
+    is.null(state$mobile))
 
   if (!viewport_zoom && !base_set) {
     if (isTRUE(state$overridden)) {
@@ -242,7 +240,9 @@ device_apply_override <- function(page, state) {
     return(invisible(page))
   }
 
-  if (viewport_zoom && (is.null(state$base_width) || is.null(state$base_height))) {
+  if (
+    viewport_zoom && (is.null(state$base_width) || is.null(state$base_height))
+  ) {
     current <- device_viewport(page)
     state$base_width <- state$width %||% current$width
     state$base_height <- state$height %||% current$height
@@ -278,7 +278,9 @@ device_apply_override <- function(page, state) {
 device_apply_css_zoom <- function(page, state, register = TRUE) {
   zoom <- state$zoom
   method <- state$zoom_method %||% "viewport"
-  desired <- if (!is.null(zoom) && !isTRUE(zoom == 1) && identical(method, "css")) {
+  desired <- if (
+    !is.null(zoom) && !isTRUE(zoom == 1) && identical(method, "css")
+  ) {
     zoom
   }
   if (identical(desired, state$css_zoom)) {
@@ -358,7 +360,9 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
 device_zoom_script <- function(zoom) {
   paste0(
     "if (window === window.top) {",
-    "var z = ", format(zoom, trim = TRUE, digits = 15), ";",
+    "var z = ",
+    format(zoom, trim = TRUE, digits = 15),
+    ";",
     "if (document.documentElement) {",
     "document.documentElement.style.zoom = z;",
     "} else {",
@@ -389,8 +393,10 @@ device_css_reapply <- function(page) {
 # pair and the union of the active ones is sent whenever either changes.
 # A "" value would clear a feature, but the API has no clear path yet.
 device_apply_media <- function(page, state, color_scheme, reduced_motion) {
-  changed <- (!is.null(color_scheme) && !identical(color_scheme, state$color_scheme)) ||
-    (!is.null(reduced_motion) && !identical(reduced_motion, state$reduced_motion))
+  changed <- (!is.null(color_scheme) &&
+    !identical(color_scheme, state$color_scheme)) ||
+    (!is.null(reduced_motion) &&
+      !identical(reduced_motion, state$reduced_motion))
   state$color_scheme <- color_scheme %||% state$color_scheme
   state$reduced_motion <- reduced_motion %||% state$reduced_motion
   if (!changed) {
@@ -398,11 +404,17 @@ device_apply_media <- function(page, state, color_scheme, reduced_motion) {
   }
   features <- list()
   if (!is.null(state$color_scheme)) {
-    features <- c(features, list(list(name = "prefers-color-scheme", value = state$color_scheme)))
+    features <- c(
+      features,
+      list(list(name = "prefers-color-scheme", value = state$color_scheme))
+    )
   }
   if (!is.null(state$reduced_motion)) {
     value <- if (isTRUE(state$reduced_motion)) "reduce" else "no-preference"
-    features <- c(features, list(list(name = "prefers-reduced-motion", value = value)))
+    features <- c(
+      features,
+      list(list(name = "prefers-reduced-motion", value = value))
+    )
   }
   page$session$Emulation$setEmulatedMedia(
     features = features,
@@ -443,6 +455,9 @@ device_eval <- function(page, expr, call = caller_env()) {
 }
 device_viewport <- function(page) {
   jsonlite::fromJSON(
-    device_eval(page, "JSON.stringify({width: innerWidth, height: innerHeight})")
+    device_eval(
+      page,
+      "JSON.stringify({width: innerWidth, height: innerHeight})"
+    )
   )
 }

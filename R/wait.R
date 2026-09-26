@@ -54,11 +54,17 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
   check_context(ctx)
   timeout <- resolve_timeout(timeout, ctx$page)
   deadline <- Sys.time() + timeout
-  remaining <- function() as.numeric(difftime(deadline, Sys.time(), units = "secs"))
+  remaining <- function() {
+    as.numeric(difftime(deadline, Sys.time(), units = "secs"))
+  }
   wait_for_load(ctx$page, timeout = timeout)
-  if (!isTRUE(pz_js(
-    ctx, "!!window.Shiny", timeout = max(0.1, remaining())
-  ))) {
+  if (
+    !isTRUE(pz_js(
+      ctx,
+      "!!window.Shiny",
+      timeout = max(0.1, remaining())
+    ))
+  ) {
     cli::cli_abort(
       "This is not a Shiny page; {.fn pz_wait_for_shiny_idle} requires a Shiny app.",
       class = "paparazzi_error_unsupported"
@@ -68,7 +74,9 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
   budget <- max(0, remaining())
   idle_js <- paste0(
     "new Promise((resolve) => {",
-    "  const budget = ", ceiling(budget * 1000), ";",
+    "  const budget = ",
+    ceiling(budget * 1000),
+    ";",
     "  let hold = null;",
     "  let deadlineTimer;",
     "  let observer;",
@@ -265,7 +273,11 @@ pz_wait_for_stable <- function(
     if (els$count == 0L) {
       return("0")
     }
-    paste0(els$count, "\u0001", paste(els_call(els, sample_js), collapse = "\u0001"))
+    paste0(
+      els$count,
+      "\u0001",
+      paste(els_call(els, sample_js), collapse = "\u0001")
+    )
   }
 
   last <- NULL
@@ -404,12 +416,19 @@ nav_snapshot <- function(ctx, timeout) {
 # timeOrigin, an incomplete wait-start snapshot, or a loaderId different
 # from the last action's main-frame loaderId.
 nav_settle <- function(
-  ctx, settle, timeout, snapshot, action_loader = NULL, call = caller_env()
+  ctx,
+  settle,
+  timeout,
+  snapshot,
+  action_loader = NULL,
+  call = caller_env()
 ) {
   read <- function() {
     tryCatch(
       list(
-        loader = ctx$page$session$Page$getFrameTree(timeout_ = timeout)$frameTree$frame$loaderId,
+        loader = ctx$page$session$Page$getFrameTree(
+          timeout_ = timeout
+        )$frameTree$frame$loaderId,
         js = pz_js(
           ctx,
           "JSON.stringify([document.readyState === 'complete', performance.timeOrigin])",
@@ -437,9 +456,11 @@ nav_settle <- function(
       # simplifyVector = FALSE keeps the boolean a boolean: the mixed
       # [boolean, number] JSON would coerce TRUE to 1 otherwise.
       state <- jsonlite::fromJSON(s$js, simplifyVector = FALSE)
-      nav <- !identical(state[[2]], snapshot$origin) || !isTRUE(snapshot$complete) ||
+      nav <- !identical(state[[2]], snapshot$origin) ||
+        !isTRUE(snapshot$complete) ||
         (!is.null(action_loader) && !identical(s$loader, action_loader))
-      isTRUE(state[[1]]) && nav &&
+      isTRUE(state[[1]]) &&
+        nav &&
         as.numeric(difftime(now, stable_since, units = "secs")) >= settle
     },
     timeout = timeout,
@@ -535,7 +556,9 @@ stable_sample_js <- function(prop) {
     paste0(
       "function() {
         return this.map((el) => {
-          const v = el[", jsonlite::toJSON(prop, auto_unbox = TRUE), "];
+          const v = el[",
+      jsonlite::toJSON(prop, auto_unbox = TRUE),
+      "];
           return v == null ? '' : String(v);
         });
       }"

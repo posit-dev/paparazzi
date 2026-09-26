@@ -36,7 +36,10 @@ test_that("new-session load waits anchor to the destination commit", {
   skip_if_no_chrome()
   blank <- chromote::ChromoteSession$new()
   withr::defer(blank$close())
-  expect_identical(blank$Runtime$evaluate("document.readyState")$result$value, "complete")
+  expect_identical(
+    blank$Runtime$evaluate("document.readyState")$result$value,
+    "complete"
+  )
 
   url <- nav_fixture_url("slow")
   await <- nav_await
@@ -47,18 +50,27 @@ test_that("new-session load waits anchor to the destination commit", {
     commits <<- c(commits, hist$entries[[hist$currentIndex + 1]]$url)
   })
   for (wait in c("load", "auto")) {
-    pz_with_page(url, function(page) {
-      expect_identical(pz_js(page, "document.readyState"), "complete")
-    }, wait = wait, timeout = 5)
+    pz_with_page(
+      url,
+      function(page) {
+        expect_identical(pz_js(page, "document.readyState"), "complete")
+      },
+      wait = wait,
+      timeout = 5
+    )
   }
   expect_identical(commits, rep(url, 2))
 })
 
 test_that("opening a same-document fragment returns without a new commit", {
   skip_if_no_chrome()
-  pz_with_page("about:blank#fragment", function(page) {
-    expect_identical(pz_js(page, "location.href"), "about:blank#fragment")
-  }, wait = "load")
+  pz_with_page(
+    "about:blank#fragment",
+    function(page) {
+      expect_identical(pz_js(page, "location.href"), "about:blank#fragment")
+    },
+    wait = "load"
+  )
 })
 
 test_that("wait = 'none' and wait = 'load' both open", {
@@ -80,7 +92,8 @@ test_that("explicit Shiny wait rejects non-Shiny pages promptly", {
   start <- Sys.time()
   expect_error(
     pz_open(fixture_file(), wait = "shiny", timeout = 3),
-    "not a Shiny page", class = "paparazzi_error_unsupported"
+    "not a Shiny page",
+    class = "paparazzi_error_unsupported"
   )
   expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 2)
 })
@@ -89,7 +102,10 @@ test_that("explicit Shiny wait on a wrapped non-Shiny session fails without clos
   skip_if_no_chrome()
   session <- chromote::ChromoteSession$new()
   withr::defer(session$close())
-  expect_error(pz_open(session, wait = "shiny", timeout = 2), "not a Shiny page")
+  expect_error(
+    pz_open(session, wait = "shiny", timeout = 2),
+    "not a Shiny page"
+  )
   expect_no_error(session$Runtime$evaluate("1 + 1"))
 })
 
@@ -114,7 +130,10 @@ test_that("new-session Shiny waits anchor to the destination commit", {
   blank <- chromote::ChromoteSession$new()
   withr::defer(blank$close())
   # The outgoing document is already complete before the app navigation.
-  expect_identical(blank$Runtime$evaluate("document.readyState")$result$value, "complete")
+  expect_identical(
+    blank$Runtime$evaluate("document.readyState")$result$value,
+    "complete"
+  )
 
   app <- local_shiny_app(shiny_idle_fixture())
   await <- nav_await
@@ -236,7 +255,8 @@ test_that("an opening failure stops the newly owned app", {
   port <- free_port()
   expect_error(
     pz_open(
-      shiny_app_fixture_dir(), shiny_options = list(port = port),
+      shiny_app_fixture_dir(),
+      shiny_options = list(port = port),
       timezone = "Mars/Olympus"
     ),
     regexp = "Invalid timezone"
@@ -248,7 +268,10 @@ test_that("an opening failure leaves a shared app running", {
   skip_if_no_chrome()
   skip_if_no_shiny()
   app <- local_shiny_app(shiny_app_fixture_dir())
-  expect_error(pz_open(app, timezone = "Mars/Olympus"), regexp = "Invalid timezone")
+  expect_error(
+    pz_open(app, timezone = "Mars/Olympus"),
+    regexp = "Invalid timezone"
+  )
   expect_true(app$is_running())
   expect_true(app_port_reachable(app$port))
 })
@@ -258,10 +281,13 @@ test_that("block helpers close pages but not shared apps", {
   skip_if_no_shiny()
   app <- local_shiny_app(shiny_app_fixture_dir())
   captured <- NULL
-  expect_error(pz_with_page(app, function(page) {
-    captured <<- page
-    stop("boom")
-  }), "boom")
+  expect_error(
+    pz_with_page(app, function(page) {
+      captured <<- page
+      stop("boom")
+    }),
+    "boom"
+  )
   expect_true(captured$is_closed())
   expect_true(app$is_running())
 
@@ -278,10 +304,13 @@ test_that("block helpers stop owned apps on exit and error", {
   skip_if_no_chrome()
   skip_if_no_shiny()
   port <- NULL
-  expect_error(pz_with_page(shiny_app_fixture_dir(), function(page) {
-    port <<- as.integer(pz_js(page, "location.port"))
-    stop("boom")
-  }), "boom")
+  expect_error(
+    pz_with_page(shiny_app_fixture_dir(), function(page) {
+      port <<- as.integer(pz_js(page, "location.port"))
+      stop("boom")
+    }),
+    "boom"
+  )
   expect_true(wait_until(function() !app_port_reachable(port)))
   local({
     page <- pz_local_page(shiny_app_fixture_dir())
@@ -443,11 +472,14 @@ test_that("split app files open as files, while their directory runs as an app",
   ui <- file.path(dir, "ui.R")
   server <- file.path(dir, "server.R")
   writeLines("shiny::fluidPage(shiny::textOutput('out'))", ui)
-  writeLines(paste(
-    "function(input, output, session) {",
-    "  output$out <- shiny::renderText('hello split app')",
-    "}"
-  ), server)
+  writeLines(
+    paste(
+      "function(input, output, session) {",
+      "  output$out <- shiny::renderText('hello split app')",
+      "}"
+    ),
+    server
+  )
 
   for (file in c(ui, server)) {
     page <- pz_open(file)

@@ -291,7 +291,9 @@ new_frame_spec <- function(
 # CSS-style padding: one number for all sides, or c(top, right,
 # bottom, left).
 check_pad <- function(pad, arg = caller_arg(pad), call = caller_env()) {
-  if (!is.numeric(pad) || length(pad) == 0 || anyNA(pad) || any(!is.finite(pad))) {
+  if (
+    !is.numeric(pad) || length(pad) == 0 || anyNA(pad) || any(!is.finite(pad))
+  ) {
     cli::cli_abort(
       "{.arg {arg}} must be a finite number or {.code c(top, right, bottom, left)}, not {.obj_type_friendly {pad}}.",
       class = "paparazzi_error_input",
@@ -310,7 +312,11 @@ check_pad <- function(pad, arg = caller_arg(pad), call = caller_env()) {
     call = call
   )
 }
-check_offset <- function(offset, arg = caller_arg(offset), call = caller_env()) {
+check_offset <- function(
+  offset,
+  arg = caller_arg(offset),
+  call = caller_env()
+) {
   if (
     !is.numeric(offset) ||
       length(offset) == 0 ||
@@ -385,7 +391,10 @@ frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
   if (!is.null(spec$bounds)) {
     els <- loc_resolve(ctx, spec$bounds, multiple = "all", call = call)
     withr::defer(release_elements(els))
-    clamps[["frame bounds"]] <- box_union(el_rects(els, call = call), call = call)
+    clamps[["frame bounds"]] <- box_union(
+      el_rects(els, call = call),
+      call = call
+    )
   }
   # The geometry read comes after resolution and measurement:
   # resolution auto-waits, and a target appearing mid-wait can expand
@@ -422,10 +431,13 @@ frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
   )
   # The pipeline ran viewport-relative; CDP clip coordinates are
   # document-relative.
-  box <- box + c(
-    geometry$scroll_x, geometry$scroll_y,
-    geometry$scroll_x, geometry$scroll_y
-  )
+  box <- box +
+    c(
+      geometry$scroll_x,
+      geometry$scroll_y,
+      geometry$scroll_x,
+      geometry$scroll_y
+    )
   box <- frame_round(box, pinned = pinned, even = even)
   # Horizontal only: an RTL frame can resolve into the document's
   # negative-x region, and CDP clip origins must be non-negative.
