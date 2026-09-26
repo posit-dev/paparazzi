@@ -11,4 +11,7 @@ Signed off: orchestrator.
 
 ## Handoff
 
-Pending.
+- Landed: `test-open.R` checks browser `Target.getTargets()$targetInfos` page target IDs before and after a failed timezone setting, with a three-second bounded poll for asynchronous target removal. The invalid-timezone assertion remains. Removed the false claim that Chromote keeps closed sessions in its private registry. No production code changed.
+- Discrimination: with only the deferred `page$close()` line in `R/open.R` temporarily commented out, targeted open tests failed `[ FAIL 2 | WARN 0 | SKIP 0 | PASS 151 ]`; the revised test failed at `expect_length(new_ids, 0L)` (actual length 1). The other failure was the existing owned-app cleanup test. Restored the line before committing; `R/open.R` has no diff.
+- Verification: baseline before edits `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 154 ]`. After restoring cleanup, five consecutive serialized open-test runs each reported `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 153 ]`. `air format --check .` and `jarl check .` passed.
+- Audited `test-open.R` and `test-device.R`: no other test reads Chromote's private `sessions` registry; no change needed in `test-device.R`. Nothing else remains in this task; the orchestrator will run the full main gate.
