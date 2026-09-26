@@ -61,6 +61,29 @@ test_that("only supplied dimensions change state", {
   expect_equal(js(page, "devicePixelRatio"), 2)
 })
 
+test_that("a failed device change doesn't leak into later partial changes", {
+  page <- local_device_page()
+  pz_device(page, width = 640, height = 560)
+
+  with_mocked_bindings(
+    record_hold = function(page, code, call) stop("override failed"),
+    expect_error(pz_device(page, width = 800), "override failed")
+  )
+  pz_device(page, height = 500)
+  expect_equal(js(page, "innerWidth"), 640)
+  expect_equal(js(page, "innerHeight"), 500)
+
+  session <- page$page$session
+  emulation <- session$Emulation
+  failing <- emulation
+  failing$setEmulatedMedia <- function(...) stop("media failed")
+  session$Emulation <- failing
+  expect_error(pz_device(page, color_scheme = "dark"), "media failed")
+  session$Emulation <- emulation
+  pz_device(page, reduced_motion = TRUE)
+  expect_false(js(page, "matchMedia('(prefers-color-scheme: dark)').matches"))
+})
+
 test_that("viewport zoom shrinks the CSS viewport and raises the scale factor", {
   page <- local_device_page()
   pz_device(page, width = 800, height = 600, scale = 2)
@@ -139,6 +162,24 @@ test_that("css zoom survives navigation, reload, and disabling", {
   expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1")
   pz_nav_goto(page, nav_fixture_url("a"))
   expect_identical(js(page, "document.title"), "paparazzi nav A")
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1")
+})
+
+test_that("a css zoom that fails after registering its script can be disabled", {
+  page <- local_page(nav_fixture_url("a"))
+  real_eval <- device_eval
+  with_mocked_bindings(
+    device_eval = function(page, expr, ...) {
+      if (grepl("style.zoom = ", expr, fixed = TRUE)) {
+        stop("apply failed")
+      }
+      real_eval(page, expr, ...)
+    },
+    expect_error(pz_device(page, zoom = 2, zoom_method = "css"), "apply failed")
+  )
+  pz_device(page, zoom = 2, zoom_method = "css")
+  pz_device(page, zoom = 1)
+  pz_nav_goto(page, nav_fixture_url("b"))
   expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1")
 })
 
