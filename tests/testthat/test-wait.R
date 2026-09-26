@@ -422,6 +422,43 @@ test_that("a completed link navigation is caught once after the click", {
   )
 })
 
+test_that("nav settle restarts its hold when the main-frame loader changes", {
+  states <- list(
+    list(loader = "old", js = "[true,2]"),
+    list(loader = "new", js = "[true,2]"),
+    list(loader = "new", js = "[false,3]"),
+    list(loader = "new", js = "[true,3]"),
+    list(loader = "new", js = "[true,3]")
+  )
+  index <- 0L
+  frame_timeouts <- list()
+  ctx <- list(page = list(
+    child_loop = NULL,
+    session = list(Page = list(getFrameTree = function(timeout_ = NULL) {
+      frame_timeouts[[length(frame_timeouts) + 1L]] <<- timeout_
+      list(frameTree = list(frame = list(loaderId = states[[index]]$loader)))
+    }))
+  ))
+  local_mocked_bindings(
+    pz_js = function(...) states[[index]]$js,
+    pz_poll = function(fn, ...) {
+      for (i in seq_len(4)) {
+        index <<- i
+        expect_false(fn(), info = paste("sample", i, "must not settle"))
+        Sys.sleep(0.02)
+      }
+      index <<- 5L
+      expect_true(fn())
+    }
+  )
+
+  nav_settle(
+    ctx, settle = 0.005, timeout = 1,
+    snapshot = list(complete = TRUE, origin = 2), action_loader = "old"
+  )
+  expect_identical(frame_timeouts, rep(list(1), 5))
+})
+
 test_that("a completed bfcache restore is caught once after history.back()", {
   skip_if_no_chrome()
   testthat::skip_if_not_installed("httpuv")
