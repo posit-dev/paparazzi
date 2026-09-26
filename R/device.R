@@ -304,9 +304,10 @@ device_apply_override <- function(page, state, call = caller_env()) {
 # css zoom is active, removed when it disables) and an inline
 # application covers the current one, which the registration alone
 # never touches. The script guards on the top frame so iframes keep
-# their own layout. A registered script also needs removal when a
-# failed apply leaves no cached zoom; a user's own html zoom style is
-# overwritten while active, but never added or removed otherwise.
+# their own layout. Only touched when the desired zoom differs from
+# the one in effect, or when a failed first apply left its script
+# registered; a user's own html zoom style is overwritten while
+# active, but never added or removed otherwise.
 device_apply_css_zoom <- function(page, state, register = TRUE) {
   zoom <- state$zoom
   method <- state$zoom_method %||% "viewport"
