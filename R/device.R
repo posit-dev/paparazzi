@@ -131,7 +131,7 @@ device_check_dots <- function(dots, call = caller_env()) {
   }
   # Unnamed dots have no name at all, not an empty one.
   nms <- names(dots)
-  if (is.null(nms) || any(!nzchar(nms))) {
+  if (is.null(nms) || !all(nzchar(nms))) {
     cli::cli_abort(
       "Device settings in {.arg ...} must be named, e.g. {.code width = 390}.",
       class = "paparazzi_error_input",

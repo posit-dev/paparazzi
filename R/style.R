@@ -284,7 +284,7 @@ style_expect_pairs <- function(dots, call = caller_env()) {
     )
   }
   nms <- names(dots)
-  if (is.null(nms) || any(!nzchar(nms))) {
+  if (is.null(nms) || !all(nzchar(nms))) {
     cli::cli_abort(
       "Every style pair must be named, like {.code color = \"red\"}.",
       class = "paparazzi_error_input",
@@ -342,7 +342,7 @@ check_style <- function(pairs, not, normalize, call = caller_env()) {
 # verdict on a declaration never changes. Acceptance is a property of
 # the (property, value) pair, so the verdict vector is per pair.
 style_abort_invalid <- function(accepted, pairs, call = caller_env()) {
-  if (any(!accepted)) {
+  if (!all(accepted)) {
     p <- which(!accepted)[[1]]
     cli::cli_abort(
       "Invalid CSS: the browser rejects {.val {pairs[[p]]}} for {.val {names(pairs)[[p]]}}.",

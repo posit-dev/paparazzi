@@ -292,7 +292,7 @@ new_frame_spec <- function(
 # bottom, left).
 check_pad <- function(pad, arg = caller_arg(pad), call = caller_env()) {
   if (
-    !is.numeric(pad) || length(pad) == 0 || anyNA(pad) || any(!is.finite(pad))
+    !is.numeric(pad) || length(pad) == 0 || anyNA(pad) || !all(is.finite(pad))
   ) {
     cli::cli_abort(
       "{.arg {arg}} must be a finite number or {.code c(top, right, bottom, left)}, not {.obj_type_friendly {pad}}.",
@@ -321,7 +321,7 @@ check_offset <- function(
     !is.numeric(offset) ||
       length(offset) == 0 ||
       anyNA(offset) ||
-      any(!is.finite(offset))
+      !all(is.finite(offset))
   ) {
     cli::cli_abort(
       "{.arg {arg}} must be a finite number or {.code c(x, y)}, not {.obj_type_friendly {offset}}.",

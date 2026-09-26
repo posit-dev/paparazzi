@@ -461,7 +461,7 @@ check_record_hold <- function(
     !is.numeric(hold) ||
       length(hold) != 2L ||
       anyNA(hold) ||
-      any(!is.finite(hold)) ||
+      !all(is.finite(hold)) ||
       any(hold < 0)
   ) {
     cli::cli_abort(

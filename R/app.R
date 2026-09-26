@@ -110,7 +110,7 @@ check_app_envvars <- function(
   }
   check_character(envvars, allow_null = TRUE, arg = arg, call = call)
   nms <- names(envvars)
-  if (is.null(nms) || any(!nzchar(nms))) {
+  if (is.null(nms) || !all(nzchar(nms))) {
     cli::cli_abort(
       "{.arg {arg}} must have a name for every element.",
       class = "paparazzi_error_input",
