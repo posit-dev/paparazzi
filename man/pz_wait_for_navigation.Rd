@@ -38,7 +38,8 @@ loading and then hold still for a moment. Three cases pass:
 \details{
 \itemize{
 \item the navigation finished before the wait started: the current document
-was created after the preceding action began;
+differs from the document where the preceding action began (including
+a page restored from the back/forward cache);
 \item the navigation is in flight when the wait starts, and is waited out;
 \item the navigation begins while the wait is running. One scheduled beyond
 the timeout can't be caught -- block on its trigger with
@@ -47,9 +48,7 @@ the timeout can't be caught -- block on its trigger with
 
 A page where nothing navigates times out with a classed error rather
 than passing, and so does a second wait after the same action: a
-successful wait uses up the action's navigation. Comparing the
-document's creation time with the action's start assumes R and the
-browser run on the same machine, as they do with a local Chrome.
+successful wait uses up the action's navigation.
 
 On success the wait resets the scope to the root and releases every
 pinned scope object: contexts scoped before the navigation error on
