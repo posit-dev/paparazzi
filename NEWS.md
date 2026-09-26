@@ -6,3 +6,6 @@
   them (`pz_click()`, `pz_type()`, `pz_set_shiny_input()`, ...), check the page
   with retrying expectations (`pz_expect_*()`), and capture screenshots and
   recordings (`pz_screenshot()`, `pz_record()`).
+
+* paparazzi requires R 4.1.0 or later, which added the native pipe `|>`. The
+  pipe appears throughout the examples and documentation.

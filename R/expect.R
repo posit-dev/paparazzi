@@ -153,8 +153,8 @@ pz_expect_count <- function(
 #' Visibility follows the browser's own `checkVisibility()`
 #' (<https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility>)
 #' with CSS checks, so `display: none` and `visibility: hidden` anywhere
-#' up the ancestor chain count as hidden; opacity and viewport position
-#' are not considered.
+#' up the ancestor chain count as hidden. Opacity and viewport position
+#' are not considered; use [pz_expect_in_viewport()] for position.
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
 #' `"paparazzi_expectation_failure"`; inside testthat, the failure is

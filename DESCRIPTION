@@ -15,7 +15,7 @@ URL: https://posit-dev.github.io/paparazzi/,
     https://github.com/posit-dev/paparazzi
 BugReports: https://github.com/posit-dev/paparazzi/issues
 Depends:
-    R (>= 4.0.0)
+    R (>= 4.1.0)
 Imports:
     chromote,
     cli,

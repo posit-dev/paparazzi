@@ -37,8 +37,8 @@ including when nothing matches.
 Visibility follows the browser's own \code{checkVisibility()}
 (\url{https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility})
 with CSS checks, so \code{display: none} and \code{visibility: hidden} anywhere
-up the ancestor chain count as hidden; opacity and viewport position
-are not considered.
+up the ancestor chain count as hidden. Opacity and viewport position
+are not considered; use \code{\link[=pz_expect_in_viewport]{pz_expect_in_viewport()}} for position.
 
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
