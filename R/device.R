@@ -225,7 +225,7 @@ device_state <- function(page) {
 # width/height of 0 keep the current value; deviceScaleFactor of 0
 # resets to 1, so the factor is always sent explicitly; width/height
 # are protocol integers, hence the rounding.
-device_apply_override <- function(page, state) {
+device_apply_override <- function(page, state, call = caller_env()) {
   zoom <- state$zoom
   method <- state$zoom_method %||% "viewport"
   zoom_on <- !is.null(zoom) && !isTRUE(zoom == 1)
@@ -242,7 +242,8 @@ device_apply_override <- function(page, state) {
         page,
         page$session$Emulation$clearDeviceMetricsOverride(
           timeout_ = page$default_timeout
-        )
+        ),
+        call = call
       )
       state$overridden <- FALSE
     }
@@ -273,7 +274,8 @@ device_apply_override <- function(page, state) {
       deviceScaleFactor = eff_scale,
       mobile = eff_mobile,
       timeout_ = page$default_timeout
-    )
+    ),
+    call = call
   )
   state$overridden <- TRUE
   invisible(page)

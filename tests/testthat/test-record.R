@@ -751,6 +751,35 @@ test_that("a device hold skips capture ticks and clears on exit", {
   expect_false(rec$held)
 })
 
+test_that("a device hold fails on a stuck capture and restores an outer hold", {
+  page <- local_record_page()
+  rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+  page_set_recorder(page$page, rec)
+  withr::defer(page_set_recorder(page$page, NULL))
+
+  ran <- FALSE
+  rec$pending <- new.env()
+  local_mocked_bindings(
+    pz_poll = function(...) {
+      cli::cli_abort("Timed out.", class = "paparazzi_error_timeout")
+    }
+  )
+  expect_error(
+    record_hold(page$page, ran <- TRUE),
+    class = "paparazzi_error_timeout"
+  )
+  expect_false(ran)
+  expect_false(rec$held)
+  expect_identical(rec$n_errors, 0L)
+
+  rec$pending <- NULL
+  record_hold(page$page, {
+    record_hold(page$page, NULL)
+    expect_true(rec$held)
+  })
+  expect_false(rec$held)
+})
+
 test_that("device metrics survive an in-flight recording capture", {
   skip_if_no_av()
   page <- local_record_page()

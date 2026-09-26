@@ -189,7 +189,13 @@ pz_record_stop <- function(ctx) {
 
   # A capture issued before the stop may still be in flight; it belongs
   # to the recording, so let it settle before the final capture.
-  record_wait_pending(rec, page)
+  tryCatch(
+    record_wait_pending(rec, page, "the in-flight frame capture"),
+    paparazzi_error_timeout = function(e) {
+      rec$pending <- NULL
+      record_error(rec, e)
+    }
+  )
 
   # Capture and await the page state at stop: the final state must be in
   # the video (the last-frame hold repeats it, not an older frame), and
@@ -388,32 +394,35 @@ page_set_recorder <- function(page, rec) {
   invisible(page)
 }
 
-record_hold <- function(page, code) {
+# A timed-out wait fails the change rather than proceeding: the capture
+# may still be running in Chrome and would undo the change when it ends.
+record_hold <- function(page, code, call = caller_env()) {
   rec <- page_recorder(page)
   if (is.null(rec) || !rec$active) {
     return(code)
   }
+  held <- rec$held
   rec$held <- TRUE
-  on.exit(rec$held <- FALSE)
-  record_wait_pending(rec, page)
+  on.exit(rec$held <- held)
+  record_wait_pending(
+    rec,
+    page,
+    "the in-flight frame capture before changing the device metrics",
+    call = call
+  )
   code
 }
 
-record_wait_pending <- function(rec, page) {
+record_wait_pending <- function(rec, page, what, call = caller_env()) {
   if (is.null(rec$pending)) {
     return(invisible(NULL))
   }
-  tryCatch(
-    pz_poll(
-      function() is.null(rec$pending),
-      timeout = page$default_timeout,
-      loop = page$child_loop,
-      what = "the in-flight frame capture"
-    ),
-    paparazzi_error_timeout = function(e) {
-      rec$pending <- NULL
-      record_error(rec, e)
-    }
+  pz_poll(
+    function() is.null(rec$pending),
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = what,
+    call = call
   )
 }
 
