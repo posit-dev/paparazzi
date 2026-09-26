@@ -83,6 +83,8 @@ file.rename("done.png", "man/figures/README-done.png")
 
 With `target` left out, `pz_screenshot()` captures the scope element, and `pz_frame(pad = 8)` adds a margin around it.
 
+The scope only lasts for this one chain. Actions like `pz_click()` change the browser tab, and every chain on `page` sees those changes. A scope isn't part of the browser, so `pz_find()` leaves `page` alone and returns a new, scoped context instead. The next chain that starts from `page` starts at the whole page again. To keep working in a scope, assign the scoped context to its own variable.
+
 ## Shiny apps
 
 Give `pz_open()` the path to a Shiny app and paparazzi runs the app in a background R process, opens it, and waits until Shiny has connected and finished its first round of updates. Closing the page stops the app. `pz_set_shiny_input()` sets an input through its Shiny input binding, so the control updates on the page and the server sees the change, even for widgets like selectize inputs and sliders.

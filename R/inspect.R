@@ -1,12 +1,16 @@
 #' Inspect the current page state
 #'
 #' @description
-#' Prints a console summary of the page: URL, device, the scope stack with
-#' live match counts (stale pinned elements warn), recording and cursor
+#' Prints a console summary of the page: URL, device, recording and cursor
 #' state, and -- when `target` is given -- the target's matches resolved
 #' relative to the current scope **without** auto-waiting: a single
 #' resolution pass, each match shown as a short opening tag with its
 #' visibility, enabled state, and box (long lists are truncated).
+#'
+#' The header names the context. At the root it reads `paparazzi page`.
+#' In a scoped context from [pz_find()] it reads `paparazzi scope`, with
+#' the scope stack right under it: live match counts for each level,
+#' plus a warning when pinned elements have gone stale.
 #'
 #' `show = "screenshot"` additionally captures an annotated screenshot:
 #' dashed outlines over the scope's elements, solid numbered outlines over
