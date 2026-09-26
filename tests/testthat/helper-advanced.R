@@ -2,8 +2,6 @@ advanced_fixture_file <- function() {
   test_path("fixtures", "advanced.html")
 }
 
-# Open the advanced interactions fixture and close it when the calling
-# test exits.
 local_advanced_page <- function(.env = parent.frame()) {
   local_page(advanced_fixture_file(), .env = .env)
 }
@@ -15,7 +13,6 @@ adv_log <- function(page) {
   pz_js(page, "window.__pzAdvLog")
 }
 
-# Log entry types, optionally narrowed to one element id.
 adv_log_types <- function(log, id = NULL) {
   keep <- vapply(
     log,

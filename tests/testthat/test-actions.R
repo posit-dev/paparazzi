@@ -36,7 +36,6 @@ test_that("the actions chain through the context invisibly", {
 
   expect_equal(pz_js(page, "document.getElementById('name').value"), "Ada")
 
-  # The whole chain happened, in order.
   log <- log_entries(page)
   i_input <- which(vapply(
     log,
@@ -509,7 +508,6 @@ test_that("pz_set_value sets a text input and dispatches input then change", {
   text <- log_ids(log_entries(page), "text")
   expect_identical(log_types(text), c("input", "change"))
   expect_equal(text[[1]]$value, "Ada")
-  # focus came first: the element is focused after the set
   expect_equal(pz_js(page, "document.activeElement.id"), "text")
 })
 
@@ -917,11 +915,9 @@ test_that("pz_select_text errors on absent text, emptiness, and multiple matches
 test_that("pz_scroll scrolls the page by, to a direction, and a target into view", {
   page <- local_advanced_page()
 
-  # by: a pixel delta against the root container, the document.
   page <- expect_invisible(pz_scroll(page, by = c(0, 300)))
   expect_equal(pz_js(page, "window.scrollY"), 300)
 
-  # to: the direction vocabulary, straight to the edge.
   pz_scroll(page, to = "bottom")
   expect_true(pz_js(
     page,
@@ -930,7 +926,6 @@ test_that("pz_scroll scrolls the page by, to a direction, and a target into view
   pz_scroll(page, to = "top")
   expect_equal(pz_js(page, "window.scrollY"), 0)
 
-  # target: auto-scrolls a below-fold element into view.
   pz_scroll(page, target = "#tall-bottom")
   y <- pz_js(
     page,
@@ -979,7 +974,6 @@ test_that("pz_scroll validates its modes", {
     pz_scroll(page, to = "bottom", by = c(0, 100)),
     class = "paparazzi_error_input"
   )
-  # by and to reuse the shared offset and direction checkers.
   expect_error(pz_scroll(page, by = "lots"), class = "paparazzi_error_input")
   expect_error(
     pz_scroll(page, to = "sideways"),
@@ -993,7 +987,6 @@ test_that("pz_scroll validates its modes", {
     class = "paparazzi_error_multiple"
   )
   expect_error(pz_scroll(ctx, to = "top"), class = "paparazzi_error_multiple")
-  # The page never moved.
   expect_equal(pz_js(page, "window.scrollY"), 0)
 })
 

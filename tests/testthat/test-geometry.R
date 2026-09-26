@@ -58,7 +58,6 @@ test_that("el_scroll_into_view scrolls the FIRST element, instantly", {
   inner_height <- pz_js(page, "window.innerHeight")
   el_scroll_into_view(els)
   y <- el_rects(els)$y
-  # First match is in the viewport right away; the second may not be.
   expect_gte(y[1], 0)
   expect_lt(y[1], inner_height)
 })
