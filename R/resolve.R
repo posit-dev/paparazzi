@@ -236,7 +236,6 @@ loc_resolve_once <- function(
       timeout_ = timeout
     ))
   } else {
-    # `this` inside the resolver is the pinned array itself.
     res <- run_cdp(ctx$page$session$Runtime$callFunctionOn(
       fn,
       objectId = root$object_id,
@@ -255,7 +254,6 @@ loc_resolve_once <- function(
   }
   object_id <- res$result$objectId
   if (is.null(object_id)) {
-    # The resolver returns `null` for an empty set, so no handle exists.
     return(new_elements(ctx$page, NULL, 0L, description))
   }
   count <- run_cdp(ctx$page$session$Runtime$callFunctionOn(

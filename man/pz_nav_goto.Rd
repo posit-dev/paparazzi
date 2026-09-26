@@ -43,7 +43,7 @@ Every navigation resets the scope to the root: the returned context has
 an empty scope stack, and the pinned scope objects are released, so a
 context scoped \strong{before} the navigation raises a detach error if used
 afterwards -- re-scope with \code{\link[=pz_find]{pz_find()}} on the returned root context.
-Session-level state (timeout, and later staging and recording) is
+Session-level state (timeout, staging and recording) is
 untouched.
 }
 \examples{

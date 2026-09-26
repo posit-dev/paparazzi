@@ -101,10 +101,9 @@ PaparazziPage <- R6::R6Class(
     },
 
     #' @description Release every remote object a scope pinned.
-    #'   Internal: runs on close, and the navigation task calls it before
-    #'   a navigation resets scopes. (An `@noRd` here would suppress the
-    #'   whole PaparazziPage topic, so it stays documented like its
-    #'   siblings on this internal-keyword topic.)
+    #'   Internal: runs on close and before navigation resets scopes. (An
+    #'   `@noRd` here would suppress the whole PaparazziPage topic, so it stays
+    #'   documented like its siblings on this internal-keyword topic.)
     release_object_group = function() {
       try(
         private$chromote_$Runtime$releaseObjectGroup(
@@ -176,12 +175,10 @@ PaparazziPage <- R6::R6Class(
     # Main-frame loaderId captured before the last user action.
     last_action_loader_ = NULL,
     # One object group per page for every remote object a scope pinned,
-    # released wholesale on close (and, later, navigation). A constant
+    # released wholesale on close and navigation. A constant
     # is safe because groups are per session, so it can't collide across
-    # pages; the field indirection keeps per-page uniqueness a later
-    # change without touching callers.
+    # pages.
     object_group_ = "paparazzi_scopes",
-    # Reserved session-level state for later tasks (staging, recorder).
     staging_ = list(),
     recorder_ = NULL
   )

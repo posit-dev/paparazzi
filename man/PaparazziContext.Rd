@@ -164,10 +164,9 @@ object a scope pinned (read-only; internal).}
 \if{latex}{\out{\hypertarget{method-PaparazziPage-release_object_group}{}}}
 \subsection{\code{PaparazziPage$release_object_group()}}{
   Release every remote object a scope pinned.
-Internal: runs on close, and the navigation task calls it before
-a navigation resets scopes. (An \verb{@noRd} here would suppress the
-whole PaparazziPage topic, so it stays documented like its
-siblings on this internal-keyword topic.)
+Internal: runs on close and before navigation resets scopes. (An
+\verb{@noRd} here would suppress the whole PaparazziPage topic, so it stays
+documented like its siblings on this internal-keyword topic.)
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{PaparazziPage$release_object_group()}

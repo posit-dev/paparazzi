@@ -32,10 +32,12 @@ process and pass its URL.}
 \item{...}{Forwarded to \code{\link[=pz_device]{pz_device()}} as device settings (e.g.
 \verb{width = 390, mobile = TRUE}); they must be named.}
 
-\item{wait}{What to wait for before returning. \code{"auto"} waits for Shiny
-idle on app paths and handles, and for load on other pages. \code{"shiny"}
-explicitly waits for Shiny to connect and become idle; non-Shiny pages
-error.}
+\item{wait}{What to wait for before returning. \code{"auto"} (the default)
+waits for Shiny idle on app paths and handles, and for load on other
+pages. \code{"load"} waits for the page to load. \code{"shiny"} explicitly waits
+for Shiny to connect and become idle; non-Shiny pages error. \code{"none"}
+returns without waiting. An existing \code{ChromoteSession} isn't
+navigated, so only \code{"shiny"} waits there.}
 
 \item{timeout}{Session default timeout in seconds; \code{NULL} uses the package
 default (10 s). Per-call \code{timeout = NULL} means "session default".}

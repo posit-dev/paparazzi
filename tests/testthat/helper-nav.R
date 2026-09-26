@@ -1,6 +1,3 @@
-# Helpers for the device and navigation tests (nav fixtures, device
-# fixture). local_page() itself lives in the shared helper-page.R.
-
 device_fixture_file <- function() {
   test_path("fixtures", "device.html")
 }

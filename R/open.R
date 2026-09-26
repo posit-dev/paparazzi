@@ -18,10 +18,12 @@
 #'   process and pass its URL.
 #' @param ... Forwarded to [pz_device()] as device settings (e.g.
 #'   `width = 390, mobile = TRUE`); they must be named.
-#' @param wait What to wait for before returning. `"auto"` waits for Shiny
-#'   idle on app paths and handles, and for load on other pages. `"shiny"`
-#'   explicitly waits for Shiny to connect and become idle; non-Shiny pages
-#'   error.
+#' @param wait What to wait for before returning. `"auto"` (the default)
+#'   waits for Shiny idle on app paths and handles, and for load on other
+#'   pages. `"load"` waits for the page to load. `"shiny"` explicitly waits
+#'   for Shiny to connect and become idle; non-Shiny pages error. `"none"`
+#'   returns without waiting. An existing `ChromoteSession` isn't
+#'   navigated, so only `"shiny"` waits there.
 #' @param timeout Session default timeout in seconds; `NULL` uses the package
 #'   default (10 s). Per-call `timeout = NULL` means "session default".
 #' @param shiny_options,envvars Passed to [pz_app()] when opening an app path.
@@ -151,15 +153,6 @@ pz_open <- function(
   ok <- TRUE
   page
 }
-open_wait_mode <- function(wait, is_shiny_app) {
-  if (!identical(wait, "auto")) {
-    return(wait)
-  }
-  if (is_shiny_app) {
-    return("shiny")
-  }
-  "load"
-}
 #' Close a page
 #'
 #' Closes the page's browser session and, if the page started a Shiny app,
@@ -182,6 +175,15 @@ pz_close <- function(page) {
   check_page(page)
   page$close()
   invisible(page)
+}
+open_wait_mode <- function(wait, is_shiny_app) {
+  if (!identical(wait, "auto")) {
+    return(wait)
+  }
+  if (is_shiny_app) {
+    return("shiny")
+  }
+  "load"
 }
 #' Open a page that closes when a block or calling frame exits
 #'
