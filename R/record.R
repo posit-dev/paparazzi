@@ -183,16 +183,16 @@ pz_record_stop <- function(ctx) {
 
   # A capture issued before the stop may still be in flight; it belongs
   # to the recording, so let it settle before the final capture.
-  if (rec$in_flight) {
+  if (!is.null(rec$pending)) {
     tryCatch(
       pz_poll(
-        function() !rec$in_flight,
+        function() is.null(rec$pending),
         timeout = page$default_timeout,
         loop = page$child_loop,
         what = "the in-flight frame capture"
       ),
       paparazzi_error_timeout = function(e) {
-        rec$in_flight <- FALSE
+        rec$pending <- NULL
         record_error(rec, e)
       }
     )
@@ -205,13 +205,13 @@ pz_record_stop <- function(ctx) {
   record_capture(rec, page, rec$vt_end)
   tryCatch(
     pz_poll(
-      function() !rec$in_flight,
+      function() is.null(rec$pending),
       timeout = min(page$default_timeout, 5),
       loop = page$child_loop,
       what = "the final frame capture"
     ),
     paparazzi_error_timeout = function(e) {
-      rec$in_flight <- FALSE
+      rec$pending <- NULL
       record_error(rec, e)
     }
   )
@@ -422,7 +422,6 @@ new_recorder <- function(
   rec$active_since <- rec_now()
   rec$active <- TRUE
   rec$paused <- FALSE
-  rec$in_flight <- FALSE
   rec$pending <- NULL
   rec$vt_end <- NULL
   rec$ticks <- 0L
@@ -531,7 +530,7 @@ record_tick <- function(page, rec = page_recorder(page)) {
     loop = page$child_loop
   )
   rec$ticks <- rec$ticks + 1L
-  if (rec$paused || rec$in_flight) {
+  if (rec$paused || !is.null(rec$pending)) {
     return(invisible(TRUE))
   }
   record_capture(rec, page, rec_vt(rec))
@@ -556,20 +555,19 @@ record_page_closed <- function(page) {
   invisible(TRUE)
 }
 # Issue one async capture on the page: the tick's periodic capture and
-# the stop-time final frame both come through here. in_flight guards
-# against overlapping captures; the callbacks clear it when chromote
+# the stop-time final frame both come through here. The pending slot
+# prevents overlapping captures; callbacks clear it when chromote
 # invokes them on the child loop. A synchronous failure (e.g. a closed
 # session) clears it and lands in the recorder's error tally instead.
 # Unclipped surface captures at DPR 2 can remap concurrent mouse input
 # to half its coordinates; a viewport clip avoids that Chrome path while
 # retaining full-resolution PNGs for the encode-time crop.
 record_capture <- function(rec, page, vt) {
-  rec$in_flight <- TRUE
   index <- length(rec$files) + 1L
-  rec$pending <- list(
-    vt = vt,
-    file = file.path(rec$frames_dir, sprintf("frame-%06d.png", index))
-  )
+  pending <- new.env(parent = emptyenv())
+  pending$vt <- vt
+  pending$file <- file.path(rec$frames_dir, sprintf("frame-%06d.png", index))
+  rec$pending <- pending
   # Both stages share one timeout budget, the same budget
   # pz_record_stop() allows an in-flight capture to settle.
   deadline <- Sys.time() + page$default_timeout
@@ -596,23 +594,24 @@ record_capture <- function(rec, page, vt) {
             fromSurface = TRUE,
             wait_ = FALSE,
             timeout_ = remaining(),
-            callback_ = function(res) record_frame_done(rec, res = res),
-            error_ = function(err) record_frame_done(rec, err = err)
+            callback_ = function(res) record_frame_done(rec, pending, res = res),
+            error_ = function(err) record_frame_done(rec, pending, err = err)
           )
-        }, error = function(e) record_frame_done(rec, err = e))
+        }, error = function(e) record_frame_done(rec, pending, err = e))
       },
-      error_ = function(err) record_frame_done(rec, err = err)
+      error_ = function(err) record_frame_done(rec, pending, err = err)
     ),
-    error = function(e) record_frame_done(rec, err = e)
+    error = function(e) record_frame_done(rec, pending, err = e)
   )
   invisible(rec)
 }
 # The capture callback: writes the PNG to the frame store at resolve
-# time. At most one capture is in flight, so issue order is resolve
-# order and frame timestamps (taken at issue) stay ordered.
-record_frame_done <- function(rec, res = NULL, err = NULL) {
-  rec$in_flight <- FALSE
-  pending <- rec$pending
+# time. A callback for a retired capture cannot consume a newer slot.
+# At most one active capture is pending, so frame timestamps stay ordered.
+record_frame_done <- function(rec, pending, res = NULL, err = NULL) {
+  if (!identical(rec$pending, pending)) {
+    return(invisible(NULL))
+  }
   rec$pending <- NULL
   tryCatch(
     {

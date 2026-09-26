@@ -196,6 +196,69 @@ test_that("stop captures a final frame after a late page change", {
   expect_equal(pixel(files[[length(files)]]), c(1, 0, 0), tolerance = 0.05)
 })
 
+test_that("late capture callbacks cannot consume the final capture slot", {
+  for (late in c("success", "error")) {
+    callbacks <- new.env(parent = emptyenv())
+    callbacks$metrics <- list()
+    callbacks$frames <- list()
+    page <- list(
+      default_timeout = 5,
+      session = list(Page = list(
+        getLayoutMetrics = function(..., callback_, error_) {
+          callbacks$metrics[[length(callbacks$metrics) + 1L]] <- callback_
+        },
+        captureScreenshot = function(..., callback_, error_) {
+          callbacks$frames[[length(callbacks$frames) + 1L]] <- list(
+            success = callback_, error = error_
+          )
+        }
+      ))
+    )
+    rec <- new_recorder(
+      path = tempfile(fileext = ".mp4"), format = "mp4", fps = 10,
+      scale = NULL, hold = c(0, 0), keep_frames = TRUE, frame = NULL
+    )
+    rec$frames_dir <- withr::local_tempdir()
+    metrics <- list(cssVisualViewport = list(
+      pageX = 0, pageY = 0, clientWidth = 640, clientHeight = 480
+    ))
+
+    record_capture(rec, page, if (late == "error") 2 else 1)
+    callbacks$metrics[[1]](metrics)
+    rec$pending <- NULL  # The stop poll timed out and retired this capture.
+    record_capture(rec, page, 2)
+    callbacks$metrics[[2]](metrics)
+    final_pending <- rec$pending
+    expect_length(callbacks$frames, 2)
+
+    if (late == "success") {
+      callbacks$frames[[1]]$success(list(
+        data = jsonlite::base64_enc(charToRaw("stale"))
+      ))
+    } else {
+      callbacks$frames[[1]]$error(simpleError("late capture error"))
+    }
+    expect_identical(rec$pending, final_pending)
+    expect_length(rec$files, 0)
+    expect_length(rec$times, 0)
+    expect_equal(rec$n_errors, 0L)
+    expect_null(rec$first_error)
+    expect_false(file.exists(final_pending$file))
+
+    callbacks$frames[[2]]$success(list(
+      data = jsonlite::base64_enc(charToRaw("final"))
+    ))
+    expect_null(rec$pending)
+    expect_equal(rec$times, 2)
+    expect_identical(rec$files, final_pending$file)
+    expect_true(file.exists(final_pending$file))
+    if (file.exists(final_pending$file)) {
+      expect_identical(readBin(final_pending$file, "raw", n = 5), charToRaw("final"))
+    }
+    expect_equal(rec$n_errors, 0L)
+  }
+})
+
 test_that("an immediate block error is not masked by the stop", {
   page <- local_record_page()
   skip_if_no_av()
