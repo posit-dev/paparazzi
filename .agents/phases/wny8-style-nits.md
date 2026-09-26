@@ -10,4 +10,6 @@ Signed off: orchestrator.
 
 ## Handoff
 
-Pending.
+- Landed: `pz_get_elements()` forwards `call` to `new_get_tibble()`; `js_value()` retains the sign of CDP's `"-0"`. Both fixes have regression tests in their matching test files. Nothing remains in scope.
+- Red then green: the getter test first reported `read(els, call)` instead of `pz_get_elements(page, target = ".item")`; the JS test first returned `Inf` instead of `-Inf`. Both passed after their respective fixes.
+- Targeted `testthat::test_local(filter = "get|js")`: `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 115 ]`. `air format --check .` and `jarl check .` passed.
