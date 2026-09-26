@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { margin: 8px; }
+    #overlap-input { display: block; width: 300px; height: 40px; box-sizing: border-box; }
+    #task-list { width: 300px; max-height: 192px; overflow-y: auto; padding: 0; margin: 0; list-style: none; }
+    #task-list li { height: 32px; box-sizing: border-box; }
+  </style>
+</head>
+<body>
+  <input id="overlap-input" aria-label="input above clipped list">
+  <ul id="task-list">
+    <li id="first" draggable="true">first destination</li>
+    <li draggable="true">second</li>
+    <li draggable="true">third</li>
+    <li draggable="true">fourth</li>
+    <li draggable="true">fifth</li>
+    <li draggable="true">sixth</li>
+    <li id="last" draggable="true">last source</li>
+  </ul>
+  <script>
+    window.dragEvents = [];
+    ["mousedown", "dragstart", "dragenter", "drop"].forEach(type => {
+      document.addEventListener(type, event => {
+        window.dragEvents.push({ type, id: event.target.id });
+      }, true);
+    });
+  </script>
+</body>
+</html>

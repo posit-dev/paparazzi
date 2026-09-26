@@ -1080,6 +1080,26 @@ test_that("pz_drag review fixes: NULL to, uppercase draggable, viewport", {
   )
 })
 
+test_that("pz_drag refuses a destination clipped by the source's scroll", {
+  for (html5 in c(TRUE, FALSE)) {
+    page <- local_page(test_path("fixtures", "drag-clipped.html"))
+    if (!html5) pz_js(page, "document.querySelector('#last').draggable = false")
+    expect_identical(pz_js(page, "document.querySelector('#last').draggable"), html5)
+
+    error <- expect_error(
+      pz_drag(page, "#last", "#first"),
+      class = "paparazzi_error_obstructed"
+    )
+    expect_s3_class(error, "paparazzi_error_target")
+    expect_match(conditionMessage(error), "#first", fixed = TRUE)
+    expect_match(conditionMessage(error), "input#overlap-input", fixed = TRUE)
+    expect_gt(pz_js(page, "document.querySelector('#task-list').scrollTop"), 0)
+    events <- pz_js(page, "window.dragEvents")
+    expect_length(events, 0L)
+    pz_close(page)
+  }
+})
+
 test_that("pz_drag errors when the destination hides after the source's scroll", {
   page <- local_advanced_page()
   # The fixture hides #vanishing-zone the moment #tall-bottom is

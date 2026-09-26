@@ -27,7 +27,8 @@ single number for both axes).}
 \description{
 Auto-waits for the source to be actionable: visible, non-empty, and
 receiving pointer events at its center (not covered by another element).
-With \code{to}, the destination is also checked when brought into view.
+With \code{to}, the destination is checked for visibility and that it receives
+the drop at its center after the source is brought into view.
 It then drags with real mouse input: press at the source's center,
 move to the destination, release. When the source is a
 real HTML5 drag source (\code{draggable}, including inherited
