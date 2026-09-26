@@ -61,6 +61,29 @@ test_that("only supplied dimensions change state", {
   expect_equal(js(page, "devicePixelRatio"), 2)
 })
 
+test_that("a failed device change doesn't leak into later partial changes", {
+  page <- local_device_page()
+  pz_device(page, width = 640, height = 560)
+
+  with_mocked_bindings(
+    record_hold = function(page, code, call) stop("override failed"),
+    expect_error(pz_device(page, width = 800), "override failed")
+  )
+  pz_device(page, height = 500)
+  expect_equal(js(page, "innerWidth"), 640)
+  expect_equal(js(page, "innerHeight"), 500)
+
+  session <- page$page$session
+  emulation <- session$Emulation
+  failing <- emulation
+  failing$setEmulatedMedia <- function(...) stop("media failed")
+  session$Emulation <- failing
+  expect_error(pz_device(page, color_scheme = "dark"), "media failed")
+  session$Emulation <- emulation
+  pz_device(page, reduced_motion = TRUE)
+  expect_false(js(page, "matchMedia('(prefers-color-scheme: dark)').matches"))
+})
+
 test_that("viewport zoom shrinks the CSS viewport and raises the scale factor", {
   page <- local_device_page()
   pz_device(page, width = 800, height = 600, scale = 2)

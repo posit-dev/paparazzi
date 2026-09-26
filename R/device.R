@@ -93,17 +93,20 @@ pz_device <- function(
   }
 
   state <- device_state(ctx$page)
-  state$width <- width %||% state$width
-  state$height <- height %||% state$height
-  state$scale <- scale %||% state$scale
-  state$mobile <- mobile %||% state$mobile
-  state$zoom <- zoom %||% state$zoom
-  state$zoom_method <- zoom_method %||% state$zoom_method
-
-  device_apply_override(ctx$page, state)
-  device_apply_css_zoom(ctx$page, state)
-
-  device_apply_media(ctx$page, state, color_scheme, reduced_motion)
+  device_step(state, {
+    state$width <- width %||% state$width
+    state$height <- height %||% state$height
+    state$scale <- scale %||% state$scale
+    state$mobile <- mobile %||% state$mobile
+    state$zoom <- zoom %||% state$zoom
+    state$zoom_method <- zoom_method %||% state$zoom_method
+    device_apply_override(ctx$page, state)
+  })
+  device_step(state, device_apply_css_zoom(ctx$page, state))
+  device_step(
+    state,
+    device_apply_media(ctx$page, state, color_scheme, reduced_motion)
+  )
 
   if (!is.null(locale)) {
     ctx$page$session$Emulation$setLocaleOverride(
@@ -219,6 +222,18 @@ device_state <- function(page) {
     attr(page, "paparazzi_device") <- state
   }
   state
+}
+
+# Apply one step of a device change. The step records its settings in
+# state before sending them, so a failed step puts the state back:
+# otherwise a later partial pz_device() call would re-send settings the
+# page never got. Earlier steps that succeeded stay recorded.
+device_step <- function(state, code) {
+  prev <- as.list(state, all.names = TRUE)
+  tryCatch(code, error = function(e) {
+    list2env(prev, envir = state)
+    stop(e)
+  })
 }
 
 # Recompute the full metrics override from state. CDP semantics (probed):
