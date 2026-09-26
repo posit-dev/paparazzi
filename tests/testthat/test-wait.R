@@ -561,6 +561,27 @@ test_that("nav settle restarts its hold when the main-frame loader changes", {
   expect_identical(frame_timeouts, rep(list(1), 5))
 })
 
+test_that("nav_snapshot propagates closed-page and JavaScript errors", {
+  failure <- NULL
+  local_mocked_bindings(pz_js = function(...) stop(failure))
+
+  for (class in c("paparazzi_error_closed", "paparazzi_error_js")) {
+    failure <- rlang::error_cnd(class, message = class)
+    expect_error(nav_snapshot(NULL, 1), class = class)
+  }
+})
+
+test_that("nav_snapshot treats a chromote swap error as in-flight", {
+  local_mocked_bindings(pz_js = function(...) {
+    stop("Execution context was destroyed")
+  })
+
+  expect_identical(
+    nav_snapshot(NULL, 1),
+    list(complete = FALSE, origin = NULL)
+  )
+})
+
 test_that("a completed bfcache restore is caught once after history.back()", {
   skip_if_no_chrome()
   testthat::skip_if_not_installed("httpuv")

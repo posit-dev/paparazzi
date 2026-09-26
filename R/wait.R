@@ -395,9 +395,10 @@ pz_wait_for_navigation <- function(
 nav_settle_secs <- 0.5
 
 # The wait-start document identity: readyState completeness plus the
-# document's timeOrigin, the token a navigation always replaces. A
-# read that fails mid-swap can't pin the identity, so it degrades to
-# the in-flight reading (incomplete at wait start).
+# document's timeOrigin, the token a navigation always replaces. A read
+# that fails during a document swap (including a command timeout) can't
+# pin the identity, so it degrades to the in-flight reading. Closed-page
+# and JavaScript errors cannot indicate a swap.
 nav_snapshot <- function(ctx, timeout) {
   s <- tryCatch(
     pz_js(
@@ -405,7 +406,12 @@ nav_snapshot <- function(ctx, timeout) {
       "JSON.stringify([document.readyState === 'complete', performance.timeOrigin])",
       timeout = timeout
     ),
-    error = function(e) NULL
+    error = function(e) {
+      if (inherits(e, c("paparazzi_error_closed", "paparazzi_error_js"))) {
+        stop(e)
+      }
+      NULL
+    }
   )
   if (is.null(s)) {
     list(complete = FALSE, origin = NULL)
