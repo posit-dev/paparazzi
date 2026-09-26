@@ -429,7 +429,10 @@ frame_measure <- function(
   } else {
     # The recording PNG holds only the viewport, not the full page.
     clamps[["the viewport"]] <- c(
-      0, 0, geometry$viewport_width, geometry$viewport_height
+      0,
+      0,
+      geometry$viewport_width,
+      geometry$viewport_height
     )
   }
   box <- frame_apply(spec, box, clamps, call = call)
