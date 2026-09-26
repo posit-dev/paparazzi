@@ -60,11 +60,13 @@ pz_loc <- function(css, ..., has_text = NULL, which = NULL, within = NULL) {
     class = "paparazzi_loc"
   )
 }
+
 #' @export
 print.paparazzi_loc <- function(x, ...) {
   cli::cat_line("<paparazzi_loc> ", format_loc(x))
   invisible(x)
 }
+
 as_loc <- function(target, arg = caller_arg(target), call = caller_env()) {
   if (inherits(target, "paparazzi_loc")) {
     return(target)
@@ -79,6 +81,7 @@ as_loc <- function(target, arg = caller_arg(target), call = caller_env()) {
     call = call
   )
 }
+
 # A target accepted by the resolver: one spec, or a list of specs/strings
 # (the union form). Names are dropped so the union serializes as a JSON
 # array, not an object.
@@ -100,6 +103,7 @@ as_loc_list <- function(target, arg = caller_arg(target), call = caller_env()) {
   }
   list(as_loc(target, arg = arg, call = call))
 }
+
 # Target description, e.g.
 #   `.shiny-tool-request` (has_text: "get_weather", which: last, within: `.chat`)
 # Qualifiers appear in a fixed order; `within` is recursive. Used by the

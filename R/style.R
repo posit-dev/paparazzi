@@ -84,6 +84,7 @@ pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
     }
   )
 }
+
 #' Expect computed styles
 #'
 #' @description
@@ -167,9 +168,11 @@ pz_expect_style <- function(
     description = expect_headline_style(pairs, not)
   )
 }
+
 style_prop_name <- function(name) {
   ifelse(startsWith(name, "--"), name, gsub("_", "-", name, fixed = TRUE))
 }
+
 # Shorthands are unreliable in computed styles (and Chrome's computed
 # style doesn't even enumerate them); the error points at longhands.
 style_check_shorthand <- function(props, call = caller_env()) {
@@ -188,6 +191,7 @@ style_check_shorthand <- function(props, call = caller_env()) {
     call = call
   )
 }
+
 style_shorthand_props <- c(
   "animation",
   "background",
@@ -228,6 +232,7 @@ style_shorthand_props <- c(
   "text-emphasis",
   "transition"
 )
+
 style_shorthand_longhands <- c(
   animation = "animation-name, animation-duration",
   background = "background-color, background-image",
@@ -260,6 +265,7 @@ style_shorthand_longhands <- c(
   "text-emphasis" = "text-emphasis-style, text-emphasis-color",
   transition = "transition-property, transition-duration"
 )
+
 style_check_duplicated <- function(props, call = caller_env()) {
   i <- anyDuplicated(props)
   if (i > 0L) {
@@ -271,6 +277,7 @@ style_check_duplicated <- function(props, call = caller_env()) {
   }
   invisible(NULL)
 }
+
 style_expect_pairs <- function(dots, call = caller_env()) {
   if (length(dots) == 0L) {
     cli::cli_abort(
@@ -304,6 +311,7 @@ style_expect_pairs <- function(dots, call = caller_env()) {
   style_check_duplicated(names(values), call = call)
   values
 }
+
 # One expectation check: reads the target's computed values and, when
 # normalizing, resolves the expected values through the probe, in one
 # synchronous JS call. Comparison happens in R (see the expectation
@@ -334,6 +342,7 @@ check_style <- function(pairs, not, normalize, call = caller_env()) {
     list(pass = pass, observed = style_observed(vals, props))
   }
 }
+
 # Invalid CSS aborts immediately, outside the retry loop: the browser's
 # verdict on a declaration never changes. Acceptance is a property of
 # the (property, value) pair, so the verdict vector is per pair.
@@ -348,6 +357,7 @@ style_abort_invalid <- function(accepted, pairs, call = caller_env()) {
   }
   invisible(NULL)
 }
+
 # The invalid-declaration verdict with no matches: there is no element
 # array to callFunctionOn, so the check runs on the page with one
 # Runtime$evaluate. The probe is a detached div: setProperty validity
@@ -383,6 +393,7 @@ style_check_invalid <- function(page, pairs, call = caller_env()) {
   }
   vapply(res$result$value, isTRUE, logical(1))
 }
+
 # Comparison matrix [match, pair]: identical strings pass; px values
 # compare numerically with a 0.5px tolerance; anything else is exact.
 style_hits <- function(vals, pairs, normalize) {
@@ -400,6 +411,7 @@ style_hits <- function(vals, pairs, normalize) {
   }
   out
 }
+
 style_compare <- function(actual, expected) {
   if (identical(actual, expected)) {
     return(TRUE)
@@ -408,13 +420,16 @@ style_compare <- function(actual, expected) {
   e <- style_px(expected)
   !is.na(a) && !is.na(e) && abs(a - e) <= style_px_tolerance
 }
+
 style_px_tolerance <- 0.5
+
 style_px <- function(x) {
   if (!is_string(x) || !grepl("^[+-]?[0-9]+(\\.[0-9]+)?px$", x)) {
     return(NA_real_)
   }
   as.numeric(sub("px$", "", x))
 }
+
 style_observed <- function(vals, props) {
   rows <- vapply(
     vals,
@@ -426,10 +441,12 @@ style_observed <- function(vals, props) {
   )
   expect_truncate(paste0(rows, collapse = " | "))
 }
+
 expect_headline_style <- function(pairs, not) {
   what <- paste0(names(pairs), ": \"", pairs, "\"", collapse = ", ")
   paste0("Expected style", if (not) " not", " to match ", what)
 }
+
 # One synchronous callFunctionOn on the matched element array: read
 # the targets and whatever context each value needs (SPEC table) from
 # the live document, THEN attach the probe, set the expected values
@@ -452,6 +469,7 @@ style_expect_js <- function(pairs, normalize) {
     "}"
   )
 }
+
 # The invalid-declaration check alone, for the zero-match path: the
 # same setProperty-to-empty-readback verdict, on a detached div.
 style_invalid_js <- function(pairs) {
@@ -470,6 +488,7 @@ style_invalid_js <- function(pairs) {
     }"
   )
 }
+
 style_pairs_json <- function(pairs) {
   jsonlite::toJSON(
     lapply(
@@ -479,6 +498,7 @@ style_pairs_json <- function(pairs) {
     auto_unbox = TRUE
   )
 }
+
 style_probe_js <- "
   // Every read of the live document -- the targets' computed styles
   // and the parent font/size context the normalization needs -- is
@@ -570,6 +590,7 @@ style_probe_js <- "
     host.remove();
   }
 "
+
 style_get_js <- function(props) {
   props_json <- if (is.null(props)) "null" else jsonlite::toJSON(props)
   paste0(

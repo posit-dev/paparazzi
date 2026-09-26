@@ -39,6 +39,7 @@ inspect_overlay_count <- function(page) {
     )
   )
 }
+
 inspect_overlay_display <- function(page) {
   pz_js(
     page,

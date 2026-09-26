@@ -50,6 +50,7 @@ pz_get_count <- function(ctx, ..., target = NULL) {
   withr::defer(release_elements(els))
   els$count
 }
+
 #' Read the text of matching elements
 #'
 #' [pz_get_text()] returns the `textContent` of every element matching
@@ -93,6 +94,7 @@ pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
     }
   )
 }
+
 #' Read the value of matching elements
 #'
 #' [pz_get_value()] returns the `value` property of every element
@@ -121,6 +123,7 @@ pz_get_value <- function(ctx, ..., target = NULL) {
     }
   )
 }
+
 #' Read an attribute of matching elements
 #'
 #' [pz_get_attr()] returns the named attribute of every element matching
@@ -157,6 +160,7 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
     read = function(els, call) chr_or_na(els_values(els, js, call = call))
   )
 }
+
 #' Read the geometry of matching elements
 #'
 #' [pz_get_rect()] returns the bounding box of every element matching
@@ -194,6 +198,7 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
     }
   )
 }
+
 #' Describe matching elements
 #'
 #' [pz_get_elements()] returns a summary of every element matching
@@ -234,6 +239,7 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
     }
   )
 }
+
 #' Read the HTML of matching elements
 #'
 #' [pz_get_html()] returns the outer HTML of every element matching
@@ -258,6 +264,7 @@ pz_get_html <- function(ctx, ..., target = NULL) {
     read = function(els, call) els_call(els, get_html_js, call = call)
   )
 }
+
 #' Read the page URL
 #'
 #' [pz_get_url()] returns the page's current URL.
@@ -277,6 +284,7 @@ pz_get_url <- function(ctx) {
   check_context(ctx)
   pz_js(ctx, "location.href")
 }
+
 #' Read the page title
 #'
 #' [pz_get_title()] returns the page's current title.
@@ -295,6 +303,7 @@ pz_get_title <- function(ctx) {
   check_context(ctx)
   pz_js(ctx, "document.title")
 }
+
 # Driver for the target-based getters. `read(els, call)` pulls values into R;
 # it never sees an empty set, because loc_resolve() errors on timeout.
 # `target = NULL` means the current context: at a scoped context that is
@@ -320,6 +329,7 @@ get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
   withr::defer(release_elements(els))
   read(els, call)
 }
+
 # JS null/undefined reads become NA_character_, preserving positions:
 # unlist() silently drops NULLs.
 chr_or_na <- function(x) {
@@ -329,6 +339,7 @@ chr_or_na <- function(x) {
     character(1)
   )
 }
+
 # Pin one single-element set off a matched array: the element column's
 # per-match scope. The slice is tagged with the page's object group, so
 # it outlives the getter's transient handle and is released with every
@@ -366,6 +377,7 @@ pin_match_id <- function(els, i, call = caller_env()) {
   }
   res$result$objectId
 }
+
 # Wrap one pinned match as the element column's entry: a context whose
 # stack is the getter context's whole stack plus that match. The
 # description narrows the getter's locs with `which = i`, so a later
@@ -382,6 +394,7 @@ pin_match <- function(ctx, els, locs, i, call = caller_env()) {
   )
   push_scope(ctx, pinned)
 }
+
 # The locs the per-match element scopes narrow from: the promoted
 # target for an explicit target, and the scope's own locs for
 # target = NULL on a scoped context (the pinned set itself). At the
@@ -398,6 +411,7 @@ get_element_locs <- function(els, target, call = caller_env()) {
     as_loc_list(target, call = call)
   }
 }
+
 # Tibble factory for the getters: while the getter's transient handle
 # is still live (inside get_impl()'s read, before the on-exit release),
 # pin one single-element set per match off the matched array and store
@@ -411,9 +425,11 @@ new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
   )
   out
 }
+
 get_value_js <- "function() {
   return this.map((el) => el.value === undefined ? null : String(el.value));
 }"
+
 # id/class come back as JS null when the attribute is absent, so the
 # getter can map them to NA like pz_get_attr() does.
 get_elements_js <- "function() {
@@ -424,6 +440,7 @@ get_elements_js <- "function() {
     text: el.textContent
   }));
 }"
+
 get_html_js <- "function() {
   return this.map((el) => el.outerHTML);
 }"

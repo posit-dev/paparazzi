@@ -87,6 +87,7 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   writeBin(jsonlite::base64_dec(res$data), path)
   invisible(ctx)
 }
+
 # The clip for a root-context capture: the viewport, in document
 # coordinates, read in one JS evaluation.
 clip_viewport <- function(ctx, call = caller_env()) {
@@ -112,6 +113,7 @@ clip_viewport <- function(ctx, call = caller_env()) {
   clip$y <- max(clip$y, 0)
   clip
 }
+
 # The clip for an element capture: the union of viewport-relative rects,
 # shifted into document coordinates. The four edges are pure reductions
 # over the tibble columns -- the prior-art bug (the blog's union_png())
@@ -142,6 +144,7 @@ clip_rects_union <- function(ctx, rects, call = caller_env()) {
   clip$y <- max(clip$y, 0)
   clip
 }
+
 # One synchronous CDP call, like loc_resolve_once(): no promise chaining.
 # captureBeyondViewport = TRUE makes Chrome interpret the clip in page
 # (document) coordinates, and fromSurface = TRUE renders the surface at

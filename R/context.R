@@ -7,6 +7,7 @@
 type_sum.PaparazziContext <- function(x) {
   "pz_ctx"
 }
+
 #' @importFrom pillar pillar_shaft
 #' @export
 pillar_shaft.PaparazziContext <- function(x, ...) {
@@ -14,6 +15,7 @@ pillar_shaft.PaparazziContext <- function(x, ...) {
   description <- if (is.null(scoped)) "root" else scoped$description
   pillar::new_pillar_shaft_simple(description, align = "left")
 }
+
 #' Paparazzi contexts and pages
 #'
 #' @description
@@ -56,6 +58,7 @@ PaparazziContext <- R6::R6Class(
     }
   )
 )
+
 #' @rdname PaparazziContext
 PaparazziPage <- R6::R6Class(
   "PaparazziPage",

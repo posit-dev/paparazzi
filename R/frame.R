@@ -80,6 +80,7 @@ pz_frame <- function(
     when = when
   )
 }
+
 #' @export
 print.paparazzi_frame <- function(x, ...) {
   describe <- function(t) {
@@ -97,6 +98,7 @@ print.paparazzi_frame <- function(x, ...) {
   cli::cat_line("<paparazzi_frame> ", paste(fields, collapse = ", "))
   invisible(x)
 }
+
 #' Set or clear the page's default framing
 #'
 #' @description
@@ -192,10 +194,12 @@ pz_stage_frame <- function(
   page_set_frame(ctx$page, spec)
   invisible(ctx)
 }
+
 # The direction vocabulary (SPEC "Directions") as sorted token sets:
 # the sides, the four corners, and "center". Consumers that take a
 # subset of the vocabulary pass their own `valid` to parse_direction().
 DIRECTION_TOKENS <- c("bottom", "center", "left", "right", "top")
+
 DIRECTIONS <- list(
   c("top"),
   c("bottom"),
@@ -207,9 +211,11 @@ DIRECTIONS <- list(
   c("bottom", "right"),
   c("center")
 )
+
 direction_labels <- function(valid = DIRECTIONS) {
   vapply(valid, function(tokens) paste(tokens, collapse = " "), character(1))
 }
+
 # Normalize a direction string to its sorted token set: lowercase,
 # split on spaces or hyphens, sort, dedupe. Tokens outside the
 # vocabulary and combinations outside `valid` abort with the valid
@@ -239,6 +245,7 @@ parse_direction <- function(
   }
   tokens
 }
+
 # The frame spec constructor: validates and normalizes every field.
 # target and bounds are promoted to loc lists eagerly, so type errors
 # surface at spec-build time; resolution stays lazy. pad is normalized
@@ -287,6 +294,7 @@ new_frame_spec <- function(
     class = "paparazzi_frame"
   )
 }
+
 # CSS-style padding: one number for all sides, or c(top, right,
 # bottom, left).
 check_pad <- function(pad, arg = caller_arg(pad), call = caller_env()) {
@@ -311,6 +319,7 @@ check_pad <- function(pad, arg = caller_arg(pad), call = caller_env()) {
     call = call
   )
 }
+
 check_offset <- function(
   offset,
   arg = caller_arg(offset),
@@ -340,6 +349,7 @@ check_offset <- function(
     call = call
   )
 }
+
 # The page-level default framing: one field in the page's reserved
 # staging state (private in R/context.R), read by screenshots and
 # recordings. R6 private fields are reachable only through the
@@ -349,10 +359,12 @@ check_offset <- function(
 page_frame <- function(page) {
   page$.__enclos_env__$private$staging_$frame
 }
+
 page_set_frame <- function(page, frame) {
   page$.__enclos_env__$private$staging_$frame <- frame
   invisible(page)
 }
+
 # The framing a capture uses: NULL means the page default if one is
 # set, else no framing; FALSE opts out for one call; a pz_frame()
 # spec (explicit or default) is used as-is. Anything else -- including
@@ -377,6 +389,7 @@ frame_effective <- function(ctx, frame, call = caller_env()) {
     call = call
   )
 }
+
 # The CDP clip for a framed capture: resolves and measures the frame's
 # content and bounds, then reads the page geometry and runs the
 # pipeline (viewport-relative), converts to document coordinates and
@@ -457,6 +470,7 @@ frame_clip <- function(ctx, target, spec, even = FALSE, call = caller_env()) {
   }
   list(x = box[1], y = box[2], width = width, height = height)
 }
+
 # The content box a frame is computed from, viewport-relative: the
 # frame's own target if it has one, else the call's target, else the
 # pinned scope (scoped context), else NULL for the viewport fallback
@@ -474,6 +488,7 @@ frame_content_box <- function(ctx, target, spec, call = caller_env()) {
   }
   NULL
 }
+
 # The union of element rects, as a viewport-relative box
 # c(left, top, right, bottom).
 box_union <- function(rects, call = caller_env()) {
@@ -491,6 +506,7 @@ box_union <- function(rects, call = caller_env()) {
     max(rects$y + rects$height)
   )
 }
+
 # One JS read of the geometry framing needs: scroll offsets, viewport
 # size, document size, and the document's left edge in document
 # coordinates.
@@ -531,6 +547,7 @@ page_geometry <- function(ctx, call = caller_env()) {
     document_left = g[7]
   )
 }
+
 # Pure framing geometry on a viewport-relative box
 # c(left, top, right, bottom): pad, offset, ratio growth by anchor,
 # then the clamps (named boxes in the same space, intersected in
@@ -566,6 +583,7 @@ frame_apply <- function(spec, box, clamps = list(), call = caller_env()) {
   }
   box
 }
+
 # Grow the shorter side to reach `ratio` (width / height), never
 # shrinking, placing the content by the anchor tokens: left/right and
 # top/bottom pin the content to that edge (all growth on the opposite
@@ -603,6 +621,7 @@ frame_grow_ratio <- function(ratio, box, anchor) {
   }
   box
 }
+
 # Round box edges: whole pixels for stills, even pixels for video
 # (the recorder's path), so width and height never split a pixel.
 # Edges a clamp fixed in place ("pinned") round INWARD -- left/top

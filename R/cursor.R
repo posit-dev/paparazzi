@@ -73,6 +73,7 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL) {
   cursor_show_at(ctx, point, from = from)
   invisible(ctx)
 }
+
 #' Hide the overlay cursor
 #'
 #' Hides the cursor set up by [pz_cursor_show()] or shown implicitly
@@ -112,6 +113,7 @@ pz_cursor_hide <- function(ctx, ...) {
   }
   invisible(ctx)
 }
+
 #' Move the overlay cursor to an element
 #'
 #' Moves the cursor over `target`, showing it first if hidden. While
@@ -156,6 +158,7 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
   cursor_show_at(ctx, point, duration = duration)
   invisible(ctx)
 }
+
 #' Move the overlay cursor out of the frame
 #'
 #' Sends the cursor out of the frame through `side`: while recording it
@@ -206,9 +209,11 @@ pz_cursor_leave <- function(ctx, side = "right") {
   cur$off_frame <- side
   invisible(ctx)
 }
+
 # The sides-only subset of the direction vocabulary, for pz_stage(enter
 # =), pz_cursor_show(from =), and pz_cursor_leave(side =).
 STAGE_SIDES <- list(c("top"), c("bottom"), c("left"), c("right"))
+
 # The cursor runtime state: a mutable environment in the page's reserved
 # private$staging_$cursor slot, created on first cursor use and reached
 # only through these accessors (the page_frame() pattern). Fields:
@@ -230,9 +235,11 @@ page_cursor <- function(page) {
   }
   cur
 }
+
 page_cursor_peek <- function(page) {
   page$.__enclos_env__$private$staging_$cursor
 }
+
 # Effective visibility: the setting FALSE hides always; an explicit
 # shown/hidden state wins; "auto" follows the recording (or cursor =
 # TRUE for stills).
@@ -250,6 +257,7 @@ cursor_visible <- function(page) {
     auto = stage_recording(page) || isTRUE(stage$cursor)
   )
 }
+
 check_cursor_enabled <- function(ctx, call = caller_env()) {
   if (identical(page_stage(ctx$page)$cursor, FALSE)) {
     cli::cli_abort(
@@ -260,6 +268,7 @@ check_cursor_enabled <- function(ctx, call = caller_env()) {
   }
   invisible(ctx)
 }
+
 # Where the cursor should appear with no target: its last position, or
 # the viewport center when it has never been placed.
 cursor_current_point <- function(ctx) {
@@ -270,6 +279,7 @@ cursor_current_point <- function(ctx) {
   v <- unlist(pz_js(ctx, "[window.innerWidth, window.innerHeight]"))
   c(x = v[1] / 2, y = v[2] / 2)
 }
+
 # The center of a resolved target, scrolled into view (staged while
 # recording, instantly otherwise).
 cursor_target_point <- function(ctx, target, call = caller_env()) {
@@ -282,6 +292,7 @@ cursor_target_point <- function(ctx, target, call = caller_env()) {
     y = rects$y[[1]] + rects$height[[1]] / 2
   )
 }
+
 # A point 40px past the named frame edge, at the target's coordinate on
 # the other axis: where an entering cursor starts and a leaving cursor
 # ends up.
@@ -296,6 +307,7 @@ cursor_off_frame_point <- function(ctx, side, point) {
     right = c(x = v[1] + margin, y = unname(point[["y"]]))
   )
 }
+
 # Show the cursor at a point, choosing the entrance from the current
 # state: an explicit `from` side (or the enter setting on first show)
 # starts off-frame and glides in; first show without a side fades in;
@@ -333,6 +345,7 @@ cursor_show_at <- function(ctx, point, duration = NULL, from = NULL) {
   }
   invisible(ctx)
 }
+
 # The one mover: draw the cursor at `point` (visible, unpressed, shape
 # auto-detected from the element under the point), animating only while
 # recording -- a glide of `duration` seconds, an instant pre-position at
@@ -368,6 +381,7 @@ cursor_apply <- function(ctx, point, duration = 0, from = NULL, fade = FALSE) {
   cursor_register_init(ctx)
   invisible(ctx)
 }
+
 # Redraw the cursor at its recorded position with a new visibility or
 # press state. No movement; the opacity/scale transitions in the layer
 # animate the change while the caller pumps.
@@ -388,6 +402,7 @@ cursor_draw <- function(ctx, visible, pressed = FALSE) {
   cursor_register_init(ctx)
   invisible(ctx)
 }
+
 cursor_press <- function(ctx, pressed) {
   if (!cursor_visible(ctx$page)) {
     return(invisible(ctx))
@@ -395,6 +410,7 @@ cursor_press <- function(ctx, pressed) {
   cursor_draw(ctx, visible = TRUE, pressed = pressed)
   invisible(ctx)
 }
+
 # One state application in the page. The JS is create-if-missing (boot
 # + apply in every call), so a page whose init script never ran -- or a
 # fresh document after navigation -- can always be driven forward.
@@ -403,6 +419,7 @@ cursor_command <- function(ctx, state) {
   pz_js(ctx, paste0("(", cursor_command_js, ")(", json, ")"), await = FALSE)
   invisible(ctx)
 }
+
 # Boot: the cursor layer under the existing overlay host's shadow root.
 # Two nested divs keep the transforms independent: .pz-glide carries the
 # translate (its transition is the glide), .pz-inner carries the press
@@ -482,6 +499,7 @@ cursor_command_js <- r"(function(state) {
   inner.style.transform = state.pressed ? 'scale(0.8)' : 'scale(1)';
   return true;
 })"
+
 # The new-document script: the same boot+apply with the last state baked
 # in, registered so a navigation re-injects the overlay at its last
 # position. Page.enable() is required for the script to run (probed on

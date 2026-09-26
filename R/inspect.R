@@ -88,6 +88,7 @@ pz_inspect <- function(
 
   invisible(ctx)
 }
+
 # Resolve the target once, without auto-waiting: one loc_resolve_once()
 # pass inside the current scope (behind the usual one-use detach probe),
 # then one callFunctionOn reading every match's tag, visibility, enabled
@@ -141,6 +142,7 @@ inspect_resolve_matches <- function(ctx, target, call = caller_env()) {
     doc_rects = inspect_doc_rects(ctx, rects)
   )
 }
+
 # Per-match read: opening tag (attributes rendered, no children),
 # checkVisibility() with CSS checks (the pz_expect_visible() predicate),
 # enabled (:disabled also covers controls disabled by an ancestor
@@ -160,6 +162,7 @@ inspect_match_js <- "function() {
     ];
   });
 }"
+
 # Viewport-relative rects shifted into document coordinates, for the
 # overlay outlines: the same shift clip_rects_union() applies to CDP
 # clips.
@@ -172,6 +175,7 @@ inspect_doc_rects <- function(ctx, rects) {
     as.numeric(rects[i, ]) + c(scroll[[1]], scroll[[2]], 0, 0)
   })
 }
+
 # Viewport-relative rects of the top pinned scope's still-laid-out
 # elements, for the dashed outlines. No detach probe: the summary has
 # already reported staleness, and a released or detached set simply
@@ -183,6 +187,7 @@ inspect_scope_rects <- function(ctx) {
   }
   inspect_positive_rects(tryCatch(el_rects(scoped), error = function(e) NULL))
 }
+
 # Live boxes with positive area only: hidden matches have zero boxes and
 # would collapse the annotated capture's union clip.
 inspect_positive_rects <- function(rects) {
@@ -196,6 +201,7 @@ inspect_positive_rects <- function(rects) {
   }
   rects[rects$width > 0 & rects$height > 0, ]
 }
+
 # The one seam for recording/cursor state in the summary: recording
 # reads the recorder, cursor reads the staging state (peek only --
 # inspecting must not create cursor state).
@@ -218,6 +224,7 @@ inspect_recording_state <- function(page) {
   }
   list(recording = recording, cursor = cursor)
 }
+
 # ── Summary ─────────────────────────────────────────────────────────
 # The summary is composed as plain strings and emitted with cat_line():
 # scope and target descriptions carry user-derived selectors whose braces
@@ -228,6 +235,7 @@ inspect_header <- function(label = "page") {
   prefix <- paste0("\u2500\u2500 paparazzi ", label, " ")
   paste0(prefix, strrep("\u2500", max(1, as.integer(width) - nchar(prefix))))
 }
+
 inspect_summary_print <- function(ctx, matches = NULL) {
   scoped <- length(ctx$scope) > 0L
   if (ctx$page$is_closed()) {
@@ -287,6 +295,7 @@ inspect_summary_print <- function(ctx, matches = NULL) {
   ))
   invisible(NULL)
 }
+
 # One scope entry per pinned set: its description and how many of its
 # elements are still in the page. The summary warns on stale scopes -- it
 # never aborts -- so every read is tolerant: a released object group
@@ -332,6 +341,7 @@ inspect_scope_entries <- function(ctx) {
   }
   list(entries = entries, warnings = warnings)
 }
+
 inspect_scope_live <- function(pinned) {
   if (is.null(pinned$object_id)) {
     return(list(gone = TRUE, live = NA_integer_))
@@ -353,6 +363,7 @@ inspect_scope_live <- function(pinned) {
     error = function(e) list(gone = TRUE, live = NA_integer_)
   )
 }
+
 # Scope descriptions render their which-qualifier compactly in the
 # summary, matching the SPEC's example: "`.item` (which: last)" becomes
 # "`.item` last" (numeric which becomes #n). Display-only; the stored
@@ -362,6 +373,7 @@ format_scope_entry <- function(description) {
   description <- sub(" \\(which: last\\)$", " last", description)
   sub(" \\(which: ([0-9]+)\\)$", " #\\1", description)
 }
+
 inspect_target_print <- function(matches) {
   phrase <- if (matches$count == 0L) {
     "no matches"
@@ -400,6 +412,7 @@ inspect_target_print <- function(matches) {
   }
   invisible(NULL)
 }
+
 inspect_short_tag <- function(tag, width = 60) {
   if (nchar(tag) <= width) {
     tag
@@ -407,6 +420,7 @@ inspect_short_tag <- function(tag, width = 60) {
     paste0(substr(tag, 1, width - 1), "\u2026")
   }
 }
+
 # ── Overlay outlines ────────────────────────────────────────────────
 # Outlines live under div#paparazzi-overlay-root with an open shadow
 # root; the resolver already excludes everything under that host id, and
@@ -440,6 +454,7 @@ overlay_draw <- function(ctx, scope_rects, target_rects) {
   pz_js(ctx, sprintf(overlay_draw_js, data), await = FALSE)
   invisible(TRUE)
 }
+
 overlay_draw_js <- "(function() {
   const data = %s;
   let host = document.getElementById('paparazzi-overlay-root');
@@ -476,6 +491,7 @@ overlay_draw_js <- "(function() {
   root.appendChild(layer);
   return true;
 })()"
+
 overlay_clear <- function(ctx) {
   pz_js(
     ctx,
@@ -488,6 +504,7 @@ overlay_clear <- function(ctx) {
   )
   invisible(TRUE)
 }
+
 # Hide-during-capture guard for pz_screenshot(): one JS call hides the
 # inspect outline layers (returning their previous inline displays, or
 # null when nothing is drawn -- the common case), the capture runs, one
@@ -510,6 +527,7 @@ overlay_hide <- function(ctx) {
     await = FALSE
   )
 }
+
 overlay_restore <- function(ctx, display) {
   if (is.null(display)) {
     return(invisible(NULL))
@@ -530,6 +548,7 @@ overlay_restore <- function(ctx, display) {
   )
   invisible(TRUE)
 }
+
 # ── Annotated capture ───────────────────────────────────────────────
 # Call screenshot_capture() directly: pz_screenshot() hides inspect
 # outlines during capture. pz_inspect() defers clearing them, including
@@ -560,6 +579,7 @@ inspect_annotated_capture <- function(ctx, scope_rects, target_rects, path) {
   writeBin(jsonlite::base64_dec(res$data), path)
   invisible(path)
 }
+
 # The annotated PNG opens in the IDE viewer when rstudioapi is available;
 # the path is always reported, since the default capture is a tempfile.
 inspect_show <- function(path) {

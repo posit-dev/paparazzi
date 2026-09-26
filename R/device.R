@@ -120,6 +120,7 @@ pz_device <- function(
 
   invisible(ctx)
 }
+
 # pz_open()'s dots are pz_device() settings, validated up front so a
 # misspelling names the mistake instead of landing in check_dots_empty()
 # as an anonymous unused argument. Unnamed dots error (settings must be
@@ -155,6 +156,7 @@ device_check_dots <- function(dots, call = caller_env()) {
   }
   dots
 }
+
 # pz_open() applies forwarded device settings right after the page is
 # created, before any navigation, so media queries and layout are
 # right at first render.
@@ -164,6 +166,7 @@ device_open <- function(page, dots) {
   }
   invisible(page)
 }
+
 # pz_device()'s positive-numeric arguments (width, height, scale, zoom):
 # rlang has no check_number_positive(), so this wraps check_number_decimal().
 # 0 is rejected everywhere: a zero viewport is meaningless and a zero
@@ -186,6 +189,7 @@ check_dimension <- function(
   }
   x
 }
+
 # Device state rides on the page as an attribute: R6 objects are
 # environments, so the attribute travels with the page and dies with
 # it, and no R6 field is needed for it. The state is an environment so
@@ -216,6 +220,7 @@ device_state <- function(page) {
   }
   state
 }
+
 # Recompute the full metrics override from state. CDP semantics (probed):
 # width/height of 0 keep the current value; deviceScaleFactor of 0
 # resets to 1, so the factor is always sent explicitly; width/height
@@ -266,6 +271,7 @@ device_apply_override <- function(page, state) {
   state$overridden <- TRUE
   invisible(page)
 }
+
 # The CSS-zoom method: one style property on <html>, everything else
 # untouched. The style dies with its document, so the zoom is carried
 # by a script CDP evaluates on every NEW document (registered while a
@@ -353,6 +359,7 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
   state$css_zoom <- desired
   invisible(page)
 }
+
 # The script that carries a css zoom onto every new document. The
 # top-frame guard keeps iframes at their own layout. The script runs
 # before the document has an <html> element, so the application waits
@@ -373,6 +380,7 @@ device_zoom_script <- function(zoom) {
     "}"
   )
 }
+
 # Reapply the css zoom on the document a navigation just settled on.
 # The injected script covers commits while the Page domain is enabled,
 # but chromote auto-disables it once its last event listener releases
@@ -388,6 +396,7 @@ device_css_reapply <- function(page) {
   device_apply_css_zoom(page, state, register = FALSE)
   invisible(TRUE)
 }
+
 # Emulated media features. CDP replaces the whole features set on every
 # call (probed), so color scheme and reduced motion are tracked as one
 # pair and the union of the active ones is sent whenever either changes.
@@ -422,6 +431,7 @@ device_apply_media <- function(page, state, color_scheme, reduced_motion) {
   )
   invisible(page)
 }
+
 # Evaluate with returnByValue; JS failures in these one-line scripts
 # surface as classed errors instead of raw chromote ones.
 device_eval <- function(page, expr, call = caller_env()) {
@@ -453,6 +463,7 @@ device_eval <- function(page, expr, call = caller_env()) {
   }
   invisible(res$result$value)
 }
+
 device_viewport <- function(page) {
   jsonlite::fromJSON(
     device_eval(

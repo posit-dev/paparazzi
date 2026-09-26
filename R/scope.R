@@ -75,6 +75,7 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
   }
   find_push(ctx, as_loc_list(target), from_root)
 }
+
 #' Find the first match and push it as the current scope
 #'
 #' [pz_find_first()] is [pz_find()] with `which = "first"`. With a
@@ -113,6 +114,7 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_bool(from_root)
   find_which(ctx, target, "first", from_root)
 }
+
 #' Find the last match and push it as the current scope
 #'
 #' [pz_find_last()] is [pz_find()] with `which = "last"`. With a
@@ -140,6 +142,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_bool(from_root)
   find_which(ctx, target, "last", from_root)
 }
+
 #' Find the nth match and push it as the current scope
 #'
 #' [pz_find_nth()] is [pz_find()] with `which = n`. With a `target`, it
@@ -176,6 +179,7 @@ pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
   check_bool(from_root)
   find_which(ctx, target, n, from_root)
 }
+
 #' Pop the current scope
 #'
 #' `pz_find_pop()` returns a context one scope level up the stack. The
@@ -208,6 +212,7 @@ pz_find_pop <- function(ctx) {
   }
   PaparazziContext$new(ctx$page, scope = utils::head(ctx$scope, -1))
 }
+
 #' Clear all scope, back to the root
 #'
 #' `pz_find_reset()` returns a context with an empty scope stack. No
@@ -241,6 +246,7 @@ pz_find_reset <- function(ctx) {
   }
   PaparazziContext$new(ctx$page, scope = list())
 }
+
 # The pinned set at the top of the scope stack, or NULL at the root:
 # the raw stack read, without the detach check scope_root() adds. For
 # routing decisions that don't consume the scope.
@@ -251,6 +257,7 @@ scope_top <- function(ctx) {
     ctx$scope[[length(ctx$scope)]]
   }
 }
+
 check_scope_single <- function(scoped, call = caller_env()) {
   if (scoped$count > 1) {
     cli::cli_abort(
@@ -278,6 +285,7 @@ scope_root <- function(ctx, call = caller_env()) {
     pinned_assert_connected(scoped, call = call)
   }
 }
+
 # Pushing never touches an existing context: derived contexts share the
 # parent's pinned sets, which is safe because the wrapper is immutable
 # and never released by consumers (cleanup is the finalizer plus group
@@ -285,6 +293,7 @@ scope_root <- function(ctx, call = caller_env()) {
 push_scope <- function(ctx, pinned) {
   PaparazziContext$new(ctx$page, scope = c(ctx$scope, list(pinned)))
 }
+
 # The pinned-set wrapper: a paparazzi_elements subclass, so
 # els_call()/els_values()/el_rects()/el_scroll_into_view() accept
 # pinned sets unchanged and action_elements()'s top-of-stack branch
@@ -331,6 +340,7 @@ new_pinned <- function(page, object_id, count, description, locs) {
   }
   els
 }
+
 # The detach check: one callFunctionOn, returnByValue. Any detached
 # element invalidates the set (pinned sets promise their whole set). A
 # CDP failure that means the set's world is gone -- "Could not find
@@ -368,6 +378,7 @@ pinned_assert_connected <- function(pinned, call = caller_env()) {
   }
   invisible(pinned)
 }
+
 # A chromote failure meaning the pinned set's execution context no
 # longer exists: the object group was released (the object is gone),
 # or a navigation destroyed the context the set was pinned in (the
@@ -380,6 +391,7 @@ pinned_dead_context_error <- function(e) {
     grepl("execution context was destroyed", msg, ignore.case = TRUE)
   )
 }
+
 pinned_abort_detached <- function(pinned, call = caller_env()) {
   cli::cli_abort(
     c(
@@ -391,6 +403,7 @@ pinned_abort_detached <- function(pinned, call = caller_env()) {
     call = call
   )
 }
+
 # Eager narrowing of the current scope: one callFunctionOn on the
 # pinned array, tagged with the object group so the slice is released
 # with everything else. No re-query and no auto-wait -- the set was
@@ -411,6 +424,7 @@ scope_slice_js <- function(which) {
     )
   }
 }
+
 # A narrowed scope's description: a single loc takes `which` directly
 # and re-formats with format_loc(); a union (or no locs at all) can't
 # carry a which, so its description is the parent's plus a match
@@ -430,6 +444,7 @@ narrow_description <- function(locs, description, which) {
     paste0(description, " (match: ", which, ")")
   }
 }
+
 narrow_locs <- function(locs, which) {
   if (length(locs) == 1) {
     loc <- locs[[1]]
@@ -442,6 +457,7 @@ narrow_locs <- function(locs, which) {
     locs
   }
 }
+
 # pz_find_first()/pz_find_last()/pz_find_nth() with a target: apply
 # `which` to the promoted loc and pin its match. Without a target:
 # narrow the current scope eagerly.
@@ -474,6 +490,7 @@ find_which <- function(ctx, target, which, from_root, call = caller_env()) {
   loc$which <- which
   find_push(ctx, list(loc), from_root, call)
 }
+
 # Narrow the current scope: slice the pinned set at the top, eager and
 # without re-query, and push the slice.
 find_narrow <- function(ctx, which, from_root, call) {
@@ -526,6 +543,7 @@ find_narrow <- function(ctx, which, from_root, call) {
   )
   push_scope(ctx, pinned)
 }
+
 # Resolve locs eagerly, pin the whole matched set, and push it.
 find_push <- function(ctx, locs, from_root, call = caller_env()) {
   els <- loc_resolve(

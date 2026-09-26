@@ -32,6 +32,7 @@ example_rd_db <- function() {
 }
 
 rd_db <- example_rd_db()
+
 has_examples <- vapply(
   rd_db,
   function(rd) "\\examples" %in% vapply(rd, attr, "", "Rd_tag"),

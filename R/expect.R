@@ -58,6 +58,7 @@ pz_expect_exists <- function(
     }
   )
 }
+
 #' Expect a number of matching elements
 #'
 #' @description
@@ -142,6 +143,7 @@ pz_expect_count <- function(
     description = expect_headline_count(n, min, max, not)
   )
 }
+
 #' Expect elements to be visible
 #'
 #' @description
@@ -198,6 +200,7 @@ pz_expect_visible <- function(
     }
   )
 }
+
 #' @rdname pz_expect_visible
 #' @export
 pz_expect_hidden <- function(
@@ -212,6 +215,7 @@ pz_expect_hidden <- function(
   check_bool(not)
   pz_expect_visible(ctx, ..., target = target, not = !not, timeout = timeout)
 }
+
 #' Expect element text content
 #'
 #' @description
@@ -280,6 +284,7 @@ pz_expect_text <- function(
     description = expect_headline_text(text, match, not)
   )
 }
+
 #' Expect elements to be enabled
 #'
 #' @description
@@ -328,6 +333,7 @@ pz_expect_enabled <- function(
     }
   )
 }
+
 #' Expect elements to be focused
 #'
 #' @description
@@ -377,6 +383,7 @@ pz_expect_focused <- function(
     }
   )
 }
+
 #' Expect elements to be checked
 #'
 #' @description
@@ -423,6 +430,7 @@ pz_expect_checked <- function(
     }
   )
 }
+
 #' Expect elements to be in the viewport
 #'
 #' @description
@@ -473,6 +481,7 @@ pz_expect_in_viewport <- function(
     }
   )
 }
+
 #' Expect element values
 #'
 #' @description
@@ -528,6 +537,7 @@ pz_expect_value <- function(
     description = expect_headline_text(value, match, not, label = "value")
   )
 }
+
 #' Expect an attribute
 #'
 #' @description
@@ -598,6 +608,7 @@ pz_expect_attr <- function(
     )
   )
 }
+
 #' Expect a class
 #'
 #' @description
@@ -663,6 +674,7 @@ pz_expect_class <- function(
     }
   )
 }
+
 #' Expect a JavaScript predicate to hold
 #'
 #' @description
@@ -710,6 +722,7 @@ pz_expect_js <- function(
     description = expect_headline_js(expr, not)
   )
 }
+
 #' Expect the page URL
 #'
 #' @description
@@ -762,6 +775,7 @@ pz_expect_url <- function(
     description = expect_headline_text(url, match, not, label = "URL")
   )
 }
+
 #' Expect the page title
 #'
 #' @description
@@ -805,6 +819,7 @@ pz_expect_title <- function(
     description = expect_headline_text(title, match, not, label = "title")
   )
 }
+
 #' Retry an expectation check
 #'
 #' Like `pz_poll()`, but instead of aborting on the deadline it returns
@@ -828,6 +843,7 @@ expect_retry <- function(fn, timeout, loop, interval = 0.1) {
     later::run_now(timeoutSecs = min(remaining, interval), loop = loop)
   }
 }
+
 #' Drive one expectation: resolve, check, retry
 #'
 #' Resolves `target` once per poll iteration with `loc_resolve_once()`
@@ -906,6 +922,7 @@ expect_impl <- function(
   waited <- round(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
   expect_report(ctx, result, description, target_desc, waited, call = call)
 }
+
 # The shared tail of every expectation: the fixed failure format and the
 # testthat bridge. The failure text carries page-derived content
 # (observed) and user-derived content (the headline holds the expected
@@ -944,6 +961,7 @@ expect_report <- function(
     call = call
   )
 }
+
 # Page-level expectations (url, title) have no target to resolve: read
 # the page once per attempt, compare in R, then reuse the shared report
 # and bridge. Works from any context -- scoped or root -- and never
@@ -976,6 +994,7 @@ expect_page_impl <- function(
   waited <- round(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
   expect_report(ctx, result, description, "the page", waited, call = call)
 }
+
 # testthat is in Suggests: inside tests, passes count and failures are
 # reported through testthat::expect(); anywhere else, the caller gets the
 # classed error instead. Returns FALSE when the bridge is inactive.
@@ -988,6 +1007,7 @@ expect_bridge <- function(ok, msg) {
   testthat::expect(ok, paste(msg, collapse = "\n"))
   TRUE
 }
+
 # Read observed values off a resolved element array with one
 # callFunctionOn. The handle is released by the caller right after;
 # timeouts surface as paparazzi_error_timeout, like loc_resolve_once().
@@ -1024,27 +1044,34 @@ els_values <- function(els, js, call = caller_env()) {
   }
   res$result$value
 }
+
 # Non-nullable reads flatten the per-element result list to a vector.
 els_call <- function(els, js, call = caller_env()) {
   unlist(els_values(els, js, call = call))
 }
+
 # Whitespace collapse for text comparison, both sides: runs collapse to a
 # single space, then leading/trailing space is dropped.
 collapse_ws <- function(x) {
   trimws(gsub("\\s+", " ", x))
 }
+
 expect_visible_js <- "function() {
   return this.map((el) => el.checkVisibility({ checkVisibilityCSS: true }));
 }"
+
 expect_enabled_js <- "function() {
   return this.map((el) => !el.matches(':disabled'));
 }"
+
 expect_focused_js <- "function() {
   return this.map((el) => document.activeElement === el);
 }"
+
 expect_checked_js <- "function() {
   return this.map((el) => el.matches(':checked'));
 }"
+
 expect_viewport_js <- "function() {
   return this.map((el) => {
     const r = el.getBoundingClientRect();
@@ -1052,9 +1079,11 @@ expect_viewport_js <- "function() {
       r.top < window.innerHeight && r.left < window.innerWidth;
   });
 }"
+
 expect_text_js <- "function() {
   return this.map((el) => el.textContent);
 }"
+
 # Name/class reach JS JSON-encoded, so quotes and specials can't break
 # out of the function string (same as pz_get_attr()).
 expect_attr_js <- function(name) {
@@ -1064,6 +1093,7 @@ expect_attr_js <- function(name) {
     ")); }"
   )
 }
+
 expect_class_js <- function(class) {
   paste0(
     "function() { return this.map((el) => el.classList.contains(",
@@ -1071,6 +1101,7 @@ expect_class_js <- function(class) {
     ")); }"
   )
 }
+
 # The user's expr is code by design (like pz_js), embedded as the
 # predicate every match is mapped through.
 expect_js_predicate <- function(expr) {
@@ -1083,13 +1114,16 @@ expect_js_predicate <- function(expr) {
     "}"
   )
 }
+
 expect_seen_count <- function(count) {
   paste0(count, if (count == 1L) " match" else " matches")
 }
+
 expect_seen_texts <- function(texts) {
   texts <- ifelse(is.na(texts), "NA", texts)
   expect_truncate(paste0('"', texts, '"', collapse = ", "))
 }
+
 expect_truncate <- function(x, width = 80) {
   if (nchar(x) > width) {
     paste0(substr(x, 1, width - 3), "...")
@@ -1097,6 +1131,7 @@ expect_truncate <- function(x, width = 80) {
     x
   }
 }
+
 # Each check takes a resolved element set and returns list(pass, observed).
 # `not` is folded in at construction: it passes when no match satisfies
 # the positive condition, including zero matches (SPEC table).
@@ -1106,6 +1141,7 @@ check_exists <- function(not) {
     list(pass = pass, observed = expect_seen_count(els$count))
   }
 }
+
 check_count <- function(min, max, not) {
   # n was already encoded as min = max = n; NULL bounds are unbounded.
   min <- min %||% -Inf
@@ -1118,6 +1154,7 @@ check_count <- function(min, max, not) {
     list(pass = pass, observed = expect_seen_count(els$count))
   }
 }
+
 # State checks share one shape: a JS predicate per element, pass when
 # every match satisfies it (or, with not, when none does, including
 # zero matches, per the SPEC table).
@@ -1133,9 +1170,11 @@ check_state <- function(js, not, seen) {
     list(pass = pass, observed = paste0(n_ok, " of ", els$count, " ", seen))
   }
 }
+
 check_visible <- function(not) {
   check_state(expect_visible_js, not, "visible")
 }
+
 # Text-like content checks (text, value, attr) share one shape: read one
 # JS expression per match, collapse whitespace, then compare. NA reads
 # (a missing value or attribute) satisfy nothing, so they only pass
@@ -1178,9 +1217,11 @@ check_text_like <- function(js, values, match, not) {
     list(pass = pass, observed = expect_seen_texts(vals))
   }
 }
+
 check_text <- function(text, match, not) {
   check_text_like(expect_text_js, text, match, not)
 }
+
 expect_text_matches <- function(x, pattern, match) {
   switch(
     match,
@@ -1189,10 +1230,12 @@ expect_text_matches <- function(x, pattern, match) {
     regex = grepl(pattern, x)
   )
 }
+
 # Keep comparisons strictly TRUE or FALSE even for missing observed values.
 expect_text_hit <- function(x, pattern, match) {
   isTRUE(expect_text_matches(x, pattern, match))
 }
+
 expect_headline_js <- function(expr, not) {
   paste0(
     "Expected JS predicate (",
@@ -1201,6 +1244,7 @@ expect_headline_js <- function(expr, not) {
     if (not) "no match" else "every match"
   )
 }
+
 expect_headline_count <- function(n, min, max, not) {
   what <- if (!is.null(n)) {
     paste0("exactly ", n)
@@ -1213,6 +1257,7 @@ expect_headline_count <- function(n, min, max, not) {
   }
   paste0("Expected count ", if (not) "not " else "", "to be ", what)
 }
+
 expect_headline_text <- function(
   text,
   match,

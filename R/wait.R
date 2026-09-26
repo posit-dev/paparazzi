@@ -26,6 +26,7 @@ pz_wait <- function(ctx, seconds) {
   pump_loop(ctx$page$child_loop, seconds)
   invisible(ctx)
 }
+
 #' Wait until a Shiny page is idle
 #'
 #' Waits for the Shiny connection, for `<html>` to lose `shiny-busy`, and
@@ -136,6 +137,7 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
   }
   invisible(ctx)
 }
+
 #' Wait until a JavaScript condition holds
 #'
 #' Polls `expr` until it evaluates truthy, then returns `ctx` invisibly.
@@ -184,6 +186,7 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
   )
   invisible(ctx)
 }
+
 #' Wait until an element stops changing
 #'
 #' Samples the `prop` property of every element matching `target` (or
@@ -299,6 +302,7 @@ pz_wait_for_stable <- function(
   )
   invisible(ctx)
 }
+
 #' Wait for a navigation to finish
 #'
 #' The explicit wait after an action that navigates -- a clicked link, a
@@ -382,12 +386,14 @@ pz_wait_for_navigation <- function(
   nav_settle_shiny(ctx$page, wait, timeout)
   invisible(root)
 }
+
 # The quiescence window for a navigation: how long the page's load state
 # must hold still before pz_wait_for_navigation() proceeds. A commit in
 # flight when the wait starts shows up as a state change inside this
 # window and is waited out; anything later than that is beyond a
 # post-action wait.
 nav_settle_secs <- 0.5
+
 # The wait-start document identity: readyState completeness plus the
 # document's timeOrigin, the token a navigation always replaces. A
 # read that fails mid-swap can't pin the identity, so it degrades to
@@ -408,6 +414,7 @@ nav_snapshot <- function(ctx, timeout) {
     list(complete = isTRUE(state[[1]]), origin = state[[2]])
   }
 }
+
 # Phase two of pz_wait_for_navigation(): the page's main-frame loaderId,
 # readyState, and timeOrigin must be complete and unchanged for `settle`
 # seconds. A loader change restarts the window even when the old document
@@ -469,6 +476,7 @@ nav_settle <- function(
     call = call
   )
 }
+
 pump_loop <- function(loop, seconds, interval = 0.1) {
   deadline <- Sys.time() + seconds
   repeat {
@@ -480,6 +488,7 @@ pump_loop <- function(loop, seconds, interval = 0.1) {
   }
   invisible(TRUE)
 }
+
 #' Poll `fn()` until it returns `TRUE` or `timeout` seconds elapse
 #'
 #' Between checks, pumps `loop` (the page's child loop) instead of sleeping,
@@ -518,6 +527,7 @@ pz_poll <- function(
     later::run_now(timeoutSecs = min(remaining, interval), loop = loop)
   }
 }
+
 # A sampled property: any single JavaScript property name, or "rect" for
 # the bounding box. The identifier check keeps property names from being
 # interpreted as JS source.
@@ -538,6 +548,7 @@ check_stable_prop <- function(prop, call = caller_env()) {
   }
   prop
 }
+
 # One sample of every element in the set, as a per-element string:
 # property values stringified (null/undefined as empty), rects rounded
 # to whole pixels so sub-pixel noise doesn't read as change. A change
@@ -565,6 +576,7 @@ stable_sample_js <- function(prop) {
     )
   }
 }
+
 # The reset that follows every navigation: the object group holding
 # every pinned scope is released wholesale (contexts derived before the
 # navigation raise the classed detach error on their next use), and the

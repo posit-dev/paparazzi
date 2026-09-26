@@ -150,6 +150,7 @@ pz_record_start <- function(
   )
   invisible(ctx)
 }
+
 #' Stop a recording and write the video
 #'
 #' Ends the recording started with [pz_record_start()], encodes the
@@ -243,6 +244,7 @@ pz_record_stop <- function(ctx) {
   stage_record_stopped(ctx)
   invisible(ctx)
 }
+
 #' Pause and resume a recording
 #'
 #' `pz_record_pause()` cuts the stretch up to the next
@@ -281,6 +283,7 @@ pz_record_pause <- function(ctx) {
   rec$paused <- TRUE
   invisible(ctx)
 }
+
 #' @rdname pz_record_pause
 #' @export
 pz_record_resume <- function(ctx) {
@@ -293,6 +296,7 @@ pz_record_resume <- function(ctx) {
   rec$paused <- FALSE
   invisible(ctx)
 }
+
 #' Hold the current frame while recording
 #'
 #' Lingers on the current frame for `seconds` in the output video.
@@ -332,6 +336,7 @@ pz_record_hold <- function(ctx, seconds) {
   rec$holds <- c(rec$holds, list(list(vt = rec_vt(rec), seconds = seconds)))
   invisible(ctx)
 }
+
 #' Record a block of code
 #'
 #' The block form of [pz_record_start()]: starts recording, evaluates
@@ -382,6 +387,7 @@ pz_record <- function(ctx, path, code, ...) {
   tryCatch(eval(expr, env), error = function(e) code_error <<- e)
   invisible(ctx)
 }
+
 # The recorder state lives in the page's reserved private$recorder_
 # slot (R/context.R). R6 privates are reachable only through the
 # object's enclos environment; these helpers are the single access
@@ -389,10 +395,12 @@ pz_record <- function(ctx, path, code, ...) {
 page_recorder <- function(page) {
   page$.__enclos_env__$private$recorder_
 }
+
 page_set_recorder <- function(page, rec) {
   page$.__enclos_env__$private$recorder_ <- rec
   invisible(page)
 }
+
 new_recorder <- function(
   path,
   format,
@@ -431,15 +439,18 @@ new_recorder <- function(
   rec$first_error <- NULL
   rec
 }
+
 rec_now <- function() {
   unname(proc.time()[["elapsed"]])
 }
+
 rec_vt <- function(rec) {
   if (rec$paused) {
     return(rec$vt_base)
   }
   rec$vt_base + (rec_now() - rec$active_since)
 }
+
 check_recording <- function(ctx, call = caller_env()) {
   rec <- page_recorder(ctx$page)
   if (is.null(rec) || !rec$active) {
@@ -451,6 +462,7 @@ check_recording <- function(ctx, call = caller_env()) {
   }
   rec
 }
+
 check_record_hold <- function(
   hold,
   arg = caller_arg(hold),
@@ -471,6 +483,7 @@ check_record_hold <- function(
   }
   as.double(hold)
 }
+
 record_format <- function(path, call = caller_env()) {
   ext <- tolower(tools::file_ext(path))
   if (!ext %in% c("mp4", "webm", "gif")) {
@@ -482,6 +495,7 @@ record_format <- function(path, call = caller_env()) {
   }
   ext
 }
+
 record_check_packages <- function(format, needs_crop, call = caller_env()) {
   if (format %in% c("mp4", "webm")) {
     rlang::check_installed(
@@ -496,6 +510,7 @@ record_check_packages <- function(format, needs_crop, call = caller_env()) {
   }
   invisible()
 }
+
 record_frames_dir <- function(path, keep_frames) {
   dir <- if (keep_frames) {
     paste0(tools::file_path_sans_ext(path), "_frames")
@@ -505,6 +520,7 @@ record_frames_dir <- function(path, keep_frames) {
   dir.create(dir, showWarnings = FALSE, recursive = TRUE)
   dir
 }
+
 # One timer tick on the child loop: re-arm, then issue an async capture
 # unless paused or one is still in flight (the in-flight guard -- a
 # skipped tick shows up as a repeated frame after resampling). The tick
@@ -533,6 +549,7 @@ record_tick <- function(page, rec = page_recorder(page)) {
   record_capture(rec, page, rec_vt(rec))
   invisible(TRUE)
 }
+
 # Synchronous teardown for the page-lifecycle close path (context.R):
 # the closed session's child loop may never pump again, so a later
 # tick can't be relied on to clean up. Deactivates the recorder,
@@ -551,6 +568,7 @@ record_page_closed <- function(page) {
   }
   invisible(TRUE)
 }
+
 # Issue one async capture on the page: the tick's periodic capture and
 # the stop-time final frame both come through here. The pending slot
 # prevents overlapping captures; callbacks clear it when chromote
@@ -607,6 +625,7 @@ record_capture <- function(rec, page, vt) {
   )
   invisible(rec)
 }
+
 # The capture callback: writes the PNG to the frame store at resolve
 # time. A callback for a retired capture cannot consume a newer slot.
 # At most one active capture is pending, so frame timestamps stay ordered.
@@ -634,6 +653,7 @@ record_frame_done <- function(rec, pending, res = NULL, err = NULL) {
   )
   invisible(NULL)
 }
+
 record_error <- function(rec, e) {
   rec$n_errors <- rec$n_errors + 1L
   if (is.null(rec$first_error)) {
@@ -641,6 +661,7 @@ record_error <- function(rec, e) {
   }
   invisible(NULL)
 }
+
 # A navigation replaces the document, so a recording's framing -- whose
 # target and bounds are pinned elements of the outgoing document --
 # dies with it. The recording itself survives (the timer, clock, and
@@ -658,6 +679,7 @@ record_nav_rebased <- function(page) {
   rec$frame_ctx <- NULL
   invisible(TRUE)
 }
+
 # The crop box in viewport-relative CSS pixels (the PNG's coordinate
 # space): the framing pipeline with the visible viewport as the clamp
 # -- not the document box frame_clip() uses, since the PNG holds only
@@ -719,6 +741,7 @@ record_crop_box <- function(ctx, spec, call = caller_env()) {
     viewport_width = geometry$viewport_width
   )
 }
+
 # PNG pixel dimensions parsed straight from the IHDR chunk, so the
 # encode path doesn't need an image package (mirrors the test helper).
 png_read_size <- function(path, call = caller_env()) {
@@ -740,6 +763,7 @@ png_read_size <- function(path, call = caller_env()) {
     height = readBin(png[21:24], "integer", size = 4, endian = "big")
   )
 }
+
 # The ffmpeg filter chain and final output dimensions. The crop is the
 # measured frame box (or the whole PNG) floored to the format's
 # alignment: multiples of 4 for mp4 and even pixels for webm, both
@@ -819,6 +843,7 @@ record_output_spec <- function(rec, png_size, call = caller_env()) {
     height = as.integer(height)
   )
 }
+
 # Map output tick times to video times across the hold intervals
 # (sorted by vt): inside a hold the video time pins to the hold's vt;
 # past a hold the hold's duration shifts the mapping.
@@ -842,6 +867,7 @@ ticks_to_vt <- function(ticks, holds) {
   }
   res
 }
+
 # Resample the captured frames to constant fps in R: normalize video
 # time so the first frame is vt 0, lay output ticks over
 # vt_end + all holds, and take the latest frame at each tick. Repeats
@@ -866,6 +892,7 @@ record_resample <- function(rec) {
   index <- pmax(findInterval(vts, times), 1L)
   list(files = rec$files[index], total = total, n_ticks = n_ticks)
 }
+
 record_encode <- function(rec, call = caller_env()) {
   resampled <- record_resample(rec)
   png_size <- png_read_size(rec$files[[1]], call = call)

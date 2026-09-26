@@ -8,7 +8,7 @@
 #' an empty scope stack, and the pinned scope objects are released, so a
 #' context scoped **before** the navigation raises a detach error if used
 #' afterwards -- re-scope with [pz_find()] on the returned root context.
-#' Session-level state (timeout, staging and recording) is
+#' Session-level state (timeout, staging, and recording) is
 #' untouched.
 #'
 #' @inheritParams pz_click
@@ -96,6 +96,7 @@ pz_nav_goto <- function(
   }
   invisible(root)
 }
+
 #' @rdname pz_nav_goto
 #'
 #' @export
@@ -125,6 +126,7 @@ pz_nav_reload <- function(ctx, ..., wait = c("auto", "load", "shiny", "none")) {
   }
   invisible(root)
 }
+
 #' @rdname pz_nav_goto
 #'
 #' @export
@@ -141,6 +143,7 @@ pz_nav_back <- function(ctx, ...) {
   device_css_reapply(ctx$page)
   invisible(root)
 }
+
 #' @rdname pz_nav_goto
 #'
 #' @export
@@ -155,6 +158,7 @@ pz_nav_forward <- function(ctx, ...) {
   device_css_reapply(ctx$page)
   invisible(root)
 }
+
 # Called after the navigation's existing load settle, on the landed document.
 nav_settle_shiny <- function(page, wait, timeout) {
   if (identical(wait, "auto")) {
@@ -176,6 +180,7 @@ nav_settle_shiny <- function(page, wait, timeout) {
   }
   invisible(page)
 }
+
 # Step `offset` entries in the history (back: -1, forward: +1). CDP's
 # currentIndex is 0-based while R's entries list is 1-based, so the
 # current entry's R index is currentIndex + 1 and the target's is
@@ -231,6 +236,7 @@ nav_history <- function(page, offset, call = caller_env()) {
   )
   TRUE
 }
+
 # Synchronize a chromote event promise (registered with wait_ = FALSE
 # before its trigger): poll until it settles, pumping the page's child
 # loop so the websocket message that resolves it gets processed. Only

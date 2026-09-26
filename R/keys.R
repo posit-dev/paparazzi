@@ -80,6 +80,7 @@ for (letter in letters) {
 # Digits and the symbols on the shifted digit row (Shift implied).
 digit_keys <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
 digit_symbols <- c("!", "@", "#", "$", "%", "^", "&", "*", "(", ")")
+
 for (i in seq_along(digit_keys)) {
   code <- paste0("Digit", digit_keys[i])
   key_code <- utf8ToInt(digit_keys[i])
@@ -112,6 +113,7 @@ punctuation_keys <- list(
   c(".", ">", "Period", "190"),
   c("/", "?", "Slash", "191")
 )
+
 for (punctuation in punctuation_keys) {
   code <- punctuation[3]
   key_code <- as.integer(punctuation[4])
