@@ -107,6 +107,19 @@ test_that("pz_nav_goto fails cleanly on navigation errors", {
   )
 })
 
+test_that("nav_check_response only rejects nonempty errorText", {
+  expect_error(
+    nav_check_response(
+      list(errorText = "net::ERR_FAILED"),
+      "https://example.org"
+    ),
+    "Navigation to.*failed: net::ERR_FAILED",
+    class = "paparazzi_error_navigation"
+  )
+  expect_no_error(nav_check_response(list(errorText = ""), "about:blank"))
+  expect_no_error(nav_check_response(list(errorText = NULL), "about:blank"))
+})
+
 test_that("nav functions validate their inputs", {
   ctx <- local_nav_page()
 

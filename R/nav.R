@@ -71,13 +71,7 @@ pz_nav_goto <- function(
     page$session$Page$frameNavigated(wait_ = FALSE)
   }
   nav <- page$session$Page$navigate(url, timeout_ = page$default_timeout)
-  # CDP reports navigation failures as `errorText`, not as errors.
-  if (!is.null(nav$errorText) && nzchar(nav$errorText)) {
-    cli::cli_abort(
-      "Navigation to {.url {url}} failed: {nav$errorText}",
-      class = "paparazzi_error_navigation"
-    )
-  }
+  nav_check_response(nav, url)
   if (!identical(wait, "none")) {
     # A same-document navigation (a URL fragment) never fires
     # frameNavigated, but its navigate response also carries no
@@ -95,6 +89,17 @@ pz_nav_goto <- function(
     nav_settle_shiny(page, wait, page$default_timeout)
   }
   invisible(root)
+}
+
+# CDP reports navigation failures as `errorText`, not as errors.
+nav_check_response <- function(nav, url, call = caller_env()) {
+  if (!is.null(nav$errorText) && nzchar(nav$errorText)) {
+    cli::cli_abort(
+      "Navigation to {.url {url}} failed: {nav$errorText}",
+      class = "paparazzi_error_navigation",
+      call = call
+    )
+  }
 }
 
 #' @rdname pz_nav_goto

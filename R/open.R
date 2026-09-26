@@ -131,14 +131,8 @@ pz_open <- function(
     withr::defer(cancel_navigated())
     event
   }
-  # CDP reports navigation failures as `errorText`, not as errors.
   nav <- session$Page$navigate(url)
-  if (!is.null(nav$errorText) && nzchar(nav$errorText)) {
-    cli::cli_abort(
-      "Navigation to {.url {url}} failed: {nav$errorText}",
-      class = "paparazzi_error_navigation"
-    )
-  }
+  nav_check_response(nav, url)
   if (wait %in% c("load", "shiny") && !is.null(nav$loaderId)) {
     nav_await(page, navigated, what = "page navigation")
   }
