@@ -395,8 +395,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
     found$els,
     set_value_js,
     args = list(list(value = arg)),
-    doing = "working with",
-    call = caller_env()
+    doing = "working with"
   )
   if (identical(res$status, "contenteditable")) {
     els_call(found$els, select_all_js)
@@ -541,8 +540,7 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
     found$els,
     select_text_js,
     args = list(list(value = text)),
-    doing = "working with",
-    call = caller_env()
+    doing = "working with"
   )
   if (!identical(res$status, "ok")) {
     cli::cli_abort(
@@ -658,8 +656,7 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
       scoped,
       scroll_apply_js,
       args = list(list(value = arg)),
-      doing = "working with",
-      call = caller_env()
+      doing = "working with"
     )
   } else {
     res <- action_cdp(

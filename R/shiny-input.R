@@ -82,9 +82,7 @@ pz_set_shiny_input <- function(ctx, id, value, ..., wait = TRUE) {
     els_values(
       scoped,
       paste0("function() { return ", invocation, "; }"),
-      args = list(),
-      doing = "working with",
-      call = caller_env()
+      doing = "working with"
     )
   }
   if (identical(result, "invalid-date-range")) {
