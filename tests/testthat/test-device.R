@@ -183,6 +183,44 @@ test_that("a css zoom that fails after registering its script can be disabled", 
   expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1")
 })
 
+test_that("css zoom can be disabled immediately after its first apply fails", {
+  page <- local_page(nav_fixture_url("a"))
+  real_eval <- device_eval
+  with_mocked_bindings(
+    device_eval = function(page, expr, ...) {
+      if (grepl("style.zoom = ", expr, fixed = TRUE)) {
+        stop("apply failed")
+      }
+      real_eval(page, expr, ...)
+    },
+    expect_error(pz_device(page, zoom = 2, zoom_method = "css"), "apply failed")
+  )
+
+  pz_device(page, zoom = 1)
+  pz_nav_goto(page, nav_fixture_url("b"))
+  expect_equal(js(page, "getComputedStyle(document.documentElement).zoom"), "1")
+})
+
+test_that("css zoom restore can be retried after its eval fails", {
+  page <- local_page(device_zoom_fixture_file())
+  expect_equal(js(page, "document.documentElement.style.zoom"), "1.5")
+  pz_device(page, zoom = 2, zoom_method = "css")
+
+  real_eval <- device_eval
+  with_mocked_bindings(
+    device_eval = function(page, expr, ...) {
+      if (grepl('style.zoom = "1.5"', expr, fixed = TRUE)) {
+        stop("restore failed")
+      }
+      real_eval(page, expr, ...)
+    },
+    expect_error(pz_device(page, zoom = 1), "restore failed")
+  )
+
+  pz_device(page, zoom = 1)
+  expect_equal(js(page, "document.documentElement.style.zoom"), "1.5")
+})
+
 test_that("disabling css zoom restores the page's own inline zoom", {
   # The fixture's <html> carries its own inline zoom; emulation must
   # give it back on disable, not remove it.
