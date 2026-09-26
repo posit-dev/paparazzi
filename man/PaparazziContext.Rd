@@ -151,7 +151,7 @@ object a scope pinned (read-only; internal).}
 \if{html}{\out{<a id="method-PaparazziPage-close"></a>}}
 \if{latex}{\out{\hypertarget{method-PaparazziPage-close}{}}}
 \subsection{\code{PaparazziPage$close()}}{
-  Close the page and its browser session. Idempotent.
+  Close the page's browser tab (its chromote session). Idempotent.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{PaparazziPage$close()}

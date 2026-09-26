@@ -83,7 +83,7 @@ PaparazziPage <- R6::R6Class(
       self$page <- self
     },
 
-    #' @description Close the page and its browser session. Idempotent.
+    #' @description Close the page's browser tab (its chromote session). Idempotent.
     close = function() {
       if (!private$closed_) {
         if (!is.null(private$owned_app_)) {
