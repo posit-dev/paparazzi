@@ -178,6 +178,23 @@ test_that("frame_apply errors on empty or out-of-clamp regions", {
   )
 })
 
+test_that("frame_region rejects an empty rounded box", {
+  expect_identical(
+    frame_region(c(1, 2, 9, 12)),
+    list(x = 1, y = 2, width = 8, height = 10)
+  )
+  expect_error(
+    frame_region(c(2, 3, 2, 10)),
+    "The framed region is empty.",
+    class = "paparazzi_error_frame",
+    fixed = TRUE
+  )
+  expect_error(
+    frame_region(c(2, 3, 10, 3)),
+    class = "paparazzi_error_frame"
+  )
+})
+
 test_that("frame_round rounds to whole or even pixels", {
   expect_identical(
     frame_round(c(0.4, 0.6, 10.6, 12.4)),
