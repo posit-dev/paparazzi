@@ -817,6 +817,23 @@ test_that("pz_set_files rejects non-file inputs and validates paths", {
     pz_set_files(page, tempfile(), target = "#file"),
     class = "paparazzi_error_input"
   )
+  dir <- withr::local_tempdir()
+  expect_error(
+    pz_set_files(page, dir, target = "#file"),
+    "is a directory, not a file",
+    class = "paparazzi_error_input"
+  )
+  dir2 <- withr::local_tempdir()
+  expect_error(
+    pz_set_files(page, c(dir, dir2), target = "#file"),
+    "are directories, not files",
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_set_files(page, c(dir, tempfile()), target = "#file"),
+    "doesn't exist",
+    class = "paparazzi_error_input"
+  )
   expect_error(pz_set_files(page, character(0), target = "#file"), "at least 1")
   expect_error(pz_set_files(page, NA, target = "#file"), "NA")
   expect_error(pz_set_files(page, f, "bogus", target = "#file"), "empty")

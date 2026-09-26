@@ -1683,5 +1683,13 @@ check_file_paths <- function(files, call = caller_env()) {
       call = call
     )
   }
+  dirs <- files[dir.exists(files)]
+  if (length(dirs) > 0L) {
+    cli::cli_abort(
+      "Path{?s} {.file {dirs}} {?is a directory/are directories}, not {?a file/files}.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
   unname(normalizePath(files, winslash = "/", mustWork = TRUE))
 }
