@@ -237,8 +237,12 @@ device_apply_override <- function(page, state) {
 
   if (!viewport_zoom && !base_set) {
     if (isTRUE(state$overridden)) {
-      page$session$Emulation$clearDeviceMetricsOverride(
-        timeout_ = page$default_timeout
+      # An in-flight capture restores the device metrics it saw at its start.
+      record_hold(
+        page,
+        page$session$Emulation$clearDeviceMetricsOverride(
+          timeout_ = page$default_timeout
+        )
       )
       state$overridden <- FALSE
     }
@@ -261,12 +265,15 @@ device_apply_override <- function(page, state) {
     eff_height <- eff_height / zoom
     eff_scale <- eff_scale * zoom
   }
-  page$session$Emulation$setDeviceMetricsOverride(
-    width = round(eff_width),
-    height = round(eff_height),
-    deviceScaleFactor = eff_scale,
-    mobile = eff_mobile,
-    timeout_ = page$default_timeout
+  record_hold(
+    page,
+    page$session$Emulation$setDeviceMetricsOverride(
+      width = round(eff_width),
+      height = round(eff_height),
+      deviceScaleFactor = eff_scale,
+      mobile = eff_mobile,
+      timeout_ = page$default_timeout
+    )
   )
   state$overridden <- TRUE
   invisible(page)
