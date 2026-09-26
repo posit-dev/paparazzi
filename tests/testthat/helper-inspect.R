@@ -50,38 +50,25 @@ inspect_overlay_display <- function(page) {
   )
 }
 
-# Count the pixels of each given color in a written PNG, by decoding it
-# in the page and scanning the whole canvas (the png package isn't
-# available). Tolerance is per channel, matching the pixel assertions in
-# test-screenshot.R.
+# Count the pixels of each given color in a written PNG, by scanning the
+# decoded canvas. Tolerance is per channel, matching the pixel assertions
+# in test-screenshot.R.
 inspect_png_colors <- function(page, path, colors) {
-  raw <- readBin(path, "raw", n = file.info(path)$size)
-  b64 <- gsub("[\r\n]", "", jsonlite::base64_enc(raw))
   spec <- jsonlite::toJSON(colors, dataframe = "values")
-  js <- sprintf(
-    paste0(
-      "(async () => {",
-      "const img = new Image();",
-      "img.src = 'data:image/png;base64,%s';",
-      "await img.decode();",
-      "const c = document.createElement('canvas').getContext('2d');",
-      "c.canvas.width = img.width; c.canvas.height = img.height;",
-      "c.drawImage(img, 0, 0);",
-      "const d = c.getImageData(0, 0, img.width, img.height).data;",
-      "const wanted = %s;",
-      "return wanted.map(([r, g, b]) => {",
-      "let n = 0;",
-      "for (let i = 0; i < d.length; i += 4) {",
-      "if (Math.abs(d[i] - r) <= 2 && Math.abs(d[i+1] - g) <= 2 && Math.abs(d[i+2] - b) <= 2) n++;",
-      "}",
-      "return n;",
-      "});",
-      "})()"
-    ),
-    b64,
-    spec
+  body <- paste0(
+    "const d = c.getImageData(0, 0, img.width, img.height).data;",
+    "const wanted = ",
+    spec,
+    ";",
+    "return wanted.map(([r, g, b]) => {",
+    "let n = 0;",
+    "for (let i = 0; i < d.length; i += 4) {",
+    "if (Math.abs(d[i] - r) <= 2 && Math.abs(d[i+1] - g) <= 2 && Math.abs(d[i+2] - b) <= 2) n++;",
+    "}",
+    "return n;",
+    "});"
   )
-  unlist(pz_js(page, js))
+  unlist(png_canvas_eval(page, path, body))
 }
 
 # The outline colors, shared by the draw code and the tests.

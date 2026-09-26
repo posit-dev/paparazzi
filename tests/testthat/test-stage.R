@@ -1,34 +1,23 @@
-# Near-black ink count in a RECTANGLE of a captured frame (helper-
-# cursor.R's scan is full-width; the demo's text-growth check needs a
-# rect that excludes the cursor and the scroller's text). Same canvas
-# decode technique as helper-cursor.R.
-demo_rect_ink <- function(page, path, x0, x1, y0, y1, dpr = cursor_dpr(page)) {
-  raw <- readBin(path, "raw", n = file.info(path)$size)
-  b64 <- gsub("[\r\n]", "", jsonlite::base64_enc(raw))
-  js <- sprintf(
-    paste0(
-      "(async () => {",
-      "const img = new Image();",
-      "img.src = 'data:image/png;base64,%s';",
-      "await img.decode();",
-      "const c = document.createElement('canvas').getContext('2d');",
-      "c.canvas.width = img.width; c.canvas.height = img.height;",
-      "c.drawImage(img, 0, 0);",
-      "const d = c.getImageData(%d, %d, %d, %d).data;",
-      "let n = 0;",
-      "for (let p = 0; p < d.length; p += 4) {",
-      "  if (d[p] < 60 && d[p + 1] < 60 && d[p + 2] < 60 && d[p + 3] > 200) n++;",
-      "}",
-      "return n;",
-      "})()"
+# Near-black ink count in a RECTANGLE of a captured frame (the demo's
+# text-growth check needs a rect that excludes the cursor and the scroller's text).
+demo_rect_ink <- function(page, path, x0, x1, y0, y1, dpr = page_dpr(page)) {
+  body <- paste0(
+    "const d = c.getImageData(",
+    sprintf(
+      "%d, %d, %d, %d",
+      round(x0 * dpr),
+      round(y0 * dpr),
+      round((x1 - x0) * dpr),
+      round((y1 - y0) * dpr)
     ),
-    b64,
-    round(x0 * dpr),
-    round(y0 * dpr),
-    round((x1 - x0) * dpr),
-    round((y1 - y0) * dpr)
+    ").data;",
+    "let n = 0;",
+    "for (let p = 0; p < d.length; p += 4) {",
+    "  if (d[p] < 60 && d[p + 1] < 60 && d[p + 2] < 60 && d[p + 3] > 200) n++;",
+    "}",
+    "return n;"
   )
-  pz_js(page, js)
+  png_canvas_eval(page, path, body)
 }
 
 test_that("pz_stage merges settings onto the defaults and validates", {
@@ -493,12 +482,12 @@ test_that("recorded demo glides, presses, types, and scrolls on camera", {
 
   # The scroll: a fixed viewport point darkens as the gradient rises,
   # through intermediate values rather than in one jump.
-  first_px <- cursor_png_pixel(page, frames[[1]], 200, 1000)
-  last_px <- cursor_png_pixel(page, frames[[length(frames)]], 200, 1000)
+  first_px <- png_pixel(page, frames[[1]], 200, 1000)
+  last_px <- png_pixel(page, frames[[length(frames)]], 200, 1000)
   expect_true(last_px[[1]] < first_px[[1]] - 50)
   reds <- vapply(
     frames,
-    function(f) cursor_png_pixel(page, f, 200, 1000)[[1]],
+    function(f) png_pixel(page, f, 200, 1000)[[1]],
     numeric(1)
   )
   expect_true(length(unique(reds[reds < reds[[1]] - 10])) >= 3)
