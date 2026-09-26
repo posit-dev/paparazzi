@@ -16,4 +16,7 @@ Commit this note before code changes. Commit the regression tests, record their 
 
 ## Handoff
 
-Pending verification.
+- Landed two regression tests: a failed first inline apply followed by immediate disable and navigation; a failed restore followed by a disable retry that must recover the page's inline zoom of 1.5.
+- Before the fix, locked `test_local(filter = "device")` failed both assertions: `[ FAIL 2 | WARN 0 | SKIP 0 | PASS 91 ]` (exit 1; computed zoom was 2 after navigation, and restored inline zoom was empty).
+- After the fix, locked device tests: `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 93 ]` (exit 0); locked wait/nav tests: `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 184 ]` (exit 0). `air format --check .` and `jarl check .` passed after formatting `R/device.R`.
+- The early return now checks for a registered script on disable, and saved inline zoom is cleared after a successful restore. No rollback or new state was added. No further implementation is planned; leave the issue open for the orchestrator.
