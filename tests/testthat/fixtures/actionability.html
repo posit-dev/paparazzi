@@ -33,7 +33,12 @@
 
   <script>
     const shadow = document.getElementById("shadow-host").attachShadow({mode: "open"});
-    shadow.innerHTML = '<button type="button" style="width: 180px; height: 48px;">shadow child</button>';
+    shadow.innerHTML = '<button type="button" id="shadow-child" style="width: 180px; height: 48px;">shadow child</button>';
+    // The document listener only sees the retargeted host; log the
+    // receiver inside the shadow root too.
+    shadow.getElementById("shadow-child").addEventListener("click", function (e) {
+      window.__pzLog.push({ type: "click", id: "shadow-child", isTrusted: e.isTrusted });
+    });
     window.__pzUncover = function () {
       setTimeout(function () {
         document.getElementById("hit-cover").remove();
