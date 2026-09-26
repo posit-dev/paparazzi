@@ -435,32 +435,17 @@ device_apply_media <- function(page, state, color_scheme, reduced_motion) {
 # Evaluate with returnByValue; JS failures in these one-line scripts
 # surface as classed errors instead of raw chromote ones.
 device_eval <- function(page, expr, call = caller_env()) {
-  res <- tryCatch(
+  res <- cdp_call(
     page$session$Runtime$evaluate(
       expr,
       returnByValue = TRUE,
       timeout_ = page$default_timeout
     ),
-    error = function(e) {
-      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        cli::cli_abort(
-          "Timed out after {page$default_timeout}s evaluating JavaScript.",
-          class = "paparazzi_error_timeout",
-          call = call,
-          parent = e
-        )
-      }
-      stop(e)
-    }
+    page$default_timeout,
+    "evaluating JavaScript",
+    call
   )
-  err <- res$exceptionDetails
-  if (!is.null(err)) {
-    cli::cli_abort(
-      "JavaScript error: {err$exception$description %||% err$text %||% 'unknown error'}.",
-      class = "paparazzi_error_js",
-      call = call
-    )
-  }
+  cdp_check_exception(res, call = call)
   invisible(res$result$value)
 }
 

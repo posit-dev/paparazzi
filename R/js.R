@@ -35,24 +35,16 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   # Captured outside the handler so the error is attributed to pz_js(),
   # not to the tryCatch callback.
   call <- current_env()
-  res <- tryCatch(
+  res <- cdp_call(
     ctx$page$session$Runtime$evaluate(
       expr,
       awaitPromise = await,
       returnByValue = TRUE,
       timeout_ = timeout
     ),
-    error = function(e) {
-      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        cli::cli_abort(
-          "Timed out after {timeout}s evaluating JavaScript.",
-          class = "paparazzi_error_timeout",
-          call = call,
-          parent = e
-        )
-      }
-      stop(e)
-    }
+    timeout,
+    "evaluating JavaScript",
+    call = call
   )
   err <- res$exceptionDetails
   if (!is.null(err)) {

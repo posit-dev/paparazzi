@@ -347,7 +347,8 @@ chr_or_na <- function(x) {
 # caller. `i` is 1-based, so it always picks a live element.
 pin_match_id <- function(els, i, call = caller_env()) {
   timeout <- els$page$default_timeout
-  res <- tryCatch(
+  doing <- sprintf("pinning match %d of %s", i, els$description)
+  res <- cdp_call(
     els$page$session$Runtime$callFunctionOn(
       paste0("function() { return [this[", i, " - 1]]; }"),
       objectId = els$object_id,
@@ -355,26 +356,11 @@ pin_match_id <- function(els, i, call = caller_env()) {
       objectGroup = els$page$object_group,
       timeout_ = timeout
     ),
-    error = function(e) {
-      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        cli::cli_abort(
-          "Timed out after {timeout}s pinning match {i} of {els$description}.",
-          class = "paparazzi_error_timeout",
-          call = call,
-          parent = e
-        )
-      }
-      stop(e)
-    }
+    timeout,
+    doing,
+    call
   )
-  err <- res$exceptionDetails
-  if (!is.null(err)) {
-    cli::cli_abort(
-      "JavaScript error while pinning match {i} of {els$description}: {err$exception$description %||% err$text %||% 'unknown error'}.",
-      class = "paparazzi_error_js",
-      call = call
-    )
-  }
+  cdp_check_exception(res, doing, call)
   res$result$objectId
 }
 

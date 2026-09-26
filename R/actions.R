@@ -659,16 +659,7 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
         timeout_ = ctx$page$default_timeout
       )
     )
-    # The evaluate command itself succeeds while the expression
-    # throws; an unraised exceptionDetails was a silently unmoved
-    # scroll (the same mapping els_arg_values() uses).
-    if (!is.null(res$exceptionDetails)) {
-      err <- res$exceptionDetails
-      cli::cli_abort(
-        "JavaScript error scrolling: {err$exception$description %||% err$text %||% 'unknown error'}.",
-        class = "paparazzi_error_js"
-      )
-    }
+    cdp_check_exception(res, "scrolling")
   }
   stage_action_pause(ctx)
   invisible(ctx)
@@ -963,30 +954,13 @@ el_pointer_point <- function(ctx, els, call = caller_env()) {
   point
 }
 
-# Every CDP command from the actions runs with the page's default
-# timeout; a chromote command timeout is re-raised as
-# paparazzi_error_timeout naming the action and its target (the same
-# mapping as loc_resolve_once()). `cmd` stays a lazy promise, so the
-# dispatch itself is forced under the tryCatch.
+# Use the page's default timeout; doing names the action and target.
 action_cdp <- function(ctx, action, target = NULL, cmd, call = caller_env()) {
-  timeout <- ctx$page$default_timeout
-  tryCatch(
+  cdp_call(
     cmd,
-    error = function(e) {
-      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        cli::cli_abort(
-          if (is.null(target)) {
-            "Timed out after {timeout}s {action}."
-          } else {
-            "Timed out after {timeout}s {action} {target}."
-          },
-          class = "paparazzi_error_timeout",
-          call = call,
-          parent = e
-        )
-      }
-      stop(e)
-    }
+    ctx$page$default_timeout,
+    doing = paste(c(action, target), collapse = " "),
+    call = call
   )
 }
 
@@ -1206,24 +1180,16 @@ els_arg_values <- function(els, js, args, call = caller_env()) {
 # error, like every other callFunctionOn.
 els_first_object_id <- function(els, call = caller_env()) {
   timeout <- els$page$default_timeout
-  res <- tryCatch(
+  res <- cdp_call(
     els$page$session$Runtime$callFunctionOn(
       "function() { return this[0]; }",
       objectId = els$object_id,
       returnByValue = FALSE,
       timeout_ = timeout
     ),
-    error = function(e) {
-      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        cli::cli_abort(
-          "Timed out after {timeout}s working with elements matching {els$description}.",
-          class = "paparazzi_error_timeout",
-          call = call,
-          parent = e
-        )
-      }
-      stop(e)
-    }
+    timeout,
+    paste("working with elements matching", els$description),
+    call = call
   )
   res$result$objectId
 }

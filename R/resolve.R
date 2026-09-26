@@ -208,60 +208,34 @@ loc_resolve_once <- function(
 ) {
   timeout <- ctx$page$default_timeout
 
-  # A chromote command timeout (slow or hung renderer) is a timeout
-  # condition of the resolve, not a raw chromote error.
-  run_cdp <- function(cmd) {
-    tryCatch(
-      cmd,
-      error = function(e) {
-        if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-          cli::cli_abort(
-            "Timed out after {timeout}s resolving {description}.",
-            class = "paparazzi_error_timeout",
-            call = call,
-            parent = e
-          )
-        }
-        stop(e)
-      }
-    )
-  }
-
   if (is.null(root)) {
-    res <- run_cdp(ctx$page$session$Runtime$evaluate(
+    res <- cdp_call(ctx$page$session$Runtime$evaluate(
       paste0("(", fn, ").call([document])"),
       awaitPromise = FALSE,
       returnByValue = FALSE,
       objectGroup = object_group,
       timeout_ = timeout
-    ))
+    ), timeout, paste("resolving", description), call = call)
   } else {
-    res <- run_cdp(ctx$page$session$Runtime$callFunctionOn(
+    res <- cdp_call(ctx$page$session$Runtime$callFunctionOn(
       fn,
       objectId = root$object_id,
       returnByValue = FALSE,
       objectGroup = object_group,
       timeout_ = timeout
-    ))
+    ), timeout, paste("resolving", description), call = call)
   }
-  err <- res$exceptionDetails
-  if (!is.null(err)) {
-    cli::cli_abort(
-      "JavaScript error while resolving {description}: {err$exception$description %||% err$text %||% 'unknown error'}.",
-      class = "paparazzi_error_js",
-      call = call
-    )
-  }
+  cdp_check_exception(res, paste("resolving", description), call = call)
   object_id <- res$result$objectId
   if (is.null(object_id)) {
     return(new_elements(ctx$page, NULL, 0L, description))
   }
-  count <- run_cdp(ctx$page$session$Runtime$callFunctionOn(
+  count <- cdp_call(ctx$page$session$Runtime$callFunctionOn(
     "function() { return this.length; }",
     objectId = object_id,
     returnByValue = TRUE,
     timeout_ = timeout
-  ))$result$value
+  ), timeout, paste("resolving", description), call = call)$result$value
   new_elements(ctx$page, object_id, count, description)
 }
 
