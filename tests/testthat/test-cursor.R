@@ -79,7 +79,6 @@ test_that("the cursor switches to a hand over cursor:pointer elements", {
 test_that("cursor = TRUE draws a static cursor in screenshots; FALSE never draws", {
   page <- local_cursor_page()
   page |> pz_stage(cursor = TRUE)
-  # A static cursor appears on pz_stage() alone, at the viewport center.
   expect_equal(cursor_overlay_state(page)[[1]], 1)
 
   page |> pz_cursor_move("#btn")

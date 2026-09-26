@@ -183,7 +183,6 @@ stage_recording <- function(page) {
   rec <- page_recorder(page)
   !is.null(rec) && isTRUE(rec$active)
 }
-# Glide duration: clamp(0.25 + distance / cursor_speed, 0.3, 1.2).
 stage_glide_duration <- function(from, to, speed) {
   dist <- sqrt((to[["x"]] - from[["x"]])^2 + (to[["y"]] - from[["y"]])^2)
   min(max(0.25 + dist / speed, 0.3), 1.2)
@@ -345,8 +344,6 @@ scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
       )
     }
   }
-  # The instant application: by scrolls the remaining delta, to
-  # scrolls to the target exactly.
   apply_instant <- function(actual) {
     arg <- scroll_arg_json(
       by = if (!is.null(by)) {

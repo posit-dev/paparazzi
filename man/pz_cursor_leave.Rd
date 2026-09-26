@@ -10,7 +10,7 @@ pz_cursor_leave(ctx, side = "right")
 \item{ctx}{A paparazzi context.}
 
 \item{side}{A side of the frame to leave through: \code{"top"},
-\code{"bottom"}, \code{"left"}, or \code{"right"}.}
+\code{"bottom"}, \code{"left"}, or \code{"right"}. Defaults to \code{"right"}.}
 }
 \value{
 \code{ctx}, invisibly.

@@ -23,7 +23,10 @@
 #'   scope's element or, at the root context, shows the cursor at its
 #'   last position (or the viewport center the first time).
 #' @param from A side of the frame to enter from: `"top"`, `"bottom"`,
-#'   `"left"`, or `"right"`.
+#'   `"left"`, or `"right"`. `NULL` (the default) re-enters from the side
+#'   the cursor last left through (see [pz_cursor_leave()]); a cursor that
+#'   has never been shown uses the `enter` setting of [pz_stage()].
+#'   Otherwise the cursor glides from its current position.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -162,7 +165,7 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
 #'
 #' @inheritParams pz_click
 #' @param side A side of the frame to leave through: `"top"`,
-#'   `"bottom"`, `"left"`, or `"right"`.
+#'   `"bottom"`, `"left"`, or `"right"`. Defaults to `"right"`.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -385,7 +388,6 @@ cursor_draw <- function(ctx, visible, pressed = FALSE) {
   cursor_register_init(ctx)
   invisible(ctx)
 }
-# The press scale-down around a click's pressed/released pair.
 cursor_press <- function(ctx, pressed) {
   if (!cursor_visible(ctx$page)) {
     return(invisible(ctx))
