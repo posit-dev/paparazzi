@@ -32,6 +32,7 @@ Known bugs to fix while porting:
 ### Chaining
 
 - Every function takes a **context** as its first argument and returns it invisibly, so whole scripts can be one `|>` chain.
+- The exception is the `pz_find*()` family (`pz_find()`, `pz_find_first()`, `pz_find_last()`, `pz_find_nth()`, `pz_find_pop()`, `pz_find_reset()`), which returns its context visibly. Scope lives only in the returned context, so a scoped context that is neither assigned nor piped onward prints at the console instead of disappearing silently.
 - A context is either the page (root) or a scoped context created by `pz_find*()`.
 - Page-level functions (`pz_press()`, recording, cursor, navigation) work from any context and return it unchanged.
 
@@ -102,7 +103,7 @@ Scope is part of the chain's context, managed as a stack:
 - `pz_find_pop()`: pop one level.
 - `pz_find_reset()`: clear all scope, back to root.
 
-`pz_find()` returns a new context; it never mutates the page object.
+`pz_find()` returns a new context; it never mutates the page object. The browser is shared: actions change the tab, and every context of a page sees those changes. Scope belongs to the chain: it's a view held on the R side, so it never carries over implicitly into the next chain, a helper's caller, or another test that shares the page. A later chain inherits a scope only when it starts from a context that holds one.
 
 Resolution: specs are lazy, `pz_find*()` is eager.
 
@@ -530,13 +531,13 @@ pz_inspect(ctx, target = NULL, ..., show = c("auto", "screenshot", "browser", "n
 ```
 
 - Returns `ctx` invisibly, so it can be dropped anywhere in a chain.
-- Prints a console summary: URL, device, scope stack with match counts (warning on stale pinned elements), recording and cursor state, and, if `target` is given, its matches resolved relative to the current scope **without** auto-waiting. Each match shows a short tag and its state (visible, enabled, box). Long lists are truncated.
+- Prints a console summary: URL, device, scope stack with match counts (warning on stale pinned elements; scoped contexts only), recording and cursor state, and, if `target` is given, its matches resolved relative to the current scope **without** auto-waiting. Each match shows a short tag and its state (visible, enabled, box). Long lists are truncated.
 
   ```
-  ── paparazzi page ───────────────────────────────────────
+  ── paparazzi scope ──────────────────────────────────────
+  Scope      root › `.history-drawer` (1) › `.history-item` last (1)
   URL        http://127.0.0.1:4821/
   Device     1440 × 900 @2x · light
-  Scope      root › `.history-drawer` (1) › `.history-item` last (1)
   Target     `.actions-btn` → 1 match
     1  <button class="actions-btn" aria-label="Actions">
        visible · enabled · at 812,344 · 24 × 24
@@ -547,6 +548,7 @@ pz_inspect(ctx, target = NULL, ..., show = c("auto", "screenshot", "browser", "n
 - `show = "browser"`: draws the outlines in the live page and opens it with chromote's `$view()`.
 - `show = "auto"`: `"screenshot"` in interactive sessions, `"none"` otherwise.
 - Outlines live in paparazzi's shadow-root overlay and never appear in `pz_screenshot()` or recordings.
+- The summary tells the root and scoped contexts apart. At the root, the header reads `paparazzi page` and there's no Scope line. A scoped context's header reads `paparazzi scope`, with the Scope line directly under it. After `pz_close()`, a root context prints `<paparazzi page> (closed)` and a scoped one prints `<paparazzi scope> (page closed)`.
 - `print()` on a page or context shows the same summary without the target section or visuals.
 - The page object has a `$view()` method that opens the live browser (DevTools), as chromote sessions do. There's no `pz_view()`; `pz_inspect(show = "browser")` covers the in-chain case.
 
@@ -592,7 +594,7 @@ Status of each name:
 - **discussed:** used in proposals without objection, but not explicitly approved.
 - **placeholder:** a working name that still needs review.
 
-Every function takes `ctx` first and returns it invisibly unless noted.
+Every function takes `ctx` first and returns it invisibly unless noted. The `pz_find*()` family returns its context visibly (see "Chaining").
 
 ### Pages, apps, navigation
 

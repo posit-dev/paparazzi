@@ -31,12 +31,16 @@ capture), \code{"browser"} (outlines left in the live page), or \code{"none"}.}
 \code{ctx}, invisibly, so it can be dropped anywhere in a chain.
 }
 \description{
-Prints a console summary of the page: URL, device, the scope stack with
-live match counts (stale pinned elements warn), recording and cursor
+Prints a console summary of the page: URL, device, recording and cursor
 state, and -- when \code{target} is given -- the target's matches resolved
 relative to the current scope \strong{without} auto-waiting: a single
 resolution pass, each match shown as a short opening tag with its
 visibility, enabled state, and box (long lists are truncated).
+
+The header names the context. At the root it reads \verb{paparazzi page}.
+In a scoped context from \code{\link[=pz_find]{pz_find()}} it reads \verb{paparazzi scope}, with
+the scope stack right under it: live match counts for each level,
+plus a warning when pinned elements have gone stale.
 
 \code{show = "screenshot"} additionally captures an annotated screenshot:
 dashed outlines over the scope's elements, solid numbered outlines over

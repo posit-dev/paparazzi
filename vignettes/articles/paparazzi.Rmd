@@ -37,7 +37,7 @@ page <- pz_open(pz_example("tasks"), width = 720, height = 800, color_scheme = "
 page
 ```
 
-Printing the page shows where the browser is and how it's set up: a 720 by 800 pixel viewport at twice the usual pixel density, like a laptop's high-resolution screen, with the page's light color scheme. `width`, `height`, and `color_scheme` are device settings, which you can change later with `pz_device()`. The **scope**, `root`, means we're working with the whole page; we'll narrow it down later.
+Printing the page shows where the browser is and how it's set up: a 720 by 800 pixel viewport at twice the usual pixel density, like a laptop's high-resolution screen, with the page's light color scheme. `width`, `height`, and `color_scheme` are device settings, which you can change later with `pz_device()`.
 
 Here's what the page looks like:
 
@@ -116,7 +116,7 @@ Inside a testthat test, expectations report their result to testthat, so a papar
 
 ## Narrow the scope
 
-A task has several parts: a title, a priority label, and a Done button. To work with one task, you can make it the chain's scope with `pz_find()`. After that, targets are looked up inside the scope, so `".task-done"` means *this* task's Done button:
+A task has several parts: a title, a priority label, and a Done button. To work with one task, you can make it the chain's **scope** with `pz_find()`. After that, targets are looked up inside the scope, so `".task-done"` means *this* task's Done button:
 
 ```{r}
 page |>
@@ -125,14 +125,24 @@ page |>
   pz_expect_class("done")
 ```
 
-With no `target`, `pz_expect_class()` checks the scope element itself, the task. `pz_find()` doesn't change `page`: it returns a new, scoped context, and `page` still refers to the whole page. Inside a chain, `pz_find_pop()` goes back up one level and `pz_find_reset()` goes back to the whole page.
+With no `target`, `pz_expect_class()` checks the scope element itself, the task. Inside a chain, `pz_find_pop()` goes back up one level and `pz_find_reset()` goes back to the whole page.
 
-If you'll work with the same part of a page for a while, assign the scoped context to a variable and start new chains from it:
+The scope belongs to the chain, not to `page`. `pz_click()` changed the browser tab, and every chain on `page` will see that task marked done. `pz_find()` changed nothing in the browser. It returned a new, scoped context, which went down the chain, and `page` still refers to the whole page.
+
+If you'll work with the same part of a page for a while, assign the scoped context to a variable. Printing it shows the scope stack under a `paparazzi scope` header:
 
 ```{r}
 task_list <- pz_find(page, ".task-list")
+task_list
+```
+
+The Scope line reads from the whole page (`root`) down to the task list, and `(1)` says the scope holds one element. Now you can start new chains from `task_list`:
+
+```{r}
 pz_get_count(task_list, target = ".task.done")
 ```
+
+If you call `pz_find()` at the console without assigning its result, it prints the scoped context. That's a reminder that the scope went into the return value, not into `page`.
 
 ## Take screenshots
 
@@ -200,7 +210,7 @@ Staging only happens during a recording. If you remove `pz_record()`, the same s
 
 ## When something goes wrong
 
-If an action can't find its element, or finds the wrong one, `pz_inspect()` shows what paparazzi sees. It prints the page summary and the matches for a target, looked up from the current scope. Because it returns the page, you can drop it into the middle of a chain:
+If an action can't find its element, or finds the wrong one, `pz_inspect()` shows what paparazzi sees. It prints the page summary and the matches for a target, looked up from the current scope. Because it returns the context it was given, you can drop it into the middle of a chain:
 
 ```{r}
 page |>
