@@ -326,10 +326,7 @@ test_that("stop captures a final frame after a late page change", {
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   withr::defer(unlink(frames_dir, recursive = TRUE))
   page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
-  withr::defer({
-    rec <- page_recorder(page)
-    if (!is.null(rec) && rec$active) pz_record_stop(page)
-  })
+  defer_record_stop(page)
   pz_wait(page, 0.4)
   # A change right before stop must appear in the final frame; without
   # the stop-time capture the video would end on an older one.
@@ -662,10 +659,7 @@ test_that("recorded clicks reach above- and below-fold buttons at DPR 2", {
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   withr::defer(unlink(frames_dir, recursive = TRUE))
   pz_record_start(page, out, fps = 30, hold = c(0, 0), keep_frames = TRUE)
-  withr::defer({
-    rec <- page_recorder(page)
-    if (!is.null(rec) && rec$active) pz_record_stop(page)
-  })
+  defer_record_stop(page)
   targets <- rep(c("bottom", "top"), 4)
   for (target in targets) {
     pz_click(page, paste0("#", target))
@@ -706,10 +700,7 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
     keep_frames = TRUE,
     frame = pz_frame(list("h1", "main"), pad = 16)
   )
-  withr::defer({
-    rec <- page_recorder(page)
-    if (!is.null(rec) && rec$active) pz_record_stop(page)
-  })
+  defer_record_stop(page)
   for (target in rep(c("task-title", "add-task"), 4)) {
     pz_click(page, paste0("#", target))
   }
@@ -748,10 +739,7 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
     frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
     withr::defer(unlink(frames_dir, recursive = TRUE))
     pz_record_start(page, out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
-    withr::defer({
-      rec <- page_recorder(page)
-      if (!is.null(rec) && rec$active) pz_record_stop(page)
-    })
+    defer_record_stop(page)
     pz_wait(page, 0.3)
     before <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
     expect_gt(length(before), 0)
@@ -786,8 +774,7 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
         length(resized) > 0 &&
           identical(png_dimensions(tail(resized, 1)), c(1600L, 1200L))
       },
-      # An old-size capture can occupy one timeout before the new one starts.
-      timeout = 2 * page$page$default_timeout,
+      timeout = 5,
       loop = page$page$child_loop,
       what = "a frame at the resized viewport"
     )

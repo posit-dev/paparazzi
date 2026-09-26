@@ -6,6 +6,19 @@ local_record_page <- function(.env = parent.frame()) {
   local_page(record_fixture_file(), .env = .env)
 }
 
+# Register after a keep_frames unlink defer: defers run LIFO, so the
+# recorder stops before its frames dir goes, even when the test fails
+# mid-recording. A late capture would otherwise write into the deleted dir.
+defer_record_stop <- function(page, .env = parent.frame()) {
+  withr::defer(
+    {
+      rec <- page_recorder(page)
+      if (!is.null(rec) && rec$active) pz_record_stop(page)
+    },
+    envir = .env
+  )
+}
+
 skip_if_no_av <- function() {
   testthat::skip_if_not_installed("av")
 }
