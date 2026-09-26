@@ -167,8 +167,6 @@ pz_expect_style <- function(
     description = expect_headline_style(pairs, not)
   )
 }
-# snake_case -> kebab-case; names starting with -- (custom properties)
-# pass through untouched.
 style_prop_name <- function(name) {
   ifelse(startsWith(name, "--"), name, gsub("_", "-", name, fixed = TRUE))
 }
@@ -273,8 +271,6 @@ style_check_duplicated <- function(props, call = caller_env()) {
   }
   invisible(NULL)
 }
-# The ... pairs: at least one, all named, all string values. Returns a
-# named character vector, names normalized to CSS property names.
 style_expect_pairs <- function(dots, call = caller_env()) {
   if (length(dots) == 0L) {
     cli::cli_abort(

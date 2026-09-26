@@ -179,23 +179,9 @@ inspect_doc_rects <- function(ctx, rects) {
 inspect_scope_rects <- function(ctx) {
   scoped <- scope_top(ctx)
   if (is.null(scoped) || is.null(scoped$object_id)) {
-    return(tibble::tibble(
-      x = numeric(),
-      y = numeric(),
-      width = numeric(),
-      height = numeric()
-    ))
+    return(inspect_positive_rects(NULL))
   }
-  rects <- tryCatch(el_rects(scoped), error = function(e) NULL)
-  if (is.null(rects) || nrow(rects) == 0L) {
-    return(tibble::tibble(
-      x = numeric(),
-      y = numeric(),
-      width = numeric(),
-      height = numeric()
-    ))
-  }
-  rects[rects$width > 0 & rects$height > 0, ]
+  inspect_positive_rects(tryCatch(el_rects(scoped), error = function(e) NULL))
 }
 # Live boxes with positive area only: hidden matches have zero boxes and
 # would collapse the annotated capture's union clip.
@@ -236,8 +222,7 @@ inspect_recording_state <- function(page) {
 # The summary is composed as plain strings and emitted with cat_line():
 # scope and target descriptions carry user-derived selectors whose braces
 # would break cli templates, so page-derived content interpolates as
-# values, never templates. Labels pad to an 11-char column, matching the
-# SPEC's example output.
+# values, never templates.
 inspect_header <- function(label = "page") {
   width <- getOption("width", 80L)
   prefix <- paste0("\u2500\u2500 paparazzi ", label, " ")
@@ -546,10 +531,9 @@ overlay_restore <- function(ctx, display) {
   invisible(TRUE)
 }
 # ── Annotated capture ───────────────────────────────────────────────
-# Drawn -> screenshot_capture() (the internal CDP call, NOT
-# pz_screenshot(), whose capture guard would hide the outlines) ->
-# so the annotated image exists. Clearing happens in pz_inspect()'s
-# deferred cleanup, covering failed captures too.
+# Call screenshot_capture() directly: pz_screenshot() hides inspect
+# outlines during capture. pz_inspect() defers clearing them, including
+# when capture fails.
 # The capture region follows pz_screenshot() conventions: the viewport
 # at the root, otherwise the union of scope and target rects padded so
 # outlines and badges aren't clipped.
