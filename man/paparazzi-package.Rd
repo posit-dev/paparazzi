@@ -8,6 +8,15 @@
 \description{
 Drive web pages from R with a pipeable interface built on 'chromote'. Find and interact with DOM elements, set input values, wait for page state, and assert on content and element state. Capture screenshots and record interactions as videos or GIFs, with optional cursor and typing animations for demos. Works with any page, including Shiny apps.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://posit-dev.github.io/paparazzi/}
+  \item \url{https://github.com/posit-dev/paparazzi}
+  \item Report bugs at \url{https://github.com/posit-dev/paparazzi/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Garrick Aden-Buie \email{garrick@adenbuie.com} (\href{https://orcid.org/0000-0002-7111-0077}{ORCID})
 
