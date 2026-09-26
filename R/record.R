@@ -189,20 +189,13 @@ pz_record_stop <- function(ctx) {
 
   # A capture issued before the stop may still be in flight; it belongs
   # to the recording, so let it settle before the final capture.
-  if (!is.null(rec$pending)) {
-    tryCatch(
-      pz_poll(
-        function() is.null(rec$pending),
-        timeout = page$default_timeout,
-        loop = page$child_loop,
-        what = "the in-flight frame capture"
-      ),
-      paparazzi_error_timeout = function(e) {
-        rec$pending <- NULL
-        record_error(rec, e)
-      }
-    )
-  }
+  tryCatch(
+    record_wait_pending(rec, page, "the in-flight frame capture"),
+    paparazzi_error_timeout = function(e) {
+      rec$pending <- NULL
+      record_error(rec, e)
+    }
+  )
 
   # Capture and await the page state at stop: the final state must be in
   # the video (the last-frame hold repeats it, not an older frame), and
@@ -401,6 +394,38 @@ page_set_recorder <- function(page, rec) {
   invisible(page)
 }
 
+# A timed-out wait fails the change rather than proceeding: the capture
+# may still be running in Chrome and would undo the change when it ends.
+record_hold <- function(page, code, call = caller_env()) {
+  rec <- page_recorder(page)
+  if (is.null(rec) || !rec$active) {
+    return(code)
+  }
+  held <- rec$held
+  rec$held <- TRUE
+  on.exit(rec$held <- held)
+  record_wait_pending(
+    rec,
+    page,
+    "the in-flight frame capture before changing the device metrics",
+    call = call
+  )
+  code
+}
+
+record_wait_pending <- function(rec, page, what, call = caller_env()) {
+  if (is.null(rec$pending)) {
+    return(invisible(NULL))
+  }
+  pz_poll(
+    function() is.null(rec$pending),
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = what,
+    call = call
+  )
+}
+
 new_recorder <- function(
   path,
   format,
@@ -432,6 +457,7 @@ new_recorder <- function(
   rec$active_since <- rec_now()
   rec$active <- TRUE
   rec$paused <- FALSE
+  rec$held <- FALSE
   rec$pending <- NULL
   rec$vt_end <- NULL
   rec$ticks <- 0L
@@ -522,8 +548,8 @@ record_frames_dir <- function(path, keep_frames) {
 }
 
 # One timer tick on the child loop: re-arm, then issue an async capture
-# unless paused or one is still in flight (the in-flight guard -- a
-# skipped tick shows up as a repeated frame after resampling). The tick
+# unless paused, held for a device change, or one is still in flight
+# (a skipped tick repeats a frame after resampling). The tick
 # runs inside run_now() during whatever pumped the loop, so its errors
 # are caught and counted on the recorder instead of escaping into an
 # unrelated call. Each scheduled tick is bound to the recorder that
@@ -543,7 +569,7 @@ record_tick <- function(page, rec = page_recorder(page)) {
     loop = page$child_loop
   )
   rec$ticks <- rec$ticks + 1L
-  if (rec$paused || !is.null(rec$pending)) {
+  if (rec$paused || rec$held || !is.null(rec$pending)) {
     return(invisible(TRUE))
   }
   record_capture(rec, page, rec_vt(rec))

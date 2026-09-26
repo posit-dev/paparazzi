@@ -720,6 +720,108 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
   expect_lt(info$height, 1120)
 })
 
+test_that("a device hold skips capture ticks and clears on exit", {
+  page <- local_record_page()
+  rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+  page_set_recorder(page$page, rec)
+  withr::defer(page_set_recorder(page$page, NULL))
+  captures <- 0L
+  local_mocked_bindings(
+    record_capture = function(...) captures <<- captures + 1L
+  )
+
+  expect_identical(
+    record_hold(page$page, {
+      expect_true(rec$held)
+      record_tick(page$page, rec)
+      "done"
+    }),
+    "done"
+  )
+  expect_identical(captures, 0L)
+  expect_identical(rec$ticks, 1L)
+  expect_identical(rec$vt_base, 0)
+  expect_false(rec$paused)
+  expect_false(rec$held)
+
+  expect_error(record_hold(page$page, stop("boom")), "boom")
+  expect_false(rec$held)
+  rec$active <- FALSE
+  expect_identical(record_hold(page$page, 42), 42)
+  expect_false(rec$held)
+})
+
+test_that("a device hold fails on a stuck capture and restores an outer hold", {
+  page <- local_record_page()
+  rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+  page_set_recorder(page$page, rec)
+  withr::defer(page_set_recorder(page$page, NULL))
+
+  ran <- FALSE
+  rec$pending <- new.env()
+  local_mocked_bindings(
+    pz_poll = function(...) {
+      cli::cli_abort("Timed out.", class = "paparazzi_error_timeout")
+    }
+  )
+  expect_error(
+    record_hold(page$page, ran <- TRUE),
+    class = "paparazzi_error_timeout"
+  )
+  expect_false(ran)
+  expect_false(rec$held)
+  expect_identical(rec$n_errors, 0L)
+
+  rec$pending <- NULL
+  record_hold(page$page, {
+    record_hold(page$page, NULL)
+    expect_true(rec$held)
+  })
+  expect_false(rec$held)
+})
+
+test_that("device metrics survive an in-flight recording capture", {
+  skip_if_no_av()
+  page <- local_record_page()
+  pz_device(page, width = 640, height = 560)
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, fps = 10, hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page$page)
+  capture_sent <- FALSE
+  session <- page$page$session
+  domain <- session$Page
+  wrapped <- domain
+  wrapped$captureScreenshot <- function(...) {
+    capture_sent <<- TRUE
+    domain$captureScreenshot(...)
+  }
+  session$Page <- wrapped
+  withr::defer(session$Page <- domain)
+  if (is.null(rec$pending)) {
+    record_capture(rec, page$page, rec_vt(rec))
+  }
+  pz_poll(
+    function() capture_sent,
+    timeout = page$page$default_timeout,
+    loop = page$page$child_loop,
+    what = "the screenshot request"
+  )
+  expect_false(is.null(rec$pending))
+
+  pz_device(page, width = 800, height = 600)
+  pz_poll(
+    function() is.null(rec$pending),
+    timeout = page$page$default_timeout,
+    loop = page$page$child_loop,
+    what = "the in-flight frame capture"
+  )
+  pz_wait(page, 0.2)
+  expect_equal(pz_js(page, "innerWidth"), 800)
+  expect_equal(pz_js(page, "innerHeight"), 600)
+})
+
 test_that("recorded viewport clips follow scroll, zoom and resize", {
   skip_if_no_av()
   skip_if_not_installed("png")
