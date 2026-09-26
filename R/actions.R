@@ -120,7 +120,7 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #' `insertText` per character with randomized delays around
 #' `typing_speed`, so the video shows the text appearing. For a
 #' value-setting primitive that works on selects, checkboxes, and range
-#' inputs, see `pz_set_value()` (a later task).
+#' inputs, see [pz_set_value()].
 #'
 #' @inheritParams pz_click
 #' @param text A string to type.
@@ -333,14 +333,6 @@ pz_blur <- function(ctx, ...) {
   }
   invisible(ctx)
 }
-# The element set an element action operates on, detach-checked. NULL
-# means the current context: the pinned set itself at a scoped
-# context, used as-is and never released (its scope owns it), erroring
-# on multiple matches like loc_resolve() does; at the root, NULL needs
-# a target. An explicit target resolves lazily INSIDE the current
-# scope (auto-waiting, so re-renders within the scope are fine) and is
-# released after the action. Returns list(els, pinned): a pinned set
-# must NOT be released by the caller.
 # Record before resolution or dispatch: either can trigger navigation.
 action_start <- function(ctx) {
   ctx$page$.__enclos_env__$private$last_action_loader_ <-
@@ -349,6 +341,14 @@ action_start <- function(ctx) {
     )$frameTree$frame$loaderId
 }
 
+# The element set an element action operates on, detach-checked. NULL
+# means the current context: the pinned set itself at a scoped
+# context, used as-is and never released (its scope owns it), erroring
+# on multiple matches like loc_resolve() does; at the root, NULL needs
+# a target. An explicit target resolves lazily INSIDE the current
+# scope (auto-waiting, so re-renders within the scope are fine) and is
+# released after the action. Returns list(els, pinned): a pinned set
+# must NOT be released by the caller.
 action_elements <- function(ctx, target, call = caller_env()) {
   if (is.null(target)) {
     scoped <- scope_root(ctx, call = call)
@@ -991,8 +991,6 @@ select_all_js <- "function() {
   sel.removeAllRanges();
   sel.addRange(range);
 }"
-# pz_set_files()'s `files`: paths to existing local files, normalized
-# to the absolute paths the browser reads.
 #' Select text inside an element
 #'
 #' Auto-waits for a match, then highlights the exact `text` inside it
@@ -1240,8 +1238,8 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
 # serves both rootings: callFunctionOn on the pinned set as `this`, or
 # Runtime$evaluate with `this` an empty array (root -- the walk never
 # starts, so the document wins). Application is instant JS, matching
-# el_scroll_into_view()'s precedent; the recording task swaps in
-# animated mouseWheel events at this seam.
+# el_scroll_into_view()'s precedent; recording uses scroll_staged()
+# for animated mouseWheel events.
 scroll_apply_js <- "function(arg) {
   const isScrollable = (e) => {
     if (e === document.scrollingElement) {
@@ -1694,6 +1692,8 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     )
   }
 }
+# pz_set_files()'s `files`: paths to existing local files, normalized
+# to the absolute paths the browser reads.
 check_file_paths <- function(files, call = caller_env()) {
   check_character(files, call = call)
   missing <- files[!file.exists(files)]

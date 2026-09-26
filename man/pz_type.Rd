@@ -36,7 +36,7 @@ with \code{typing = "natural"} (the default; see \code{\link[=pz_stage]{pz_stage
 \code{insertText} per character with randomized delays around
 \code{typing_speed}, so the video shows the text appearing. For a
 value-setting primitive that works on selects, checkboxes, and range
-inputs, see \code{pz_set_value()} (a later task).
+inputs, see \code{\link[=pz_set_value]{pz_set_value()}}.
 }
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
