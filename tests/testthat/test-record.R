@@ -194,6 +194,7 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
 })
 
 test_that("GIF frame crops preserve alpha and crop unique PNGs", {
+  testthat::skip_if_not_installed("gifski")
   testthat::skip_if_not_installed("png")
   source <- withr::local_tempfile(fileext = ".png")
   image <- array(seq(0, 1, length.out = 5 * 5 * 4), c(5, 5, 4))
@@ -220,6 +221,7 @@ test_that("GIF frame crops preserve alpha and crop unique PNGs", {
 })
 
 test_that("unframed GIFs of odd size go to gifski uncropped", {
+  testthat::skip_if_not_installed("gifski")
   testthat::skip_if_not_installed("png")
   source <- withr::local_tempfile(fileext = ".png")
   png::writePNG(array(0.5, c(5, 7, 3)), source)
