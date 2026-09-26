@@ -154,7 +154,7 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
     document.getElementById('box').style.background = '#fdfdf5';
     document.getElementById('box').textContent = 'Flat text';"
   )
-  dpr <- pz_js(page, "window.devicePixelRatio")
+  dpr <- page_dpr(page)
   out <- withr::local_tempfile(fileext = ".gif")
   raw_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   withr::defer(unlink(raw_dir, recursive = TRUE))
@@ -337,7 +337,7 @@ test_that("stop captures a final frame after a late page change", {
 
   files <- sort(list.files(frames_dir, full.names = TRUE, pattern = "[.]png$"))
   expect_gte(length(files), 2L)
-  dpr <- pz_js(page, "window.devicePixelRatio")
+  dpr <- page_dpr(page)
   # a pixel inside #box (CSS left 40, top 30, 100x60), in device pixels
   pixel <- function(path) {
     img <- png::readPNG(path)
@@ -488,7 +488,7 @@ test_that("closing the page tears down the recorder synchronously", {
 test_that("a frame crops the recording at encode time", {
   page <- local_record_page()
   skip_if_no_av()
-  dpr <- pz_js(page, "window.devicePixelRatio")
+  dpr <- page_dpr(page)
 
   out <- withr::local_tempfile(fileext = ".mp4")
   page |>
@@ -510,7 +510,7 @@ test_that("a frame crops the recording at encode time", {
 test_that("frame when = start and stop measure at different times", {
   page <- local_record_page()
   skip_if_no_av()
-  dpr <- pz_js(page, "window.devicePixelRatio")
+  dpr <- page_dpr(page)
   width_at <- function(css) floor(round(css * dpr) / 4) * 4
 
   out_stop <- withr::local_tempfile(fileext = ".mp4")
@@ -547,7 +547,7 @@ test_that("frame when = start and stop measure at different times", {
 test_that("a targetless stop frame crops from the start-time scope", {
   page <- local_record_page()
   skip_if_no_av()
-  dpr <- pz_js(page, "window.devicePixelRatio")
+  dpr <- page_dpr(page)
   width_at <- function(css) floor(round(css * dpr) / 4) * 4
 
   out <- withr::local_tempfile(fileext = ".mp4")
@@ -568,7 +568,7 @@ test_that("a targetless stop frame crops from the start-time scope", {
 test_that("a framed recording survives a navigation by framing the viewport", {
   page <- local_record_page()
   skip_if_no_av()
-  dpr <- pz_js(page, "window.devicePixelRatio")
+  dpr <- page_dpr(page)
   vw <- pz_js(page, "innerWidth")
   vh <- pz_js(page, "innerHeight")
   width_at <- function(css) floor(round(css * dpr) / 4) * 4
@@ -596,7 +596,7 @@ test_that("a framed recording survives a navigation by framing the viewport", {
 test_that("a when = start crop is measured before the navigation and stays", {
   page <- local_record_page()
   skip_if_no_av()
-  dpr <- pz_js(page, "window.devicePixelRatio")
+  dpr <- page_dpr(page)
   width_at <- function(css) floor(round(css * dpr) / 4) * 4
 
   out <- withr::local_tempfile(fileext = ".mp4")
