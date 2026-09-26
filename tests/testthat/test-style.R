@@ -7,14 +7,6 @@
 # #custom element with a custom property. style-empty.html is an
 # empty-body page for the DOM-untouched checks.
 
-# Same pattern as test-expect.R: test files can't rely on each other's
-# sourcing order, so each failure-path file carries its own copy.
-local_outside_testthat <- function(env = parent.frame()) {
-  old <- Sys.getenv(c("TESTTHAT", "TESTTHAT_IS_TESTING"))
-  Sys.setenv(TESTTHAT = "", TESTTHAT_IS_TESTING = "")
-  withr::defer(do.call(Sys.setenv, as.list(old)), envir = env)
-}
-
 test_that("pz_get_style returns a tibble with one row per match and per-property columns", {
   page <- local_style_page()
   styles <- pz_get_style(
