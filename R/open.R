@@ -153,6 +153,7 @@ pz_open <- function(
   ok <- TRUE
   page
 }
+
 #' Close a page
 #'
 #' Closes the page's browser session and, if the page started a Shiny app,
@@ -176,15 +177,7 @@ pz_close <- function(page) {
   page$close()
   invisible(page)
 }
-open_wait_mode <- function(wait, is_shiny_app) {
-  if (!identical(wait, "auto")) {
-    return(wait)
-  }
-  if (is_shiny_app) {
-    return("shiny")
-  }
-  "load"
-}
+
 #' Open a page that closes when a block or calling frame exits
 #'
 #' [pz_with_page()] evaluates `code` with the page open and closes it on exit,
@@ -235,6 +228,7 @@ pz_with_page <- function(x, code, ...) {
   }
   invisible(page)
 }
+
 #' @rdname pz_with_page
 #' @export
 pz_local_page <- function(x, ..., .env = caller_env()) {
@@ -242,6 +236,17 @@ pz_local_page <- function(x, ..., .env = caller_env()) {
   withr::defer(pz_close(page), envir = .env)
   page
 }
+
+open_wait_mode <- function(wait, is_shiny_app) {
+  if (!identical(wait, "auto")) {
+    return(wait)
+  }
+  if (is_shiny_app) {
+    return("shiny")
+  }
+  "load"
+}
+
 open_target_url <- function(x, call = caller_env()) {
   if (inherits(x, "shiny.appobj")) {
     cli::cli_abort(
@@ -278,6 +283,7 @@ open_target_url <- function(x, call = caller_env()) {
     call = call
   )
 }
+
 # Standalone app files: app.R and the runnable app-*.R/app_*.R and
 # *-app.R/*_app.R variants. ui.R/server.R require their containing directory.
 is_shiny_app_file <- function(name) {
@@ -287,6 +293,7 @@ is_shiny_app_file <- function(name) {
 
   grepl("^(app[_-].+|.+[_-]app)[.]R$", name)
 }
+
 file_url <- function(path) {
   path <- normalizePath(path, winslash = "/", mustWork = TRUE)
   segs <- strsplit(path, "/", fixed = TRUE)[[1]]
@@ -308,6 +315,7 @@ file_url <- function(path) {
   }
   paste0("file://", path)
 }
+
 wait_for_load <- function(page, timeout, call = caller_env()) {
   deadline <- Sys.time() + timeout
   pz_poll(
