@@ -226,11 +226,20 @@ nav_history <- function(page, offset, call = caller_env()) {
   target <- idx - 1
   pz_poll(
     fn = function() {
-      # Mid-switch, the session can transiently report "Not attached
-      # to an active page"; that means not-yet, so the poll retries.
+      # Mid-switch, "Not attached to an active page" means not-yet;
+      # a command timeout also leaves the poll to report its own timeout.
       hist <- tryCatch(
         session$Page$getNavigationHistory(timeout_ = page$default_timeout),
-        error = function(e) NULL
+        error = function(e) {
+          msg <- conditionMessage(e)
+          if (
+            grepl("Not attached to an active page", msg, ignore.case = TRUE) ||
+              grepl("timed out", msg, ignore.case = TRUE)
+          ) {
+            return(NULL)
+          }
+          stop(e)
+        }
       )
       isTRUE(hist$currentIndex == target)
     },

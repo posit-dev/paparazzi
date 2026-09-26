@@ -50,6 +50,83 @@ test_that("pz_nav_goto handles a same-document fragment navigation", {
   expect_no_error(pz_nav_goto(root, nav_fixture_url("b")))
 })
 
+test_that("nav_history propagates unexpected errors from its poll", {
+  calls <- 0L
+  page <- list(
+    default_timeout = 0.05,
+    child_loop = later::create_loop(),
+    session = list(
+      Page = list(
+        getNavigationHistory = function(timeout_) {
+          calls <<- calls + 1L
+          if (calls > 1L) {
+            stop("Unknown CDP failure")
+          }
+          list(currentIndex = 1L, entries = list(list(id = 1), list(id = 2)))
+        },
+        navigateToHistoryEntry = function(entryId, timeout_) NULL
+      )
+    )
+  )
+
+  expect_error(nav_history(page, -1), "Unknown CDP failure")
+  expect_identical(calls, 2L)
+})
+
+test_that("nav_history retries not-attached and command timeout failures", {
+  for (failure in c("NOT ATTACHED TO AN ACTIVE PAGE", "Command timed out")) {
+    calls <- 0L
+    page <- list(
+      default_timeout = 0.2,
+      child_loop = later::create_loop(),
+      session = list(
+        Page = list(
+          getNavigationHistory = function(timeout_) {
+            calls <<- calls + 1L
+            if (calls == 2L) {
+              stop(failure)
+            }
+            list(
+              currentIndex = if (calls == 1L) 1L else 0L,
+              entries = list(list(id = 1), list(id = 2))
+            )
+          },
+          navigateToHistoryEntry = function(entryId, timeout_) NULL
+        )
+      )
+    )
+
+    expect_true(nav_history(page, -1))
+    expect_identical(calls, 3L)
+  }
+})
+
+test_that("nav_history reports its own timeout after command timeouts", {
+  calls <- 0L
+  page <- list(
+    default_timeout = 0.02,
+    child_loop = later::create_loop(),
+    session = list(
+      Page = list(
+        getNavigationHistory = function(timeout_) {
+          calls <<- calls + 1L
+          if (calls > 1L) {
+            stop("Command timed out")
+          }
+          list(currentIndex = 1L, entries = list(list(id = 1), list(id = 2)))
+        },
+        navigateToHistoryEntry = function(entryId, timeout_) NULL
+      )
+    )
+  )
+
+  expect_error(
+    nav_history(page, -1),
+    "waiting for history navigation",
+    class = "paparazzi_error_timeout"
+  )
+})
+
 test_that("history traversal works: goto, back, forward", {
   ctx <- local_nav_page()
 
