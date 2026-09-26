@@ -103,11 +103,10 @@ as_loc_list <- function(target, arg = caller_arg(target), call = caller_env()) {
 # Target description, e.g.
 #   `.shiny-tool-request` (has_text: "get_weather", which: last, within: `.chat`)
 # Qualifiers appear in a fixed order; `within` is recursive. Used by the
-# resolver errors, the print method, and (later) expectation failures and
-# the detached-scope error.
+# resolver errors, the print method, expectation failures, and the
+# detached-scope error.
 format_loc <- function(loc) {
   if (is_list(loc) && !inherits(loc, "paparazzi_loc")) {
-    # Union target: one description per spec, in order.
     return(paste(vapply(loc, format_loc, character(1)), collapse = " | "))
   }
   if (!inherits(loc, "paparazzi_loc")) {
