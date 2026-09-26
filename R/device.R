@@ -102,7 +102,9 @@ pz_device <- function(
     state$zoom_method <- zoom_method %||% state$zoom_method
     device_apply_override(ctx$page, state)
   })
-  device_step(state, device_apply_css_zoom(ctx$page, state))
+  # CSS zoom spans several CDP calls and records each as it succeeds, so
+  # rolling it back would lose a script Chrome already registered.
+  device_apply_css_zoom(ctx$page, state)
   device_step(
     state,
     device_apply_media(ctx$page, state, color_scheme, reduced_motion)
