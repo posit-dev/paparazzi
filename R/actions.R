@@ -7,12 +7,13 @@
 # DOM.setFileInputFiles (pz_set_files()).
 #' Click an element
 #'
-#' Auto-waits for the element to be actionable: visible (as in
-#' [pz_expect_visible()]), with a non-empty box, and receiving pointer
-#' events at its center (not covered by another element). After scrolling
-#' it into view, clicks its center with real browser input events: a mouse
-#' move to the point, then a left-button press and release. The page sees a trusted pointer sequence -- exactly
-#' what a user's click produces -- so `:hover` state, focus, and click
+#' Auto-waits for the element to be actionable -- visible with a
+#' non-empty box, the same "visible" [pz_expect_visible()] uses, and
+#' receiving pointer events at its center (not covered by another
+#' element) -- then scrolls it into view and clicks the center of it
+#' with real browser input events: a mouse move to the point, then a
+#' left-button press and release. The page sees a trusted pointer
+#' sequence -- exactly what a user's click produces -- so `:hover` state, focus, and click
 #' handlers all behave as they would live. While recording, the staging
 #' settings ([pz_stage()]) animate the scroll, the cursor glide, and
 #' the press; otherwise everything runs straight to the final state.
@@ -406,8 +407,14 @@ format_pointer_blocker <- function(blocker) {
     if (length(classes)) paste0(".", classes, collapse = "")
   )
 }
-# Scroll and sample in the same poll; after a blocked sample, retry until
-# the page's existing actionability budget expires.
+# Scroll the first element into view and return the center of its
+# bounding rect as c(x, y) (viewport CSS pixels), auto-waiting until it
+# is actionable: visible, non-empty, and the topmost element at that
+# point. Resolution auto-wait only covers ">= 1 match", so without this
+# a hidden, zero-sized, or covered match would send input to whatever
+# sits at the point. Rects go stale after the scroll, so each attempt
+# scrolls first, then probes. The scroll and the post-poll cursor move
+# are the staging seams (stage_scroll_into_view(), stage_move_cursor()).
 el_pointer_point <- function(ctx, els, call = caller_env()) {
   point <- NULL
   blocker <- NULL
@@ -440,8 +447,7 @@ el_pointer_point <- function(ctx, els, call = caller_env()) {
       cli::cli_abort(
         "Timed out after {timeout}s waiting for {els$description} to receive pointer events; blocked by {blocker_name}.",
         class = c("paparazzi_error_obstructed", "paparazzi_error_timeout"),
-        call = call,
-        parent = e
+        call = call
       )
     }
   )
