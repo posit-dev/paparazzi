@@ -14,4 +14,6 @@ Narrow the two navigation-related error handlers in `R/nav.R` and `R/wait.R`, wi
 
 ## Handoff
 
-Pending implementation and verification.
+- Landed: `nav_history()` retries only the not-attached and command-timeout errors; `nav_snapshot()` propagates closed-page and JavaScript errors. No navigation ordering or lifecycle changes. `pz_js()` raises the two denied classes via `check_context()` and its `exceptionDetails` handling; its command timeouts come from `cdp_call()`.
+- Red then green: the unfixed code failed the new unexpected-history-error and closed-page/JS snapshot assertions (`[ FAIL 3 | WARN 0 | SKIP 0 | PASS 179 ]`). After the fix, targeted `nav|wait` tests report `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 184 ]`.
+- `air format --check .` and `jarl check .` passed. No further work on this branch; the orchestrator owns the full-suite merge gate.
