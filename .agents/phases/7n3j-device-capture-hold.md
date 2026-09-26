@@ -15,4 +15,7 @@ Signed off: orchestrator, per garrick's decision on paparazzi#7n3j.
 
 ## Handoff
 
-To be filled after implementation.
+- Landed: a recorder capture hold around both device-metrics override commands, shared in-flight settle handling with recording stop, and tests for tick suppression, hold cleanup, and an in-flight viewport resize. The existing viewport resize test retains its 5 s budget.
+- Red: after synchronizing the test with the actual screenshot request, the unfixed code failed 3/3 runs: `innerWidth` was 640 rather than 800 and `innerHeight` was 560 rather than 600. Earlier attempts that waited only for `rec$pending` did not reliably reproduce the capture overlap.
+- Green: `.agents/chrome-lock.sh Rscript -e 'testthat::test_local(filter = "record|device|inspect")'` completed twice on the formatted final code: `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 596 ]` and `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 601 ]`. `air format --check .` and `jarl check .` passed.
+- Next: the orchestrator can run the full gate; no NEWS entry or screencast work was taken on.
