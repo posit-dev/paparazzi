@@ -82,12 +82,13 @@ page default from \code{\link[=pz_stage_frame]{pz_stage_frame()}}) is measured o
 start for \code{pz_frame(when = "start")}, at the end for the default
 \code{when = "stop"}, i.e. against the final layout -- and the crop is
 applied to every frame during encoding. \code{.mp4} dimensions are
-rounded down to multiples of 4; other formats to even pixels.
+rounded down to multiples of 4 and \code{.webm} to even pixels; \code{.gif}
+keeps whole pixels.
 
-Encoding uses the \pkg{av} package (checked for at
-\code{pz_record_start()}). Unframed \code{.gif} recordings prefer the
-\pkg{gifski} package when installed (higher quality); framed GIFs go
-through \pkg{av}, which can crop.
+\code{.mp4} and \code{.webm} recordings require \pkg{av}. All \code{.gif} recordings
+require \pkg{gifski}; framed GIFs also require \pkg{png} to crop the
+captured frames before encoding. Packages are checked at
+\code{pz_record_start()}.
 }
 
 \examples{

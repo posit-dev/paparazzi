@@ -129,12 +129,9 @@ test_that("frames are resampled to the requested constant fps", {
   expect_gte(info20$frames, 8)
 })
 
-test_that("gif encodes via gifski or av", {
+test_that("gif encodes via gifski", {
   page <- local_record_page()
-  testthat::skip_if(
-    !rlang::is_installed("gifski") && !rlang::is_installed("av"),
-    "neither gifski nor av is installed"
-  )
+  testthat::skip_if_not_installed("gifski")
 
   out <- withr::local_tempfile(fileext = ".gif")
   page |> pz_record(out, pz_wait(page, 0.4), fps = 10, hold = c(0.2, 0.2))
@@ -145,13 +142,121 @@ test_that("gif encodes via gifski or av", {
     expect_equal(info$codec, "gif")
     expect_gte(info$duration, 0.6)
     expect_lte(info$duration, 1.2)
-    expect_equal(info$width %% 2, 0)
-    expect_equal(info$height %% 2, 0)
-  } else {
-    dims <- gif_dimensions(out)
-    expect_equal(dims[1] %% 2, 0)
-    expect_equal(dims[2] %% 2, 0)
   }
+})
+
+test_that("framed GIFs give gifski losslessly cropped unique captures", {
+  testthat::skip_if_not_installed("gifski")
+  testthat::skip_if_not_installed("png")
+  page <- local_record_page()
+  pz_js(page, "document.body.style.background = '#fdfdf5';
+    document.getElementById('box').style.background = '#fdfdf5';
+    document.getElementById('box').textContent = 'Flat text';")
+  dpr <- pz_js(page, "window.devicePixelRatio")
+  out <- withr::local_tempfile(fileext = ".gif")
+  raw_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(raw_dir, recursive = TRUE))
+  captured <- NULL
+  local_mocked_bindings(gifski = function(png_files, gif_file, width, height, ...) {
+    raw <- unique(rec$files)
+    spec <- record_output_spec(rec, png_read_size(raw[[1]]))
+    crop <- spec$crop
+    expect_equal(crop$width, round(116 * dpr))
+    expect_equal(crop$height, round(76 * dpr))
+    expect_true(length(raw) >= 1L)
+    expect_true(length(png_files) > length(unique(png_files)))
+    expect_equal(length(list.files(dirname(png_files[[1]]), pattern = "[.]png$")),
+      length(raw))
+    expect_equal(basename(png_files), basename(record_resample(rec)$files))
+    expect_equal(c(width, height), c(spec$width, spec$height))
+    expect_false(any(png_files %in% raw))
+    expect_true(all(file.exists(png_files)))
+    for (i in seq_along(raw)) {
+      source <- png::readPNG(raw[[i]])
+      cropped <- png::readPNG(file.path(dirname(png_files[[1]]), basename(raw[[i]])))
+      expect_equal(dim(cropped)[1:2], c(crop$height, crop$width))
+      expect_equal(cropped, source[
+        seq.int(crop$y + 1L, length.out = crop$height),
+        seq.int(crop$x + 1L, length.out = crop$width),
+        , drop = FALSE
+      ])
+    }
+    captured <<- png_files
+  }, .package = "gifski")
+  page |> pz_record_start(out, fps = 10, scale = 0.5, hold = c(0.5, 0.5),
+    frame = pz_frame("#box", pad = 8), keep_frames = TRUE)
+  rec <- page_recorder(page)
+  pz_wait(page, 0.3)
+  page |> pz_record_stop()
+  expect_gt(length(captured), 0L)
+  expect_true(all(file.exists(rec$files)))
+  expect_false(any(file.exists(unique(captured))))
+})
+
+test_that("GIF frame crops preserve alpha and crop unique PNGs", {
+  testthat::skip_if_not_installed("gifski")
+  testthat::skip_if_not_installed("png")
+  source <- withr::local_tempfile(fileext = ".png")
+  image <- array(seq(0, 1, length.out = 5 * 5 * 4), c(5, 5, 4))
+  png::writePNG(image, source)
+  rec <- list(
+    format = "gif", path = withr::local_tempfile(fileext = ".gif"),
+    files = c(source, source), times = c(0, 0.1), vt_end = 0.1,
+    holds = list(), hold_first = 0.5, hold_last = 0,
+    fps = 10, scale = NULL,
+    crop = list(x = 1, y = 2, width = 3, height = 2, viewport_width = 5)
+  )
+  input <- png::readPNG(source)
+  cropped_path <- NULL
+  local_mocked_bindings(gifski = function(png_files, width, height, ...) {
+    expect_equal(c(width, height), c(3, 2))
+    expect_length(unique(png_files), 1L)
+    expect_equal(dim(png::readPNG(png_files[[1]])), c(2, 3, 4))
+    expect_equal(png::readPNG(png_files[[1]]), input[3:4, 2:4, , drop = FALSE])
+    cropped_path <<- png_files[[1]]
+  }, .package = "gifski")
+  record_encode(rec)
+  expect_false(file.exists(cropped_path))
+  expect_true(file.exists(source))
+})
+
+test_that("unframed GIFs of odd size go to gifski uncropped", {
+  testthat::skip_if_not_installed("gifski")
+  testthat::skip_if_not_installed("png")
+  source <- withr::local_tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(5, 7, 3)), source)
+  rec <- list(
+    format = "gif", path = withr::local_tempfile(fileext = ".gif"),
+    files = source, times = 0, vt_end = 0,
+    holds = list(), hold_first = 0.2, hold_last = 0,
+    fps = 10, crop = NULL, scale = NULL
+  )
+  local_mocked_bindings(gifski = function(png_files, width, height, ...) {
+    expect_equal(c(width, height), c(7, 5))
+    expect_true(all(png_files == source))
+  }, .package = "gifski")
+  record_encode(rec)
+})
+
+test_that("GIF dependencies are checked before recording", {
+  requested <- character()
+  present <- character()
+  local_mocked_bindings(check_installed = function(pkg, reason = NULL, ...) {
+    requested <<- c(requested, pkg)
+    if (!pkg %in% present) stop(paste("missing", pkg, reason))
+  }, .package = "rlang")
+  expect_error(record_check_packages("gif", FALSE), "missing gifski")
+  present <- "gifski"
+  expect_no_error(record_check_packages("gif", FALSE))
+  expect_equal(tail(requested, 1), "gifski")
+  expect_error(record_check_packages("gif", TRUE), "missing png")
+  present <- c("gifski", "png", "av")
+  requested <- character()
+  expect_no_error(record_check_packages("gif", TRUE))
+  expect_equal(requested, c("gifski", "png"))
+  requested <- character()
+  expect_no_error(record_check_packages("mp4", FALSE))
+  expect_equal(requested, "av")
 })
 
 test_that("an immediate stop still writes a one-frame video", {

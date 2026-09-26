@@ -337,8 +337,8 @@ Timer and event loop:
 Encoding:
 
 - Format from the extension: `.mp4` (h264, yuv420p, dimensions rounded to multiples of 4), `.webm`, `.gif`.
-- `av` is the encoder; `gifski` is an optional higher-quality path for `.gif`. Both are in Suggests. `pz_record_start()` checks up front that the packages needed for the requested format are installed.
-- `av` encodes at a constant frame rate, so frames are resampled to `fps` in R (latest frame at each output tick). This removes the blog's frame-duration off-by-one.
+- `av` encodes `.mp4` and `.webm`; every `.gif` uses `gifski`. Framed GIFs additionally use `png` to crop captured PNGs before gifski encodes them. All three packages are in Suggests; `pz_record_start()` checks up front that the packages needed for the requested format are installed.
+- Frames are resampled to `fps` in R (latest frame at each output tick). This removes the blog's frame-duration off-by-one.
 
 ### Framing
 
