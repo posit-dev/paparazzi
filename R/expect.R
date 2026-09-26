@@ -1009,39 +1009,31 @@ expect_bridge <- function(ok, msg) {
 }
 
 # Read observed values off a resolved element array with one
-# callFunctionOn. The handle is released by the caller right after;
-# timeouts surface as paparazzi_error_timeout, like loc_resolve_once().
-# Returns the raw per-element result list: NULLs (JS null or undefined)
-# survive, so nullable reads can map them in R.
-els_values <- function(els, js, call = caller_env()) {
+# callFunctionOn. `args` supplies optional CDP callArguments; the caller
+# releases the handle right after. Returns the raw per-element result
+# list: NULLs (JS null or undefined) survive for nullable reads.
+els_values <- function(
+  els,
+  js,
+  args = NULL,
+  doing = "reading",
+  call = caller_env()
+) {
   timeout <- els$page$default_timeout
-  res <- tryCatch(
+  doing <- paste(doing, "elements matching", els$description)
+  res <- cdp_call(
     els$page$session$Runtime$callFunctionOn(
       js,
       objectId = els$object_id,
+      arguments = args,
       returnByValue = TRUE,
       timeout_ = timeout
     ),
-    error = function(e) {
-      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        cli::cli_abort(
-          "Timed out after {timeout}s reading elements matching {els$description}.",
-          class = "paparazzi_error_timeout",
-          call = call,
-          parent = e
-        )
-      }
-      stop(e)
-    }
+    timeout,
+    doing,
+    call = call
   )
-  err <- res$exceptionDetails
-  if (!is.null(err)) {
-    cli::cli_abort(
-      "JavaScript error reading elements matching {els$description}: {err$exception$description %||% err$text %||% 'unknown error'}.",
-      class = "paparazzi_error_js",
-      call = call
-    )
-  }
+  cdp_check_exception(res, doing, call = call)
   res$result$value
 }
 

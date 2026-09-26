@@ -334,10 +334,11 @@ scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
       if (is.null(aim)) {
         els_values(scoped, wheel_container_js, call = call)
       } else {
-        els_arg_values(
+        els_values(
           scoped,
           wheel_container_js,
-          list(list(value = c(aim[[1]], aim[[2]]))),
+          args = list(list(value = c(aim[[1]], aim[[2]]))),
+          doing = "working with",
           call = call
         )
       }
@@ -369,10 +370,11 @@ scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
       } else {
         list(to = as.list(to))
       }
-      els_arg_values(
+      els_values(
         scoped,
         scroll_apply_js,
-        list(list(value = arg_list)),
+        args = list(list(value = arg_list)),
+        doing = "working with",
         call = call
       )
     } else {

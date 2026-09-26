@@ -153,7 +153,7 @@ clip_rects_union <- function(ctx, rects, call = caller_env()) {
 # same reason).
 screenshot_capture <- function(ctx, clip, call = caller_env()) {
   timeout <- ctx$page$default_timeout
-  tryCatch(
+  cdp_call(
     ctx$page$session$Page$captureScreenshot(
       format = "png",
       clip = list(
@@ -167,18 +167,8 @@ screenshot_capture <- function(ctx, clip, call = caller_env()) {
       captureBeyondViewport = TRUE,
       timeout_ = timeout
     ),
-    error = function(e) {
-      # A chromote command timeout is a timeout of the capture, not a raw
-      # chromote error.
-      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        cli::cli_abort(
-          "Timed out after {timeout}s capturing the screenshot.",
-          class = "paparazzi_error_timeout",
-          call = call,
-          parent = e
-        )
-      }
-      stop(e)
-    }
+    timeout,
+    "capturing the screenshot",
+    call = call
   )
 }

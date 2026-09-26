@@ -364,33 +364,18 @@ style_abort_invalid <- function(accepted, pairs, call = caller_env()) {
 # holds regardless of attachment, so nothing needs to touch the DOM.
 style_check_invalid <- function(page, pairs, call = caller_env()) {
   timeout <- page$default_timeout
-  res <- tryCatch(
+  res <- cdp_call(
     page$session$Runtime$evaluate(
       paste0("(", style_invalid_js(pairs), ")()"),
       awaitPromise = FALSE,
       returnByValue = TRUE,
       timeout_ = timeout
     ),
-    error = function(e) {
-      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        cli::cli_abort(
-          "Timed out after {timeout}s validating CSS.",
-          class = "paparazzi_error_timeout",
-          call = call,
-          parent = e
-        )
-      }
-      stop(e)
-    }
+    timeout,
+    "validating CSS",
+    call
   )
-  err <- res$exceptionDetails
-  if (!is.null(err)) {
-    cli::cli_abort(
-      "JavaScript error validating CSS: {err$exception$description %||% err$text %||% 'unknown error'}.",
-      class = "paparazzi_error_js",
-      call = call
-    )
-  }
+  cdp_check_exception(res, "validating CSS", call)
   vapply(res$result$value, isTRUE, logical(1))
 }
 

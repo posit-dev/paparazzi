@@ -60,3 +60,42 @@ resolve_timeout <- function(
   check_number_decimal(timeout, min = 0, arg = arg, call = call)
   timeout
 }
+
+# Force a lazy chromote command, re-raising a chromote timeout as
+# paparazzi_error_timeout that names what was being done. `cmd` must stay
+# a promise so the command itself runs under the tryCatch.
+cdp_call <- function(cmd, timeout, doing, call = caller_env()) {
+  tryCatch(
+    cmd,
+    error = function(e) {
+      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
+        cli::cli_abort(
+          "Timed out after {timeout}s {doing}.",
+          class = "paparazzi_error_timeout",
+          call = call,
+          parent = e
+        )
+      }
+      stop(e)
+    }
+  )
+}
+
+# A Runtime command succeeds even when the expression throws; the
+# exception arrives in the response instead.
+cdp_check_exception <- function(res, doing = NULL, call = caller_env()) {
+  err <- res$exceptionDetails
+  if (is.null(err)) {
+    return(invisible(res))
+  }
+  detail <- err$exception$description %||% err$text %||% "unknown error"
+  cli::cli_abort(
+    if (is.null(doing)) {
+      "JavaScript error: {detail}."
+    } else {
+      "JavaScript error {doing}: {detail}."
+    },
+    class = "paparazzi_error_js",
+    call = call
+  )
+}
