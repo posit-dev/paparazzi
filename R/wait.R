@@ -396,27 +396,28 @@ nav_snapshot <- function(ctx, timeout) {
     list(complete = isTRUE(state[[1]]), origin = state[[2]])
   }
 }
-# Phase two of pz_wait_for_navigation(): the page's load state -- the
-# readyState and the document's timeOrigin -- must be complete AND
-# unchanged for `settle` seconds. Any change restarts the window, so a
-# document swap mid-window (the commit the action triggered) is caught
-# and its load is waited out before passing. Completing the window is
-# not enough on its own: the pass needs positive evidence a navigation
-# occurred: a changed wait-start timeOrigin, a wait-start snapshot that
-# caught the document incomplete, or a loaderId different from the last
-# action's main-frame loaderId. A settled page with no such evidence times out.
+# Phase two of pz_wait_for_navigation(): the page's main-frame loaderId,
+# readyState, and timeOrigin must be complete and unchanged for `settle`
+# seconds. A loader change restarts the window even when the old document
+# was complete. Completing the window is not enough on its own: the pass
+# needs positive evidence a navigation occurred -- a changed wait-start
+# timeOrigin, an incomplete wait-start snapshot, or a loaderId different
+# from the last action's main-frame loaderId.
 nav_settle <- function(
   ctx, settle, timeout, snapshot, action_loader = NULL, call = caller_env()
 ) {
   read <- function() {
     tryCatch(
-      pz_js(
-        ctx,
-        "JSON.stringify([document.readyState === 'complete', performance.timeOrigin])",
-        timeout = timeout
+      list(
+        loader = ctx$page$session$Page$getFrameTree(timeout_ = timeout)$frameTree$frame$loaderId,
+        js = pz_js(
+          ctx,
+          "JSON.stringify([document.readyState === 'complete', performance.timeOrigin])",
+          timeout = timeout
+        )
       ),
-      # Mid-navigation evaluations can fail while the renderer swaps
-      # documents; that's a changing state, not an error.
+      # Mid-navigation reads can fail while the renderer swaps documents;
+      # that's a changing state, not an error.
       error = function(e) NULL
     )
   }
@@ -435,17 +436,11 @@ nav_settle <- function(
       }
       # simplifyVector = FALSE keeps the boolean a boolean: the mixed
       # [boolean, number] JSON would coerce TRUE to 1 otherwise.
-      state <- jsonlite::fromJSON(s, simplifyVector = FALSE)
-      nav <- !identical(state[[2]], snapshot$origin) || !isTRUE(snapshot$complete)
-      settled <- isTRUE(state[[1]]) &&
+      state <- jsonlite::fromJSON(s$js, simplifyVector = FALSE)
+      nav <- !identical(state[[2]], snapshot$origin) || !isTRUE(snapshot$complete) ||
+        (!is.null(action_loader) && !identical(s$loader, action_loader))
+      isTRUE(state[[1]]) && nav &&
         as.numeric(difftime(now, stable_since, units = "secs")) >= settle
-      if (settled && !nav && !is.null(action_loader)) {
-        nav <- !identical(
-          ctx$page$session$Page$getFrameTree()$frameTree$frame$loaderId,
-          action_loader
-        )
-      }
-      settled && nav
     },
     timeout = timeout,
     loop = ctx$page$child_loop,
