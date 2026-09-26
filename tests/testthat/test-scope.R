@@ -1,15 +1,3 @@
-# Read the textContent of every element in a pinned or resolved set, so
-# tests can assert *which* elements a scope holds.
-scope_texts <- function(els) {
-  unlist(
-    els$page$session$Runtime$callFunctionOn(
-      "function() { return this.map((el) => el.textContent.trim()); }",
-      objectId = els$object_id,
-      returnByValue = TRUE
-    )$result$value
-  )
-}
-
 # The id of every element in a set: a stable, whitespace-free way to
 # assert *which* elements a scope holds.
 scope_ids <- function(els) {
@@ -83,7 +71,7 @@ test_that("pz_find resolves inside the current scope", {
   # that match document-wide.
   scoped <- pz_find(ctx, ".btn")
   expect_identical(scoped$scope[[2]]$count, 2L)
-  expect_setequal(scope_texts(scoped$scope[[2]]), c("Delete", "Save"))
+  expect_setequal(elements_text(scoped$scope[[2]]), c("Delete", "Save"))
 })
 
 test_that("from_root resolves the target from the document, still on the stack", {
@@ -102,8 +90,8 @@ test_that("pz_find_first/last/nth with a target pin the picked match", {
   nth <- pz_find_nth(page, 3, target = ".btn")
 
   expect_identical(first$scope[[1]]$count, 1L)
-  expect_identical(scope_texts(first$scope[[1]]), "Save")
-  expect_identical(scope_texts(nth$scope[[1]]), "Save   now")
+  expect_identical(elements_text(first$scope[[1]]), "Save")
+  expect_identical(elements_text(nth$scope[[1]]), "Save   now")
   # An out-of-range which on a target keeps auto-waiting: no match.
   expect_error(
     pz_find_nth(page, 99, target = ".btn"),
@@ -133,8 +121,8 @@ test_that("narrowing slices the current scope eagerly", {
 
   # Narrowing stacks: first of the nth is the same element.
   expect_identical(
-    scope_texts(pz_find_first(nth)$scope[[3]]),
-    scope_texts(nth$scope[[2]])
+    elements_text(pz_find_first(nth)$scope[[3]]),
+    elements_text(nth$scope[[2]])
   )
 })
 
@@ -333,11 +321,11 @@ test_that("numeric narrowing slices the pinned position", {
 
   # switch() on a numeric which would pick by position: 2 -> "last",
   # > 3 -> no function at all. Every position must slice its own match.
-  expect_identical(scope_texts(pz_find_first(ctx)$scope[[2]]), "A1")
-  expect_identical(scope_texts(pz_find_nth(ctx, 2)$scope[[2]]), "A2")
-  expect_identical(scope_texts(pz_find_nth(ctx, 4)$scope[[2]]), "nested-a")
-  expect_identical(scope_texts(pz_find_nth(ctx, 6)$scope[[2]]), "get_weather")
-  expect_identical(scope_texts(pz_find_last(ctx)$scope[[2]]), "get_weather")
+  expect_identical(elements_text(pz_find_first(ctx)$scope[[2]]), "A1")
+  expect_identical(elements_text(pz_find_nth(ctx, 2)$scope[[2]]), "A2")
+  expect_identical(elements_text(pz_find_nth(ctx, 4)$scope[[2]]), "nested-a")
+  expect_identical(elements_text(pz_find_nth(ctx, 6)$scope[[2]]), "get_weather")
+  expect_identical(elements_text(pz_find_last(ctx)$scope[[2]]), "get_weather")
 })
 
 test_that("narrowing keeps a loc's original which", {
@@ -364,5 +352,5 @@ test_that("narrowing keeps a loc's original which", {
     narrowed$scope[[2]]$description,
     "`#scope-a .sc-item` (which: 2)"
   )
-  expect_identical(scope_texts(narrowed$scope[[2]]), "A2")
+  expect_identical(elements_text(narrowed$scope[[2]]), "A2")
 })

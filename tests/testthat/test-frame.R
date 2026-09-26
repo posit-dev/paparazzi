@@ -240,7 +240,7 @@ test_that("frame_round rounds constrained edges inward", {
 test_that("a pad-only frame pads the capture on all sides", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #card (100, 80, 120x90) + 32 on each side: (68, 48) 184x154.
   pz_screenshot(page, path, target = "#card", frame = pz_frame(pad = 32))
@@ -248,14 +248,14 @@ test_that("a pad-only frame pads the capture on all sides", {
   # The card sits 32px inside the capture: red at (40, 40); the point
   # left of it (page 78, 148) is padding background -- clear of
   # #corner, which overlaps the padded region.
-  expect_frame_pixel(page, path, 40, 40, dpr, c(200, 30, 30))
-  expect_frame_pixel(page, path, 10, 100, dpr, c(255, 255, 255))
+  expect_png_pixel(page, path, 40, 40, c(200, 30, 30), dpr = dpr)
+  expect_png_pixel(page, path, 10, 100, c(255, 255, 255), dpr = dpr)
 })
 
 test_that("pad accepts c(top, right, bottom, left)", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #card + 10/20/30/40: (60, 70) 180x130.
   pz_screenshot(
@@ -270,7 +270,7 @@ test_that("pad accepts c(top, right, bottom, left)", {
 test_that("offset nudges the capture after padding", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #card + pad 10 = (90, 70) 140x110; offset (5, -8) moves it to
   # (95, 62), so the card starts at (5, 18) inside the capture.
@@ -281,14 +281,14 @@ test_that("offset nudges the capture after padding", {
     frame = pz_frame(pad = 10, offset = c(5, -8))
   )
   expect_identical(png_dimensions(path), as.integer(round(c(140, 110) * dpr)))
-  expect_frame_pixel(page, path, 20, 30, dpr, c(200, 30, 30))
-  expect_frame_pixel(page, path, 2, 5, dpr, c(255, 255, 255))
+  expect_png_pixel(page, path, 20, 30, c(200, 30, 30), dpr = dpr)
+  expect_png_pixel(page, path, 2, 5, c(255, 255, 255), dpr = dpr)
 })
 
 test_that("ratio grows the shorter side, placing content by anchor", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #small is 60x45 (4:3); 16/9 grows the width to 80. With
   # anchor = "left" the content pins to the left edge of the frame.
@@ -299,8 +299,8 @@ test_that("ratio grows the shorter side, placing content by anchor", {
     frame = pz_frame(ratio = 16 / 9, anchor = "left")
   )
   expect_identical(png_dimensions(path), as.integer(round(c(80, 45) * dpr)))
-  expect_frame_pixel(page, path, 30, 22, dpr, c(30, 120, 200))
-  expect_frame_pixel(page, path, 70, 22, dpr, c(255, 255, 255))
+  expect_png_pixel(page, path, 30, 22, c(30, 120, 200), dpr = dpr)
+  expect_png_pixel(page, path, 70, 22, c(255, 255, 255), dpr = dpr)
 
   # anchor = "top right": the vertical token is unused while growing
   # width; "right" pins the content to the right edge.
@@ -311,8 +311,8 @@ test_that("ratio grows the shorter side, placing content by anchor", {
     frame = pz_frame(ratio = 16 / 9, anchor = "top right")
   )
   expect_identical(png_dimensions(path), as.integer(round(c(80, 45) * dpr)))
-  expect_frame_pixel(page, path, 50, 22, dpr, c(30, 120, 200))
-  expect_frame_pixel(page, path, 10, 22, dpr, c(255, 255, 255))
+  expect_png_pixel(page, path, 50, 22, c(30, 120, 200), dpr = dpr)
+  expect_png_pixel(page, path, 10, 22, c(255, 255, 255), dpr = dpr)
 
   # Growing the height instead: #wide is 120x60 (2:1); ratio 1 grows
   # the height to 120, content at the bottom.
@@ -323,14 +323,14 @@ test_that("ratio grows the shorter side, placing content by anchor", {
     frame = pz_frame(ratio = 1, anchor = "bottom")
   )
   expect_identical(png_dimensions(path), as.integer(round(c(120, 120) * dpr)))
-  expect_frame_pixel(page, path, 60, 100, dpr, c(30, 200, 120))
-  expect_frame_pixel(page, path, 60, 20, dpr, c(255, 255, 255))
+  expect_png_pixel(page, path, 60, 100, c(30, 200, 120), dpr = dpr)
+  expect_png_pixel(page, path, 60, 20, c(255, 255, 255), dpr = dpr)
 })
 
 test_that("ratio + pad compose in order, and anchor spellings are equivalent", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #small + pad 24 = (376, 36) 108x93; ratio 16/9 grows the width to
   # 165.33, centered horizontally: (347.33, 36) -- whole-pixel rounding
@@ -339,8 +339,8 @@ test_that("ratio + pad compose in order, and anchor spellings are equivalent", {
   spec_a <- pz_frame(ratio = 16 / 9, pad = 24, anchor = "top")
   pz_screenshot(page, path, target = "#small", frame = spec_a)
   expect_identical(png_dimensions(path), as.integer(round(c(166, 93) * dpr)))
-  expect_frame_pixel(page, path, 80, 46, dpr, c(30, 120, 200))
-  expect_frame_pixel(page, path, 10, 46, dpr, c(255, 255, 255))
+  expect_png_pixel(page, path, 80, 46, c(30, 120, 200), dpr = dpr)
+  expect_png_pixel(page, path, 10, 46, c(255, 255, 255), dpr = dpr)
 
   # Spellings of the same anchor build identical specs.
   expect_identical(
@@ -352,7 +352,7 @@ test_that("ratio + pad compose in order, and anchor spellings are equivalent", {
 test_that("bounds clamp the frame to their box", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #inner-tr + 32 = (488, 188) 104x92; #bound starts at y = 200, so
   # the top pad is cut: (488, 200) 104x92.
@@ -364,15 +364,15 @@ test_that("bounds clamp the frame to their box", {
   )
   expect_identical(png_dimensions(path), as.integer(round(c(104, 92) * dpr)))
   # #inner-tr starts at (32, 20) inside the clamped capture.
-  expect_frame_pixel(page, path, 40, 40, dpr, c(200, 200, 30))
+  expect_png_pixel(page, path, 40, 40, c(200, 200, 30), dpr = dpr)
   # Below the cut pad: #bound's background, not the page background.
-  expect_frame_pixel(page, path, 100, 5, dpr, c(240, 240, 240))
+  expect_png_pixel(page, path, 100, 5, c(240, 240, 240), dpr = dpr)
 })
 
 test_that("a fractional bound rounds the clip inward on every edge", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #fractional begins at (620.4, 262.6); with pad 120 around #wide,
   # the bound clamps all four edges of the frame, and inward rounding
@@ -384,27 +384,27 @@ test_that("a fractional bound rounds the clip inward on every edge", {
     frame = pz_frame(pad = 120, bounds = "#fractional")
   )
   expect_identical(png_dimensions(path), as.integer(round(c(199, 88) * dpr)))
-  expect_frame_pixel(page, path, 0, 0, dpr, c(60, 60, 60))
-  expect_frame_pixel(page, path, 198, 87, dpr, c(60, 60, 60))
+  expect_png_pixel(page, path, 0, 0, c(60, 60, 60), dpr = dpr)
+  expect_png_pixel(page, path, 198, 87, c(60, 60, 60), dpr = dpr)
 })
 
 test_that("the frame clamps to the page at the top-left corner", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #corner + 32 = (-22, -22) 142x92; the page starts at (0, 0), so
   # the frame clamps to (0, 0) 142x92.
   pz_screenshot(page, path, target = "#corner", frame = pz_frame(pad = 32))
   expect_identical(png_dimensions(path), as.integer(round(c(142, 92) * dpr)))
-  expect_frame_pixel(page, path, 30, 30, dpr, c(120, 30, 200))
-  expect_frame_pixel(page, path, 5, 5, dpr, c(255, 255, 255))
+  expect_png_pixel(page, path, 30, 30, c(120, 30, 200), dpr = dpr)
+  expect_png_pixel(page, path, 5, 5, c(255, 255, 255), dpr = dpr)
 })
 
 test_that("the frame clamps to the page at the bottom edge", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #deep (100, 1940, 40x40) + 32 reaches y = 2012, past the
   # 2000px-tall page: the frame clamps to (68, 1908) 104x92.
@@ -415,20 +415,20 @@ test_that("the frame clamps to the page at the bottom edge", {
 test_that("a below-fold frame captures without scrolling", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #low sits at y = 1500, far below the viewport; the framed capture
   # still must not scroll the page as a side effect.
   pz_screenshot(page, path, target = "#low", frame = pz_frame(pad = 20))
   expect_identical(png_dimensions(path), as.integer(round(c(140, 100) * dpr)))
-  expect_frame_pixel(page, path, 70, 50, dpr, c(200, 120, 30))
+  expect_png_pixel(page, path, 70, 50, c(200, 120, 30), dpr = dpr)
   expect_equal(pz_js(page, "window.scrollY"), 0)
 })
 
 test_that("the frame clamps against geometry read after resolution auto-waits", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # A late element expands the document while the target resolution
   # auto-waits for it; the clamp must see the expanded document, not
@@ -457,7 +457,7 @@ test_that("the frame clamps against geometry read after resolution auto-waits", 
 test_that("a frame's own target replaces the call's target", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # The screenshot's target is ignored when the frame names its own.
   pz_screenshot(
@@ -467,13 +467,13 @@ test_that("a frame's own target replaces the call's target", {
     frame = pz_frame("#card", pad = 32)
   )
   expect_identical(png_dimensions(path), as.integer(round(c(184, 154) * dpr)))
-  expect_frame_pixel(page, path, 40, 40, dpr, c(200, 30, 30))
+  expect_png_pixel(page, path, 40, 40, c(200, 30, 30), dpr = dpr)
 })
 
 test_that("a frame unions a multi-element target", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #card (100, 80, 120x90) + #small (400, 60, 60x45): the union is
   # (100, 60) 360x110, and the frame pads it.
@@ -490,7 +490,7 @@ test_that("an identity frame at the root captures the viewport", {
   page <- local_frame_page()
   plain <- withr::local_tempfile(fileext = ".png")
   framed <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   pz_screenshot(page, plain)
   pz_screenshot(page, framed, frame = pz_frame())
@@ -520,7 +520,7 @@ test_that("an identity frame keeps the viewport on negative RTL scroll", {
 test_that("a frame on RTL left-overflow content captures it", {
   page <- local_rtl_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # #mark sits in the left overflow, at negative document x
   # (around [-1208, -1108] for a 992px viewport): clamping to
@@ -540,7 +540,7 @@ test_that("a frame on RTL left-overflow content captures it", {
 test_that("a frame on a scoped context uses the scope's box", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # The scope pins #card; with no frame target, the frame pads the
   # scope's box: (90, 70) 140x110.
@@ -552,7 +552,7 @@ test_that("a frame on a scoped context uses the scope's box", {
 test_that("pz_stage_frame sets the page's default framing", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   # A target-less default frames each call's own target.
   page |> pz_stage_frame(pad = 32) |> pz_screenshot(path, target = "#card")
@@ -572,7 +572,7 @@ test_that("pz_stage_frame sets the page's default framing", {
 test_that("an explicit frame replaces the default entirely", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   pz_stage_frame(page, pad = 32)
   # No field merging: pad = 8 replaces pad = 32, giving 136x106.
@@ -586,7 +586,7 @@ test_that("an explicit frame replaces the default entirely", {
 test_that("frame = FALSE opts out of the default for one call", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   pz_stage_frame(page, pad = 32)
   pz_screenshot(page, path, target = "#card", frame = FALSE)
@@ -596,7 +596,7 @@ test_that("frame = FALSE opts out of the default for one call", {
 test_that("pz_stage_frame(NULL) clears the default", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(page)
+  dpr <- page_dpr(page)
 
   pz_stage_frame(page, pad = 32)
   pz_stage_frame(page, NULL)
@@ -608,7 +608,7 @@ test_that("a staged frame does not leak to other pages", {
   page <- local_frame_page()
   other <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
-  dpr <- frame_dpr(other)
+  dpr <- page_dpr(other)
 
   pz_stage_frame(page, pad = 32)
   pz_screenshot(other, path, target = "#card")
