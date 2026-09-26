@@ -20,4 +20,7 @@ Add an isolated scroll-list fixture under `tests/testthat/fixtures/`: an input a
 
 ## Handoff
 
-Pending implementation and verification.
+- Landed: signed-off mechanism note `805418f`; red-first overflow-list fixture and regression `18fdcbc`; final destination center receiver check, HTML5/plain-source assertions and regenerated `pz_drag` Rd `08b7d6f`. `btw pkg document` ran; unrelated generated `man/paparazzi-package.Rd` link drift was reverted. No autoscroll.
+- Verification: baseline locked `actions` `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 256 ]`; red-first locked `actions` `[ FAIL 3 | WARN 0 | SKIP 0 | PASS 256 ]` (expected missing error, cascading NULL assertions before the second variant); final locked `actions` `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 270 ]`; locked `cursor|stage|example` `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 262 ]` (before final two test assertions, which only affect `actions`). No full-suite run.
+- Finding for orchestrator: cursor detour is real in recording with visible cursor. `pz_drag()` calls `el_pointer_point(ctx, dest)` before `el_pointer_point(ctx, source)`; each ends with `stage_move_cursor()`, which invokes `cursor_show_at()` while recording (`R/stage.R`). The cursor can visibly travel to the destination before returning to the source. Not changed here.
+- Examples: `inst/examples/tasks.html` has the same short scrollable task list, but no `pz_drag()` invocation or workaround. The only example drag (`R/actions.R` roxygen, generated Rd) moves the fourth task onto the first and does not scroll the first out. No `pz_drag()` calls/workarounds in `README.Rmd`, `vignettes/`, or other `inst/` files. Nothing to remove. Next: orchestrator review and merge gate; issue remains open.
