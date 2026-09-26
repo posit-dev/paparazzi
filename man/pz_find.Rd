@@ -22,7 +22,7 @@ the current scope? The new scope is still pushed on top of the
 stack, so \code{\link[=pz_find_pop]{pz_find_pop()}} returns to the previous scope.}
 }
 \value{
-A new context, invisibly.
+A new context.
 }
 \description{
 \code{\link[=pz_find]{pz_find()}} resolves \code{target} (auto-waiting for at least one match),

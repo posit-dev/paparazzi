@@ -10,7 +10,7 @@ pz_find_pop(ctx)
 \item{ctx}{A paparazzi context.}
 }
 \value{
-A new context, invisibly.
+The context.
 }
 \description{
 \code{pz_find_pop()} returns a context one scope level up the stack. The

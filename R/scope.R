@@ -34,7 +34,7 @@
 #'   the current scope? The new scope is still pushed on top of the
 #'   stack, so [pz_find_pop()] returns to the previous scope.
 #'
-#' @return A new context, invisibly.
+#' @return A new context.
 #'
 #' @seealso [pz_find_first()], [pz_find_pop()], [pz_find_reset()]
 #'
@@ -73,7 +73,7 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
       class = "paparazzi_error_target"
     )
   }
-  invisible(find_push(ctx, as_loc_list(target), from_root))
+  find_push(ctx, as_loc_list(target), from_root)
 }
 #' Find the first match and push it as the current scope
 #'
@@ -89,7 +89,7 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
 #' @param from_root Resolve the target from the page root instead of
 #'   the current scope? Requires a `target`.
 #'
-#' @return A new context, invisibly.
+#' @return A new context.
 #'
 #' @seealso [pz_find()], [pz_find_last()], [pz_find_nth()]
 #'
@@ -111,7 +111,7 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
   check_dots_empty()
   check_bool(from_root)
-  invisible(find_which(ctx, target, "first", from_root))
+  find_which(ctx, target, "first", from_root)
 }
 #' Find the last match and push it as the current scope
 #'
@@ -122,7 +122,7 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #'
 #' @inheritParams pz_find_first
 #'
-#' @return A new context, invisibly.
+#' @return A new context.
 #'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_nth()]
 #'
@@ -138,7 +138,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
   check_dots_empty()
   check_bool(from_root)
-  invisible(find_which(ctx, target, "last", from_root))
+  find_which(ctx, target, "last", from_root)
 }
 #' Find the nth match and push it as the current scope
 #'
@@ -154,7 +154,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #' @param n The match to pick, 1-based (`"first"`/`"last"` are the
 #'   [pz_find_first()]/[pz_find_last()] wrappers, not values here).
 #'
-#' @return A new context, invisibly.
+#' @return A new context.
 #'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_last()]
 #'
@@ -174,7 +174,7 @@ pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
   check_dots_empty()
   n <- check_which(n, strings = FALSE)
   check_bool(from_root)
-  invisible(find_which(ctx, target, n, from_root))
+  find_which(ctx, target, n, from_root)
 }
 #' Pop the current scope
 #'
@@ -185,7 +185,7 @@ pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
 #'
 #' @inheritParams pz_click
 #'
-#' @return A new context, invisibly.
+#' @return The context.
 #'
 #' @seealso [pz_find()], [pz_find_reset()]
 #'
@@ -204,9 +204,9 @@ pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
 pz_find_pop <- function(ctx) {
   check_context(ctx)
   if (length(ctx$scope) == 0) {
-    return(invisible(ctx))
+    return(ctx)
   }
-  invisible(PaparazziContext$new(ctx$page, scope = utils::head(ctx$scope, -1)))
+  PaparazziContext$new(ctx$page, scope = utils::head(ctx$scope, -1))
 }
 #' Clear all scope, back to the root
 #'
@@ -217,7 +217,7 @@ pz_find_pop <- function(ctx) {
 #'
 #' @inheritParams pz_click
 #'
-#' @return A new context, invisibly.
+#' @return The context.
 #'
 #' @seealso [pz_find()], [pz_find_pop()]
 #'
@@ -237,9 +237,9 @@ pz_find_pop <- function(ctx) {
 pz_find_reset <- function(ctx) {
   check_context(ctx)
   if (length(ctx$scope) == 0) {
-    return(invisible(ctx))
+    return(ctx)
   }
-  invisible(PaparazziContext$new(ctx$page, scope = list()))
+  PaparazziContext$new(ctx$page, scope = list())
 }
 # The pinned set at the top of the scope stack, or NULL at the root:
 # the raw stack read, without the detach check scope_root() adds. For
