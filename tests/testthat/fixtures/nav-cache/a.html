@@ -1,0 +1,11 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Cache A</title></head>
+<body>
+<div id="page">A</div>
+<button id="next" onclick="location.href = 'b.html'">Next</button>
+<script>
+window.identity = Math.random();
+window.shows = [];
+addEventListener('pageshow', event => shows.push(event.persisted));
+</script>
+</body></html>

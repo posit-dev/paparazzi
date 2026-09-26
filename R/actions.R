@@ -343,7 +343,10 @@ pz_blur <- function(ctx, ...) {
 # must NOT be released by the caller.
 # Record before resolution or dispatch: either can trigger navigation.
 action_start <- function(ctx) {
-  ctx$page$.__enclos_env__$private$last_action_start_ <- as.numeric(Sys.time()) * 1000
+  ctx$page$.__enclos_env__$private$last_action_loader_ <-
+    ctx$page$session$Page$getFrameTree(
+      timeout_ = ctx$page$default_timeout
+    )$frameTree$frame$loaderId
 }
 
 action_elements <- function(ctx, target, call = caller_env()) {

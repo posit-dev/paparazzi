@@ -296,7 +296,8 @@ pz_wait_for_stable <- function(
 #' loading and then hold still for a moment. Three cases pass:
 #'
 #' * the navigation finished before the wait started: the current document
-#'   was created after the preceding action began;
+#'   differs from the document where the preceding action began (including
+#'   a page restored from the back/forward cache);
 #' * the navigation is in flight when the wait starts, and is waited out;
 #' * the navigation begins while the wait is running. One scheduled beyond
 #'   the timeout can't be caught -- block on its trigger with
@@ -304,9 +305,7 @@ pz_wait_for_stable <- function(
 #'
 #' A page where nothing navigates times out with a classed error rather
 #' than passing, and so does a second wait after the same action: a
-#' successful wait uses up the action's navigation. Comparing the
-#' document's creation time with the action's start assumes R and the
-#' browser run on the same machine, as they do with a local Chrome.
+#' successful wait uses up the action's navigation.
 #'
 #' On success the wait resets the scope to the root and releases every
 #' pinned scope object: contexts scoped before the navigation error on
@@ -355,7 +354,7 @@ pz_wait_for_navigation <- function(
   # precedes them both: a complete, settled page satisfies the settle
   # check with nothing navigating, so the wait holds the identity of the
   # document it started on and passes only on a different document (a
-  # new timeOrigin), a document created after the last action began, or
+  # new timeOrigin), a different loaderId from the last action, or
   # one it caught incomplete (the in-flight navigation it waits out).
   snapshot <- nav_snapshot(ctx, timeout)
   wait_for_load(ctx$page, timeout = timeout)
@@ -364,7 +363,7 @@ pz_wait_for_navigation <- function(
     settle = nav_settle_secs,
     timeout = timeout,
     snapshot = snapshot,
-    action_start = ctx$page$.__enclos_env__$private$last_action_start_
+    action_loader = ctx$page$.__enclos_env__$private$last_action_loader_
   )
   root <- wait_nav_reset(ctx)
   device_css_reapply(ctx$page)
@@ -397,27 +396,28 @@ nav_snapshot <- function(ctx, timeout) {
     list(complete = isTRUE(state[[1]]), origin = state[[2]])
   }
 }
-# Phase two of pz_wait_for_navigation(): the page's load state -- the
-# readyState and the document's timeOrigin -- must be complete AND
-# unchanged for `settle` seconds. Any change restarts the window, so a
-# document swap mid-window (the commit the action triggered) is caught
-# and its load is waited out before passing. Completing the window is
-# not enough on its own: the pass needs positive evidence a navigation
-# occurred: a changed wait-start timeOrigin, a wait-start snapshot that
-# caught the document incomplete, or a document newer than the last
-# action's start. A settled page with no such evidence times out.
+# Phase two of pz_wait_for_navigation(): the page's main-frame loaderId,
+# readyState, and timeOrigin must be complete and unchanged for `settle`
+# seconds. A loader change restarts the window even when the old document
+# was complete. Completing the window is not enough on its own: the pass
+# needs positive evidence a navigation occurred -- a changed wait-start
+# timeOrigin, an incomplete wait-start snapshot, or a loaderId different
+# from the last action's main-frame loaderId.
 nav_settle <- function(
-  ctx, settle, timeout, snapshot, action_start = NULL, call = caller_env()
+  ctx, settle, timeout, snapshot, action_loader = NULL, call = caller_env()
 ) {
   read <- function() {
     tryCatch(
-      pz_js(
-        ctx,
-        "JSON.stringify([document.readyState === 'complete', performance.timeOrigin])",
-        timeout = timeout
+      list(
+        loader = ctx$page$session$Page$getFrameTree(timeout_ = timeout)$frameTree$frame$loaderId,
+        js = pz_js(
+          ctx,
+          "JSON.stringify([document.readyState === 'complete', performance.timeOrigin])",
+          timeout = timeout
+        )
       ),
-      # Mid-navigation evaluations can fail while the renderer swaps
-      # documents; that's a changing state, not an error.
+      # Mid-navigation reads can fail while the renderer swaps documents;
+      # that's a changing state, not an error.
       error = function(e) NULL
     )
   }
@@ -436,9 +436,9 @@ nav_settle <- function(
       }
       # simplifyVector = FALSE keeps the boolean a boolean: the mixed
       # [boolean, number] JSON would coerce TRUE to 1 otherwise.
-      state <- jsonlite::fromJSON(s, simplifyVector = FALSE)
+      state <- jsonlite::fromJSON(s$js, simplifyVector = FALSE)
       nav <- !identical(state[[2]], snapshot$origin) || !isTRUE(snapshot$complete) ||
-        (!is.null(action_start) && state[[2]] > action_start)
+        (!is.null(action_loader) && !identical(s$loader, action_loader))
       isTRUE(state[[1]]) && nav &&
         as.numeric(difftime(now, stable_since, units = "secs")) >= settle
     },
@@ -548,7 +548,7 @@ stable_sample_js <- function(prop) {
 # returned context is back at the root. The caller's context is never
 # mutated.
 wait_nav_reset <- function(ctx) {
-  ctx$page$.__enclos_env__$private$last_action_start_ <- NULL
+  ctx$page$.__enclos_env__$private$last_action_loader_ <- NULL
   ctx$page$release_object_group()
   record_nav_rebased(ctx$page)
   # The inline css zoom dies with the document being left; its

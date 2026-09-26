@@ -6,7 +6,7 @@ Signed off: orchestrator, per garrick's tripwire sign-off on npaj.
 
 A fast link may finish loading before `pz_wait_for_navigation()` snapshots the document. The existing snapshot/settle check then sees no navigation and times out despite the preceding click.
 
-Use the signed-off R timestamp fallback (b). `PaparazziPage` holds one private last-action-start field, exposed through a page active binding. A shared `action_start(ctx)` helper records `as.numeric(Sys.time()) * 1000` before each user-level action's first browser interaction; each exported action calls it (including the root/no-target branches of press, blur, type and scroll, and `pz_set_shiny_input`). Browser-side token capture (a) would require an extra CDP evaluation for the CDP-only press/click/scroll paths, or invasive changes to their dispatch and heterogeneous JS probes. The fallback relies on R and Chrome using the same machine wall clock; `performance.timeOrigin` is the document's epoch milliseconds. The settled document passes when it is newer than the last action start OR when the existing wait-start snapshot indicates a new/in-flight document. Keep the existing load and settle requirements. A successful wait clears the field in `wait_nav_reset()` so a second wait without another action times out; `wait = 'none'` and navigation resets clear it too. `pz_nav_*()` and `pz_js()` do not record actions.
+Superseded by `.agents/phases/xwzz-bfcache-nav.md`: the signed-off main-frame loaderId captured before each action replaces the R wall-clock timestamp comparison while retaining the wait-start snapshot evidence.
 
 ## Existing expectations and test plan
 
@@ -19,4 +19,4 @@ Use the signed-off R timestamp fallback (b). `PaparazziPage` holds one private l
 
 - Landed: red-first regression (7b9dd0c; one expected failure), action-start comparison and documentation (2d748de); `btw pkg document` ran.
 - Next: no code work pending; targeted tests: FAIL 0 / WARN 0 / SKIP 0 / PASS 433. No transient timeout file needed a serial rerun.
-- Provisional: none; R/browser wall clocks must share a machine, and successful navigation resets consume the action start.
+- Provisional: none; the wall-clock assumption is superseded by `.agents/phases/xwzz-bfcache-nav.md`.

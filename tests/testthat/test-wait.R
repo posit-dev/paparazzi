@@ -422,6 +422,78 @@ test_that("a completed link navigation is caught once after the click", {
   )
 })
 
+test_that("nav settle restarts its hold when the main-frame loader changes", {
+  states <- list(
+    list(loader = "old", js = "[true,2]"),
+    list(loader = "new", js = "[true,2]"),
+    list(loader = "new", js = "[false,3]"),
+    list(loader = "new", js = "[true,3]"),
+    list(loader = "new", js = "[true,3]")
+  )
+  index <- 0L
+  frame_timeouts <- list()
+  ctx <- list(page = list(
+    child_loop = NULL,
+    session = list(Page = list(getFrameTree = function(timeout_ = NULL) {
+      frame_timeouts[[length(frame_timeouts) + 1L]] <<- timeout_
+      list(frameTree = list(frame = list(loaderId = states[[index]]$loader)))
+    }))
+  ))
+  local_mocked_bindings(
+    pz_js = function(...) states[[index]]$js,
+    pz_poll = function(fn, ...) {
+      for (i in seq_len(4)) {
+        index <<- i
+        expect_false(fn(), info = paste("sample", i, "must not settle"))
+        Sys.sleep(0.02)
+      }
+      index <<- 5L
+      expect_true(fn())
+    }
+  )
+
+  nav_settle(
+    ctx, settle = 0.005, timeout = 1,
+    snapshot = list(complete = TRUE, origin = 2), action_loader = "old"
+  )
+  expect_identical(frame_timeouts, rep(list(1), 5))
+})
+
+test_that("a completed bfcache restore is caught once after history.back()", {
+  skip_if_no_chrome()
+  testthat::skip_if_not_installed("httpuv")
+  port <- free_port()
+  fixture <- test_path("fixtures", "nav-cache")
+  server <- processx::process$new(
+    file.path(R.home("bin"), "Rscript"),
+    args = c(
+      "-e",
+      "httpuv::runServer('127.0.0.1', as.integer(commandArgs(TRUE)[[1]]), list(staticPaths = list('/' = httpuv::staticPath(commandArgs(TRUE)[[2]]))))",
+      as.character(port), fixture
+    ),
+    stdout = tempfile(), stderr = "2>&1", cleanup = TRUE
+  )
+  withr::defer(if (server$is_alive()) server$kill())
+  expect_true(wait_until(function() app_port_reachable(port), timeout = 5))
+  page <- local_page(paste0("http://127.0.0.1:", port, "/a.html"))
+  identity <- pz_js(page, "window.identity")
+  origin <- pz_js(page, "performance.timeOrigin")
+
+  pz_click(page, "#next")
+  pz_wait_for_js(page, "document.readyState === 'complete' && !!document.querySelector('#back')")
+  back <- pz_find(page, "#back")
+  pz_click(back)
+  pz_wait_for_js(page, "document.readyState === 'complete' && !!document.querySelector('#next') && window.shows.includes(true)")
+  expect_identical(pz_js(page, "window.identity"), identity)
+  expect_identical(pz_js(page, "performance.timeOrigin"), origin)
+  expect_identical(pz_js(page, "window.shows[window.shows.length - 1]"), TRUE)
+
+  reset <- pz_wait_for_navigation(back, timeout = 2)
+  expect_length(reset$scope, 0)
+  expect_match(pz_get_url(reset), "/a.html", fixed = TRUE)
+  expect_error(pz_wait_for_navigation(reset, timeout = 0.8), class = "paparazzi_error_timeout")
+})
+
 test_that("a non-navigating action does not satisfy the navigation wait", {
   page <- local_nav_page()
   pz_click(page, "#scope-target")
