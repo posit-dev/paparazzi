@@ -786,7 +786,8 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
         length(resized) > 0 &&
           identical(png_dimensions(tail(resized, 1)), c(1600L, 1200L))
       },
-      timeout = page$page$default_timeout,
+      # An old-size capture can occupy one timeout before the new one starts.
+      timeout = 2 * page$page$default_timeout,
       loop = page$page$child_loop,
       what = "a frame at the resized viewport"
     )
