@@ -18,6 +18,6 @@ Add a framed GIF test in `tests/testthat/test-record.R` using an off-white page 
 
 ## Handoff
 
-- Landed: c947136 (signed-off mechanism), 3d3e855 (GIF crop/encode and tests), 488d494 (SPEC, README.Rmd, DESCRIPTION, roxygen docs). Red-first: FAIL 5 / WARN 0 / SKIP 0 / PASS 494. Final targeted run: FAIL 0 / WARN 0 / SKIP 0 / PASS 524. `btw pkg document` ran.
+- Landed: c947136 (signed-off mechanism), 3d3e855 (GIF crop/encode and tests), 488d494 (SPEC, README.Rmd, DESCRIPTION, roxygen docs), f79641b (handoff), and a follow-up ensuring all unique captures are cropped. Red-first: FAIL 5 / WARN 0 / SKIP 0 / PASS 494. Final targeted run: FAIL 0 / WARN 0 / SKIP 0 / PASS 523. `btw pkg document` ran.
 - Next: orchestrator re-renders README.md and runs the full merge-gate suite.
 - Provisional: unframed GIFs with odd captured PNG dimensions need an alignment crop; unlike explicitly framed GIFs, that need cannot be known at `pz_record_start()` before capture. The encode-time crop branch checks png with a clear reason; orchestrator to decide whether to also require png upfront for *all* GIFs (stricter than requested) or accept this late check on the odd-dimension edge case.

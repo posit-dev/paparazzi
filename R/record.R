@@ -862,7 +862,7 @@ record_encode <- function(rec, call = caller_env()) {
       crop_dir <- tempfile("paparazzi-crop-")
       dir.create(crop_dir)
       on.exit(unlink(crop_dir, recursive = TRUE), add = TRUE)
-      sources <- unique(files)
+      sources <- unique(rec$files)
       cropped <- file.path(crop_dir, basename(sources))
       box <- out$crop
       for (i in seq_along(sources)) {

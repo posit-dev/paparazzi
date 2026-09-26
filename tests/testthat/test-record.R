@@ -164,14 +164,15 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
   withr::defer(unlink(raw_dir, recursive = TRUE))
   captured <- NULL
   local_mocked_bindings(gifski = function(png_files, gif_file, width, height, ...) {
-    raw <- unique(record_resample(rec)$files)
+    raw <- unique(rec$files)
     spec <- record_output_spec(rec, png_read_size(raw[[1]]))
     crop <- spec$crop
     expect_equal(crop$width, floor(round(116 * dpr) / 2) * 2)
     expect_equal(crop$height, floor(round(76 * dpr) / 2) * 2)
     expect_true(length(raw) >= 1L)
     expect_true(length(png_files) > length(unique(png_files)))
-    expect_equal(length(unique(png_files)), length(raw))
+    expect_equal(length(list.files(dirname(png_files[[1]]), pattern = "[.]png$")),
+      length(raw))
     expect_equal(basename(png_files), basename(record_resample(rec)$files))
     expect_equal(c(width, height), c(spec$width, spec$height))
     expect_false(any(png_files %in% raw))
