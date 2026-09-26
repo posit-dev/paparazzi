@@ -391,7 +391,13 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
   }
   el_scroll_into_view(found$els)
 
-  res <- els_arg_values(found$els, set_value_js, list(list(value = arg)))
+  res <- els_values(
+    found$els,
+    set_value_js,
+    args = list(list(value = arg)),
+    doing = "working with",
+    call = caller_env()
+  )
   if (identical(res$status, "contenteditable")) {
     els_call(found$els, select_all_js)
     insert_text(ctx, found$els$description, arg$text)
@@ -531,7 +537,13 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
   }
   el_scroll_into_view(found$els)
 
-  res <- els_arg_values(found$els, select_text_js, list(list(value = text)))
+  res <- els_values(
+    found$els,
+    select_text_js,
+    args = list(list(value = text)),
+    doing = "working with",
+    call = caller_env()
+  )
   if (!identical(res$status, "ok")) {
     cli::cli_abort(
       c(
@@ -642,7 +654,13 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
     } else {
       list(to = as.list(to))
     }
-    els_arg_values(scoped, scroll_apply_js, list(list(value = arg)))
+    els_values(
+      scoped,
+      scroll_apply_js,
+      args = list(list(value = arg)),
+      doing = "working with",
+      call = caller_env()
+    )
   } else {
     res <- action_cdp(
       ctx,
@@ -1137,42 +1155,6 @@ set_value_argument <- function(value, call = caller_env()) {
   } else {
     list(kind = "text", checked = FALSE, text = as.character(value))
   }
-}
-
-# els_values() with CDP callArguments: the resolved set stays `this`,
-# and each entry of `args` is a {value: ...} callArgument. Same timeout
-# and error mapping as els_values().
-els_arg_values <- function(els, js, args, call = caller_env()) {
-  timeout <- els$page$default_timeout
-  res <- tryCatch(
-    els$page$session$Runtime$callFunctionOn(
-      js,
-      objectId = els$object_id,
-      arguments = args,
-      returnByValue = TRUE,
-      timeout_ = timeout
-    ),
-    error = function(e) {
-      if (grepl("timed out", conditionMessage(e), ignore.case = TRUE)) {
-        cli::cli_abort(
-          "Timed out after {timeout}s working with elements matching {els$description}.",
-          class = "paparazzi_error_timeout",
-          call = call,
-          parent = e
-        )
-      }
-      stop(e)
-    }
-  )
-  err <- res$exceptionDetails
-  if (!is.null(err)) {
-    cli::cli_abort(
-      "JavaScript error working with elements matching {els$description}: {err$exception$description %||% err$text %||% 'unknown error'}.",
-      class = "paparazzi_error_js",
-      call = call
-    )
-  }
-  res$result$value
 }
 
 # The first element's own remote objectId. The caller releases the

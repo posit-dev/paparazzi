@@ -209,33 +209,48 @@ loc_resolve_once <- function(
   timeout <- ctx$page$default_timeout
 
   if (is.null(root)) {
-    res <- cdp_call(ctx$page$session$Runtime$evaluate(
-      paste0("(", fn, ").call([document])"),
-      awaitPromise = FALSE,
-      returnByValue = FALSE,
-      objectGroup = object_group,
-      timeout_ = timeout
-    ), timeout, paste("resolving", description), call = call)
+    res <- cdp_call(
+      ctx$page$session$Runtime$evaluate(
+        paste0("(", fn, ").call([document])"),
+        awaitPromise = FALSE,
+        returnByValue = FALSE,
+        objectGroup = object_group,
+        timeout_ = timeout
+      ),
+      timeout,
+      paste("resolving", description),
+      call = call
+    )
   } else {
-    res <- cdp_call(ctx$page$session$Runtime$callFunctionOn(
-      fn,
-      objectId = root$object_id,
-      returnByValue = FALSE,
-      objectGroup = object_group,
-      timeout_ = timeout
-    ), timeout, paste("resolving", description), call = call)
+    res <- cdp_call(
+      ctx$page$session$Runtime$callFunctionOn(
+        fn,
+        objectId = root$object_id,
+        returnByValue = FALSE,
+        objectGroup = object_group,
+        timeout_ = timeout
+      ),
+      timeout,
+      paste("resolving", description),
+      call = call
+    )
   }
   cdp_check_exception(res, paste("resolving", description), call = call)
   object_id <- res$result$objectId
   if (is.null(object_id)) {
     return(new_elements(ctx$page, NULL, 0L, description))
   }
-  count <- cdp_call(ctx$page$session$Runtime$callFunctionOn(
-    "function() { return this.length; }",
-    objectId = object_id,
-    returnByValue = TRUE,
-    timeout_ = timeout
-  ), timeout, paste("resolving", description), call = call)$result$value
+  count <- cdp_call(
+    ctx$page$session$Runtime$callFunctionOn(
+      "function() { return this.length; }",
+      objectId = object_id,
+      returnByValue = TRUE,
+      timeout_ = timeout
+    ),
+    timeout,
+    paste("resolving", description),
+    call = call
+  )$result$value
   new_elements(ctx$page, object_id, count, description)
 }
 
