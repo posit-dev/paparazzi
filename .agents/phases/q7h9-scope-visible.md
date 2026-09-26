@@ -5,3 +5,7 @@
 - Add visible-return assertions for all six find functions and both root no-ops in test-scope.R; update root/scoped print and closed-page assertions in test-inspect.R and test-scope.R, including line positions and width.
 
 Signed off: orchestrator (spec in kata q7h9)
+
+- Landed: visible find returns, root/scoped summaries, closed-page strings, generated help and tests (c483d65, fef9ccc).
+- Verified: scoped/inspect/context [ FAIL 0 | WARN 0 | SKIP 0 | PASS 183 ]; plus open [ FAIL 0 | WARN 0 | SKIP 0 | PASS 337 ]. Next: orchestrator gate and docs task.
+- Provisional: none; `pz_inspect()` on a closed page still rejects the context before summary printing, as before.
