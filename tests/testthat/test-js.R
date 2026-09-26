@@ -82,6 +82,7 @@ test_that("pz_js maps unserializable values", {
   expect_identical(pz_js(page, "1/0"), Inf)
   expect_identical(pz_js(page, "-1/0"), -Inf)
   expect_true(is.nan(pz_js(page, "0/0")))
+  expect_identical(1 / pz_js(page, "-0"), -Inf)
   expect_identical(pz_js(page, "undefined"), NULL)
 })
 

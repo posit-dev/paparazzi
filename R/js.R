@@ -103,7 +103,7 @@ js_value <- function(result) {
     "NaN" = NaN,
     "Infinity" = Inf,
     "-Infinity" = -Inf,
-    "-0" = 0,
+    "-0" = -0,
     {
       num <- suppressWarnings(as.numeric(sub("n$", "", uv)))
       if (is.na(num)) uv else num
