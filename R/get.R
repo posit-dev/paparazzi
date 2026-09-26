@@ -1,4 +1,3 @@
-# Getters end the chain: they return values, not the context.
 #' Count matching elements
 #'
 #' [pz_get_count()] returns the number of elements matching `target`,
@@ -40,7 +39,6 @@ pz_get_count <- function(ctx, ..., target = NULL) {
   # too instead of counting nothing.
   root <- scope_root(ctx)
   if (is.null(target) && !is.null(root)) {
-    # The scope's own count, without re-querying the pinned set.
     return(root$count)
   }
   els <- loc_resolve_once(

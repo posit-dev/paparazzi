@@ -154,8 +154,7 @@ pz_expect_count <- function(
 #' (<https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility>)
 #' with CSS checks, so `display: none` and `visibility: hidden` anywhere
 #' up the ancestor chain count as hidden; opacity and viewport position
-#' are not considered (a `pz_expect_in_viewport()` entry may arrive
-#' later).
+#' are not considered.
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
 #' `"paparazzi_expectation_failure"`; inside testthat, the failure is
@@ -242,9 +241,6 @@ pz_expect_hidden <- function(
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root, so `pz_expect_text(page, "Welcome")` checks the
 #'   page text.
-#' @param not Invert the check.
-#' @param timeout Seconds to wait for the expectation to pass; `NULL`
-#'   (default) uses the session default, `0` checks once.
 #'
 #' @return `ctx`, invisibly.
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
@@ -940,7 +936,6 @@ expect_report <- function(
     return(invisible(ctx))
   }
   if (expect_bridge(FALSE, msg)) {
-    # Inside testthat the failure is already registered as a test failure.
     return(invisible(ctx))
   }
   cli::cli_abort(
@@ -1194,15 +1189,14 @@ expect_text_matches <- function(x, pattern, match) {
     regex = grepl(pattern, x)
   )
 }
-# NA-tolerant single comparison: a missing value or attribute reads as
-# NA, and grepl() on NA would leak NA into the pass result.
+# Keep comparisons strictly TRUE or FALSE even for missing observed values.
 expect_text_hit <- function(x, pattern, match) {
   isTRUE(expect_text_matches(x, pattern, match))
 }
 expect_headline_js <- function(expr, not) {
   paste0(
     "Expected JS predicate (",
-    expect_truncate(expr, 60),
+    expect_truncate(expr, width = 60),
     ") to hold for ",
     if (not) "no match" else "every match"
   )

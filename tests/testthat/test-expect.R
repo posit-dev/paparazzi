@@ -50,10 +50,8 @@ test_that("pz_expect_count passes exact counts and inclusive bounds", {
   pz_expect_count(page, n = 3, target = ".message")
   pz_expect_count(page, min = 1, target = ".btn")
   pz_expect_count(page, max = 10, target = ".btn")
-  pz_expect_count(page, min = 5, max = 7, target = ".btn") # 6 matches
-  # min = max is the same as n
+  pz_expect_count(page, min = 5, max = 7, target = ".btn")
   pz_expect_count(page, min = 2, max = 2, target = ".chat")
-  # not = TRUE passes when the count is anything else
   pz_expect_count(page, n = 2, target = ".message", not = TRUE)
 })
 
@@ -677,7 +675,6 @@ test_that("pz_expect_value follows a typed value", {
 test_that("pz_expect_attr defaults to an exact comparison", {
   page <- local_state_page()
   pz_expect_attr(page, "href", "https://example.com/page", target = "#link-one")
-  # Non-default modes are still available.
   pz_expect_attr(
     page,
     "href",

@@ -1,12 +1,3 @@
-# The pz_get_*() getters end the chain: they return values, not the
-# context. Everything here runs against getters.html, whose exact
-# shape is pinned in .agents/phases/getters.md: three p.item (with
-# whitespace wrinkles), three .field controls covering value/""/NA,
-# two a.link (one missing data-role), two absolutely-positioned
-# #box* divs, #rich, and a p.padded with leading/trailing whitespace.
-# (The auto-wait test schedules its own late element via pz_js(); the
-# fixture itself stays static.)
-
 test_that("pz_get_count returns the number of matches as an integer", {
   page <- local_getters_page()
   expect_type(pz_get_count(page, target = ".item"), "integer")
@@ -50,9 +41,7 @@ test_that("pz_get_text(raw = TRUE) preserves the browser's whitespace", {
   page <- local_getters_page()
   raw <- pz_get_text(page, target = ".item", raw = TRUE)
   expect_identical(length(raw), 3L)
-  # Inner spaces are kept...
   expect_identical(raw[[1]], "first   item")
-  # ...and so is the newline + indentation of the second item.
   expect_match(raw[[2]], "second\n +item")
 })
 
@@ -113,7 +102,6 @@ test_that("pz_get_rect returns one row per match with scoped element entries", {
   rects <- pz_get_rect(page, target = "div[id^='box']")
   expect_identical(nrow(rects), 2L)
   expect_named(rects, c("x", "y", "width", "height", "element"))
-  # Document order: box1 first, box2 second.
   expect_equal(rects$x, c(10, 50))
   expect_equal(rects$y, c(20, 100))
   expect_equal(rects$width, c(100, 200))
@@ -138,7 +126,6 @@ test_that("pz_get_elements summarizes every match", {
   expect_identical(els$tag, rep("p", 3))
   expect_identical(els$id, rep(NA_character_, 3))
   expect_identical(els$class, rep("item", 3))
-  # Text is collapsed exactly as pz_get_text() collapses it.
   expect_identical(els$text, c("first item", "second item", "third item"))
   expect_type(els$element, "list")
 })
