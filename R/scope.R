@@ -185,7 +185,7 @@ pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
 #'
 #' @inheritParams pz_click
 #'
-#' @return The context.
+#' @return A new context one level up, or `ctx` itself at the root.
 #'
 #' @seealso [pz_find()], [pz_find_reset()]
 #'
@@ -217,7 +217,7 @@ pz_find_pop <- function(ctx) {
 #'
 #' @inheritParams pz_click
 #'
-#' @return The context.
+#' @return A new root context, or `ctx` itself at the root.
 #'
 #' @seealso [pz_find()], [pz_find_pop()]
 #'
