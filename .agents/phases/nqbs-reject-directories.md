@@ -11,4 +11,6 @@ Signed off: orchestrator.
 
 ## Handoff
 
-Pending implementation and verification.
+- Landed: `check_file_paths()` now rejects directories after checking for missing paths, preserving normalized-path returns; the actions regression covers singular and plural directory messages and missing-path precedence. No docs or snapshots needed (the existing parameter description is accurate, and this file has no message snapshots).
+- Red before fix: `[ FAIL 1 | WARN 0 | SKIP 0 | PASS 270 ]` (`pz_set_files(page, dir, target = "#file")` did not throw `paparazzi_error_input`). Green after fix: targeted actions tests `[ FAIL 0 | WARN 0 | SKIP 0 | PASS 273 ]`.
+- `air format --check .` and `jarl check .` passed. Next: orchestrator review and full suite on main; this issue remains open for the orchestrator.
