@@ -32,7 +32,8 @@
 #' start for `pz_frame(when = "start")`, at the end for the default
 #' `when = "stop"`, i.e. against the final layout -- and the crop is
 #' applied to every frame during encoding. `.mp4` dimensions are
-#' rounded down to multiples of 4; other formats to even pixels.
+#' rounded down to multiples of 4 and `.webm` to even pixels; `.gif`
+#' keeps whole pixels.
 #'
 #' `.mp4` and `.webm` recordings require \pkg{av}. All `.gif` recordings
 #' require \pkg{gifski}; framed GIFs also require \pkg{png} to crop the
@@ -734,11 +735,12 @@ png_read_size <- function(path, call = caller_env()) {
 }
 # The ffmpeg filter chain and final output dimensions. The crop is the
 # measured frame box (or the whole PNG) floored to the format's
-# alignment: multiples of 4 for mp4, even pixels elsewhere, both
-# required by yuv420p-family encoders. scale <= 4 is a factor; larger
-# is the output width in pixels.
+# alignment: multiples of 4 for mp4 and even pixels for webm, both
+# required by yuv420p-family encoders; gifski takes any size, so an
+# unframed GIF never needs a crop. scale <= 4 is a factor; larger is
+# the output width in pixels.
 record_output_spec <- function(rec, png_size, call = caller_env()) {
-  align <- if (identical(rec$format, "mp4")) 4 else 2
+  align <- switch(rec$format, mp4 = 4, webm = 2, gif = 1)
   if (!is.null(rec$crop)) {
     dpr <- png_size$width / rec$crop$viewport_width
     x <- floor(rec$crop$x * dpr)
@@ -858,7 +860,6 @@ record_encode <- function(rec, call = caller_env()) {
   if (identical(rec$format, "gif")) {
     files <- resampled$files
     if (!is.null(out$crop)) {
-      rlang::check_installed("png", reason = "to crop .gif captures.")
       crop_dir <- tempfile("paparazzi-crop-")
       dir.create(crop_dir)
       on.exit(unlink(crop_dir, recursive = TRUE), add = TRUE)

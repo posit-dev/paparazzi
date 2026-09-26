@@ -142,12 +142,6 @@ test_that("gif encodes via gifski", {
     expect_equal(info$codec, "gif")
     expect_gte(info$duration, 0.6)
     expect_lte(info$duration, 1.2)
-    expect_equal(info$width %% 2, 0)
-    expect_equal(info$height %% 2, 0)
-  } else {
-    dims <- gif_dimensions(out)
-    expect_equal(dims[1] %% 2, 0)
-    expect_equal(dims[2] %% 2, 0)
   }
 })
 
@@ -167,8 +161,8 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
     raw <- unique(rec$files)
     spec <- record_output_spec(rec, png_read_size(raw[[1]]))
     crop <- spec$crop
-    expect_equal(crop$width, floor(round(116 * dpr) / 2) * 2)
-    expect_equal(crop$height, floor(round(76 * dpr) / 2) * 2)
+    expect_equal(crop$width, round(116 * dpr))
+    expect_equal(crop$height, round(76 * dpr))
     expect_true(length(raw) >= 1L)
     expect_true(length(png_files) > length(unique(png_files)))
     expect_equal(length(list.files(dirname(png_files[[1]]), pattern = "[.]png$")),
@@ -199,7 +193,7 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
   expect_false(any(file.exists(unique(captured))))
 })
 
-test_that("GIF alignment trims preserve alpha and crop unique PNGs", {
+test_that("GIF frame crops preserve alpha and crop unique PNGs", {
   testthat::skip_if_not_installed("png")
   source <- withr::local_tempfile(fileext = ".png")
   image <- array(seq(0, 1, length.out = 5 * 5 * 4), c(5, 5, 4))
@@ -208,20 +202,38 @@ test_that("GIF alignment trims preserve alpha and crop unique PNGs", {
     format = "gif", path = withr::local_tempfile(fileext = ".gif"),
     files = c(source, source), times = c(0, 0.1), vt_end = 0.1,
     holds = list(), hold_first = 0.5, hold_last = 0,
-    fps = 10, crop = NULL, scale = NULL
+    fps = 10, scale = NULL,
+    crop = list(x = 1, y = 2, width = 3, height = 2, viewport_width = 5)
   )
   input <- png::readPNG(source)
   cropped_path <- NULL
   local_mocked_bindings(gifski = function(png_files, width, height, ...) {
-    expect_equal(c(width, height), c(4, 4))
+    expect_equal(c(width, height), c(3, 2))
     expect_length(unique(png_files), 1L)
-    expect_equal(dim(png::readPNG(png_files[[1]])), c(4, 4, 4))
-    expect_equal(png::readPNG(png_files[[1]]), input[1:4, 1:4, , drop = FALSE])
+    expect_equal(dim(png::readPNG(png_files[[1]])), c(2, 3, 4))
+    expect_equal(png::readPNG(png_files[[1]]), input[3:4, 2:4, , drop = FALSE])
     cropped_path <<- png_files[[1]]
   }, .package = "gifski")
   record_encode(rec)
   expect_false(file.exists(cropped_path))
   expect_true(file.exists(source))
+})
+
+test_that("unframed GIFs of odd size go to gifski uncropped", {
+  testthat::skip_if_not_installed("png")
+  source <- withr::local_tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(5, 7, 3)), source)
+  rec <- list(
+    format = "gif", path = withr::local_tempfile(fileext = ".gif"),
+    files = source, times = 0, vt_end = 0,
+    holds = list(), hold_first = 0.2, hold_last = 0,
+    fps = 10, crop = NULL, scale = NULL
+  )
+  local_mocked_bindings(gifski = function(png_files, width, height, ...) {
+    expect_equal(c(width, height), c(7, 5))
+    expect_true(all(png_files == source))
+  }, .package = "gifski")
+  record_encode(rec)
 })
 
 test_that("GIF dependencies are checked before recording", {
