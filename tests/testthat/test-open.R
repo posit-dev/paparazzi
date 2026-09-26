@@ -506,7 +506,7 @@ test_that("print() works on open and closed pages", {
   expect_output(print(page), "── paparazzi page")
   expect_output(print(page), "URL        file:")
   pz_close(page)
-  expect_output(print(page), "PaparazziPage: closed")
+  expect_output(print(page), "<paparazzi page> \\(closed\\)")
 })
 
 test_that("Windows drive paths are not mistaken for URL schemes", {

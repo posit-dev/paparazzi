@@ -17,8 +17,9 @@ pillar_shaft.PaparazziContext <- function(x, ...) {
 #' Paparazzi contexts and pages
 #'
 #' @description
-#' A **context** is the first argument and invisible return value of every
-#' `pz_*()` function, enabling `|>` chains. A context is either the root (a
+#' A **context** is the first argument of `pz_*()` functions, enabling `|>`
+#' chains. `pz_find*()` return contexts visibly; chainable actions return
+#' them invisibly. A context is either the root (a
 #' `PaparazziPage`) or a scoped context created by `pz_find*()`: a context
 #' holding an immutable stack of pinned element sets. The stack is never
 #' mutated in place -- `pz_find*()` derive a new context sharing the
@@ -126,7 +127,7 @@ PaparazziPage <- R6::R6Class(
     #' @param ... Unused; included for compatibility with the `print()` generic.
     print = function(...) {
       if (private$closed_) {
-        cli::cat_line("<PaparazziPage: closed>")
+        cli::cat_line("<paparazzi page> (closed)")
         return(invisible(self))
       }
       inspect_summary_print(self)
