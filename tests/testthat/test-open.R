@@ -370,28 +370,30 @@ test_that("pz_close is idempotent and functions reject closed pages", {
 
 test_that("a failed device setting after page creation closes the new session", {
   skip_if_no_chrome()
-  # Every ChromoteSession registers itself with its parent browser
-  # object and is never removed on close, so the registry (an R-level
-  # list, re-read fresh) holds the session pz_open() created even after
-  # its cleanup. An invalid timezone fails inside
-  # Emulation.setTimezoneOverride, i.e. after the page (and its
-  # session) already exist.
-  registry <- function() {
-    chromote::default_chromote_object()$.__enclos_env__$private$sessions
+  browser <- chromote::default_chromote_object()
+  page_targets <- function() {
+    targets <- browser$Target$getTargets()$targetInfos
+    vapply(
+      Filter(function(target) identical(target$type, "page"), targets),
+      function(target) target$targetId,
+      character(1)
+    )
   }
-  before <- names(registry())
+  before <- page_targets()
+  # Invalid timezone fails after the new page target has been created.
   expect_error(
     pz_open(fixture_file(), timezone = "Mars/Olympus"),
     regexp = "Invalid timezone"
   )
-  new_ids <- setdiff(names(registry()), before)
-  expect_length(new_ids, 1L)
-  # A leaked session would still answer commands; the deferred close
-  # makes the new one reject them as closed.
-  expect_error(
-    registry()[[new_ids]]$Page$getNavigationHistory(),
-    regexp = "closed"
-  )
+  deadline <- Sys.time() + 3
+  repeat {
+    new_ids <- setdiff(page_targets(), before)
+    if (length(new_ids) == 0L || Sys.time() >= deadline) {
+      break
+    }
+    Sys.sleep(0.05)
+  }
+  expect_length(new_ids, 0L)
 })
 
 test_that("a failed device setting on a wrapped session leaves it open", {
