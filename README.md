@@ -90,6 +90,13 @@ pz_close(page)
 With `target` left out, `pz_screenshot()` captures the scope element,
 and `pz_frame(pad = 8)` adds a margin around it.
 
+The scope doesn’t stick to `page`. Actions like `pz_click()` change the
+browser tab, and every chain on `page` sees those changes. A scope isn’t
+part of the browser, so `pz_find()` leaves `page` alone and returns a
+new, scoped context instead. The next chain that starts from `page`
+starts at the whole page again. To keep working in a scope, assign the
+scoped context to its own variable.
+
 ## Shiny apps
 
 Give `pz_open()` the path to a Shiny app and paparazzi runs the app in a

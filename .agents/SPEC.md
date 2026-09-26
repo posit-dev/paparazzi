@@ -103,7 +103,7 @@ Scope is part of the chain's context, managed as a stack:
 - `pz_find_pop()`: pop one level.
 - `pz_find_reset()`: clear all scope, back to root.
 
-`pz_find()` returns a new context; it never mutates the page object. The browser is shared: actions change the tab, and every context of a page sees those changes. Scope belongs to the chain: it's a view held on the R side, so it can't leak from one chain into the next, into a helper's caller, or into another test that shares the page.
+`pz_find()` returns a new context; it never mutates the page object. The browser is shared: actions change the tab, and every context of a page sees those changes. Scope belongs to the chain: it's a view held on the R side, so it never carries over implicitly into the next chain, a helper's caller, or another test that shares the page. A later chain inherits a scope only when it starts from a context that holds one.
 
 Resolution: specs are lazy, `pz_find*()` is eager.
 
