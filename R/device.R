@@ -304,9 +304,9 @@ device_apply_override <- function(page, state, call = caller_env()) {
 # css zoom is active, removed when it disables) and an inline
 # application covers the current one, which the registration alone
 # never touches. The script guards on the top frame so iframes keep
-# their own layout. Only touched when the desired zoom differs from
-# the one in effect; a user's own html zoom style is overwritten
-# while active, but never added or removed otherwise.
+# their own layout. A registered script also needs removal when a
+# failed apply leaves no cached zoom; a user's own html zoom style is
+# overwritten while active, but never added or removed otherwise.
 device_apply_css_zoom <- function(page, state, register = TRUE) {
   zoom <- state$zoom
   method <- state$zoom_method %||% "viewport"
@@ -315,7 +315,10 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
   ) {
     zoom
   }
-  if (identical(desired, state$css_zoom)) {
+  if (
+    identical(desired, state$css_zoom) &&
+      (!is.null(desired) || is.null(state$css_script))
+  ) {
     return(invisible(page))
   }
   if (is.null(desired)) {
@@ -331,7 +334,6 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
       state$css_script <- NULL
     }
     saved <- state$css_zoom_saved
-    state$css_zoom_saved <- NULL
     if (is.null(saved) || !nzchar(saved)) {
       device_eval(page, "document.documentElement.style.removeProperty('zoom')")
     } else {
@@ -343,6 +345,7 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
         )
       )
     }
+    state$css_zoom_saved <- NULL
   } else {
     # Reapply after a navigation skips the registration: the script
     # in place already encodes the desired zoom (only pz_device()
