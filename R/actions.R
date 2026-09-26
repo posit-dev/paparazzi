@@ -1290,7 +1290,8 @@ scroll_arg_json <- function(by = NULL, to = NULL) {
 #' @description
 #' Auto-waits for the source to be actionable: visible, non-empty, and
 #' receiving pointer events at its center (not covered by another element).
-#' With `to`, the destination is also checked when brought into view.
+#' With `to`, the destination is checked for visibility and that it receives
+#' the drop at its center after the source is brought into view.
 #' It then drags with real mouse input: press at the source's center,
 #' move to the destination, release. When the source is a
 #' real HTML5 drag source (`draggable`, including inherited
@@ -1373,20 +1374,30 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
     # page, and a drop dispatched off-screen lands on nothing.
     to_point <- el_pointer_point(ctx, dest)
     from <- el_pointer_point(ctx, found$els)
-    probe <- els_call(dest, dest_point_js)
-    if (length(probe) == 7L && probe[1] == 1 && probe[4] > 0 && probe[5] > 0) {
+    probe <- els_values(dest, dest_point_js)
+    if (isTRUE(probe$visible) && probe$width > 0 && probe$height > 0) {
       drop <- c(
-        x = probe[2] + probe[4] / 2,
-        y = probe[3] + probe[5] / 2
+        x = probe$x + probe$width / 2,
+        y = probe$y + probe$height / 2
       )
-      if (drop[[1]] < 0 || drop[[1]] > probe[6] ||
-        drop[[2]] < 0 || drop[[2]] > probe[7]) {
+      if (drop[[1]] < 0 || drop[[1]] > probe$viewportWidth ||
+        drop[[2]] < 0 || drop[[2]] > probe$viewportHeight) {
         cli::cli_abort(
           c(
             "The drag destination is outside the viewport after bringing the source into view.",
             i = "Both endpoints must be visible at once, like a real drag; scroll or scope so they are."
           ),
           class = "paparazzi_error_target"
+        )
+      }
+      if (!is.null(probe$blocker)) {
+        blocker_name <- format_pointer_blocker(probe$blocker)
+        cli::cli_abort(
+          c(
+            "The drag destination {dest$description} does not receive pointer events at its center after bringing the source into view; blocked by {blocker_name}.",
+            i = "Both endpoints must be visible at once, like a real drag; scroll or scope so they are."
+          ),
+          class = c("paparazzi_error_obstructed", "paparazzi_error_target")
         )
       }
       to_point <- drop
@@ -1419,18 +1430,20 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
   stage_action_pause(ctx)
   invisible(ctx)
 }
-# The destination's final point after the source settles: the
-# actionability probe (visible, non-empty box) plus the viewport size,
-# so the drop center can be checked in-view.
-dest_point_js <- "function() {
+# The destination's final point after the source settles: visibility,
+# box, viewport, and the receiver at the box center.
+dest_point_js <- paste0("function() {\n", pointer_hit_test_js, "
   const el = this[0];
   const r = el.getBoundingClientRect();
-  return [
-    el.checkVisibility({ checkVisibilityCSS: true }) ? 1 : 0,
-    r.x, r.y, r.width, r.height,
-    window.innerWidth, window.innerHeight
-  ];
-}"
+  const visible = el.checkVisibility({ checkVisibilityCSS: true });
+  return {
+    visible, x: r.x, y: r.y, width: r.width, height: r.height,
+    viewportWidth: window.innerWidth, viewportHeight: window.innerHeight,
+    blocker: visible && r.width > 0 && r.height > 0
+      ? pointerHitTest(el, r.x + r.width / 2, r.y + r.height / 2)
+      : null
+  };
+}")
 # Is the source a real HTML5 drag source? Own or inherited draggable
 # attribute (the IDL property only reflects the element's own
 # attribute, so inheritance needs the closest() walk; an explicit
