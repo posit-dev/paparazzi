@@ -88,50 +88,28 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   invisible(ctx)
 }
 
-# The clip for a root-context capture: the viewport, in document
-# coordinates, read in one JS evaluation.
+# The clip for a root-context capture: the viewport in document coordinates.
 clip_viewport <- function(ctx, call = caller_env()) {
-  v <- pz_js(
-    ctx,
-    "[window.scrollX, window.scrollY, window.innerWidth, window.innerHeight]"
+  g <- page_geometry(ctx, call = call)
+  # RTL scrollX can be negative; CDP rejects negative clip origins.
+  list(
+    x = max(g$scroll_x, 0),
+    y = max(g$scroll_y, 0),
+    width = g$viewport_width,
+    height = g$viewport_height
   )
-  # pz_js() converts a JS array to an R list, so flatten it before the
-  # shape check.
-  v <- unlist(v)
-  if (!is.numeric(v) || length(v) != 4) {
-    cli::cli_abort(
-      "Internal error: the viewport read returned {.obj_type_friendly {v}}, not four numbers.",
-      class = "paparazzi_error_internal",
-      call = call
-    )
-  }
-  clip <- list(x = v[[1]], y = v[[2]], width = v[[3]], height = v[[4]])
-  # scrollX goes negative on horizontally-scrolled RTL pages, and CDP
-  # rejects a negative clip origin; clamp it (the region shifts by the
-  # clamped amount). Bounds-aware capture is the framing task's job.
-  clip$x <- max(clip$x, 0)
-  clip$y <- max(clip$y, 0)
-  clip
 }
 
 # The clip for an element capture: the union of viewport-relative rects,
-# shifted into document coordinates. The four edges are pure reductions
-# over the tibble columns -- the prior-art bug (the blog's union_png())
-# updated x before computing width, so no rect is ever mutated
-# mid-computation.
+# shifted into document coordinates.
 clip_rects_union <- function(ctx, rects, call = caller_env()) {
-  if (nrow(rects) == 0L) {
-    cli::cli_abort(
-      "Internal error: computing a clip for an empty element set.",
-      class = "paparazzi_error_internal",
-      call = call
-    )
-  }
-  x0 <- min(rects$x)
-  y0 <- min(rects$y)
-  x1 <- max(rects$x + rects$width)
-  y1 <- max(rects$y + rects$height)
-  clip <- list(x = x0, y = y0, width = x1 - x0, height = y1 - y0)
+  edges <- box_union(rects, call = call)
+  clip <- list(
+    x = edges[1],
+    y = edges[2],
+    width = edges[3] - edges[1],
+    height = edges[4] - edges[2]
+  )
   # el_rects() is viewport-relative; CDP clip coordinates (with
   # captureBeyondViewport) are document-relative, so add the scroll
   # offsets. Off-viewport targets need no scrollIntoView.
