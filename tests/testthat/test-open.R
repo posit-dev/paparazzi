@@ -385,6 +385,9 @@ test_that("a failed device setting after page creation closes the new session", 
     pz_open(fixture_file(), timezone = "Mars/Olympus"),
     regexp = "Invalid timezone"
   )
+  # pz_open() looks the default browser up itself; a replaced browser
+  # would make the target diff below vacuous.
+  expect_identical(chromote::default_chromote_object(), browser)
   deadline <- Sys.time() + 3
   repeat {
     new_ids <- setdiff(page_targets(), before)
