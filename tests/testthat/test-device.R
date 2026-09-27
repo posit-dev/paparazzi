@@ -73,6 +73,7 @@ test_that("a failed device change doesn't leak into later partial changes", {
   expect_equal(js(page, "innerWidth"), 640)
   expect_equal(js(page, "innerHeight"), 500)
 
+  pz_device(page, color_scheme = "light")
   session <- page$page$session
   emulation <- session$Emulation
   failing <- emulation
