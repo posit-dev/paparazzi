@@ -1158,10 +1158,9 @@ check_visible <- function(not) {
   check_state(expect_visible_js, not, "visible")
 }
 
-# Text-like content checks (text, value, attr) share one shape: read one
+# Text and value checks share one shape: read one
 # JS expression per match, collapse whitespace, then compare. NA reads
-# (a missing value or attribute) satisfy nothing, so they only pass
-# through not, via "no match satisfies".
+# satisfy nothing, so they only pass through not, via "no match satisfies".
 check_text_like <- function(js, values, match, not) {
   function(els) {
     if (els$count == 0L) {

@@ -89,7 +89,7 @@ pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
 #'
 #' @description
 #' [pz_expect_style()] passes when at least one element matches
-#' `target` and every match has every named property set to the
+#' `.target` and every match has every named property set to the
 #' expected value, comparing **computed** styles -- what the browser
 #' actually applied, the same values Playwright's `toHaveCSS()` and
 #' jQuery's `.css()` read.

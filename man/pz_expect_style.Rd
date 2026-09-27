@@ -37,7 +37,7 @@ comparing? See Details.}
 }
 \description{
 \code{\link[=pz_expect_style]{pz_expect_style()}} passes when at least one element matches
-\code{target} and every match has every named property set to the
+\code{.target} and every match has every named property set to the
 expected value, comparing \strong{computed} styles -- what the browser
 actually applied, the same values Playwright's \code{toHaveCSS()} and
 jQuery's \code{.css()} read.
