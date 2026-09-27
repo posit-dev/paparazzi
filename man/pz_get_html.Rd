@@ -4,17 +4,17 @@
 \alias{pz_get_html}
 \title{Read the HTML of matching elements}
 \usage{
-pz_get_html(ctx, ..., target = NULL)
+pz_get_html(ctx, target = NULL, ...)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
-
-\item{...}{Checked empty; reserved for future use.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
 current context: the pinned set at a scoped context, or the page
 body at the root.}
+
+\item{...}{Checked empty; reserved for future use.}
 }
 \value{
 A character vector, one entry per match.

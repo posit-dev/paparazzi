@@ -172,7 +172,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #' pz_close(page)
 #'
 #' @export
-pz_find_nth <- function(ctx, n, ..., target = NULL, from_root = FALSE) {
+pz_find_nth <- function(ctx, n, target = NULL, ..., from_root = FALSE) {
   check_context(ctx)
   check_dots_empty()
   n <- check_which(n, strings = FALSE)

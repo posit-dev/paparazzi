@@ -6,31 +6,30 @@
 \usage{
 pz_expect_style(
   ctx,
+  .target = NULL,
   ...,
-  target = NULL,
-  not = FALSE,
-  timeout = NULL,
-  normalize = TRUE
+  .not = FALSE,
+  .timeout = NULL,
+  .normalize = TRUE
 )
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{...}{Property/value pairs, e.g. \code{color = "red"}. Dynamic
-dots: a list spliced in with \verb{!!!} works. Names are the CSS
-property names, snake_case accepted.}
-
-\item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
+\item{.target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
 current context: the pinned set at a scoped context, or the page
 body at the root.}
 
-\item{not}{Invert the check.}
+\item{...}{Property/value pairs, e.g. \code{color = "red"}. Dynamic
+dots: a list spliced in with \verb{!!!} works. Names are the CSS
+property names, snake_case accepted.}
 
-\item{timeout}{Seconds to wait for the expectation to pass; \code{NULL}
-(default) uses the session default, \code{0} checks once.}
+\item{.not}{Invert the combined expectation?}
 
-\item{normalize}{Normalize expected values in the browser before
+\item{.timeout}{Seconds to wait; \code{NULL} uses the session default.}
+
+\item{.normalize}{Normalize expected values in the browser before
 comparing? See Details.}
 }
 \value{
@@ -58,9 +57,9 @@ reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect
 the retry, timeout, and bridge behavior shared by all expectations.
 }
 \details{
-With \code{not = TRUE} the expectation passes when at least one
+With \code{.not = TRUE} the expectation passes when at least one
 property/value pair doesn't match (including when nothing matches).
-With \code{normalize = FALSE} the expected values are compared as raw
+With \code{.normalize = FALSE} the expected values are compared as raw
 strings against the browser's computed output, for contexts the
 probe can't reproduce (unusual \verb{\%} cases, container query units);
 the pixel tolerance still applies.
@@ -69,20 +68,20 @@ Shorthand properties (\code{margin}, \code{border}, \code{background}, ...) are
 unreliable in computed styles and error with a longhand suggestion;
 check the longhand properties instead. A value the browser rejects
 errors immediately as invalid CSS, without retrying (only detected
-with \code{normalize = TRUE}).
+with \code{.normalize = TRUE}).
 }
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 
 # Expected values are written as you'd write them in CSS
-page |> pz_expect_style(background_color = "#0d6efd", target = "#add-task")
-page |> pz_expect_style(font_size = "1.5rem", target = "h1")
-page |> pz_expect_style(display = "none", target = "#help")
+page |> pz_expect_style("#add-task", background_color = "#0d6efd")
+page |> pz_expect_style("h1", font_size = "1.5rem")
+page |> pz_expect_style("#help", display = "none")
 
 page |>
   pz_click("#toggle-help") |>
-  pz_expect_style(display = "none", target = "#help", not = TRUE)
+  pz_expect_style("#help", display = "none", .not = TRUE)
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

@@ -4,17 +4,17 @@
 \alias{pz_get_text}
 \title{Read the text of matching elements}
 \usage{
-pz_get_text(ctx, ..., target = NULL, raw = FALSE)
+pz_get_text(ctx, target = NULL, ..., raw = FALSE)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
-
-\item{...}{Checked empty; reserved for future use.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
 current context: the pinned set at a scoped context, or the page
 body at the root.}
+
+\item{...}{Checked empty; reserved for future use.}
 
 \item{raw}{Return the text without collapsing whitespace?}
 }

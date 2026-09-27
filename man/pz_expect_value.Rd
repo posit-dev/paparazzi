@@ -7,9 +7,9 @@
 pz_expect_value(
   ctx,
   value,
+  target = NULL,
   ...,
   match = c("contains", "exact", "regex"),
-  target = NULL,
   not = FALSE,
   timeout = NULL
 )
@@ -20,16 +20,16 @@ pz_expect_value(
 \item{value}{A character vector of expected values: length 1 applies
 to every match, length \code{n} is compared pairwise in order.}
 
-\item{...}{Checked empty; reserved for future use.}
-
-\item{match}{How to compare \code{text}: \code{"contains"} (substring),
-\code{"exact"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).}
-
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
 current context: the pinned set at a scoped context, or the page
 body at the root, so \code{pz_expect_text(page, "Welcome")} checks the
 page text.}
+
+\item{...}{Checked empty; reserved for future use.}
+
+\item{match}{How to compare \code{text}: \code{"contains"} (substring),
+\code{"exact"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).}
 
 \item{not}{Invert the check.}
 

@@ -4,7 +4,7 @@
 \alias{pz_expect_js}
 \title{Expect a JavaScript predicate to hold}
 \usage{
-pz_expect_js(ctx, expr, ..., target = NULL, not = FALSE, timeout = NULL)
+pz_expect_js(ctx, expr, target = NULL, ..., not = FALSE, timeout = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -12,13 +12,13 @@ pz_expect_js(ctx, expr, ..., target = NULL, not = FALSE, timeout = NULL)
 \item{expr}{A JavaScript function receiving the element, as a string,
 e.g. \code{"el => el.scrollTop > 0"}.}
 
-\item{...}{Checked empty; reserved for future use.}
-
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
 current context: the pinned set at a scoped context (so
 \code{\link[=pz_expect_exists]{pz_expect_exists()}} on one trivially passes while the scope is
 live), the page body at the root.}
+
+\item{...}{Checked empty; reserved for future use.}
 
 \item{not}{Invert the check.}
 

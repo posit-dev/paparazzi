@@ -30,7 +30,7 @@
 #' pz_close(page)
 #'
 #' @export
-pz_get_count <- function(ctx, ..., target = NULL) {
+pz_get_count <- function(ctx, target = NULL, ...) {
   check_dots_empty()
   check_context(ctx)
   resolved <- target_resolver_expr(target)
@@ -59,11 +59,11 @@ pz_get_count <- function(ctx, ..., target = NULL) {
 #' `raw = TRUE` returns the text exactly as the browser holds it.
 #'
 #' @param ctx A paparazzi context.
-#' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
+#' @param ... Checked empty; reserved for future use.
 #' @param raw Return the text without collapsing whitespace?
 #'
 #' @return A character vector, one entry per match.
@@ -81,7 +81,7 @@ pz_get_count <- function(ctx, ..., target = NULL) {
 #' pz_close(page)
 #'
 #' @export
-pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
+pz_get_text <- function(ctx, target = NULL, ..., raw = FALSE) {
   check_dots_empty()
   check_bool(raw)
   get_impl(
@@ -112,7 +112,7 @@ pz_get_text <- function(ctx, ..., target = NULL, raw = FALSE) {
 #' pz_close(page)
 #'
 #' @export
-pz_get_value <- function(ctx, ..., target = NULL) {
+pz_get_value <- function(ctx, target = NULL, ...) {
   check_dots_empty()
   get_impl(
     ctx = ctx,
@@ -143,7 +143,7 @@ pz_get_value <- function(ctx, ..., target = NULL) {
 #' pz_close(page)
 #'
 #' @export
-pz_get_attr <- function(ctx, name, ..., target = NULL) {
+pz_get_attr <- function(ctx, name, target = NULL, ...) {
   check_dots_empty()
   check_string(name)
   # The name reaches JS JSON-encoded, so quotes and specials can't break
@@ -186,7 +186,7 @@ pz_get_attr <- function(ctx, name, ..., target = NULL) {
 #' pz_close(page)
 #'
 #' @export
-pz_get_rect <- function(ctx, ..., target = NULL) {
+pz_get_rect <- function(ctx, target = NULL, ...) {
   check_dots_empty()
   get_impl(
     ctx = ctx,
@@ -218,7 +218,7 @@ pz_get_rect <- function(ctx, ..., target = NULL) {
 #' pz_close(page)
 #'
 #' @export
-pz_get_elements <- function(ctx, ..., target = NULL) {
+pz_get_elements <- function(ctx, target = NULL, ...) {
   check_dots_empty()
   get_impl(
     ctx = ctx,
@@ -256,7 +256,7 @@ pz_get_elements <- function(ctx, ..., target = NULL) {
 #' pz_close(page)
 #'
 #' @export
-pz_get_html <- function(ctx, ..., target = NULL) {
+pz_get_html <- function(ctx, target = NULL, ...) {
   check_dots_empty()
   get_impl(
     ctx = ctx,

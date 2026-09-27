@@ -2,72 +2,63 @@
 % Please edit documentation in R/expect.R
 \name{pz_expect_attr}
 \alias{pz_expect_attr}
-\title{Expect an attribute}
+\title{Expect attributes}
 \usage{
 pz_expect_attr(
   ctx,
-  name,
-  value,
+  .target = NULL,
   ...,
-  match = c("exact", "contains", "regex"),
-  target = NULL,
-  not = FALSE,
-  timeout = NULL
+  .match = c("exact", "contains", "regex"),
+  .not = FALSE,
+  .timeout = NULL
 )
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{name}{The attribute name.}
+\item{.target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
+either. \code{NULL} selects the current context.}
 
-\item{value}{A character vector of expected attribute values: length 1
-applies to every match, length \code{n} is compared pairwise in order.}
+\item{...}{Named attribute/value pairs. Values are character vectors;
+use backticks for names such as \code{aria-expanded}. Dynamic dots support
+splicing a named list with \verb{!!!}.}
 
-\item{...}{Checked empty; reserved for future use.}
+\item{.match}{Comparison mode for all pairs: \code{"exact"} (default),
+\code{"contains"}, or \code{"regex"}.}
 
-\item{match}{How to compare \code{text}: \code{"contains"} (substring),
-\code{"exact"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).}
+\item{.not}{Invert the combined expectation?}
 
-\item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs and strings (a union matching any of them). \code{NULL} means the
-current context: the pinned set at a scoped context, or the page
-body at the root, so \code{pz_expect_text(page, "Welcome")} checks the
-page text.}
-
-\item{not}{Invert the check.}
-
-\item{timeout}{Seconds to wait for the expectation to pass; \code{NULL}
-(default) uses the session default, \code{0} checks once.}
+\item{.timeout}{Seconds to wait; \code{NULL} uses the session default.}
 }
 \value{
 \code{ctx}, invisibly.
 }
 \description{
-\code{\link[=pz_expect_attr]{pz_expect_attr()}} passes when at least one element matches and the
-named attribute of every match satisfies \code{value}. A missing attribute
-satisfies nothing, so \code{not = TRUE} is how to expect its absence. By
-default the comparison is \code{match = "exact"}, unlike the text-like
-expectations that default to \code{"contains"}.
+\code{\link[=pz_expect_attr]{pz_expect_attr()}} passes when at least one element matches and every
+matched element satisfies every named attribute/value pair in \code{...}.
+Missing attributes satisfy no pair. Comparisons are exact by default;
+\code{.match = "contains"} or \code{"regex"} applies to all pairs in the call.
 
-A length-1 \code{value} applies to every match. A length-\code{n} \code{value}
-requires exactly \code{n} matches and compares pairwise, in order. With
-\code{not = TRUE}, the expectation passes when no match satisfies \code{value},
-including when nothing matches.
+A length-1 value applies to every element. A vector requires exactly
+that many matches and compares pairwise, in order. With \code{.not = TRUE},
+the expectation passes when the combined condition does not hold,
+including when no element matches.
 
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
-reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect_exists()}} for the
+reported as a test failure. See \code{\link[=pz_expect_exists]{pz_expect_exists()}} for the
 retry, timeout, and bridge behavior shared by all expectations.
 }
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_expect_attr("data-priority", "high", target = pz_loc(".task", has_text = "tax"))
+page |> pz_expect_attr(
+  pz_loc(".task", has_text = "tax"), `data-priority` = "high"
+)
 
-# The toggle keeps its aria-expanded attribute in sync
 page |>
   pz_click("#toggle-help") |>
-  pz_expect_attr("aria-expanded", "true", target = "#toggle-help")
+  pz_expect_attr("#toggle-help", `aria-expanded` = "true")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

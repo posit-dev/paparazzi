@@ -99,6 +99,36 @@ test_that("pz_find_first/last/nth with a target pin the picked match", {
   )
 })
 
+test_that("pz_find_nth accepts target by position", {
+  page <- local_elements_page()
+
+  nth <- pz_find_nth(page, 3, ".btn")
+  expect_identical(nth$scope[[1]]$count, 1L)
+  expect_identical(nth$scope[[1]]$description, "`.btn` (which: 3)")
+  expect_identical(elements_text(nth$scope[[1]]), "Save   now")
+})
+
+test_that("a positional target on pz_find_nth resolves inside the scope", {
+  page <- local_elements_page()
+  ctx <- pz_find(page, "#panel-b")
+
+  nth <- pz_find_nth(ctx, 2, ".btn")
+  expect_identical(length(nth$scope), 2L)
+  expect_identical(elements_text(nth$scope[[2]]), "Save")
+  expect_identical(nth$scope[[2]]$description, "`.btn` (which: 2)")
+})
+
+test_that("pz_find_nth without a target narrows the current scope", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-a .sc-item")
+
+  nth <- pz_find_nth(ctx, 2)
+  expect_identical(length(nth$scope), 2L)
+  expect_identical(nth$scope[[2]]$description, "`#scope-a .sc-item` (which: 2)")
+  expect_identical(pz_get_count(nth), 1L)
+  expect_identical(pz_get_text(nth), "A2")
+})
+
 test_that("narrowing slices the current scope eagerly", {
   page <- local_elements_page()
   ctx <- pz_find(page, ".panel")
@@ -180,6 +210,7 @@ test_that("the find family validates its inputs", {
   expect_error(pz_find_nth(page, "first"), "pz_find_first")
   expect_error(pz_find_nth(page, 0), class = "rlang_error")
   expect_error(pz_find_nth(page, 1.5), class = "rlang_error")
+  expect_error(pz_find_nth(page, 2, ".btn", extra = 1), class = "rlang_error")
 
   expect_error(
     pz_find("not a context", ".btn"),

@@ -38,10 +38,10 @@ Known bugs to fix while porting:
 
 ### Argument order
 
-- The second argument is the action's **main input**.
-  - When the main input is the element (click, hover, find), it is `target`.
-  - Otherwise `target` is an optional, named argument after `...`.
-- `...` comes before optional arguments so they must be named. Unless a function documents a use for them (e.g. `pz_expect_style()` property pairs, `pz_open()` forwarding to `pz_device()`), the dots are checked empty with `rlang::check_dots_empty()`, so stray positional arguments error instead of being ignored.
+- The first argument after `ctx` is the operation's main input.
+  - When that input is the element (click, hover, find), it is `target`.
+  - For `pz_find_nth()`, getters, and expectations, `target` follows any main input and precedes `...`, so it can be passed positionally or by name. Other actions keep an optional, named `target` after `...`.
+- `...` separates positional inputs from named-only options where it is checked empty. In `pz_expect_attr()` and `pz_expect_style()`, it instead carries named attribute/style pairs; dot-prefixed control arguments (`.target`, `.match`, `.not`, `.timeout`, `.normalize`) avoid collisions with pair names. `pz_open()` forwards its dots to `pz_device()`. All other dots are checked empty with `rlang::check_dots_empty()`.
 - `target = NULL` means **the current context**:
 
   | Context | click / hover | type / press | screenshot |
@@ -56,6 +56,9 @@ pz_screenshot(ctx, path, ..., target = NULL, frame = NULL)
 pz_set_files(ctx, files, ..., target = NULL)
 pz_select_text(ctx, text, ..., target = NULL)
 pz_press(ctx, key, ...)
+pz_expect_text(ctx, text, target = NULL, ..., match = "contains", not = FALSE, timeout = NULL)
+pz_get_attr(ctx, name, target = NULL, ...)
+pz_expect_attr(ctx, .target = NULL, ..., .match = c("exact", "contains", "regex"), .not = FALSE, .timeout = NULL)
 ```
 
 ### Actions
@@ -99,7 +102,7 @@ chat <- list(
 Scope is part of the chain's context, managed as a stack:
 
 - `pz_find(ctx, target, ..., from_root = FALSE)`: push a scope. With `from_root = TRUE` the target is resolved from the root, but the new scope is still pushed on top of the stack, so `pz_find_pop()` returns to the previous scope.
-- `pz_find_first()`, `pz_find_last()`, `pz_find_nth(n)`: same as `pz_find()` with `which`. `target` is optional; without it they narrow the current scope. Each call pushes one level.
+- `pz_find_first()`, `pz_find_last()`, `pz_find_nth(n, target = NULL, ...)`: same as `pz_find()` with `which`. `target` is optional; without it they narrow the current scope. Each call pushes one level.
 - `pz_find_pop()`: pop one level.
 - `pz_find_reset()`: clear all scope, back to root.
 
@@ -137,7 +140,7 @@ Resolution: specs are lazy, `pz_find*()` is eager.
 
 Shared behavior:
 
-- Signature: `pz_expect_x(ctx, <main input>, ..., target = NULL, not = FALSE, timeout = NULL)`.
+- Signature: `pz_expect_x(ctx, <main input>, target = NULL, ..., not = FALSE, timeout = NULL)`. The pair-taking `pz_expect_attr()` and `pz_expect_style()` instead use dot-prefixed controls (see below).
 - Retry until pass or timeout. `timeout = NULL` uses the session default; `timeout = 0` checks once.
 - On success, return `ctx` invisibly.
 - On failure, throw a classed error (e.g. `paparazzi_expectation_failure`) showing the expectation, the last observed value, the full target including scope, and the time waited:
@@ -164,7 +167,7 @@ Catalog:
 | | `pz_expect_in_viewport()` | – |
 | Content | `pz_expect_text()` | `text` |
 | | `pz_expect_value()` | `value` |
-| | `pz_expect_attr()` | `name`, `value` |
+| | `pz_expect_attr()` | attribute/value pairs in the dots |
 | | `pz_expect_class()` | `class` |
 | | `pz_expect_style()` | `...` property/value pairs (see Styles) |
 | Escape hatch | `pz_expect_js()` | JS predicate receiving the element, e.g. `"el => el.scrollTop > 0"` |
@@ -173,15 +176,16 @@ Catalog:
 
 Negation:
 
-- Every expectation takes `not = FALSE`; no `pz_expect_not_*()` variants.
+- Every expectation takes `not = FALSE` (`pz_expect_attr()` and `pz_expect_style()` use `.not`); no `pz_expect_not_*()` variants.
 - Aliases only when the negated state is a common concept in its own right. For now that's just `pz_expect_hidden()`, which is exactly `pz_expect_visible(not = TRUE)`.
 
 Multiple matches:
 
 - The default is **all**: every match must satisfy the expectation. To express "some element", narrow the scope, e.g. `pz_find_last()` or `pz_loc(has_text =)`.
 - The exception is `pz_expect_exists()`, which is about existence: it passes with at least one match (visible or not), and with `not = TRUE` it passes with zero matches.
-- State and content checks need at least one match. With `not = TRUE`, they pass when no match satisfies the condition, including zero matches.
-- Text vectors: length 1 applies to every match. Length `n` compares pairwise in order and requires exactly `n` matches.
+- State and single-value content checks need at least one match. With `not = TRUE`, they pass when no match satisfies the condition, including zero matches. The pair-taking attribute/style checks instead negate the combined all-matches/all-pairs condition.
+- Text vectors: length 1 applies to every match. Length `n` compares pairwise in order and requires exactly `n` matches. The same applies to attribute values in `pz_expect_attr()`.
+- In `pz_expect_attr()`, the dots hold named attribute/value pairs. Multiple pairs combine with AND across every element; `.not = TRUE` negates the combined check (it passes when any pair fails on any element, or when there are no matches). Vector values stay pairwise per attribute for the match count.
 
 | Check | Passes when | `not = TRUE` passes when |
 |---|---|---|
@@ -192,7 +196,7 @@ Multiple matches:
 
 Text matching:
 
-- `match = c("contains", "exact", "regex")`, defaulting to `"contains"`. Also used by `pz_expect_value()`, `pz_expect_url()` and `pz_expect_title()`.
+- `match = c("contains", "exact", "regex")`, defaulting to `"contains"`. Also used by `pz_expect_value()`, `pz_expect_attr()` (as `.match`, defaulting to `"exact"`), `pz_expect_url()` and `pz_expect_title()`.
 - Whitespace is collapsed before comparing.
 
 Waits vs. expectations:
@@ -224,7 +228,7 @@ Getters return values, so they end the chain. They're named `pz_get_*()`, parall
 | `pz_get_url()` / `pz_get_title()` | character | `pz_expect_url()` / `pz_expect_title()` |
 | `pz_js()` | the JS value | `pz_expect_js()` |
 
-- Same argument rule as everything else: `pz_get_text(ctx, ..., target = NULL)`, `pz_get_attr(ctx, name, ..., target = NULL)`. `target = NULL` means the current scope.
+- Same argument rule as everything else: `pz_get_text(ctx, target = NULL, ...)`, `pz_get_attr(ctx, name, target = NULL, ...)`. `target = NULL` means the current scope.
 - Getters auto-wait for at least one match, then return all matches, and error after the timeout. `pz_get_count()` returns immediately, since 0 is a valid answer.
 - `pz_get_text()` collapses whitespace like `pz_expect_text()`; `raw = TRUE` turns that off.
 - Tibble getters include an `element` list-column. Each entry is a context scoped to that one match, pinned at get time (see Scoping), so you can continue from it: `rects$element[[2]] |> pz_hover() |> pz_screenshot("second.png")`. The column gets a short pillar type label (e.g. `<pz_ctx>`) and a compact print format. tibble is in Imports.
@@ -235,7 +239,7 @@ Getters return values, so they end the chain. They're named `pz_get_*()`, parall
     pz_find(".history-drawer") |>
     pz_find_last(".history-item")
 
-  title <- pz_get_text(item, target = ".history-title")
+  title <- pz_get_text(item, ".history-title")
 
   item |>
     pz_hover() |>
@@ -247,16 +251,16 @@ Getters return values, so they end the chain. They're named `pz_get_*()`, parall
 `pz_get_style()` / `pz_expect_style()` read and check **computed** styles. "style" rather than "css" because it's the applied style (as in `getComputedStyle()`), and because "CSS" already means selectors in this package. Docs should mention Playwright's `toHaveCSS()` and jQuery's `.css()` for discoverability.
 
 ```r
-pz_get_style(ctx, props = NULL, ..., target = NULL)
-pz_expect_style(ctx, ..., target = NULL, not = FALSE, timeout = NULL, normalize = TRUE)
+pz_get_style(ctx, props = NULL, target = NULL, ...)
+pz_expect_style(ctx, .target = NULL, ..., .not = FALSE, .timeout = NULL, .normalize = TRUE)
 
-page |> pz_expect_style(display = "none", target = ".tool-body")
-page |> pz_expect_style(font_size = "1rem", color = "#0d6efd", target = ".btn-primary")
+page |> pz_expect_style(display = "none", .target = ".tool-body")
+page |> pz_expect_style(font_size = "1rem", color = "#0d6efd", .target = ".btn-primary")
 ```
 
-- In `pz_expect_style()`, `...` holds the property/value pairs (dynamic dots, so `!!!styles` works). `target`, `not` and `timeout` are named arguments after the dots.
+- In `pz_expect_style()`, `...` holds the property/value pairs (dynamic dots, so `!!!styles` works). `.target` precedes the dots; the remaining controls (`.not`, `.timeout`, `.normalize`) follow them. All controls are dot-prefixed to avoid collisions with property names.
 - snake_case names are converted to kebab-case (`font_size` → `font-size`). Custom properties (`` `--bs-primary` ``) pass through unchanged.
-- Every match must satisfy every pair. `not = TRUE` passes when at least one pair doesn't match.
+- Every match must satisfy every pair. `.not = TRUE` passes when at least one pair doesn't match.
 - `pz_get_style()` returns a tibble with one row per match, one character column per property, and the `element` column. `props = NULL` returns all computed properties.
 
 Normalization: the browser returns computed values (`rgb(...)`, px lengths, numeric font weights), which rarely match what users write. Expected values are normalized in the browser too:
@@ -577,12 +581,12 @@ page |>
   pz_press("Enter") |>
   pz_find_reset() |>
   pz_wait_for_stable(target = pz_loc(".shiny-chat-assistant-message", which = "last")) |>
-  pz_expect_text("otters", target = pz_loc(".shiny-chat-assistant-message", which = "last"))
+  pz_expect_text("otters", pz_loc(".shiny-chat-assistant-message", which = "last"))
 
 page |>
   pz_find(pz_loc(".shiny-tool-request", has_text = "get_weather")) |>
   pz_click(".tool-header") |>
-  pz_expect_visible(target = ".tool-body") |>
+  pz_expect_visible(".tool-body") |>
   pz_screenshot("tool-expanded.png", frame = pz_frame(pad = 32))
 ```
 
@@ -621,11 +625,11 @@ Arguments: `shiny_options` and `wait = "auto"` are confirmed.
 | `pz_find()` | `(ctx, target, ..., from_root = FALSE)` | confirmed |
 | `pz_find_first()` | `(ctx, target = NULL, ..., from_root = FALSE)` | confirmed |
 | `pz_find_last()` | `(ctx, target = NULL, ..., from_root = FALSE)` | confirmed |
-| `pz_find_nth()` | `(ctx, n, ..., target = NULL, from_root = FALSE)` | confirmed |
+| `pz_find_nth()` | `(ctx, n, target = NULL, ..., from_root = FALSE)` | confirmed |
 | `pz_find_pop()` | `(ctx)` | confirmed |
 | `pz_find_reset()` | `(ctx)` | confirmed |
 
-Arguments: `target` and `from_root` are confirmed. `pz_find_nth()` takes `n` as its main input, so `target` moves after the dots. That follows the argument rule, but it hasn't been reviewed.
+Arguments: `target` and `from_root` are confirmed. `pz_find_nth()` takes `n` as its main input, with `target` right after it, before the dots (approved revision).
 
 ### Actions
 
@@ -653,24 +657,24 @@ Skipped: select option, check/uncheck, clear (covered by `pz_set_value()` / `pz_
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_expect_exists()` | `(ctx, ..., target = NULL, not = FALSE, timeout = NULL)` | confirmed |
-| `pz_expect_count()` | `(ctx, n = NULL, ..., min = NULL, max = NULL, target = NULL, not = FALSE, timeout = NULL)` | confirmed |
-| `pz_expect_visible()` | `(ctx, ..., target = NULL, not = FALSE, timeout = NULL)` | confirmed |
-| `pz_expect_hidden()` | `(ctx, ..., target = NULL, not = FALSE, timeout = NULL)` | confirmed |
+| `pz_expect_exists()` | `(ctx, target = NULL, ..., not = FALSE, timeout = NULL)` | confirmed |
+| `pz_expect_count()` | `(ctx, n = NULL, target = NULL, ..., min = NULL, max = NULL, not = FALSE, timeout = NULL)` | confirmed |
+| `pz_expect_visible()` | `(ctx, target = NULL, ..., not = FALSE, timeout = NULL)` | confirmed |
+| `pz_expect_hidden()` | `(ctx, target = NULL, ..., not = FALSE, timeout = NULL)` | confirmed |
 | `pz_expect_enabled()` | same shape | confirmed |
 | `pz_expect_focused()` | same shape | confirmed |
 | `pz_expect_checked()` | same shape | confirmed |
 | `pz_expect_in_viewport()` | same shape | confirmed |
-| `pz_expect_text()` | `(ctx, text, ..., match = "contains", target = NULL, not = FALSE, timeout = NULL)` | confirmed |
-| `pz_expect_value()` | `(ctx, value, ..., match = "contains", target = NULL, not = FALSE, timeout = NULL)` | confirmed |
-| `pz_expect_attr()` | `(ctx, name, value, ..., match = "exact", target = NULL, not = FALSE, timeout = NULL)` | confirmed |
-| `pz_expect_class()` | `(ctx, class, ..., target = NULL, not = FALSE, timeout = NULL)` | confirmed |
-| `pz_expect_style()` | `(ctx, ..., target = NULL, not = FALSE, timeout = NULL, normalize = TRUE)` | confirmed |
-| `pz_expect_js()` | `(ctx, expr, ..., target = NULL, not = FALSE, timeout = NULL)` | confirmed |
+| `pz_expect_text()` | `(ctx, text, target = NULL, ..., match = "contains", not = FALSE, timeout = NULL)` | confirmed |
+| `pz_expect_value()` | `(ctx, value, target = NULL, ..., match = "contains", not = FALSE, timeout = NULL)` | confirmed |
+| `pz_expect_attr()` | `(ctx, .target = NULL, ..., .match = c("exact", "contains", "regex"), .not = FALSE, .timeout = NULL)` | confirmed |
+| `pz_expect_class()` | `(ctx, class, target = NULL, ..., not = FALSE, timeout = NULL)` | confirmed |
+| `pz_expect_style()` | `(ctx, .target = NULL, ..., .not = FALSE, .timeout = NULL, .normalize = TRUE)` | confirmed |
+| `pz_expect_js()` | `(ctx, expr, target = NULL, ..., not = FALSE, timeout = NULL)` | confirmed |
 | `pz_expect_url()` | `(ctx, url, ..., match = "contains", not = FALSE, timeout = NULL)` | confirmed |
 | `pz_expect_title()` | `(ctx, title, ..., match = "contains", not = FALSE, timeout = NULL)` | confirmed |
 
-Arguments: the `pz_expect_` prefix, `not` and `match` are confirmed. `pz_expect_attr()` defaults to `match = "exact"`; the other text-like expectations default to `"contains"`.
+Arguments: the `pz_expect_` prefix, `not` and `match` are confirmed for the single-value checks. `pz_expect_attr()` and `pz_expect_style()` take their checks in the dots, so their controls are dot-prefixed (`.target`, `.match`, `.not`, `.timeout`, `.normalize` as applicable). `pz_expect_attr()` defaults to `.match = "exact"`; the other text-like expectations default to `"contains"`. In the remaining target-bearing expectations, `target` sits after the main input, before the dots.
 
 ### Waits
 
@@ -686,18 +690,18 @@ Arguments: the `pz_expect_` prefix, `not` and `match` are confirmed. `pz_expect_
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_get_count()` | `(ctx, ..., target = NULL)` → integer | confirmed |
-| `pz_get_text()` | `(ctx, ..., target = NULL, raw = FALSE)` → character | confirmed |
-| `pz_get_value()` | `(ctx, ..., target = NULL)` → character | confirmed |
-| `pz_get_attr()` | `(ctx, name, ..., target = NULL)` → character | confirmed |
-| `pz_get_style()` | `(ctx, props = NULL, ..., target = NULL)` → tibble | confirmed |
-| `pz_get_rect()` | `(ctx, ..., target = NULL)` → tibble | confirmed |
-| `pz_get_elements()` | `(ctx, ..., target = NULL)` → tibble | confirmed |
-| `pz_get_html()` | `(ctx, ..., target = NULL)` → character | confirmed |
+| `pz_get_count()` | `(ctx, target = NULL, ...)` → integer | confirmed |
+| `pz_get_text()` | `(ctx, target = NULL, ..., raw = FALSE)` → character | confirmed |
+| `pz_get_value()` | `(ctx, target = NULL, ...)` → character | confirmed |
+| `pz_get_attr()` | `(ctx, name, target = NULL, ...)` → character | confirmed |
+| `pz_get_style()` | `(ctx, props = NULL, target = NULL, ...)` → tibble | confirmed |
+| `pz_get_rect()` | `(ctx, target = NULL, ...)` → tibble | confirmed |
+| `pz_get_elements()` | `(ctx, target = NULL, ...)` → tibble | confirmed |
+| `pz_get_html()` | `(ctx, target = NULL, ...)` → character | confirmed |
 | `pz_get_url()` | `(ctx)` → character | confirmed |
 | `pz_get_title()` | `(ctx)` → character | confirmed |
 
-Arguments: the `pz_get_` prefix is confirmed.
+Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input, before the dots (approved revision).
 
 ### Recording
 

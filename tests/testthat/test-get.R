@@ -21,8 +21,65 @@ test_that("pz_get_count returns 0 for a missing target without waiting", {
 
 test_that("pz_get_count validates its inputs", {
   page <- local_getters_page()
-  expect_error(pz_get_count(page, "extra"), class = "rlang_error")
+  expect_error(pz_get_count(page, extra = 1), class = "rlang_error")
   expect_error(pz_get_count("not a page"), class = "paparazzi_error_context")
+})
+
+test_that("target can be passed by position", {
+  page <- local_getters_page()
+
+  expect_identical(pz_get_count(page, ".item"), 3L)
+  expect_identical(pz_get_text(page, ".padded"), "padded text")
+  expect_identical(
+    pz_get_value(page, ".field"),
+    c("alpha", "", NA_character_)
+  )
+  expect_identical(pz_get_attr(page, "href", ".link"), c("#top", "#bottom"))
+  expect_identical(nrow(pz_get_rect(page, "#box1")), 1L)
+  expect_identical(nrow(pz_get_elements(page, ".link")), 2L)
+  expect_identical(
+    pz_get_html(page, "#rich"),
+    '<div id="rich"><b>bold</b> and <i>italic</i></div>'
+  )
+})
+
+test_that("a positional target resolves inside the current scope", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-b")
+
+  expect_identical(pz_get_text(ctx, ".sc-label"), "nested-b")
+  expect_identical(
+    pz_get_text(ctx, pz_loc(".sc-item", which = "first")),
+    "B1"
+  )
+})
+
+test_that("pz_get_attr can read an attribute named target", {
+  page <- local_getters_page()
+  pz_js(
+    page,
+    "document.querySelector('.link').setAttribute('target', '_blank')"
+  )
+
+  expect_identical(
+    pz_get_attr(page, "target", target = ".link"),
+    c("_blank", NA_character_)
+  )
+  expect_identical(
+    pz_get_attr(page, "target", ".link"),
+    c("_blank", NA_character_)
+  )
+})
+
+test_that("positional targets keep the dots checked", {
+  page <- local_getters_page()
+  expect_error(pz_get_count(page, ".item", extra = 1), class = "rlang_error")
+  expect_error(pz_get_text(page, ".item", extra = 1), class = "rlang_error")
+  expect_error(
+    pz_get_attr(page, "href", ".link", extra = 1),
+    class = "rlang_error"
+  )
+  expect_error(pz_get_rect(page, "#box1", extra = 1), class = "rlang_error")
 })
 
 test_that("target-based getters validate context before reading the scope", {
@@ -246,6 +303,19 @@ test_that("target = NULL on a scope returns one row per pinned match", {
   rects <- pz_get_rect(ctx)
   expect_identical(nrow(rects), 6L)
   expect_identical(pz_get_value(ctx), rep(NA_character_, 6L))
+})
+
+test_that("pz_get_attr and pz_get_html omit target on a scope", {
+  page <- local_scopes_page()
+  ctx <- pz_find(page, "#scope-b .sc-item")
+
+  expect_identical(
+    pz_get_attr(ctx, "class"),
+    c("sc-item", "sc-item", "sc-item", "sc-item sc-target", "sc-item")
+  )
+  html <- pz_get_html(ctx)
+  expect_length(html, 5L)
+  expect_match(html[[3]], "nested-b", fixed = TRUE)
 })
 
 test_that("pz_get_count on a scope returns the pinned count immediately", {

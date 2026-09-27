@@ -60,6 +60,15 @@ test_that("pz_get_style reads one row per match in order", {
   expect_identical(cards$color, rep("rgb(51, 51, 51)", 3))
 })
 
+test_that("pz_get_style takes the target positionally", {
+  page <- local_style_page()
+  styles <- pz_get_style(page, "color", "#primary")
+  expect_identical(nrow(styles), 1L)
+  expect_identical(styles$color, "rgb(255, 255, 255)")
+  cards <- pz_get_style(page, "color", ".card")
+  expect_identical(nrow(cards), 3L)
+})
+
 test_that("pz_get_style reads custom properties", {
   page <- local_style_page()
   styles <- pz_get_style(page, "--bs-primary", target = "#custom")
@@ -89,7 +98,10 @@ test_that("pz_get_style works from a scoped context and at the root", {
 
 test_that("pz_get_style validates its inputs", {
   page <- local_style_page()
-  expect_error(pz_get_style(page, "color", "extra"), class = "rlang_error")
+  expect_error(
+    pz_get_style(page, "color", "#primary", "extra"),
+    class = "rlang_error"
+  )
   # With target = NULL a non-context ctx would crash deeper in the
   # scope stack; an explicit target routes through check_context.
   expect_error(
@@ -127,7 +139,7 @@ test_that("hex expectations match computed rgb() values", {
       page,
       color = "#ffffff",
       background_color = "#0d6efd",
-      target = "#primary"
+      .target = "#primary"
     )
   )
   expect_false(res$visible)
@@ -137,52 +149,52 @@ test_that("hex expectations match computed rgb() values", {
 test_that("em resolves against the parent font for font-size, the own font otherwise", {
   page <- local_style_page()
   # #em-child is 1.5em of #em-parent's 20px = 30px.
-  pz_expect_style(page, font_size = "1.5em", target = "#em-child")
-  pz_expect_style(page, font_size = "2em", target = "#em-child", not = TRUE)
+  pz_expect_style(page, font_size = "1.5em", .target = "#em-child")
+  pz_expect_style(page, font_size = "2em", .target = "#em-child", .not = TRUE)
   # margin-left: 1em uses the element's own 20px font.
-  pz_expect_style(page, margin_left = "1em", target = "#em-margin")
+  pz_expect_style(page, margin_left = "1em", .target = "#em-margin")
 })
 
 test_that("percentages resolve against the parent's size", {
   page <- local_style_page()
-  pz_expect_style(page, width = "50%", height = "25%", target = "#half")
+  pz_expect_style(page, width = "50%", height = "25%", .target = "#half")
 })
 
 test_that("currentColor resolves against the target's color", {
   page <- local_style_page()
-  pz_expect_style(page, border_color = "currentColor", target = "#current")
+  pz_expect_style(page, border_color = "currentColor", .target = "#current")
 })
 
 test_that("rem and vw need no context", {
   page <- local_style_page()
-  pz_expect_style(page, font_size = "1.5rem", target = "#rem-box")
-  pz_expect_style(page, width = "50vw", target = "#vw-box")
+  pz_expect_style(page, font_size = "1.5rem", .target = "#rem-box")
+  pz_expect_style(page, width = "50vw", .target = "#vw-box")
 })
 
 test_that("keywords normalize to computed values", {
   page <- local_style_page()
   # font-weight: normal computes to 400.
-  pz_expect_style(page, font_weight = "normal", target = "#primary")
+  pz_expect_style(page, font_weight = "normal", .target = "#primary")
 })
 
 test_that("numeric px comparisons tolerate ~0.5px of noise", {
   page <- local_style_page()
   # #third is 200px / 3 = 66.67px: 0.17px off passes, 0.67px off fails.
-  pz_expect_style(page, width = "66.5px", target = "#third")
+  pz_expect_style(page, width = "66.5px", .target = "#third")
   local_outside_testthat()
   expect_error(
-    pz_expect_style(page, width = "66px", target = "#third", timeout = 0),
+    pz_expect_style(page, width = "66px", .target = "#third", .timeout = 0),
     class = "paparazzi_expectation_failure"
   )
 })
 
 test_that("every match must satisfy every pair", {
   page <- local_style_page()
-  pz_expect_style(page, color = "#333333", target = ".card")
+  pz_expect_style(page, color = "#333333", .target = ".card")
   local_outside_testthat()
   # .mixed has a fourth, differently colored member.
   err <- expect_error(
-    pz_expect_style(page, color = "#333333", target = ".mixed", timeout = 0),
+    pz_expect_style(page, color = "#333333", .target = ".mixed", .timeout = 0),
     class = "paparazzi_expectation_failure"
   )
   expect_match(
@@ -192,57 +204,62 @@ test_that("every match must satisfy every pair", {
   )
 })
 
-test_that("not = TRUE passes when at least one pair doesn't match", {
+test_that(".not = TRUE passes when at least one pair doesn't match", {
   page <- local_style_page()
-  pz_expect_style(page, color = "#333333", target = ".mixed", not = TRUE)
+  pz_expect_style(page, color = "#333333", .target = ".mixed", .not = TRUE)
   # All .card matches agree, so the negation fails.
   local_outside_testthat()
   expect_error(
     pz_expect_style(
       page,
       color = "#333333",
-      target = ".card",
-      not = TRUE,
-      timeout = 0
+      .target = ".card",
+      .not = TRUE,
+      .timeout = 0
     ),
     class = "paparazzi_expectation_failure"
   )
 })
 
-test_that("not = TRUE passes when nothing matches", {
+test_that(".not = TRUE passes when nothing matches", {
   page <- local_style_page()
-  pz_expect_style(page, color = "red", target = ".never", not = TRUE)
+  pz_expect_style(page, color = "red", .target = ".never", .not = TRUE)
 })
 
 test_that("!!! splices a list of style pairs", {
   page <- local_style_page()
   styles <- list(color = "#ffffff", font_weight = "normal")
-  pz_expect_style(page, !!!styles, target = "#primary")
+  pz_expect_style(page, !!!styles, .target = "#primary")
 })
 
 test_that("custom properties pass their names and values through", {
   page <- local_style_page()
-  pz_expect_style(page, `--bs-primary` = "#0d6efd", target = "#custom")
+  pz_expect_style(page, `--bs-primary` = "#0d6efd", .target = "#custom")
 })
 
-test_that("normalize = FALSE compares raw computed strings", {
+test_that(".normalize = FALSE compares raw computed strings", {
   page <- local_style_page()
   pz_expect_style(
     page,
     color = "rgb(13, 110, 253)",
-    target = "#rgb-box",
-    normalize = FALSE
+    .target = "#rgb-box",
+    .normalize = FALSE
   )
   # The px tolerance still applies in raw mode.
-  pz_expect_style(page, width = "66.5px", target = "#third", normalize = FALSE)
+  pz_expect_style(
+    page,
+    width = "66.5px",
+    .target = "#third",
+    .normalize = FALSE
+  )
   local_outside_testthat()
   expect_error(
     pz_expect_style(
       page,
       color = "#0d6efd",
-      target = "#rgb-box",
-      normalize = FALSE,
-      timeout = 0
+      .target = "#rgb-box",
+      .normalize = FALSE,
+      .timeout = 0
     ),
     class = "paparazzi_expectation_failure"
   )
@@ -254,13 +271,13 @@ test_that("invalid CSS errors immediately, without retrying", {
   page <- local_page(style_fixture_file(), timeout = 3)
   start <- Sys.time()
   expect_error(
-    pz_expect_style(page, width = "nonsense", target = "#sizes"),
+    pz_expect_style(page, width = "nonsense", .target = "#sizes"),
     class = "paparazzi_error_input"
   )
   expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
   # An unknown property name is rejected the same way.
   expect_error(
-    pz_expect_style(page, colour = "red", target = "#sizes"),
+    pz_expect_style(page, colour = "red", .target = "#sizes"),
     class = "paparazzi_error_input"
   )
 })
@@ -272,15 +289,15 @@ test_that("invalid CSS errors immediately even with no matches", {
   page <- local_page(style_fixture_file(), timeout = 3)
   start <- Sys.time()
   expect_error(
-    pz_expect_style(page, color = "not-a-color", target = ".absent"),
+    pz_expect_style(page, color = "not-a-color", .target = ".absent"),
     class = "paparazzi_error_input"
   )
   expect_error(
     pz_expect_style(
       page,
       color = "not-a-color",
-      target = ".absent",
-      not = TRUE
+      .target = ".absent",
+      .not = TRUE
     ),
     class = "paparazzi_error_input"
   )
@@ -290,16 +307,16 @@ test_that("invalid CSS errors immediately even with no matches", {
 test_that("pz_expect_style rejects shorthands and suggests longhands", {
   page <- local_style_page()
   err <- expect_error(
-    pz_expect_style(page, margin = "1rem", target = "#spaced"),
+    pz_expect_style(page, margin = "1rem", .target = "#spaced"),
     class = "paparazzi_error_input"
   )
   expect_match(conditionMessage(err), "margin-top", fixed = TRUE)
   expect_error(
-    pz_expect_style(page, background = "#0d6efd", target = "#primary"),
+    pz_expect_style(page, background = "#0d6efd", .target = "#primary"),
     class = "paparazzi_error_input"
   )
   err <- expect_error(
-    pz_expect_style(page, border_top = "1px solid red", target = "#spaced"),
+    pz_expect_style(page, border_top = "1px solid red", .target = "#spaced"),
     class = "paparazzi_error_input"
   )
   expect_match(conditionMessage(err), "border-top-width", fixed = TRUE)
@@ -312,14 +329,14 @@ test_that("pz_expect_style retries until the style arrives", {
     "setTimeout(() => document.getElementById('late').classList.add('blue'), 300)",
     await = FALSE
   )
-  pz_expect_style(page, color = "#0000ff", target = "#late", timeout = 5)
+  pz_expect_style(page, color = "#0000ff", .target = "#late", .timeout = 5)
 })
 
 test_that("pz_expect_style failure has the classed error format", {
   page <- local_style_page()
   local_outside_testthat()
   err <- expect_error(
-    pz_expect_style(page, color = "red", target = "#rgb-box", timeout = 0),
+    pz_expect_style(page, color = "red", .target = "#rgb-box", .timeout = 0),
     class = "paparazzi_expectation_failure"
   )
   msg <- conditionMessage(err)
@@ -332,18 +349,28 @@ test_that("pz_expect_style failure has the classed error format", {
 test_that("pz_expect_style works from a scoped context and at the root", {
   page <- local_style_page()
   pz_find(page, "#em-parent") |> pz_expect_style(font_size = "20px")
-  pz_find(page, "#sizes") |> pz_expect_style(width = "50%", target = "#half")
+  pz_find(page, "#sizes") |> pz_expect_style(width = "50%", .target = "#half")
   # target = NULL at the root checks the body.
   pz_expect_style(page, display = "block")
 })
 
+test_that("pz_expect_style takes the target positionally", {
+  page <- local_style_page()
+  pz_expect_style(page, "#primary", color = "#ffffff")
+  pz_expect_style(page, "#em-child", font_size = "1.5em")
+  pz_find(page, "#sizes") |> pz_expect_style("#half", width = "100px")
+})
+
 test_that("pz_expect_style validates its inputs", {
   page <- local_style_page()
-  expect_error(pz_expect_style(page, target = "#primary"), "pair")
-  expect_error(pz_expect_style(page, "red", target = "#primary"), "named")
-  expect_error(pz_expect_style(page, color = 1, target = "#primary"), "strings")
+  expect_error(pz_expect_style(page, .target = "#primary"), "pair")
+  expect_error(pz_expect_style(page, .target = "#primary", "red"), "named")
   expect_error(
-    pz_expect_style(page, color = NA, target = "#primary"),
+    pz_expect_style(page, color = 1, .target = "#primary"),
+    "strings"
+  )
+  expect_error(
+    pz_expect_style(page, color = NA, .target = "#primary"),
     "strings"
   )
   expect_error(
@@ -354,25 +381,42 @@ test_that("pz_expect_style validates its inputs", {
     pz_expect_style(
       page,
       color = "red",
-      normalize = "yes",
-      target = "#primary"
+      .normalize = "yes",
+      .target = "#primary"
     ),
     "normalize"
   )
   expect_error(
-    pz_expect_style(page, color = "red", not = "yes", target = "#primary"),
+    pz_expect_style(page, color = "red", .not = "yes", .target = "#primary"),
     "not"
   )
   expect_error(
-    pz_expect_style(page, color = "red", timeout = -1, target = "#primary"),
+    pz_expect_style(page, color = "red", .timeout = -1, .target = "#primary"),
     "timeout"
   )
   dup <- list(font_size = "10px", `font-size` = "12px")
   err <- expect_error(
-    pz_expect_style(page, !!!dup, target = "#primary"),
+    pz_expect_style(page, !!!dup, .target = "#primary"),
     class = "paparazzi_error_input"
   )
   expect_match(conditionMessage(err), "Duplicated", fixed = TRUE)
+})
+
+test_that("target = is a style pair on pz_expect_style, not the selector", {
+  page <- local_style_page()
+  err <- expect_error(
+    pz_expect_style(page, color = "red", target = "#primary"),
+    class = "paparazzi_error_input"
+  )
+  expect_match(
+    conditionMessage(err),
+    'the browser rejects "#primary" for "target"',
+    fixed = TRUE
+  )
+  expect_error(
+    pz_expect_style(page, target = ".never"),
+    class = "paparazzi_error_input"
+  )
 })
 
 test_that("the probe never enters the app's DOM", {
@@ -386,8 +430,8 @@ test_that("the probe never enters the app's DOM", {
   )
   expect_true(before)
   before_count <- pz_get_count(page, target = "body div")
-  pz_expect_style(page, width = "50%", target = "#half")
-  pz_expect_style(page, font_size = "1.5em", target = "#em-child")
+  pz_expect_style(page, width = "50%", .target = "#half")
+  pz_expect_style(page, font_size = "1.5em", .target = "#em-child")
   # The probe host lives only inside the synchronous JS call: once
   # the expectations return, the DOM shows no trace -- no host anywhere
   # to find, documentElement's last child unchanged, no extra nodes.
@@ -403,7 +447,7 @@ test_that("the probe never enters the app's DOM", {
 test_that("the probe leaves body:empty matching unaffected", {
   page <- local_page(style_empty_fixture_file())
   expect_identical(pz_get_count(page, target = "body:empty"), 1L)
-  pz_expect_style(page, display = "block", target = "body")
+  pz_expect_style(page, display = "block", .target = "body")
   # The body still matches :empty after normalization: the probe is
   # created and removed within the one JS call, never appended to
   # the body.
@@ -432,10 +476,10 @@ test_that("the probe does not disturb positional-selector styles", {
   )
   before <- pz_get_style(page, "color", target = "#pos-colored")$color
   expect_identical(before, "rgb(214, 40, 40)")
-  pz_expect_style(page, color = "#d62828", target = "#pos-colored")
+  pz_expect_style(page, color = "#d62828", .target = "#pos-colored")
   # The % context is the positionally-sized parent's 200px width.
-  pz_expect_style(page, width = "100px", target = "#pos-half")
-  pz_expect_style(page, width = "50%", target = "#pos-half")
+  pz_expect_style(page, width = "100px", .target = "#pos-half")
+  pz_expect_style(page, width = "50%", .target = "#pos-half")
   # The positional styles survive the probe calls unchanged.
   expect_identical(
     pz_get_style(page, "color", target = "#pos-colored")$color,

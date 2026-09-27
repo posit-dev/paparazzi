@@ -28,11 +28,11 @@
 #'   computed properties are the same for every element, but custom
 #'   properties vary); a match that doesn't report a property reads as
 #'   `""` (empty string).
-#' @param ... Checked empty; reserved for future use.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
+#' @param ... Checked empty; reserved for future use.
 #'
 #' @return A tibble with one row per match, one character column per
 #'   property, plus an `element` list-column: each entry is a context
@@ -50,7 +50,7 @@
 #' pz_close(page)
 #'
 #' @export
-pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
+pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
   check_dots_empty()
   if (!is.null(props)) {
     check_character(props)
@@ -109,9 +109,9 @@ pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
 #' the retry, timeout, and bridge behavior shared by all expectations.
 #'
 #' @details
-#' With `not = TRUE` the expectation passes when at least one
+#' With `.not = TRUE` the expectation passes when at least one
 #' property/value pair doesn't match (including when nothing matches).
-#' With `normalize = FALSE` the expected values are compared as raw
+#' With `.normalize = FALSE` the expected values are compared as raw
 #' strings against the browser's computed output, for contexts the
 #' probe can't reproduce (unusual `%` cases, container query units);
 #' the pixel tolerance still applies.
@@ -120,18 +120,19 @@ pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
 #' unreliable in computed styles and error with a longhand suggestion;
 #' check the longhand properties instead. A value the browser rejects
 #' errors immediately as invalid CSS, without retrying (only detected
-#' with `normalize = TRUE`).
+#' with `.normalize = TRUE`).
 #'
 #' @inheritParams pz_click
-#' @param ... Property/value pairs, e.g. `color = "red"`. Dynamic
-#'   dots: a list spliced in with `!!!` works. Names are the CSS
-#'   property names, snake_case accepted.
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
+#' @param .target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
 #'   body at the root.
-#' @inheritParams pz_expect_exists
-#' @param normalize Normalize expected values in the browser before
+#' @param ... Property/value pairs, e.g. `color = "red"`. Dynamic
+#'   dots: a list spliced in with `!!!` works. Names are the CSS
+#'   property names, snake_case accepted.
+#' @param .not Invert the combined expectation?
+#' @param .timeout Seconds to wait; `NULL` uses the session default.
+#' @param .normalize Normalize expected values in the browser before
 #'   comparing? See Details.
 #'
 #' @return `ctx`, invisibly.
@@ -139,33 +140,33 @@ pz_get_style <- function(ctx, props = NULL, ..., target = NULL) {
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Expected values are written as you'd write them in CSS
-#' page |> pz_expect_style(background_color = "#0d6efd", target = "#add-task")
-#' page |> pz_expect_style(font_size = "1.5rem", target = "h1")
-#' page |> pz_expect_style(display = "none", target = "#help")
+#' page |> pz_expect_style("#add-task", background_color = "#0d6efd")
+#' page |> pz_expect_style("h1", font_size = "1.5rem")
+#' page |> pz_expect_style("#help", display = "none")
 #'
 #' page |>
 #'   pz_click("#toggle-help") |>
-#'   pz_expect_style(display = "none", target = "#help", not = TRUE)
+#'   pz_expect_style("#help", display = "none", .not = TRUE)
 #' pz_close(page)
 #'
 #' @export
 pz_expect_style <- function(
   ctx,
+  .target = NULL,
   ...,
-  target = NULL,
-  not = FALSE,
-  timeout = NULL,
-  normalize = TRUE
+  .not = FALSE,
+  .timeout = NULL,
+  .normalize = TRUE
 ) {
-  check_bool(normalize)
+  check_bool(.normalize)
   pairs <- style_expect_pairs(list2(...), call = environment())
   expect_impl(
     ctx = ctx,
-    target = target,
-    not = not,
-    timeout = timeout,
-    check = check_style(pairs, not, normalize, call = environment()),
-    description = expect_headline_style(pairs, not)
+    target = .target,
+    not = .not,
+    timeout = .timeout,
+    check = check_style(pairs, .not, .normalize, call = environment()),
+    description = expect_headline_style(pairs, .not)
   )
 }
 

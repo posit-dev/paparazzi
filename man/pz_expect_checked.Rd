@@ -4,18 +4,18 @@
 \alias{pz_expect_checked}
 \title{Expect elements to be checked}
 \usage{
-pz_expect_checked(ctx, ..., target = NULL, not = FALSE, timeout = NULL)
+pz_expect_checked(ctx, target = NULL, ..., not = FALSE, timeout = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
-
-\item{...}{Checked empty; reserved for future use.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
 current context: the pinned set at a scoped context (so
 \code{\link[=pz_expect_exists]{pz_expect_exists()}} on one trivially passes while the scope is
 live), the page body at the root.}
+
+\item{...}{Checked empty; reserved for future use.}
 
 \item{not}{Invert the check.}
 

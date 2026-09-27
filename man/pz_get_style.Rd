@@ -4,7 +4,7 @@
 \alias{pz_get_style}
 \title{Read computed styles of matching elements}
 \usage{
-pz_get_style(ctx, props = NULL, ..., target = NULL)
+pz_get_style(ctx, props = NULL, target = NULL, ...)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -16,12 +16,12 @@ computed properties are the same for every element, but custom
 properties vary); a match that doesn't report a property reads as
 \code{""} (empty string).}
 
-\item{...}{Checked empty; reserved for future use.}
-
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
 current context: the pinned set at a scoped context, or the page
 body at the root.}
+
+\item{...}{Checked empty; reserved for future use.}
 }
 \value{
 A tibble with one row per match, one character column per

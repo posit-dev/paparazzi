@@ -4,7 +4,7 @@
 \alias{pz_find_nth}
 \title{Find the nth match and push it as the current scope}
 \usage{
-pz_find_nth(ctx, n, ..., target = NULL, from_root = FALSE)
+pz_find_nth(ctx, n, target = NULL, ..., from_root = FALSE)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -12,11 +12,11 @@ pz_find_nth(ctx, n, ..., target = NULL, from_root = FALSE)
 \item{n}{The match to pick, 1-based (\code{"first"}/\code{"last"} are the
 \code{\link[=pz_find_first]{pz_find_first()}}/\code{\link[=pz_find_last]{pz_find_last()}} wrappers, not values here).}
 
-\item{...}{Checked empty; reserved for future use.}
-
 \item{target}{A CSS selector string or a \code{\link[=pz_loc]{pz_loc()}} spec. \code{NULL}
 narrows the current scope; a union can't pick one match by
 position, and a spec that already carries \code{which} is an error.}
+
+\item{...}{Checked empty; reserved for future use.}
 
 \item{from_root}{Resolve the target from the page root instead of
 the current scope? Requires a \code{target}.}

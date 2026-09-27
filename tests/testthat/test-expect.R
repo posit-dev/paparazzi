@@ -1,13 +1,14 @@
-test_that("pz_expect_text orders match before target like value and attr", {
+test_that("pz_expect_text places target after the expected text", {
   expect_identical(
     names(formals(pz_expect_text)),
-    c("ctx", "text", "...", "match", "target", "not", "timeout")
+    c("ctx", "text", "target", "...", "match", "not", "timeout")
   )
 })
 
 test_that("pz_expect_exists passes and returns ctx invisibly", {
   page <- local_elements_page()
   res <- withVisible(pz_expect_exists(page, target = ".btn"))
+  pz_expect_exists(page, ".btn")
   expect_false(res$visible)
   expect_identical(res$value, page)
 })
@@ -34,6 +35,7 @@ test_that("pz_expect_exists failure has the classed error format", {
 test_that("pz_expect_count passes exact counts and inclusive bounds", {
   page <- local_elements_page()
   pz_expect_count(page, n = 1, target = ".story")
+  pz_expect_count(page, 1, ".story")
   pz_expect_count(page, n = 3, target = ".message")
   pz_expect_count(page, min = 1, target = ".btn")
   pz_expect_count(page, max = 10, target = ".btn")
@@ -127,6 +129,7 @@ test_that("pz_expect_hidden is pz_expect_visible(not = TRUE)", {
 test_that("pz_expect_text contains, exact, and regex, whitespace-collapsed", {
   page <- local_elements_page()
   pz_expect_text(page, "otters", target = ".story")
+  pz_expect_text(page, "otters", ".story")
   pz_expect_text(
     page,
     "Once there were otters.",
@@ -659,56 +662,76 @@ test_that("pz_expect_value follows a typed value", {
   )
 })
 
-test_that("pz_expect_attr defaults to an exact comparison", {
+test_that("pz_expect_attr checks named attribute pairs", {
   page <- local_state_page()
-  pz_expect_attr(page, "href", "https://example.com/page", target = "#link-one")
   pz_expect_attr(
     page,
-    "href",
-    "example.com",
-    target = "#link-one",
-    match = "contains"
+    "#link-one",
+    href = "https://example.com/page",
+    target = "_blank"
   )
+  pz_expect_attr(page, "#link-one", href = "example.com", .match = "contains")
+  pz_expect_attr(page, "#link-one", href = "^https://", .match = "regex")
+  pz_expect_attr(page, "#no-href", href = "whatever", .not = TRUE, .timeout = 0)
   pz_expect_attr(
     page,
-    "href",
-    "^https://",
-    target = "#link-one",
-    match = "regex"
+    "#link-two",
+    target = "_blank",
+    .not = TRUE,
+    .timeout = 0
   )
-  # A missing attribute satisfies nothing, so not covers absence.
-  pz_expect_attr(
+
+  pz_js(page, "document.getElementById('link-one').setAttribute('not', 'yet')")
+  pz_js(
     page,
-    "href",
-    "whatever",
-    target = "#no-href",
-    not = TRUE,
-    timeout = 0
+    "document.getElementById('link-one').setAttribute('match', 'yes')"
   )
-  pz_expect_attr(
+  pz_js(
     page,
-    "target",
-    "_blank",
-    target = "#link-two",
-    not = TRUE,
-    timeout = 0
+    "document.getElementById('link-one').setAttribute('timeout', 'now')"
   )
+  pz_expect_attr(page, "#link-one", not = "yet", match = "yes", timeout = "now")
+
+  pairs <- list(href = "https://example.com/page", target = "_blank")
+  pz_expect_attr(page, "#link-one", !!!pairs)
 })
 
-test_that("pz_expect_attr compares vectors pairwise in order", {
+test_that("pz_expect_attr negates the combined condition", {
   page <- local_state_page()
-  hrefs <- c("one.html", "two.html", "three.html")
-  pz_expect_attr(page, "href", hrefs, target = ".attr-line")
+  pz_expect_attr(
+    page,
+    "#link-one",
+    href = "wrong",
+    target = "_blank",
+    .not = TRUE,
+    .timeout = 0
+  )
+  pz_expect_attr(page, ".never", href = "anything", .not = TRUE, .timeout = 0)
 
   local_outside_testthat()
   err <- expect_error(
     pz_expect_attr(
       page,
-      "href",
-      rev(hrefs),
-      target = ".attr-line",
-      timeout = 0
+      "#link-one",
+      href = "wrong",
+      target = "_blank",
+      .timeout = 0
     ),
+    class = "paparazzi_expectation_failure"
+  )
+  expect_match(conditionMessage(err), "href:", fixed = TRUE)
+  expect_match(conditionMessage(err), "target:", fixed = TRUE)
+})
+
+test_that("pz_expect_attr compares vectors pairwise in order", {
+  page <- local_state_page()
+  hrefs <- c("one.html", "two.html", "three.html")
+  pz_expect_attr(page, ".attr-line", href = hrefs)
+  pz_expect_attr(page, ".attr-line", href = hrefs, class = "attr-line")
+
+  local_outside_testthat()
+  err <- expect_error(
+    pz_expect_attr(page, ".attr-line", href = rev(hrefs), .timeout = 0),
     class = "paparazzi_expectation_failure"
   )
   expect_match(
@@ -721,6 +744,29 @@ test_that("pz_expect_attr compares vectors pairwise in order", {
     'Last seen: "one.html", "two.html", "three.html"',
     fixed = TRUE
   )
+  pz_expect_attr(
+    page,
+    ".attr-line",
+    href = hrefs[-1],
+    .not = TRUE,
+    .timeout = 0
+  )
+})
+
+test_that("pz_expect_attr validates attribute pairs", {
+  page <- local_state_page()
+  expect_error(pz_expect_attr(page, "#link-one"), "at least one named")
+  expect_error(pz_expect_attr(page, "#link-one", "x"), "named")
+  expect_error(pz_expect_attr(page, "#link-one", href = 1), "character")
+  expect_error(pz_expect_attr(page, "#link-one", href = NA_character_), "NA")
+  expect_error(
+    pz_expect_attr(page, "#link-one", href = character()),
+    "at least"
+  )
+  expect_error(
+    pz_expect_attr(page, "#link-one", href = "x", href = "y"),
+    "unique"
+  )
 })
 
 test_that("pz_expect_attr retries until the attribute lands", {
@@ -732,7 +778,7 @@ test_that("pz_expect_attr retries until the attribute lands", {
   }, 300)",
     await = FALSE
   )
-  pz_expect_attr(page, "data-state", "ready", target = "#btn-one", timeout = 5)
+  pz_expect_attr(page, "#btn-one", `data-state` = "ready", .timeout = 5)
 })
 
 test_that("pz_expect_class checks class membership", {

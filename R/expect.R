@@ -39,8 +39,8 @@
 #' @export
 pz_expect_exists <- function(
   ctx,
-  ...,
   target = NULL,
+  ...,
   not = FALSE,
   timeout = NULL
 ) {
@@ -96,10 +96,10 @@ pz_expect_exists <- function(
 pz_expect_count <- function(
   ctx,
   n = NULL,
+  target = NULL,
   ...,
   min = NULL,
   max = NULL,
-  target = NULL,
   not = FALSE,
   timeout = NULL
 ) {
@@ -181,8 +181,8 @@ pz_expect_count <- function(
 #' @export
 pz_expect_visible <- function(
   ctx,
-  ...,
   target = NULL,
+  ...,
   not = FALSE,
   timeout = NULL
 ) {
@@ -205,8 +205,8 @@ pz_expect_visible <- function(
 #' @export
 pz_expect_hidden <- function(
   ctx,
-  ...,
   target = NULL,
+  ...,
   not = FALSE,
   timeout = NULL
 ) {
@@ -266,9 +266,9 @@ pz_expect_hidden <- function(
 pz_expect_text <- function(
   ctx,
   text,
+  target = NULL,
   ...,
   match = c("contains", "exact", "regex"),
-  target = NULL,
   not = FALSE,
   timeout = NULL
 ) {
@@ -314,8 +314,8 @@ pz_expect_text <- function(
 #' @export
 pz_expect_enabled <- function(
   ctx,
-  ...,
   target = NULL,
+  ...,
   not = FALSE,
   timeout = NULL
 ) {
@@ -364,8 +364,8 @@ pz_expect_enabled <- function(
 #' @export
 pz_expect_focused <- function(
   ctx,
-  ...,
   target = NULL,
+  ...,
   not = FALSE,
   timeout = NULL
 ) {
@@ -411,8 +411,8 @@ pz_expect_focused <- function(
 #' @export
 pz_expect_checked <- function(
   ctx,
-  ...,
   target = NULL,
+  ...,
   not = FALSE,
   timeout = NULL
 ) {
@@ -462,8 +462,8 @@ pz_expect_checked <- function(
 #' @export
 pz_expect_in_viewport <- function(
   ctx,
-  ...,
   target = NULL,
+  ...,
   not = FALSE,
   timeout = NULL
 ) {
@@ -519,9 +519,9 @@ pz_expect_in_viewport <- function(
 pz_expect_value <- function(
   ctx,
   value,
+  target = NULL,
   ...,
   match = c("contains", "exact", "regex"),
-  target = NULL,
   not = FALSE,
   timeout = NULL
 ) {
@@ -538,74 +538,65 @@ pz_expect_value <- function(
   )
 }
 
-#' Expect an attribute
+#' Expect attributes
 #'
 #' @description
-#' [pz_expect_attr()] passes when at least one element matches and the
-#' named attribute of every match satisfies `value`. A missing attribute
-#' satisfies nothing, so `not = TRUE` is how to expect its absence. By
-#' default the comparison is `match = "exact"`, unlike the text-like
-#' expectations that default to `"contains"`.
+#' [pz_expect_attr()] passes when at least one element matches and every
+#' matched element satisfies every named attribute/value pair in `...`.
+#' Missing attributes satisfy no pair. Comparisons are exact by default;
+#' `.match = "contains"` or `"regex"` applies to all pairs in the call.
 #'
-#' A length-1 `value` applies to every match. A length-`n` `value`
-#' requires exactly `n` matches and compares pairwise, in order. With
-#' `not = TRUE`, the expectation passes when no match satisfies `value`,
-#' including when nothing matches.
+#' A length-1 value applies to every element. A vector requires exactly
+#' that many matches and compares pairwise, in order. With `.not = TRUE`,
+#' the expectation passes when the combined condition does not hold,
+#' including when no element matches.
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
 #' `"paparazzi_expectation_failure"`; inside testthat, the failure is
-#' reported as a test failure instead. See [pz_expect_exists()] for the
+#' reported as a test failure. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @inheritParams pz_expect_text
-#' @param name The attribute name.
-#' @param value A character vector of expected attribute values: length 1
-#'   applies to every match, length `n` is compared pairwise in order.
+#' @param ctx A paparazzi context.
+#' @param .target A CSS selector string, a [pz_loc()] spec, or a list of
+#'   either. `NULL` selects the current context.
+#' @param ... Named attribute/value pairs. Values are character vectors;
+#'   use backticks for names such as `aria-expanded`. Dynamic dots support
+#'   splicing a named list with `!!!`.
+#' @param .match Comparison mode for all pairs: `"exact"` (default),
+#'   `"contains"`, or `"regex"`.
+#' @param .not Invert the combined expectation?
+#' @param .timeout Seconds to wait; `NULL` uses the session default.
 #'
 #' @return `ctx`, invisibly.
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_expect_attr("data-priority", "high", target = pz_loc(".task", has_text = "tax"))
+#' page |> pz_expect_attr(
+#'   pz_loc(".task", has_text = "tax"), `data-priority` = "high"
+#' )
 #'
-#' # The toggle keeps its aria-expanded attribute in sync
 #' page |>
 #'   pz_click("#toggle-help") |>
-#'   pz_expect_attr("aria-expanded", "true", target = "#toggle-help")
+#'   pz_expect_attr("#toggle-help", `aria-expanded` = "true")
 #' pz_close(page)
 #'
 #' @export
 pz_expect_attr <- function(
   ctx,
-  name,
-  value,
+  .target = NULL,
   ...,
-  match = c("exact", "contains", "regex"),
-  target = NULL,
-  not = FALSE,
-  timeout = NULL
+  .match = c("exact", "contains", "regex"),
+  .not = FALSE,
+  .timeout = NULL
 ) {
-  check_dots_empty()
-  check_string(name)
-  check_character(value)
-  match <- arg_match(match)
+  pairs <- expect_attr_pairs(list2(...), call = environment())
+  .match <- arg_match(.match)
   expect_impl(
     ctx = ctx,
-    target = target,
-    not = not,
-    timeout = timeout,
-    check = check_text_like(
-      expect_attr_js(name),
-      collapse_ws(value),
-      match,
-      not
-    ),
-    description = expect_headline_text(
-      value,
-      match,
-      not,
-      label = paste0("attribute \"", name, "\""),
-      plural = paste0("attributes \"", name, "\"")
-    )
+    target = .target,
+    not = .not,
+    timeout = .timeout,
+    check = check_attr_pairs(pairs, .match, .not),
+    description = expect_headline_attrs(pairs, .match, .not)
   )
 }
 
@@ -641,8 +632,8 @@ pz_expect_attr <- function(
 pz_expect_class <- function(
   ctx,
   class,
-  ...,
   target = NULL,
+  ...,
   not = FALSE,
   timeout = NULL
 ) {
@@ -706,8 +697,8 @@ pz_expect_class <- function(
 pz_expect_js <- function(
   ctx,
   expr,
-  ...,
   target = NULL,
+  ...,
   not = FALSE,
   timeout = NULL
 ) {
@@ -1078,11 +1069,11 @@ expect_text_js <- "function() {
 
 # Name/class reach JS JSON-encoded, so quotes and specials can't break
 # out of the function string (same as pz_get_attr()).
-expect_attr_js <- function(name) {
+expect_attrs_js <- function(names) {
   paste0(
-    "function() { return this.map((el) => el.getAttribute(",
-    jsonlite::toJSON(name, auto_unbox = TRUE),
-    ")); }"
+    "function() { const names = ",
+    jsonlite::toJSON(names, auto_unbox = FALSE),
+    "; return this.map((el) => names.map((name) => el.getAttribute(name))); }"
   )
 }
 
@@ -1212,6 +1203,92 @@ check_text_like <- function(js, values, match, not) {
 
 check_text <- function(text, match, not) {
   check_text_like(expect_text_js, text, match, not)
+}
+
+expect_attr_pairs <- function(dots, call = caller_env()) {
+  nms <- names(dots)
+  if (length(dots) == 0L || is.null(nms) || !all(nzchar(nms))) {
+    cli::cli_abort(
+      "Provide at least one named attribute/value pair in {.arg ...}.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  if (anyDuplicated(nms)) {
+    cli::cli_abort(
+      "Attribute names in {.arg ...} must be unique.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  lapply(seq_along(dots), function(i) {
+    value <- dots[[i]]
+    check_character(value, arg = nms[[i]], call = call)
+    collapse_ws(value)
+  }) |>
+    stats::setNames(nms)
+}
+
+check_attr_pairs <- function(pairs, match, not) {
+  js <- expect_attrs_js(names(pairs))
+  function(els) {
+    if (els$count == 0L) {
+      return(list(pass = not, observed = expect_seen_count(0L)))
+    }
+    vals <- lapply(els_values(els, js), chr_or_na)
+    hits <- matrix(FALSE, nrow = els$count, ncol = length(pairs))
+    observed <- character(length(pairs))
+    for (p in seq_along(pairs)) {
+      actual <- collapse_ws(vapply(vals, `[[`, character(1), p))
+      expected <- pairs[[p]]
+      if (length(expected) == 1L || length(expected) == els$count) {
+        hits[, p] <- vapply(
+          seq_along(actual),
+          function(i) {
+            expect_text_hit(
+              actual[[i]],
+              expected[[if (length(expected) == 1L) 1L else i]],
+              match
+            )
+          },
+          logical(1)
+        )
+      }
+      observed[[p]] <- expect_seen_texts(actual)
+    }
+    seen <- if (length(pairs) == 1L) {
+      observed[[1]]
+    } else {
+      expect_truncate(paste0(names(pairs), ": ", observed, collapse = "; "))
+    }
+    list(pass = if (not) !all(hits) else all(hits), observed = seen)
+  }
+}
+
+expect_headline_attrs <- function(pairs, match, not) {
+  if (length(pairs) == 1L) {
+    name <- names(pairs)[[1]]
+    return(expect_headline_text(
+      pairs[[1]],
+      match,
+      not,
+      label = paste0("attribute \"", name, "\""),
+      plural = paste0("attributes \"", name, "\"")
+    ))
+  }
+  what <- vapply(
+    seq_along(pairs),
+    function(i) {
+      paste0(names(pairs)[[i]], " = ", expect_seen_texts(pairs[[i]]))
+    },
+    character(1)
+  )
+  paste0(
+    "Expected attributes",
+    if (not) " not",
+    " to match ",
+    paste(what, collapse = "; ")
+  )
 }
 
 expect_text_matches <- function(x, pattern, match) {
