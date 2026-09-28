@@ -24,10 +24,19 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   page <- local_cursor_page()
 
   expect_identical(page_stage(page), STAGE_DEFAULTS)
+  expect_equal(page_stage(page)$cursor_speed, 500)
+  expect_equal(page_stage(page)$cursor_scale, 1.75)
 
-  page |> pz_stage(cursor_speed = 800, typing_speed = 30, pause = 0.5)
+  page |>
+    pz_stage(
+      cursor_speed = 800,
+      cursor_scale = 2,
+      typing_speed = 30,
+      pause = 0.5
+    )
   stage <- page_stage(page)
   expect_equal(stage$cursor_speed, 800)
+  expect_equal(stage$cursor_scale, 2)
   expect_equal(stage$typing_speed, 30)
   expect_equal(stage$pause, 0.5)
   # Only supplied arguments change.
@@ -41,6 +50,7 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_identical(stage$typing, "instant")
   expect_true(stage$cursor)
   expect_equal(stage$cursor_speed, 800)
+  expect_equal(stage$cursor_scale, 2)
 
   # An explicit NULL removes the override (back to the default);
   # only omitted arguments leave a setting alone.
@@ -48,6 +58,7 @@ test_that("pz_stage merges settings onto the defaults and validates", {
     pz_stage(
       cursor = NULL,
       cursor_speed = NULL,
+      cursor_scale = NULL,
       enter = NULL,
       typing = NULL,
       typing_speed = NULL,
@@ -57,11 +68,25 @@ test_that("pz_stage merges settings onto the defaults and validates", {
 
   expect_error(pz_stage(page, cursor = "yes"), class = "rlang_error")
   expect_error(pz_stage(page, cursor_speed = 0), class = "rlang_error")
+  expect_error(pz_stage(page, cursor_scale = 0), class = "rlang_error")
+  expect_error(pz_stage(page, cursor_scale = 5.1), class = "rlang_error")
+  expect_error(pz_stage(page, cursor_scale = Inf), class = "rlang_error")
+  expect_error(pz_stage(page, cursor_scale = "large"), class = "rlang_error")
   expect_error(pz_stage(page, enter = "up"), class = "paparazzi_error_input")
   expect_error(pz_stage(page, typing = "slow"), class = "rlang_error")
   expect_error(pz_stage(page, typing_speed = -1), class = "rlang_error")
   expect_error(pz_stage(page, pause = -1), class = "rlang_error")
   expect_error(pz_stage(page, bogus = 1), class = "rlang_error")
+})
+
+test_that("the glide formula uses the new default and 0.5-2s limits", {
+  point <- c(x = 0, y = 0)
+  to <- function(x) c(x = x, y = 0)
+  expect_equal(stage_glide_duration(point, to(300), 500), 0.85)
+  expect_equal(stage_glide_duration(point, to(300), 400), 1)
+  expect_equal(stage_glide_duration(point, to(0), 500), 0.5)
+  expect_equal(stage_glide_duration(point, to(3000), 500), 2)
+  expect_equal(stage_glide_duration(point, to(300), 1500), 0.5)
 })
 
 test_that("natural typing is per-character while recording, instant otherwise", {
@@ -136,6 +161,50 @@ test_that("smooth scrolling uses real wheel events while recording", {
   )
   expect_true(pz_js(page, "window.__log.wheels") > wheels)
 
+  page |> pz_record_stop()
+})
+
+test_that("pz_scroll duration overrides staged wheels for by, to, and target", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(cursor_speed = 500)
+  page |> pz_record_start(
+    withr::local_tempfile(fileext = ".mp4"),
+    fps = 10,
+    hold = c(0, 0)
+  )
+
+  wheel_durations <- numeric()
+  original_wheel <- stage_wheel
+  testthat::local_mocked_bindings(
+    stage_wheel = function(ctx, point, dx, dy, duration, call = caller_env()) {
+      wheel_durations <<- c(wheel_durations, duration)
+      original_wheel(ctx, point, dx, dy, duration, call = call)
+    }
+  )
+
+  page |> pz_scroll(by = c(0, 300), duration = 0.05)
+  expect_equal(pz_js(page, "window.scrollY"), 300)
+  expect_true(length(wheel_durations) > 0)
+  expect_true(all(wheel_durations == 0.05))
+  wheel_durations <- numeric()
+
+  page |> pz_scroll(to = "bottom", duration = 0.05)
+  expect_equal(
+    pz_js(page, "window.scrollY"),
+    pz_js(page, "document.scrollingElement.scrollHeight - window.innerHeight")
+  )
+  expect_true(length(wheel_durations) > 0)
+  expect_true(all(wheel_durations == 0.05))
+  wheel_durations <- numeric()
+
+  page |> pz_scroll(target = "#plain", duration = 0.05)
+  expect_true(pz_js(
+    page,
+    "document.getElementById('plain').getBoundingClientRect().y >= 0"
+  ))
+  expect_true(length(wheel_durations) > 0)
+  expect_true(all(wheel_durations == 0.05))
   page |> pz_record_stop()
 })
 
@@ -459,7 +528,7 @@ test_that("recorded demo glides, presses, types, and scrolls on camera", {
   heights <- vapply(
     inks,
     function(ink) {
-      if (ink$count > 20 && abs(ink$x - 660) < 10) ink$height else NA_real_
+      if (ink$count > 20 && abs(ink$x - 660) < 25) ink$height else NA_real_
     },
     numeric(1)
   )

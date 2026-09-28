@@ -4,7 +4,7 @@
 \alias{pz_scroll}
 \title{Scroll the page or an element into view}
 \usage{
-pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL)
+pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -19,6 +19,11 @@ axes).}
 
 \item{to}{A direction string: the sides, the four corners, or
 \code{"center"}.}
+
+\item{duration}{Seconds per staged wheel scroll; \code{NULL} computes the
+time from the scroll distance and \code{cursor_speed} in \code{\link[=pz_stage]{pz_stage()}}.
+Applies only while recording, including \code{target} and any scroll
+needed to bring a scoped container into view.}
 }
 \value{
 \code{ctx}, invisibly.
@@ -27,7 +32,7 @@ axes).}
 Exactly one of \code{target}, \code{by}, and \code{to}:
 \itemize{
 \item \code{target}: auto-waits for a match, then scrolls it into view
-(instantly).
+(instantly outside a recording).
 \item \code{by = c(x, y)}: scrolls the current scope's scroll container --
 the scope element or its nearest scrollable ancestor, or the page
 itself at the root context -- by that many pixels.

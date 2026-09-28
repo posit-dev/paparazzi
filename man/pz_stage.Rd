@@ -4,7 +4,17 @@
 \alias{pz_stage}
 \title{Stage the page for recording}
 \usage{
-pz_stage(ctx, ..., cursor, cursor_speed, enter, typing, typing_speed, pause)
+pz_stage(
+  ctx,
+  ...,
+  cursor,
+  cursor_speed,
+  cursor_scale,
+  enter,
+  typing,
+  typing_speed,
+  pause
+)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -15,9 +25,20 @@ pz_stage(ctx, ..., cursor, cursor_speed, enter, typing, typing_speed, pause)
 cursor only while recording, \code{TRUE} shows it always (stills too),
 \code{FALSE} never shows it. Supply \code{NULL} to restore the default.}
 
-\item{cursor_speed}{Glide speed in pixels per second. Glide duration
-scales with distance: roughly \code{clamp(0.25 + distance / cursor_speed, 0.3, 1.2)} seconds. Supply \code{NULL} to restore the
-default.}
+\item{cursor_speed}{Staging speed in pixels per second for cursor glides
+and recorded scrolls. The default, 500 px/s, gives viewers time to
+follow the movement; 400-600 px/s is a useful range for deliberate
+actions. Each glide uses its straight-line distance; each scroll
+uses the largest axis delta. Duration is
+\code{clamp(0.25 + distance / cursor_speed, 0.5, 2)} seconds: the 0.25s
+base makes short moves less sensitive to speed, and the 0.5-2s
+limits mean extreme speeds have little effect. Supply \code{NULL} to
+restore the default.}
+
+\item{cursor_scale}{Cursor size relative to the original 20px overlay
+artwork, from greater than 0 to 5. The default is 1.75 (about 35px);
+use 1 for the original size. Applies to recordings and stills.
+Supply \code{NULL} to restore the default.}
 
 \item{enter}{Where a cursor that has never been shown first appears:
 \code{NULL} (the default) fades in on the target; a side (\code{"top"},
@@ -54,7 +75,7 @@ is skipped and the chain runs straight to its final state -- except
 page <- pz_open(pz_example("tasks"))
 
 # Staging settings stay on the page until you change them
-page |> pz_stage(enter = "left", cursor_speed = 1200, typing_speed = 20, pause = 0.3)
+page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
 
 path <- file.path(tempdir(), "add-task.mp4")
 page |>

@@ -15,7 +15,9 @@
 #' last position, fades in on the target when it has never been shown,
 #' or glides in from `from` (or the `enter` side set with [pz_stage()])
 #' when entering the frame. Without a recording the cursor appears
-#' statically, which is how a cursor lands in a screenshot.
+#' statically, which is how a cursor lands in a screenshot. Its default
+#' size is 1.75 times the original artwork; set `cursor_scale` with
+#' [pz_stage()] to change the size in videos and stills.
 #'
 #' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
@@ -436,6 +438,7 @@ cursor_press <- function(ctx, pressed) {
 # + apply in every call), so a page whose init script never ran -- or a
 # fresh document after navigation -- can always be driven forward.
 cursor_command <- function(ctx, state) {
+  state$scale <- page_stage(ctx$page)$cursor_scale
   json <- jsonlite::toJSON(state, auto_unbox = TRUE, null = "null")
   pz_js(ctx, paste0("(", cursor_command_js, ")(", json, ")"), await = FALSE)
   invisible(ctx)
@@ -443,8 +446,8 @@ cursor_command <- function(ctx, state) {
 
 # Boot: the cursor layer under the existing overlay host's shadow root.
 # Two nested divs keep the transforms independent: .pz-glide carries the
-# translate (its transition is the glide), .pz-inner carries the press
-# scale and the fade opacity. The layer is position: fixed (pointer
+# translate (its transition is the glide), .pz-inner carries the size,
+# press scale, and fade opacity. The layer is position: fixed (pointer
 # coordinates are viewport-relative, unlike the inspect layer's document
 # coordinates) and counter-zoomed by 1 / zoom(documentElement), because
 # a CSS zoom on <html> would otherwise scale the layer away from the
@@ -517,7 +520,7 @@ cursor_command_js <- r"(function(state) {
     ? 'opacity 0.25s ease, transform 0.12s ease'
     : 'none';
   inner.style.opacity = state.visible ? '1' : '0';
-  inner.style.transform = state.pressed ? 'scale(0.8)' : 'scale(1)';
+  inner.style.transform = 'scale(' + state.scale * (state.pressed ? 0.8 : 1) + ')';
   return true;
 })"
 
@@ -552,7 +555,8 @@ cursor_register_init <- function(ctx) {
     shape = "auto",
     pressed = FALSE,
     duration = 0,
-    anim = FALSE
+    anim = FALSE,
+    scale = page_stage(page)$cursor_scale
   )
   json <- jsonlite::toJSON(state, auto_unbox = TRUE, null = "null")
   # New-document scripts run before the document element exists, so the

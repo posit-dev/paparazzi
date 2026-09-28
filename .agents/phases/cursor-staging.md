@@ -42,13 +42,20 @@ R/resolve.R).
   session; without `Page.enable()` it silently never runs.
   Re-registering (remove + add) swaps the source.
 
+## nn5g + zwtt follow-up (2026-09-28)
+
+- Decision: keep px/s, use a 500 px/s default with [0.5, 2] second bounds for both cursor glides and staged wheel scrolls; document arithmetic as the no-recording estimate rather than exporting a helper. `pz_scroll(duration =)` overrides each wheel scroll in target/by/to paths.
+- Size: use the existing `.pz-inner` wrapper, with a 1.75x default and a 0.8 press multiplier. No SVG geometry, extra wrapper, or zoom bookkeeping changes.
+- Handoff: focused `btw pkg test --filter 'cursor|stage|actions'` passed (443, no failures/warnings), including custom-size navigation. Full main-branch suite passed (2859, no failures/warnings) before that test-only addition. User approved passing scale through existing new-document init state. Manual roborev review remains before issue closure.
+
 ## Decisions
 
 - **Staging state on the page.** Two fields in the page's reserved
   `private$staging_` list (R/context.R, untouched; the
   `page_frame()`/`page_set_frame()` pattern in R/frame.R is the access
   model): `staging_$stage`, the settings list merged by `pz_stage()`
-  (fields `cursor` NULL/TRUE/FALSE, `cursor_speed` px/s, `enter` NULL
+  (fields `cursor` NULL/TRUE/FALSE, `cursor_speed` px/s,
+  `cursor_scale` size multiplier, `enter` NULL
   or side tokens, `typing` "natural"/"instant", `typing_speed`
   chars/s, `pause` seconds; defaults below), and `staging_$cursor`, a
   mutable environment with the cursor runtime state (`visibility`
@@ -57,7 +64,8 @@ R/resolve.R).
   through, `init_id` the registered new-document script id or NULL).
   Access only through `page_stage()` / `page_cursor()` and their
   setters in R/stage.R / R/cursor.R. Defaults: `cursor = NULL`,
-  `cursor_speed = 1500`, `enter = NULL`, `typing = "natural"`,
+  `cursor_speed = 500`, `cursor_scale = 1.75`, `enter = NULL`,
+  `typing = "natural"`,
   `typing_speed = 16`, `pause = 0`.
 
 - **Recording detection.** "While recording" is
@@ -110,9 +118,12 @@ R/resolve.R).
   straight to the final state.
 
 - **Glide math.** `duration = clamp(0.25 + distance / cursor_speed,
-  0.3, 1.2)` seconds over the straight-line distance, CSS
+  0.5, 2)` seconds over the straight-line distance, CSS
   `cubic-bezier(0.42, 0, 0.58, 1)` (ease-in-out). An explicit
-  `duration =` (pz_cursor_move) wins. Off-frame entry/exit points are
+  `duration =` (pz_cursor_move) wins. A pz_scroll(duration =)
+  override controls each staged wheel scroll, including into-view
+  rounds; otherwise scroll timing uses the same bounds with the largest
+  absolute axis delta as its distance. Off-frame entry/exit points are
   computed from the viewport box and the side tokens: 40px past the
   named edge(s), at the target's coordinate on the other axis.
 

@@ -932,7 +932,7 @@ test_that("pz_select_text errors on absent text, emptiness, and multiple matches
 test_that("pz_scroll scrolls the page by, to a direction, and a target into view", {
   page <- local_advanced_page()
 
-  page <- expect_invisible(pz_scroll(page, by = c(0, 300)))
+  page <- expect_invisible(pz_scroll(page, by = c(0, 300), duration = 0.1))
   expect_equal(pz_js(page, "window.scrollY"), 300)
 
   pz_scroll(page, to = "bottom")
@@ -992,6 +992,12 @@ test_that("pz_scroll validates its modes", {
     class = "paparazzi_error_input"
   )
   expect_error(pz_scroll(page, by = "lots"), class = "paparazzi_error_input")
+  expect_error(pz_scroll(page, by = 100, duration = -1), class = "rlang_error")
+  expect_error(pz_scroll(page, to = "top", duration = Inf), class = "rlang_error")
+  expect_error(
+    pz_scroll(page, target = "#rich", duration = "slow"),
+    class = "rlang_error"
+  )
   expect_error(
     pz_scroll(page, to = "sideways"),
     class = "paparazzi_error_input"

@@ -561,7 +561,7 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
 #' Exactly one of `target`, `by`, and `to`:
 #'
 #' - `target`: auto-waits for a match, then scrolls it into view
-#'   (instantly).
+#'   (instantly outside a recording).
 #' - `by = c(x, y)`: scrolls the current scope's scroll container --
 #'   the scope element or its nearest scrollable ancestor, or the page
 #'   itself at the root context -- by that many pixels.
@@ -583,6 +583,10 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
 #'   axes).
 #' @param to A direction string: the sides, the four corners, or
 #'   `"center"`.
+#' @param duration Seconds per staged wheel scroll; `NULL` computes the
+#'   time from the scroll distance and `cursor_speed` in [pz_stage()].
+#'   Applies only while recording, including `target` and any scroll
+#'   needed to bring a scoped container into view.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -607,9 +611,22 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
 #' pz_close(page)
 #'
 #' @export
-pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
+pz_scroll <- function(
+  ctx,
+  target = NULL,
+  ...,
+  by = NULL,
+  to = NULL,
+  duration = NULL
+) {
   check_context(ctx)
   check_dots_empty()
+  check_number_decimal(
+    duration,
+    min = 0,
+    allow_null = TRUE,
+    allow_infinite = FALSE
+  )
   action_start(ctx)
   modes <- c(target = !is.null(target), by = !is.null(by), to = !is.null(to))
   if (sum(modes) != 1L) {
@@ -624,7 +641,7 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
     if (!found$pinned) {
       withr::defer(release_elements(found$els))
     }
-    stage_scroll_into_view(ctx, found$els)
+    stage_scroll_into_view(ctx, found$els, duration = duration)
     stage_action_pause(ctx)
     return(invisible(ctx))
   }
@@ -640,7 +657,7 @@ pz_scroll <- function(ctx, target = NULL, ..., by = NULL, to = NULL) {
     check_scope_single(scoped)
   }
   if (stage_recording(ctx$page)) {
-    scroll_staged(ctx, scoped, by, to)
+    scroll_staged(ctx, scoped, by, to, duration = duration)
     stage_action_pause(ctx)
     return(invisible(ctx))
   }
@@ -1038,7 +1055,7 @@ dispatch_click <- function(ctx, action, target, point, call = caller_env()) {
   if (staged) {
     pump_loop(ctx$page$child_loop, 0.15)
     cursor_press(ctx, TRUE)
-    pump_loop(ctx$page$child_loop, 0.08)
+    pump_loop(ctx$page$child_loop, 0.16)
   }
   dispatch_mouse(
     ctx,

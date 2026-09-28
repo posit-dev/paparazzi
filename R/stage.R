@@ -25,10 +25,19 @@
 #' @param cursor Cursor visibility: `NULL` (the default) shows the
 #'   cursor only while recording, `TRUE` shows it always (stills too),
 #'   `FALSE` never shows it. Supply `NULL` to restore the default.
-#' @param cursor_speed Glide speed in pixels per second. Glide duration
-#'   scales with distance: roughly `clamp(0.25 + distance /
-#'   cursor_speed, 0.3, 1.2)` seconds. Supply `NULL` to restore the
-#'   default.
+#' @param cursor_speed Staging speed in pixels per second for cursor glides
+#'   and recorded scrolls. The default, 500 px/s, gives viewers time to
+#'   follow the movement; 400-600 px/s is a useful range for deliberate
+#'   actions. Each glide uses its straight-line distance; each scroll
+#'   uses the largest axis delta. Duration is
+#'   `clamp(0.25 + distance / cursor_speed, 0.5, 2)` seconds: the 0.25s
+#'   base makes short moves less sensitive to speed, and the 0.5-2s
+#'   limits mean extreme speeds have little effect. Supply `NULL` to
+#'   restore the default.
+#' @param cursor_scale Cursor size relative to the original 20px overlay
+#'   artwork, from greater than 0 to 5. The default is 1.75 (about 35px);
+#'   use 1 for the original size. Applies to recordings and stills.
+#'   Supply `NULL` to restore the default.
 #' @param enter Where a cursor that has never been shown first appears:
 #'   `NULL` (the default) fades in on the target; a side (`"top"`,
 #'   `"bottom"`, `"left"`, `"right"`) or corner (`"top left"`,
@@ -51,7 +60,7 @@
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Staging settings stay on the page until you change them
-#' page |> pz_stage(enter = "left", cursor_speed = 1200, typing_speed = 20, pause = 0.3)
+#' page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
 #'
 #' path <- file.path(tempdir(), "add-task.mp4")
 #' page |>
@@ -77,6 +86,7 @@ pz_stage <- function(
   ...,
   cursor,
   cursor_speed,
+  cursor_scale,
   enter,
   typing,
   typing_speed,
@@ -103,6 +113,19 @@ pz_stage <- function(
     } else {
       check_number_decimal(cursor_speed, min = 1)
       overrides$cursor_speed <- cursor_speed
+    }
+  }
+  if (!missing(cursor_scale)) {
+    if (is.null(cursor_scale)) {
+      overrides[["cursor_scale"]] <- NULL
+    } else {
+      check_number_decimal(
+        cursor_scale,
+        min = .Machine$double.eps,
+        max = 5,
+        allow_infinite = FALSE
+      )
+      overrides$cursor_scale <- cursor_scale
     }
   }
   if (!missing(enter)) {
@@ -156,6 +179,11 @@ pz_stage <- function(
     } else {
       cursor_draw(ctx, visible = TRUE)
     }
+  } else if (
+    !missing(cursor_scale) && !is.null(cur) && !is.null(cur$x) &&
+      cursor_visible(page)
+  ) {
+    cursor_draw(ctx, visible = TRUE)
   }
   invisible(ctx)
 }
@@ -165,7 +193,8 @@ pz_stage <- function(
 # that never set the field.
 STAGE_DEFAULTS <- list(
   cursor = NULL,
-  cursor_speed = 1500,
+  cursor_speed = 500,
+  cursor_scale = 1.75,
   enter = NULL,
   typing = "natural",
   typing_speed = 16,
@@ -191,7 +220,7 @@ stage_recording <- function(page) {
 
 stage_glide_duration <- function(from, to, speed) {
   dist <- sqrt((to[["x"]] - from[["x"]])^2 + (to[["y"]] - from[["y"]])^2)
-  min(max(0.25 + dist / speed, 0.3), 1.2)
+  min(max(0.25 + dist / speed, 0.5), 2)
 }
 
 # The pointer-action seam, called from el_pointer_point() once the
@@ -216,11 +245,16 @@ stage_move_cursor <- function(ctx, point) {
 # The scroll half of the el_pointer_point() seam. Recording: animated
 # wheel scrolling over the container; not recording: the established
 # instant scroll.
-stage_scroll_into_view <- function(ctx, els, call = caller_env()) {
+stage_scroll_into_view <- function(
+  ctx,
+  els,
+  duration = NULL,
+  call = caller_env()
+) {
   if (!stage_recording(ctx$page)) {
     return(el_scroll_into_view(els, call = call))
   }
-  stage_wheel_into_view(ctx, els, call = call)
+  stage_wheel_into_view(ctx, els, duration = duration, call = call)
 }
 
 # The animated auto-scroll: real mouseWheel events with the cursor
@@ -235,7 +269,12 @@ stage_scroll_into_view <- function(ctx, els, call = caller_env()) {
 # position unchanged (a page canceling wheel events) or exceeds the
 # round bound (a page fighting the scroll) falls back to the instant
 # scroll: the final state is always correct, animated or not.
-stage_wheel_into_view <- function(ctx, els, call = caller_env()) {
+stage_wheel_into_view <- function(
+  ctx,
+  els,
+  duration = NULL,
+  call = caller_env()
+) {
   if (els$count == 0L || is.null(els$object_id)) {
     return(invisible(els))
   }
@@ -271,8 +310,9 @@ stage_wheel_into_view <- function(ctx, els, call = caller_env()) {
     point <- c(x = probe$x, y = probe$y)
     stage_move_cursor(ctx, point)
     stage <- page_stage(ctx$page)
-    duration <- min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.3), 1.2)
-    stage_wheel(ctx, point, delta[[1]], delta[[2]], duration, call = call)
+    wheel_duration <- duration %||%
+      min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.5), 2)
+    stage_wheel(ctx, point, delta[[1]], delta[[2]], wheel_duration, call = call)
   }
 }
 
@@ -319,13 +359,20 @@ stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
 # -- and when no suitable point exists the instant application runs
 # BEFORE any wheel fires. After the wheels, a miss (clamping,
 # canceling) still repairs instantly so the final position is exact.
-scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
+scroll_staged <- function(
+  ctx,
+  scoped,
+  by,
+  to,
+  duration = NULL,
+  call = caller_env()
+) {
   # A wheel only lands on a container the cursor point is actually
   # over; a scoped container outside the viewport is first brought
   # into view -- the staged way while recording, like every other
   # pre-action scroll (a no-op when it already is).
   if (!is.null(scoped)) {
-    stage_scroll_into_view(ctx, scoped, call = call)
+    stage_scroll_into_view(ctx, scoped, duration = duration, call = call)
   }
   # The container probe, with or without an aim (the target scroll
   # position, which turns on the hit test); one function serves the
@@ -408,8 +455,9 @@ scroll_staged <- function(ctx, scoped, by, to, call = caller_env()) {
   point <- c(x = probe$x, y = probe$y)
   stage_move_cursor(ctx, point)
   stage <- page_stage(ctx$page)
-  duration <- min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.3), 1.2)
-  stage_wheel(ctx, point, delta[[1]], delta[[2]], duration, call = call)
+  wheel_duration <- duration %||%
+    min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.5), 2)
+  stage_wheel(ctx, point, delta[[1]], delta[[2]], wheel_duration, call = call)
   # Verify and repair: wheels are best-effort (clamping, canceling),
   # the recorded end state must match the instant path.
   actual <- wheel_container()

@@ -32,7 +32,9 @@ While recording, the cursor appears with staging: it glides from its
 last position, fades in on the target when it has never been shown,
 or glides in from \code{from} (or the \code{enter} side set with \code{\link[=pz_stage]{pz_stage()}})
 when entering the frame. Without a recording the cursor appears
-statically, which is how a cursor lands in a screenshot.
+statically, which is how a cursor lands in a screenshot. Its default
+size is 1.75 times the original artwork; set \code{cursor_scale} with
+\code{\link[=pz_stage]{pz_stage()}} to change the size in videos and stills.
 }
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}

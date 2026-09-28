@@ -105,13 +105,34 @@ test_that("cursor = TRUE draws a static cursor in screenshots; FALSE never draws
   ink <- cursor_png_ink(page, shot, band = c(280, 370))
   expect_true(ink$count > 50)
   expect_true(abs(ink$x - 660) < 15)
-  expect_true(abs(ink$y - 322) < 15)
+  expect_true(abs(ink$y - 322) < 30)
 
   page2 <- local_cursor_page()
   page2 |> pz_stage(cursor = FALSE)
   shot2 <- withr::local_tempfile(fileext = ".png")
   page2 |> pz_screenshot(shot2)
   expect_equal(cursor_png_ink(page2, shot2, band = c(280, 370))$count, 0)
+})
+
+test_that("cursor_scale changes ink size and NULL restores the default", {
+  page <- local_cursor_page()
+  page |> pz_stage(cursor_scale = 1) |> pz_cursor_move("#btn")
+  shot <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(shot)
+  original <- cursor_png_ink(page, shot, band = c(280, 370))
+
+  page |> pz_stage(cursor_scale = 2)
+  shot2 <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(shot2)
+  larger <- cursor_png_ink(page, shot2, band = c(280, 370))
+  expect_gt(larger$height, original$height * 1.7)
+
+  page |> pz_stage(cursor_scale = NULL)
+  shot3 <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(shot3)
+  restored <- cursor_png_ink(page, shot3, band = c(280, 370))
+  expect_gt(restored$height, original$height * 1.4)
+  expect_lt(restored$height, larger$height)
 })
 
 test_that("the overlay is excluded from resolution and hit-testing", {
@@ -124,9 +145,12 @@ test_that("the overlay is excluded from resolution and hit-testing", {
   expect_no_error(page |> pz_expect_count(before, target = "div"))
 })
 
-test_that("the overlay survives navigation with its last position", {
+test_that("the overlay survives navigation with its size and last position", {
   page <- local_cursor_page()
-  page |> pz_cursor_move("#btn")
+  page |> pz_stage(cursor_scale = 2) |> pz_cursor_move("#btn")
+  before_path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(before_path)
+  before <- cursor_png_ink(page, before_path, band = c(280, 370))
 
   pz_chromote(page)$Page$reload()
   pz_wait(page, 1)
@@ -135,6 +159,10 @@ test_that("the overlay survives navigation with its last position", {
   expect_false(is.null(st))
   expect_equal(st[[1]], 1)
   expect_equal(st[2:3], c(660, 322))
+  after_path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(after_path)
+  after <- cursor_png_ink(page, after_path, band = c(280, 370))
+  expect_equal(after$height, before$height)
   # And the re-injected overlay is still excluded from resolution.
   expect_equal(pz_get_count(page, target = "div"), 5)
 })
@@ -192,12 +220,23 @@ test_that("the press animation scales the cursor down", {
   shot <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(shot)
   unpressed <- cursor_png_ink(page, shot, band = c(280, 370))
+  scale <- function(page) {
+    pz_js(
+      page,
+      paste0(
+        "parseFloat(document.getElementById('paparazzi-overlay-root')",
+        ".shadowRoot.querySelector('.pz-inner').style.transform.slice(6))"
+      )
+    )
+  }
+  expect_equal(scale(page), 1.75)
 
   cursor_press(page, TRUE)
   pump_loop(page$child_loop, 0.2)
   shot2 <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(shot2)
   pressed <- cursor_png_ink(page, shot2, band = c(280, 370))
+  expect_equal(scale(page), 1.4)
 
   expect_true(pressed$count > 20)
   expect_true(pressed$height < unpressed$height * 0.9)
