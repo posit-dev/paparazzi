@@ -204,8 +204,11 @@ offset). Each lands as its own unit on main with one roborev review.
   paths with manifest hotspots, covered all CSS cursor keywords including
   blank `none` and explicit `auto`; cursor|stage|actions tests and style checks
   green. Garrick approved light/dark pointer, text, and crosshair captures.
-  Next: review this unit and close zw7w. Provisional: URL-image loading
-  remains deferred; computed fallback keywords remain supported.
+  Roborev job 1318 found that decorative SVG image roles need an aria-hidden
+  ancestor; the cursor layer is hidden from accessibility APIs with a test.
+  Next: close review and zw7w, then run the full test gate on main.
+  Provisional: URL-image loading remains deferred; computed fallback
+  keywords remain supported.
 
 (newest first; three lines per session: landed / next / provisional)
 

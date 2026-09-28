@@ -446,6 +446,18 @@ test_that("all CSS cursor presets validate and select their own layer", {
   expect_error(pz_cursor_hide(page, icon = "pointer"), class = "rlang_error")
 })
 
+test_that("decorative cursor icons are hidden from assistive technology", {
+  page <- local_cursor_page()
+  page |> pz_cursor_move("#plain")
+  expect_identical(
+    pz_js(
+      page,
+      "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-cursor').getAttribute('aria-hidden')"
+    ),
+    "true"
+  )
+})
+
 test_that("automatic icons follow computed CSS at the landing point", {
   page <- local_cursor_page()
   for (case in list(
