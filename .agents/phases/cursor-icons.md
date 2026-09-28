@@ -177,6 +177,19 @@ offset). Each lands as its own unit on main with one roborev review.
 
 ## Handoff log
 
+(newest first; three lines per session: landed / next / provisional)
+
+- 2026-09-28 (phase close): all five units landed, merged, reviewed, and
+  closed in kata (rny6 025d89b, df7d a06fa7a + 072ac42, 2vqb 89a70d6 +
+  5d629fb, k6vz 41c7ec5 + 965e1d5 + b014bb5, 9a2n 1eec5e4), SPEC amended
+  (c2d8670, c079628, e601cbb), main green at the final gate (FAIL 0 /
+  WARN 0 / SKIP 0 / PASS 3187, which also carries the knitr work that
+  landed mid-session). Next: zw7w (deferred per garrick; blocker 2vqb
+  closed, deferral context commented on its issue) builds on CURSOR_ART
+  and the schedule mechanism. Provisional: artwork aesthetics rest on
+  pixel-geometry tests (no agent here can view rendered images) — garrick
+  should eyeball a demo capture; the drag seam test now ignores the rect
+  attribute the staging seam carries.
 - 2026-09-28 (9a2n): landed per-call viewport offsets, two-boundary discrete icon scheduling, still/recorded and pointer-isolation coverage; focused cursor|stage 369 PASS / 0 FAIL / 0 WARN / 0 SKIP, changed-file air and jarl clean.
   Next: orchestrator reviews and merges this unit; SPEC amendment remains with the orchestrator.
   Provisional: off-viewport resting icon falls back to default as `elementFromPoint()` has no element there; cursor coordinates remain off-frame and the next glide starts there.
