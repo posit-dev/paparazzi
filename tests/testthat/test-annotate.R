@@ -201,6 +201,9 @@ test_that("fade produces recorded intermediate frames and clears in reverse", {
   page |>
     pz_annotate("#box", id = "animated", reveal = "fade", color = "#ff0000")
   expect_equal(annotation_state(page)[[1]]$animations, 0)
+  # Under load the last capture of the pumped fade can still be in flight
+  # mid-animation; keep capturing until a settled frame lands.
+  pump_loop(page$child_loop, 0.5)
   files <- page_recorder(page)$files
   expect_gt(length(files), 1)
   dpr <- page_dpr(page)
