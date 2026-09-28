@@ -258,7 +258,7 @@ stage_move_cursor <- function(ctx, point) {
       )
     )
     if (!is.null(rect)) {
-      attr(point, "rect") <- setNames(
+      attr(point, "rect") <- set_names(
         unlist(rect),
         c("x", "y", "width", "height")
       )

@@ -575,7 +575,7 @@ cursor_apply <- function(
     anim = recording
   )
   start <- if (!is.null(state$from)) {
-    setNames(state$from, c("x", "y"))
+    set_names(state$from, c("x", "y"))
   } else if (!is.null(cur$x)) {
     c(x = cur$x, y = cur$y)
   }

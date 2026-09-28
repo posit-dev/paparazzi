@@ -128,7 +128,7 @@ print.paparazzi_preview <- function(x, ...) {
 knit_capture_path <- function(ext) {
   # fig_path() does not advance for external images; magick uses knitr's
   # plot counter to avoid overwriting earlier captures in the chunk.
-  number <- getFromNamespace("plot_counter", "knitr")()
+  number <- utils::getFromNamespace("plot_counter", "knitr")()
   path <- knitr::fig_path(ext, number = number)
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   path
