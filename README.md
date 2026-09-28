@@ -47,15 +47,19 @@ thing as a GIF:
 ``` r
 library(paparazzi)
 
-page <- pz_open(pz_example("tasks"), width = 600, height = 480, color_scheme = "light")
+page <- pz_open(
+  pz_example("tasks"),
+  width = 600,
+  height = 480,
+  color_scheme = "light"
+)
 
-page |>
-  pz_record(code = {
-    page |>
-      pz_type("Buy milk", target = "#task-title") |>
-      pz_click("#add-task") |>
-      pz_expect_text("Buy milk", target = pz_loc(".task-title", which = "first"))
-  }, scale = 0.6)
+pz_record(page, scale = 0.6, code = {
+  page |>
+    pz_type("Buy milk", target = "#task-title") |>
+    pz_click("#add-task") |>
+    pz_expect_text("Buy milk", target = pz_loc(".task-title", which = "first"))
+})
 ```
 
 <img src="man/figures/README-record-1.gif" alt="A cursor moves to the task form, types Buy milk, and clicks Add. Buy milk appears at the top of the task list."  />
