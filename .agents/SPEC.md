@@ -68,7 +68,7 @@ pz_expect_attr(ctx, .target = NULL, ..., .match = c("exact", "contains", "regex"
 Pointer and keyboard:
 
 - `pz_click()`, `pz_hover()`, `pz_type()` as above.
-- `pz_press(ctx, key, ...)`: Playwright-style key syntax, e.g. `"Enter"`, `"Control+A"`, `"Meta+Enter"`, `"Shift+Tab"`. A vector presses keys in sequence: `pz_press(c("ArrowDown", "Enter"))`.
+- `pz_press(ctx, key, ...)`: Playwright-style key syntax, e.g. `"Enter"`, `"Control+A"`, `"Meta+Enter"`, `"Shift+Tab"`. A vector presses keys in sequence: `pz_press(c("ArrowDown", "Enter"))`. Discussed: a `Mod` modifier and a `show_keys` option (see Camera, annotations, and captions).
 - `pz_focus(ctx, target = NULL, ...)` / `pz_blur(ctx, ...)`: e.g. focus to show an input's enabled look, blur to remove focus rings before a screenshot.
 - `pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)`: with a target, scroll it into view; with `by = c(x, y)` or `to = "bottom"` (direction vocabulary), scroll the current scope's container. While recording, scrolling is smooth, using real `mouseWheel` events with the cursor over the container; positive `duration` overrides the staged time per wheel scroll, while `duration = 0` uses the existing instant path (no queued wheels). Auto-scroll before other actions is animated the same way.
 - `pz_drag(ctx, target, to, ..., by = NULL)`: `to` is a target, or use an offset `by = c(x, y)`. Real mouse press/move/release; the cursor glides while holding when recording. HTML5 drag and drop (`dragstart`/`drop`) needs `Input.setInterceptDrags` + `Input.dispatchDragEvent`, chosen when the source is `draggable`.
@@ -454,6 +454,74 @@ Robustness:
 - The overlay is re-injected after navigation via `Page.addScriptToEvaluateOnNewDocument`, keeping its last position.
 - The overlay is excluded from `pz_find()`, bounding boxes and union screenshots, and uses `pointer-events: none`.
 
+### Camera, annotations, and captions
+
+Video-editor features for recordings and annotated stills. Design discussion, rationale and probe notes are on kata `1a3m`; the full idea backlog is on `54b1`. Signatures are provisional until the spikes (`k5zn` camera encode, `3hzw` wipe reveal, `9jec` caption compositing) report.
+
+There are two families, split by where the effect shows up, each paired with `pz_stage()` settings (like `pz_cursor_*()` with `pz_stage(cursor_*)`):
+
+- `pz_camera*()`: moves the view. Recording-only.
+- `pz_annotate*()`: marks up the page. Appears in recordings and stills.
+
+Keystroke callouts are a `pz_press()` option, not functions of their own.
+
+There are three layers:
+
+| Layer | What lives there | Mechanism |
+|---|---|---|
+| Page | marks, callouts, spotlight, redaction, cursor | DOM in the `#paparazzi-overlay-root` shadow root. Captured like page content, so it zooms with the camera. |
+| Encode | camera, captions, keystroke callouts | Applied at `pz_record_stop()`: a time-varying crop and scale, plus composited screen-space PNGs. |
+| Stills | annotations, current caption | Page annotations are captured as-is; the caption is composited onto the PNG. |
+
+#### Camera
+
+```r
+pz_camera(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL)
+pz_camera_reset(ctx)
+```
+
+- The camera is an **encode-time crop**. Capture stays full-viewport. Each camera call records a keyframe (video time, shot rect in page CSS px, easing), and at stop every output frame gets an interpolated crop, scaled back to the output size. It works for both capture methods, and camera motion runs at the output fps. Sharpness is capped by the capture DPR (2 by default). The per-frame scroll position is logged so page-coordinate shots map into viewport frames.
+- **Home shot:** the recording's frame (`pz_record_start(frame =)` or `pz_stage_frame()`), falling back to the full viewport. It defines the output size. Every shot grows to home's aspect ratio (centered) and is clamped inside home, so the camera never shows anything outside the recording's frame. `pz_camera_reset()` returns home, from any context.
+- **Shot:** `target` takes element targets only (selector, `pz_loc()`, or a list whose union is the shot); coordinates may come later. Multiple matches are unioned. At the root, `target = NULL` is an error, as for `pz_click()`. `pad` uses `pz_frame()` semantics, but `NULL` means 24 CSS px. `zoom = NULL` fits `target` + `pad`, capped at the capture DPR (so a scale-1 page never zooms on a fit); a number is magnification relative to home. Beyond the DPR, a softness warning is given once per recording. A shot is measured when its call runs.
+- **Duration:** `duration = NULL` is distance-based, `clamp(0.66 + 2 * d, 0.66, 2)` seconds, with `d = |Δcenter| / home_diagonal + 0.5 * |log2(zoom_to / zoom_from)|` (constants to be tuned against a prototype). Easing is the cursor's cubic ease-in-out. While recording, the call pumps for the move's duration so the move plays out in the video.
+- **Follow the action:** `pz_stage(camera_follow = TRUE)` is the default. While zoomed in, a pointer or typing action whose resolved target falls outside the shot plus a margin triggers a minimal pan at the current zoom, zooming out only as far as needed to fit the target. The move is keyframed to the cursor glide, so it lands when the cursor does; with the cursor off, it gets its own short staged pause. Expectations, getters and waits never move the camera, and it never triggers at home.
+- **Without a recording**, camera calls are no-ops, and stills ignore the camera; to reuse a shot for a still, pass the same target to `pz_screenshot(frame =)`. The camera resets to home at every `pz_record_start()`.
+- The cursor and page annotations zoom with the page. A fixed-size cursor under zoom is deferred; it would need page-side counter-scaling synced to the encode-time camera, a second clock. Revisit this after a prototype.
+
+#### Annotations
+
+```r
+pz_annotate(ctx, target = NULL, ..., type = c("box", "circle", "underline", "highlight"),
+            label = NULL, pad = NULL, reveal = NULL, id = NULL,
+            color = NULL, font_family = NULL, font_size = NULL)
+pz_annotate_callout(ctx, text, ..., target = NULL, side = NULL, arrow = TRUE, label = NULL,
+                    reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)
+pz_annotate_spotlight(ctx, target = NULL, ..., pad = NULL, dim = NULL, reveal = NULL)
+pz_annotate_redact(ctx, target = NULL, ..., method = c("fill", "blur"), pad = NULL, id = NULL, color = NULL)
+pz_annotate_caption(ctx, text, ..., side = "bottom", color = NULL, font_family = NULL, font_size = NULL)
+pz_annotate_clear(ctx, id = NULL, ...)
+```
+
+- **Multiple matches:** every function accepts them, so each match is annotated, and each match is redacted (anything else would leak).
+- **Lifetime:** annotations persist until cleared or replaced. There is no `duration` argument; clearing is an explicit step in the chain (e.g. after `pz_wait()` or `pz_record_hold()`). Reusing an `id` replaces that annotation. `pz_annotate_clear(id = NULL)` clears everything. Spotlight and caption are single-slot (each new call replaces the last), with the reserved ids `"spotlight"` and `"caption"`. Annotations and captions are page state and persist across recordings; a caption set before `pz_record_start()` shows from the first frame.
+- **Geometry:** each annotation keeps a reference to its element. A page-side `requestAnimationFrame` loop, running only while annotations exist, repositions the boxes in a `position: fixed` layer, which handles scrolling, inner scroll containers, fixed and sticky elements, and layout shifts. The loop only mirrors layout and orders nothing relative to R. A disconnected element hides its annotation, except redaction, which keeps its last box or errors. (CSS anchor positioning can't reach page anchors from the shadow root.)
+- **Reveal:** `"fade"`, `"draw"`, `"pop"`, `"slide"`, `"wipe"` (a clockwise conic sweep from 12 o'clock) or `"none"`, with a default per type. Clearing plays the reverse. Reveals animate only while recording; draw and clear calls pump through their animations, since a reveal can't play during a `pz_record_hold()` frozen frame. Without a recording, annotations draw and clear instantly. Redaction has no `reveal` and always appears instantly.
+- **Options:**
+  - `label`: a badge (`1`, `"A"`); `TRUE` numbers the matches 1..n, as `pz_inspect()` does.
+  - `side`: the direction vocabulary. For a callout, `NULL` picks the side with the most room.
+  - `arrow = FALSE`: a tooltip-style bubble next to the target.
+  - `dim`: the spotlight's overlay opacity.
+  - `method`: the redaction style, a solid `"fill"` (the safe choice) or `"blur"` (`backdrop-filter`, with a generous default radius). There is no pixelation: `backdrop-filter: url()` does nothing in Chrome, and filtering the element itself would restyle the page.
+  - Style arguments (`color`, `font_family`, `font_size`) come after the dots and default to `NULL`, meaning the `pz_stage()` default (`annotate_color`, `annotate_font_family`, `annotate_font_size`) or the built-in fallback. On marks, the font arguments style the label badges. `font_size` is CSS px; screen-space captions scale by the output's scale factor.
+- **Stills:** page annotations appear in `pz_screenshot()`; `pz_inspect()` outlines stay hidden. The current caption is composited onto stills.
+- **Frames:** by default a frame measures element geometry only, which can clip an annotation's label or arrow. `pz_frame(target_box = "annotated")` makes each target contribute its box plus its own attached annotations (spotlight counts as its cutout, redaction adds nothing). This applies to stills and camera shots, but never to the recording's home frame, which is measured once while annotations come and go.
+
+#### Captions and keystroke callouts
+
+- **Captions:** screen-space. Chrome renders each caption as a transparent PNG (so it's styled with CSS and uses the page's fonts), and the encoder composites it over its time window. The default look is a translucent dark pill with white text, centered, at most about 80% of the output width, wrapping. `pz_record_start(captions = c("burn", "vtt", "both"))` defaults to `"burn"`; `"vtt"` and `"both"` write `<name>.vtt` next to the video, which knitr can wire up as a `<track>`.
+- **Keystroke callouts:** `pz_press(show_keys = NULL)`, with the page default `pz_stage(show_keys = "none")`. Values are `c("none", "words", "mac", "both")`: `"words"` shows Ctrl, Shift, Alt and Meta keycaps; `"mac"` shows ⌃ ⌥ ⇧ ⌘; `"both"` renders `Mod` as "Ctrl / ⌘". They're screen-space, shown bottom-center and stacked above any caption. A callout appears at the press, holds about 1 s after the last key, then fades over 0.25 s, all computed at encode. They're recording-only, and `pz_type()` has no `show_keys` argument.
+- **`Mod` modifier:** `pz_press("Mod+K")` presses Meta when the browser reports a Mac platform, and Control otherwise.
+
 ### Sessions and apps
 
 Opening pages:
@@ -654,7 +722,7 @@ Arguments: `target` and `from_root` are confirmed. `pz_find_nth()` takes `n` as 
 | `pz_set_files()` | `(ctx, files, ..., target = NULL)` | confirmed |
 | `pz_screenshot()` | `(ctx, path, ..., target = NULL, frame = NULL)` | confirmed |
 
-Arguments: the `pz_press()` key syntax is confirmed.
+Arguments: the `pz_press()` key syntax is confirmed. Discussed additions: a `Mod` modifier and `show_keys = NULL`.
 
 Skipped: select option, check/uncheck, clear (covered by `pz_set_value()` / `pz_set_shiny_input()`).
 
@@ -731,7 +799,24 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 | `pz_cursor_move()` | `(ctx, target, ..., duration = NULL, icon = NULL, offset = NULL)` | confirmed |
 | `pz_cursor_leave()` | `(ctx, side = "right", icon = NULL)` | confirmed |
 
-Arguments: `cursor_speed`, `cursor_scale`, `typing_speed` and `pause` are confirmed.
+Arguments: `cursor_speed`, `cursor_scale`, `typing_speed` and `pause` are confirmed. Discussed additions: `camera_follow`, `show_keys`, `annotate_color`, `annotate_font_family` and `annotate_font_size`.
+
+### Camera and annotations
+
+The family names are confirmed; the signatures are provisional until the spikes report (kata `1a3m`).
+
+| Function | Signature | Name |
+|---|---|---|
+| `pz_camera()` | `(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL)` | confirmed |
+| `pz_camera_reset()` | `(ctx)` | confirmed |
+| `pz_annotate()` | `(ctx, target = NULL, ..., type = c("box", "circle", "underline", "highlight"), label = NULL, pad = NULL, reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
+| `pz_annotate_callout()` | `(ctx, text, ..., target = NULL, side = NULL, arrow = TRUE, label = NULL, reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
+| `pz_annotate_spotlight()` | `(ctx, target = NULL, ..., pad = NULL, dim = NULL, reveal = NULL)` | confirmed |
+| `pz_annotate_redact()` | `(ctx, target = NULL, ..., method = c("fill", "blur"), pad = NULL, id = NULL, color = NULL)` | confirmed |
+| `pz_annotate_caption()` | `(ctx, text, ..., side = "bottom", color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
+| `pz_annotate_clear()` | `(ctx, id = NULL, ...)` | confirmed |
+
+Discussed arguments on existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))`, `pz_press(show_keys = NULL)`.
 
 ### Escape hatches and debugging
 
