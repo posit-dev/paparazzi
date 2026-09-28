@@ -36,6 +36,12 @@
 #'   does not override the next call's automatic inference. The last
 #'   visible icon stays on the cursor until the next destination; the
 #'   first off-frame entrance starts with `default` unless overridden.
+#'   While recording, an automatic move keeps the icon already visible
+#'   through the glide and switches as it lands; an explicit `icon`
+#'   applies from the start of the glide and stays through its landing
+#'   and any press. The artwork tracks CSS zoom and the device pixel
+#'   ratio internally, and a navigation re-injects the overlay with its
+#'   last icon.
 #' @param from A side (`"top"`, `"bottom"`, `"left"`, `"right"`) or
 #'   corner (`"top left"`, `"bottom right"`, ...) of the frame to enter
 #'   from. `NULL` (the default) re-enters from the direction the cursor
@@ -194,6 +200,10 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL, icon = NULL) {
 #' @param side A side (`"top"`, `"bottom"`, `"left"`, `"right"`) or
 #'   corner (`"top left"`, `"bottom right"`, ...) of the frame to leave
 #'   through. Defaults to `"right"`.
+#' @param icon CSS cursor keyword to show during the exit. `NULL` (the
+#'   default) keeps the icon already on the cursor: there is nothing to
+#'   infer at the off-frame exit point. The exit icon becomes the last
+#'   visible icon, so the next entrance starts with it.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -628,16 +638,28 @@ cursor_command_js <- r"(function(state) {
   if (!icon) {
     icon = 'default';
     let el = document.elementFromPoint(state.x, state.y);
-    for (; el; el = el.parentElement) {
+    while (el) {
       const cursor = getComputedStyle(el).cursor;
-      if (cursor === 'auto') continue;
-      // Chrome serializes cursor URLs with a trailing keyword when a
-      // CSS fallback is present. A bare URL has no supported fallback.
-      const keyword = cursor.startsWith('url(')
-        ? (cursor.match(/\)\s*,\s*([a-z-]+)\s*$/) || [])[1]
-        : cursor;
-      if (Object.prototype.hasOwnProperty.call(state.icons, keyword)) icon = keyword;
-      break;
+      if (cursor !== 'auto') {
+        // Chrome serializes cursor URLs with a trailing keyword when a
+        // CSS fallback is present. A bare URL has no supported fallback.
+        const keyword = cursor.startsWith('url(')
+          ? (cursor.match(/\)\s*,\s*([a-z-]+)\s*$/) || [])[1]
+          : cursor;
+        if (Object.prototype.hasOwnProperty.call(state.icons, keyword)) icon = keyword;
+        break;
+      }
+      // An open shadow host reports its own cursor, not its shadow
+      // content's; hit-test inside the shadow tree and keep walking the
+      // composed parent chain when a tree is exhausted.
+      if (el.shadowRoot) {
+        const inner = el.shadowRoot.elementFromPoint(state.x, state.y);
+        if (inner) {
+          el = inner;
+          continue;
+        }
+      }
+      el = el.parentElement || el.getRootNode().host || null;
     }
   }
   const deferSwitch = state.anim && state.duration > 0 && !state.icon &&

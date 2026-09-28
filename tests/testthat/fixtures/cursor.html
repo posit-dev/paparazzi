@@ -23,6 +23,7 @@
   #url-bare { position: absolute; left: 260px; top: 230px; width: 60px; height: 30px; cursor: url("missing.cur"); }
   #inherit-pointer { position: absolute; left: 350px; top: 230px; width: 60px; height: 30px; cursor: pointer; }
   #inherit-pointer span { cursor: auto; }
+  #shadow-host { position: absolute; left: 460px; top: 230px; width: 100px; height: 40px; display: block; }
   #scroller { position: absolute; left: 450px; top: 60px; width: 200px; height: 150px;
               overflow: auto; border: 2px solid steelblue; }
   #scroller > div { height: 800px; background: linear-gradient(#efe, #cfc); }
@@ -45,6 +46,7 @@
 <span id="url-fallback"></span>
 <span id="url-bare"></span>
 <span id="inherit-pointer"><span>inside</span></span>
+<pz-shadow-target id="shadow-host"></pz-shadow-target>
 <div id="scroller"><div>inner</div></div>
 <div id="spacer"></div>
 <button id="below">Below</button>
@@ -61,6 +63,17 @@ window.addEventListener("wheel", (e) => {
   window.__log.wheels++;
   if (!e.isTrusted) window.__log.wheelsTrusted = false;
 }, { passive: true });
+// The host leaves cursor at auto; the shadow child sets it, so the
+// overlay's inference must descend into the open shadow root.
+customElements.define("pz-shadow-target", class extends HTMLElement {
+  connectedCallback() {
+    const root = this.attachShadow({ mode: "open" });
+    const button = document.createElement("button");
+    button.textContent = "shadow";
+    button.style.cssText = "width:100%;height:100%;cursor:pointer;";
+    root.appendChild(button);
+  }
+});
 </script>
 </body>
 </html>

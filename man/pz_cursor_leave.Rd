@@ -13,18 +13,10 @@ pz_cursor_leave(ctx, side = "right", icon = NULL)
 corner (\code{"top left"}, \code{"bottom right"}, ...) of the frame to leave
 through. Defaults to \code{"right"}.}
 
-\item{icon}{CSS cursor keyword to show for this call. \code{NULL} (the
-default) infers the icon at the actual landing point: the first
-computed \code{cursor} other than \code{auto} on the element under the point
-or an ancestor. Supported values: \code{default}, \code{pointer}, \code{text},
-\code{not-allowed}, \code{crosshair}, \code{grab}, \code{grabbing}, \code{ew-resize},
-\code{ns-resize}, \code{nesw-resize}, \code{nwse-resize}, \code{row-resize}, and
-\code{col-resize}. An unsupported CSS keyword or bare \code{url()} uses
-\code{default}; a \code{url()} with a supported keyword fallback uses that
-keyword. An explicit icon lasts through this call's landing but
-does not override the next call's automatic inference. The last
-visible icon stays on the cursor until the next destination; the
-first off-frame entrance starts with \code{default} unless overridden.}
+\item{icon}{CSS cursor keyword to show during the exit. \code{NULL} (the
+default) keeps the icon already on the cursor: there is nothing to
+infer at the off-frame exit point. The exit icon becomes the last
+visible icon, so the next entrance starts with it.}
 }
 \value{
 \code{ctx}, invisibly.

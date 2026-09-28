@@ -410,6 +410,7 @@ test_that("automatic icons follow computed CSS at the landing point", {
     c("#url-fallback", "pointer"),
     c("#url-bare", "default"),
     c("#inherit-pointer span", "pointer"),
+    c("#shadow-host", "pointer"),
     c("#plain", "default")
   )) {
     page |> pz_cursor_move(case[[1]])
