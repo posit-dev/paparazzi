@@ -127,6 +127,10 @@ offset). Each lands as its own unit on main with one roborev review.
   viewport bounding rect along the straight segment from start S to landing
   D. Boundaries count as inside; a start already inside flips at 0%. The
   target's rect, not other elements crossed by the segment, determines entry.
+  Direct cursor calls retain the resolved target's rect before releasing
+  its element handles. The existing staged action seam passes only a point;
+  `stage_move_cursor()` takes the viewport rect of the element hit at that
+  actionable point (which may be a descendant of the resolved action target).
 - Clip the segment against the four rect half-planes in linear progress
   `u` (Liang-Barsky slab intersection); clamp the first intersection to
   [0, 1]. Invert CSS ease-in-out by bisection on its monotone cubic
@@ -137,9 +141,10 @@ offset). Each lands as its own unit on main with one roborev review.
 - The transient `state$switch` JSON object holds `at` (time fraction
   in [0, 1]), `from` and `to` (the two icon keywords). R sends it only
   for an automatic recorded glide whose inferred landing keyword differs
-  from the previous keyword. The JS fills the destination keyword from
-  its existing landing-point inference; the state carries the R-computed
-  entry fraction and previous keyword. No switch for explicit icons,
+  from the previous keyword. R probes the JS landing-point inference
+  without moving the overlay, then sends the computed entry fraction
+  and both keywords; the drawing JS confirms the landing keyword.
+  No switch for explicit icons,
   static draws, or a zero-duration glide.
 - For the two participating SVGs only, JS writes `pz-icon-in` and
   `pz-icon-out` keyframes at the computed percentage: hold the prior
@@ -154,6 +159,15 @@ offset). Each lands as its own unit on main with one roborev review.
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
+
+- 2026-09-28 (k6vz): landed analytic eased rect entry, rect threading,
+  discrete schedule-driven icon keyframes and sampled glide regressions;
+  focused cursor|stage 325 PASS / 0 FAIL / 0 WARN / 0 SKIP; air and jarl clean.
+  Next: 9a2n adds an optional second landing-point flip for offsets
+  beyond the target, without changing the glide pump or using timers.
+  Provisional: staged pointer actions receive only an actionable point;
+  their hit-tested rect can belong to a descendant rather than the
+  resolved action target. Direct cursor calls use the resolved rect.
 
 - 2026-09-28 (2vqb): landed the per-call `icon` API, 13-keyword SVG
   registry with visibility selection, landing-point CSS inference and URL
