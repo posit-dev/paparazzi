@@ -59,6 +59,90 @@ test_that("pause/resume cuts the paused stretch out of the video", {
   expect_lte(info$duration, 1.5)
 })
 
+test_that("knit recording results distinguish GIF images and video output", {
+  skip_if_not_installed("knitr")
+  withr::local_options(knitr.graphics.error = FALSE)
+  gif <- record_knit_media("figure/demo.gif")
+  expect_s3_class(gif, "knit_image_paths")
+  expect_equal(as.character(gif), "figure/demo.gif")
+
+  prior_format <- knitr::opts_knit$get("rmarkdown.pandoc.to")
+  withr::defer(knitr::opts_knit$set(rmarkdown.pandoc.to = prior_format))
+  for (format in c("html", "latex")) {
+    input <- withr::local_tempfile(fileext = ".Rmd")
+    output <- withr::local_tempfile(fileext = ".md")
+    knitr::opts_knit$set(rmarkdown.pandoc.to = format)
+    writeLines(
+      c(
+        "```{r, echo=FALSE, error=FALSE}",
+        'record_knit_media("figure/a & b.webm")',
+        "```"
+      ),
+      input
+    )
+    knitr::knit(input, output = output, envir = environment(), quiet = TRUE)
+    text <- paste(readLines(output), collapse = "\n")
+    if (format == "html") {
+      expect_match(text, "<video controls")
+      expect_match(text, 'src="figure/a%20%26%20b.webm"', fixed = TRUE)
+      expect_false(grepl("knit_asis|knit_image_paths", text))
+    } else {
+      expect_match(
+        text,
+        "[Download recording](<figure/a%20%26%20b.webm>)",
+        fixed = TRUE
+      )
+      expect_false(grepl("<video", text, fixed = TRUE))
+    }
+  }
+})
+
+test_that("knitted recordings return media only at completion", {
+  skip_if_not_installed("knitr")
+  skip_if_not_installed("gifski")
+  skip_if_no_av()
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r demo, echo=FALSE, error=FALSE}',
+    'start <- withVisible(pz_record_start(page, fps=5, hold=c(0, 0)))',
+    'stopifnot(!start$visible, identical(start$value, page))',
+    'pz_wait(page, 0.2)',
+    'pz_record_stop(page)',
+    'pz_record(page, code = { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
+    'pz_record(page, "named.gif", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
+    'pz_record(page, "named.mp4", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
+    'page |> pz_record_start("split.webm", fps=5, hold=c(0, 0))',
+    'pz_wait(page, 0.2)',
+    'pz_record_stop(page)',
+    '```',
+    sep = "\n"
+  )
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_false(grepl("Error", markdown, fixed = TRUE))
+  gifs <- list.files(
+    "figure",
+    pattern = "[.]gif$",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+  expect_length(gifs, 2L)
+  expect_true(all(file.exists(gifs)))
+  expect_match(markdown, "demo-1.gif", fixed = TRUE)
+  expect_match(markdown, "demo-2.gif", fixed = TRUE)
+  expect_true(file.exists("named.gif"))
+  expect_match(markdown, "named.gif", fixed = TRUE)
+  expect_true(file.exists("named.mp4"))
+  expect_match(
+    markdown,
+    '<video controls preload="metadata" src="named.mp4">',
+    fixed = TRUE
+  )
+  expect_true(file.exists("split.webm"))
+  expect_match(markdown, 'src="split.webm"', fixed = TRUE)
+})
+
 test_that("pz_record encodes on error and returns ctx invisibly", {
   page <- local_record_page()
   skip_if_no_av()
@@ -911,6 +995,7 @@ test_that("recording input and lifecycle errors are classed", {
   page <- local_record_page()
   skip_if_no_av()
 
+  expect_error(pz_record_start(page), "path")
   expect_error(
     pz_record_start(page, withr::local_tempfile(fileext = ".mov")),
     class = "paparazzi_error_input"

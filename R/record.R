@@ -42,7 +42,9 @@
 #'
 #' @inheritParams pz_click
 #' @param path Output file path; the extension (`.mp4`, `.webm`, or
-#'   `.gif`) selects the format. An existing file is overwritten.
+#'   `.gif`) selects the format. An existing file is overwritten. When
+#'   knitting, an omitted path uses a numbered `.gif` in the chunk's
+#'   figure directory. Outside knitting a path is required.
 #' @param method Capture method. Only `"poll"` is implemented;
 #'   `"screencast"` (`Page.startScreencast`) is reserved.
 #' @param frame Framing applied at encode time: `NULL` (the default)
@@ -92,6 +94,9 @@ pz_record_start <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
+  if (missing(path) && isTRUE(getOption("knitr.in.progress"))) {
+    path <- knit_capture_path("gif")
+  }
   check_string(path)
   method <- arg_match(method)
   if (identical(method, "screencast")) {
@@ -158,7 +163,9 @@ pz_record_start <- function(
 #'
 #' @inheritParams pz_click
 #'
-#' @return `ctx`, invisibly.
+#' @return `ctx`, invisibly outside knitting. While knitting, returns a
+#'   printable image for GIF, HTML video for MP4/WebM, or a video link in
+#'   non-HTML output, even when the path was supplied explicitly.
 #'
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
 #' page <- pz_open(pz_example("tasks"))
@@ -235,6 +242,9 @@ pz_record_stop <- function(ctx) {
   # The staging hook: an auto cursor under cursor = NULL belonged to the
   # recording, so it leaves the page now that stills would catch it.
   stage_record_stopped(ctx)
+  if (isTRUE(getOption("knitr.in.progress"))) {
+    return(record_knit_media(rec$path))
+  }
   invisible(ctx)
 }
 
@@ -335,14 +345,15 @@ pz_record_hold <- function(ctx, seconds) {
 #' The block form of [pz_record_start()]: starts recording, evaluates
 #' the embraced expression `code`, and stops and encodes on exit --
 #' including on error, so a failed run still produces the video up to
-#' the failure. Returns `ctx` invisibly (not the block's value), so the
-#' chain continues after the recording.
+#' the failure. Outside knitting, returns `ctx` invisibly (not the block's
+#' value). In a knitted chunk the completed recording is terminal media;
+#' write `pz_record(code = { ... })` to omit the path.
 #'
 #' @inheritParams pz_record_start
 #' @param code An expression to evaluate while recording.
 #' @param ... Passed to [pz_record_start()].
 #'
-#' @return `ctx`, invisibly.
+#' @return `ctx`, invisibly outside knitting; printable media while knitting.
 #'
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
 #' page <- pz_open(pz_example("tasks"))
@@ -366,19 +377,44 @@ pz_record <- function(ctx, path, code, ...) {
   expr <- substitute(code)
   env <- parent.frame()
   pz_record_start(ctx, path, ...)
-  # Stop on any exit; an error from the block wins over a stop error
-  # (e.g. a run that failed before the first frame was captured).
-  code_error <- NULL
-  withr::defer({
-    stop_error <- tryCatch(pz_record_stop(ctx), error = function(e) e)
-    if (!is.null(code_error)) {
-      stop(code_error)
-    } else if (inherits(stop_error, "error")) {
-      stop(stop_error)
-    }
-  })
-  tryCatch(eval(expr, env), error = function(e) code_error <<- e)
+  # Stop once even if the block fails; the block's error takes priority.
+  code_error <- tryCatch(
+    {
+      eval(expr, env)
+      NULL
+    },
+    error = identity
+  )
+  stop_result <- tryCatch(pz_record_stop(ctx), error = identity)
+  if (inherits(code_error, "error")) {
+    stop(code_error)
+  }
+  if (inherits(stop_result, "error")) {
+    stop(stop_result)
+  }
+  if (isTRUE(getOption("knitr.in.progress"))) {
+    return(stop_result)
+  }
   invisible(ctx)
+}
+
+record_knit_media <- function(path) {
+  if (record_format(path) == "gif") {
+    return(knitr::include_graphics(path))
+  }
+  # Percent-encode filename characters without encoding path separators.
+  url <- gsub("%2F", "/", utils::URLencode(path, reserved = TRUE), fixed = TRUE)
+  if (knitr::is_html_output()) {
+    return(knitr::asis_output(paste0(
+      '<video controls preload="metadata" src="',
+      url,
+      '">',
+      '<a href="',
+      url,
+      '">Download recording</a></video>'
+    )))
+  }
+  knitr::asis_output(paste0("[Download recording](<", url, ">)"))
 }
 
 # The recorder state lives in the page's reserved private$recorder_
