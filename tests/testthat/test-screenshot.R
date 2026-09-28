@@ -141,6 +141,202 @@ test_that("pz_screenshot returns its context invisibly", {
   expect_identical(withVisible(pz_screenshot(page, path))$value, page)
 })
 
+test_that("pathless screenshots are numbered knitr figures", {
+  skip_if_not_installed("knitr")
+  page <- local_screenshot_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r fig-shot, echo=FALSE, fig.path="figures/", fig.cap="The page", fig.alt="Red box", out.width="50%"}',
+    'page |> pz_screenshot(target = "#shot-a")',
+    'page |> pz_screenshot(target = "#shot-b")',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_match(markdown, "figures/fig-shot-1.png", fixed = TRUE)
+  expect_match(markdown, "figures/fig-shot-2.png", fixed = TRUE)
+  expect_match(markdown, 'alt="Red box"', fixed = TRUE)
+  expect_match(markdown, 'width="50%"', fixed = TRUE)
+  expect_match(markdown, "The page", fixed = TRUE)
+  expect_true(file.exists("figures/fig-shot-1.png"))
+  expect_true(file.exists("figures/fig-shot-2.png"))
+  expect_identical(
+    png_dimensions("figures/fig-shot-1.png"),
+    as.integer(round(c(100, 60) * page_dpr(page)))
+  )
+
+  for (retina in c(1, 2)) {
+    text <- paste(
+      sprintf(
+        '```{r fig-css, echo=FALSE, fig.path="figures/", fig.retina=%d}',
+        retina
+      ),
+      'page |> pz_screenshot(target = "#shot-a")',
+      '```',
+      sep = "\n"
+    )
+    markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+    expect_match(markdown, 'width="100"', fixed = TRUE)
+  }
+})
+
+test_that("a pathless screenshot resolves in rendered R Markdown", {
+  skip_if_not_installed("rmarkdown")
+  page <- local_screenshot_page()
+  dir <- withr::local_tempdir()
+  input <- file.path(dir, "live-shot.Rmd")
+  writeLines(
+    c(
+      "---",
+      "output:",
+      "  html_document:",
+      "    self_contained: false",
+      "---",
+      "",
+      '```{r fig-live-shot, echo=FALSE, fig.cap="The red box", fig.alt="Red box"}',
+      'page |> pz_screenshot(target = "#shot-a")',
+      '```'
+    ),
+    input
+  )
+
+  output <- getExportedValue("rmarkdown", "render")(
+    input,
+    envir = environment(),
+    quiet = TRUE
+  )
+  html <- paste(readLines(output, warn = FALSE), collapse = "\n")
+  image_src <- function(document) {
+    match <- regmatches(
+      document,
+      regexec('src="([^"]+)"[^>]*alt="Red box"', document)
+    )[[1]]
+    if (length(match) != 2L) {
+      return(NULL)
+    }
+    match[[2]]
+  }
+  src <- image_src(html)
+  expect_false(is.null(src))
+  expect_match(src, "fig-live-shot-1.png", fixed = TRUE)
+  expect_true(file.exists(file.path(dirname(output), src)))
+  expect_identical(
+    png_dimensions(file.path(dirname(output), src)),
+    as.integer(round(c(100, 60) * page_dpr(page)))
+  )
+  expect_match(html, "The red box", fixed = TRUE)
+  expect_match(html, 'alt="Red box"', fixed = TRUE)
+
+  # A dangling final HTML image link must fail the same resolution check.
+  broken <- sub(src, "missing-image.png", html, fixed = TRUE)
+  expect_identical(image_src(broken), "missing-image.png")
+  expect_false(file.exists(file.path(dirname(output), image_src(broken))))
+})
+
+test_that("a Quarto screenshot figure resolves with its cross-reference", {
+  skip_if(Sys.which("quarto") == "", "Quarto not available")
+  skip_if_not_installed("pkgload")
+  skip_if_no_chrome()
+  dir <- withr::local_tempdir()
+  input <- file.path(dir, "live-shot.qmd")
+  package_root <- normalizePath(test_path("..", ".."))
+  fixture <- normalizePath(screenshot_fixture_file())
+  writeLines(
+    c(
+      "---",
+      "format: html",
+      "---",
+      "",
+      "See @fig-live-shot.",
+      "",
+      "```{r}",
+      "#| echo: false",
+      sprintf("pkgload::load_all(%s, quiet = TRUE)", deparse(package_root)),
+      sprintf("page <- pz_open(%s)", deparse(fixture)),
+      "```",
+      "",
+      "```{r}",
+      "#| label: fig-live-shot",
+      "#| echo: false",
+      "#| fig-cap: The red box",
+      "#| fig-alt: Red box",
+      'page |> pz_screenshot(target = "#shot-a")',
+      "```",
+      "",
+      "```{r}",
+      "#| echo: false",
+      "pz_close(page)",
+      "```"
+    ),
+    input
+  )
+
+  result <- processx::run(
+    Sys.which("quarto"),
+    c("render", input, "--to", "html"),
+    wd = dir,
+    error_on_status = FALSE,
+    timeout = 120000
+  )
+  expect_identical(
+    result$status,
+    0L,
+    info = paste(result$stdout, result$stderr)
+  )
+  output <- file.path(dir, "live-shot.html")
+  html <- paste(readLines(output, warn = FALSE), collapse = "\n")
+  src <- regmatches(
+    html,
+    regexec('src="([^"]*fig-live-shot-1\\.png)"', html)
+  )[[1]]
+  expect_length(src, 2L)
+  expect_true(file.exists(file.path(dir, src[[2]])))
+  expect_match(html, 'id="fig-live-shot"', fixed = TRUE)
+  expect_match(html, 'href="#fig-live-shot"', fixed = TRUE)
+  expect_match(html, "The red box", fixed = TRUE)
+  expect_match(html, 'alt="Red box"', fixed = TRUE)
+})
+
+test_that("explicit paths stay chainable while knitting", {
+  skip_if_not_installed("knitr")
+  page <- local_screenshot_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r fig-manual, echo=FALSE}',
+    'page |> pz_screenshot("manual.png", target = "#shot-a") |> pz_click("#shot-a")',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_true(file.exists("manual.png"))
+  expect_false(grepl("manual.png", markdown, fixed = TRUE))
+})
+
+test_that("pathless screenshots preview interactively without magick", {
+  page <- local_screenshot_page()
+  rlang::local_interactive()
+  shown <- NULL
+  withr::local_options(viewer = function(path) shown <<- path)
+
+  preview <- pz_screenshot(page, target = "#shot-a")
+  withr::defer(unlink(unclass(preview)))
+  expect_s3_class(preview, "paparazzi_preview")
+  expect_true(file.exists(unclass(preview)))
+  expect_identical(shown, NULL)
+  expect_invisible(print(preview))
+  expect_identical(shown, unclass(preview))
+})
+
+test_that("a missing screenshot path still errors in noninteractive scripts", {
+  page <- local_screenshot_page()
+  rlang::local_interactive(FALSE)
+  expect_error(pz_screenshot(page), "path")
+})
+
 test_that("pz_screenshot validates its inputs", {
   page <- local_screenshot_page()
   path <- withr::local_tempfile(fileext = ".png")

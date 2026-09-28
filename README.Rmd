@@ -40,25 +40,21 @@ paparazzi controls Chrome (or another Chromium-based browser) through chromote, 
 
 paparazzi ships a small task-tracker page for examples. This script adds a task to it, checks that the task was saved, and records the whole thing as a GIF:
 
-```{r record}
+```{r record, fig.alt = "A cursor moves to the task form, types Buy milk, and clicks Add. Buy milk appears at the top of the task list."}
 library(paparazzi)
 
 page <- pz_open(pz_example("tasks"), width = 600, height = 480, color_scheme = "light")
 
 page |>
-  pz_record("add-task.gif", scale = 0.6, {
+  pz_record(code = {
     page |>
       pz_type("Buy milk", target = "#task-title") |>
       pz_click("#add-task") |>
       pz_expect_text("Buy milk", target = pz_loc(".task-title", which = "first"))
-  })
+  }, scale = 0.6)
 ```
 
-```{r, include = FALSE}
-file.rename("add-task.gif", "man/figures/README-add-task.gif")
-```
-
-<img src="man/figures/README-add-task.gif" alt="A cursor moves to the task form, types &quot;Buy milk&quot;, and clicks Add. After a moment, &quot;Buy milk&quot; appears at the top of the task list." />
+When a recording finishes as the last call in a knitted chunk expression, knitr includes it in the document. Without a path, it writes a numbered GIF under the chunk's figure directory. Name the `code` argument when leaving out the path.
 
 paparazzi's actions and expectations take the page as their first argument and return it, so a script reads as one chain of steps. The actions wait for their element to be ready before acting, and expectations like `pz_expect_text()` retry until they pass or time out. That matters here: the page takes a moment to save a new task, and the expectation waits for it instead of failing straight away.
 
@@ -66,22 +62,18 @@ While recording, paparazzi animates a cursor between elements and types one char
 
 You can also narrow a chain to part of the page. `pz_find()` makes the matched element the chain's **scope**, so later targets are looked up inside it. Here we mark one task as done and take a screenshot of it:
 
-```{r screenshot}
+```{r screenshot, fig.alt = "The Book dentist appointment task, crossed out."}
 page |>
   pz_find(pz_loc(".task", has_text = "dentist")) |>
   pz_click(".task-done") |>
-  pz_screenshot("done.png", frame = pz_frame(pad = 8))
-
-pz_close(page)
+  pz_screenshot(frame = pz_frame(pad = 8))
 ```
 
 ```{r, include = FALSE}
-file.rename("done.png", "man/figures/README-done.png")
+pz_close(page)
 ```
 
-<img src="man/figures/README-done.png" alt="The &quot;Book dentist appointment&quot; task, crossed out." />
-
-With `target` left out, `pz_screenshot()` captures the scope element, and `pz_frame(pad = 8)` adds a margin around it.
+With `target` left out, `pz_screenshot()` captures the scope element, and `pz_frame(pad = 8)` adds a margin around it. A pathless screenshot is the final step of this chain: knitr includes its result as a figure. If you need to keep piping actions afterward, give the screenshot an explicit file path.
 
 The scope doesn't stick to `page`. Actions like `pz_click()` change the browser tab, and every chain on `page` sees those changes. A scope isn't part of the browser, so `pz_find()` leaves `page` alone and returns a new, scoped context instead. The next chain that starts from `page` starts at the whole page again. To keep working in a scope, assign the scoped context to its own variable.
 

@@ -33,6 +33,7 @@ Suggests:
     av,
     gifski,
     httpuv,
+    knitr,
     png,
     rstudioapi,
     shiny,

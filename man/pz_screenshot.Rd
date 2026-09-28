@@ -10,7 +10,12 @@ pz_screenshot(ctx, path, ..., target = NULL, frame = NULL)
 \item{ctx}{A paparazzi context.}
 
 \item{path}{File path the PNG is written to; an existing file is
-overwritten.}
+overwritten. If omitted while knitting, a numbered file in the
+chunk's figure directory is used and the screenshot is included in
+the document. If omitted in an interactive session, a temporary PNG
+is shown when the result is printed. A path is required otherwise.
+In a document, end the pipe with \code{pz_screenshot()} to include it; give
+intermediate screenshots a path to keep chaining.}
 
 \item{...}{Checked empty; reserved for future use.}
 
@@ -26,11 +31,15 @@ capture, replacing any default entirely; \code{FALSE} disables framing
 for this capture.}
 }
 \value{
-\code{ctx}, invisibly.
+With an explicit path, \code{ctx}, invisibly. Without a path while
+knitting, a knitr image; without a path in an interactive session,
+an image preview. These image results are terminal, not contexts.
 }
 \description{
-Captures a PNG of the page and writes it to \code{path}, returning the
-context invisibly so screenshots slot into \verb{|>} chains.
+Captures a PNG of the page. With an explicit \code{path}, returns the context
+invisibly so screenshots slot into \verb{|>} chains. Without a path, the
+capture is a terminal step: a figure in a knitted document or a
+printable preview in an interactive session.
 
 The captured region depends on \code{target}:
 \itemize{

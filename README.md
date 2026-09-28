@@ -50,15 +50,20 @@ library(paparazzi)
 page <- pz_open(pz_example("tasks"), width = 600, height = 480, color_scheme = "light")
 
 page |>
-  pz_record("add-task.gif", scale = 0.6, {
+  pz_record(code = {
     page |>
       pz_type("Buy milk", target = "#task-title") |>
       pz_click("#add-task") |>
       pz_expect_text("Buy milk", target = pz_loc(".task-title", which = "first"))
-  })
+  }, scale = 0.6)
 ```
 
-<img src="man/figures/README-add-task.gif" alt="A cursor moves to the task form, types &quot;Buy milk&quot;, and clicks Add. After a moment, &quot;Buy milk&quot; appears at the top of the task list." />
+<img src="man/figures/README-record-1.gif" alt="A cursor moves to the task form, types Buy milk, and clicks Add. Buy milk appears at the top of the task list."  />
+
+When a recording finishes as the last call in a knitted chunk
+expression, knitr includes it in the document. Without a path, it writes
+a numbered GIF under the chunk’s figure directory. Name the `code`
+argument when leaving out the path.
 
 paparazzi’s actions and expectations take the page as their first
 argument and return it, so a script reads as one chain of steps. The
@@ -80,15 +85,16 @@ inside it. Here we mark one task as done and take a screenshot of it:
 page |>
   pz_find(pz_loc(".task", has_text = "dentist")) |>
   pz_click(".task-done") |>
-  pz_screenshot("done.png", frame = pz_frame(pad = 8))
-
-pz_close(page)
+  pz_screenshot(frame = pz_frame(pad = 8))
 ```
 
-<img src="man/figures/README-done.png" alt="The &quot;Book dentist appointment&quot; task, crossed out." />
+<img src="man/figures/README-screenshot-1.png" alt="The Book dentist appointment task, crossed out." width="532" />
 
 With `target` left out, `pz_screenshot()` captures the scope element,
-and `pz_frame(pad = 8)` adds a margin around it.
+and `pz_frame(pad = 8)` adds a margin around it. A pathless screenshot
+is the final step of this chain: knitr includes its result as a figure.
+If you need to keep piping actions afterward, give the screenshot an
+explicit file path.
 
 The scope doesn’t stick to `page`. Actions like `pz_click()` change the
 browser tab, and every chain on `page` sees those changes. A scope isn’t

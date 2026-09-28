@@ -1,8 +1,10 @@
 #' Take a screenshot
 #'
 #' @description
-#' Captures a PNG of the page and writes it to `path`, returning the
-#' context invisibly so screenshots slot into `|>` chains.
+#' Captures a PNG of the page. With an explicit `path`, returns the context
+#' invisibly so screenshots slot into `|>` chains. Without a path, the
+#' capture is a terminal step: a figure in a knitted document or a
+#' printable preview in an interactive session.
 #'
 #' The captured region depends on `target`:
 #' * `NULL` from the root context (from [pz_open()]): the current
@@ -20,7 +22,12 @@
 #'
 #' @inheritParams pz_click
 #' @param path File path the PNG is written to; an existing file is
-#'   overwritten.
+#'   overwritten. If omitted while knitting, a numbered file in the
+#'   chunk's figure directory is used and the screenshot is included in
+#'   the document. If omitted in an interactive session, a temporary PNG
+#'   is shown when the result is printed. A path is required otherwise.
+#'   In a document, end the pipe with `pz_screenshot()` to include it; give
+#'   intermediate screenshots a path to keep chaining.
 #' @param target What to capture: `NULL` for the viewport (root context)
 #'   or the scope's box (scoped context), or a CSS selector string,
 #'   `pz_loc()` spec, or list of either for the union of matched
@@ -33,7 +40,9 @@
 #'
 #' @seealso [pz_frame()], [pz_stage_frame()]
 #'
-#' @return `ctx`, invisibly.
+#' @return With an explicit path, `ctx`, invisibly. Without a path while
+#'   knitting, a knitr image; without a path in an interactive session,
+#'   an image preview. These image results are terminal, not contexts.
 #'
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
 #' page <- pz_open(pz_example("tasks"))
@@ -55,6 +64,13 @@
 pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   check_context(ctx)
   check_dots_empty()
+  implicit <- missing(path)
+  knitting <- isTRUE(getOption("knitr.in.progress"))
+  if (implicit && knitting) {
+    path <- knit_capture_path("png")
+  } else if (implicit && rlang::is_interactive()) {
+    path <- tempfile("paparazzi-", fileext = ".png")
+  }
   check_string(path)
 
   # NULL means the page default (pz_stage_frame()) if one is set; FALSE
@@ -85,7 +101,37 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   on.exit(overlay_restore(ctx, overlay_display), add = TRUE)
   res <- screenshot_capture(ctx, clip)
   writeBin(jsonlite::base64_dec(res$data), path)
+  if (implicit && knitting) {
+    return(knitr::include_graphics(
+      path,
+      dpi = 96 * pz_js(ctx, "window.devicePixelRatio")
+    ))
+  }
+  if (implicit) {
+    return(structure(path, class = "paparazzi_preview"))
+  }
   invisible(ctx)
+}
+
+#' @export
+#' @noRd
+print.paparazzi_preview <- function(x, ...) {
+  viewer <- getOption("viewer")
+  if (is.function(viewer)) {
+    viewer(unclass(x))
+  } else {
+    utils::browseURL(unclass(x))
+  }
+  invisible(x)
+}
+
+knit_capture_path <- function(ext) {
+  # fig_path() does not advance for external images; magick uses knitr's
+  # plot counter to avoid overwriting earlier captures in the chunk.
+  number <- getFromNamespace("plot_counter", "knitr")()
+  path <- knitr::fig_path(ext, number = number)
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  path
 }
 
 # The clip for a root-context capture: the viewport in document coordinates.

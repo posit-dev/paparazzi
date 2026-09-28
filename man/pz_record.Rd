@@ -10,21 +10,24 @@ pz_record(ctx, path, code, ...)
 \item{ctx}{A paparazzi context.}
 
 \item{path}{Output file path; the extension (\code{.mp4}, \code{.webm}, or
-\code{.gif}) selects the format. An existing file is overwritten.}
+\code{.gif}) selects the format. An existing file is overwritten. When
+knitting, an omitted path uses a numbered \code{.gif} in the chunk's
+figure directory. Outside knitting a path is required.}
 
 \item{code}{An expression to evaluate while recording.}
 
 \item{...}{Passed to \code{\link[=pz_record_start]{pz_record_start()}}.}
 }
 \value{
-\code{ctx}, invisibly.
+\code{ctx}, invisibly outside knitting; printable media while knitting.
 }
 \description{
 The block form of \code{\link[=pz_record_start]{pz_record_start()}}: starts recording, evaluates
 the embraced expression \code{code}, and stops and encodes on exit --
 including on error, so a failed run still produces the video up to
-the failure. Returns \code{ctx} invisibly (not the block's value), so the
-chain continues after the recording.
+the failure. Outside knitting, returns \code{ctx} invisibly (not the block's
+value). In a knitted chunk the completed recording is terminal media;
+write \code{pz_record(code = { ... })} to omit the path.
 }
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
