@@ -377,7 +377,8 @@ pz_record <- function(ctx, path, code, ...) {
   expr <- substitute(code)
   env <- parent.frame()
   pz_record_start(ctx, path, ...)
-  # Stop once even if the block fails; the block's error takes priority.
+  # Non-local exits (including interrupts) still stop the recording.
+  on.exit(pz_record_stop(ctx), add = TRUE)
   code_error <- tryCatch(
     {
       eval(expr, env)
@@ -385,6 +386,8 @@ pz_record <- function(ctx, path, code, ...) {
     },
     error = identity
   )
+  # The normal path stops once, and the block's error takes priority.
+  on.exit(NULL)
   stop_result <- tryCatch(pz_record_stop(ctx), error = identity)
   if (inherits(code_error, "error")) {
     stop(code_error)
@@ -402,9 +405,31 @@ record_knit_media <- function(path) {
   if (record_format(path) == "gif") {
     return(knitr::include_graphics(path))
   }
+  # The figure directory is carried along when R Markdown or Quarto moves
+  # the rendered document; an external named path is not.
+  figure_dir <- dirname(knitr::fig_path(record_format(path)))
+  dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
+  media_path <- file.path(
+    figure_dir,
+    paste0(unname(tools::md5sum(path)), "-", basename(path))
+  )
+  if (
+    !identical(normalizePath(path), normalizePath(media_path, mustWork = FALSE))
+  ) {
+    if (!file.copy(path, media_path, overwrite = TRUE)) {
+      cli::cli_abort("Could not copy recording to {.path {media_path}}.")
+    }
+  }
+  # Use the same output-relative path conversion as other knitr figures.
+  media_path <- as.character(knitr::include_graphics(media_path))
   # Percent-encode filename characters without encoding path separators.
-  url <- gsub("%2F", "/", utils::URLencode(path, reserved = TRUE), fixed = TRUE)
-  if (knitr::is_html_output()) {
+  url <- gsub(
+    "%2F",
+    "/",
+    utils::URLencode(media_path, reserved = TRUE),
+    fixed = TRUE
+  )
+  if (knitr::is_html_output(excludes = c("markdown", "gfm", "epub", "epub2"))) {
     return(knitr::asis_output(paste0(
       '<video controls preload="metadata" src="',
       url,

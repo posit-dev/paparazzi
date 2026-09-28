@@ -66,11 +66,15 @@ test_that("knit recording results distinguish GIF images and video output", {
   expect_s3_class(gif, "knit_image_paths")
   expect_equal(as.character(gif), "figure/demo.gif")
 
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  dir.create("figure")
+  writeBin(charToRaw("fixture"), "figure/a & b.webm")
   prior_format <- knitr::opts_knit$get("rmarkdown.pandoc.to")
   withr::defer(knitr::opts_knit$set(rmarkdown.pandoc.to = prior_format))
   for (format in c("html", "latex")) {
-    input <- withr::local_tempfile(fileext = ".Rmd")
-    output <- withr::local_tempfile(fileext = ".md")
+    input <- file.path(dir, paste0(format, ".Rmd"))
+    output <- file.path(dir, paste0(format, ".md"))
     knitr::opts_knit$set(rmarkdown.pandoc.to = format)
     writeLines(
       c(
@@ -84,23 +88,168 @@ test_that("knit recording results distinguish GIF images and video output", {
     text <- paste(readLines(output), collapse = "\n")
     if (format == "html") {
       expect_match(text, "<video controls")
-      expect_match(text, 'src="figure/a%20%26%20b.webm"', fixed = TRUE)
+      expect_match(text, "a%20%26%20b.webm", fixed = TRUE)
       expect_false(grepl("knit_asis|knit_image_paths", text))
     } else {
-      expect_match(
-        text,
-        "[Download recording](<figure/a%20%26%20b.webm>)",
-        fixed = TRUE
-      )
+      expect_match(text, "[Download recording](<", fixed = TRUE)
+      expect_match(text, "a%20%26%20b.webm", fixed = TRUE)
       expect_false(grepl("<video", text, fixed = TRUE))
     }
   }
+})
+
+video_sources <- function(html) {
+  tags <- regmatches(html, gregexpr('<video[^>]+src="[^"]+"', html))[[1]]
+  sub('.*src="([^"]+)"', "\\1", tags)
+}
+
+video_source_exists <- function(output, src) {
+  file.exists(file.path(dirname(output), utils::URLdecode(src)))
+}
+
+test_that("named videos resolve from final rendered HTML", {
+  skip_if_not_installed("rmarkdown")
+  skip_if_no_av()
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "clips"))
+  dir.create(file.path(dir, "published"))
+  absolute <- file.path(dir, "absolute.mp4")
+  input <- file.path(dir, "record-video.Rmd")
+  writeLines(
+    c(
+      "---",
+      "output:",
+      "  html_document:",
+      "    self_contained: false",
+      "---",
+      "",
+      '```{r, echo=FALSE, error=FALSE}',
+      sprintf(
+        'pz_record(page, %s, { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
+        deparse(absolute)
+      ),
+      'pz_record(page, "clips/relative.webm", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
+      '```'
+    ),
+    input
+  )
+  output <- getExportedValue("rmarkdown", "render")(
+    input,
+    output_dir = file.path(dir, "published"),
+    envir = environment(),
+    quiet = TRUE
+  )
+  html <- paste(readLines(output, warn = FALSE), collapse = "\n")
+  src <- video_sources(html)
+  expect_length(src, 2L)
+  expect_true(file.exists(absolute))
+  expect_true(file.exists(file.path(dir, "clips", "relative.webm")))
+  expect_true(all(vapply(
+    src,
+    video_source_exists,
+    logical(1),
+    output = output
+  )))
+
+  broken <- sub(src[[1]], "missing-video.mp4", html, fixed = TRUE)
+  expect_identical(video_sources(broken)[[1]], "missing-video.mp4")
+  expect_false(video_source_exists(output, video_sources(broken)[[1]]))
+
+  links_input <- file.path(dir, "record-links.Rmd")
+  writeLines(
+    c(
+      "---",
+      "output: md_document",
+      "---",
+      "",
+      '```{r, echo=FALSE, error=FALSE}',
+      sprintf("record_knit_media(%s)", deparse(absolute)),
+      'record_knit_media("clips/relative.webm")',
+      '```'
+    ),
+    links_input
+  )
+  links_output <- getExportedValue("rmarkdown", "render")(
+    links_input,
+    output_dir = file.path(dir, "published"),
+    envir = environment(),
+    quiet = TRUE
+  )
+  markdown <- gsub(
+    "[[:space:]]+",
+    " ",
+    paste(readLines(links_output, warn = FALSE), collapse = "\n")
+  )
+  matches <- regmatches(
+    markdown,
+    gregexpr("\\[Download recording\\]\\(<?[^)>]+>?\\)", markdown)
+  )[[1]]
+  links <- sub("^\\[Download recording\\]\\(<?([^)>]+)>?\\)$", "\\1", matches)
+  expect_length(links, 2L)
+  expect_true(all(vapply(
+    links,
+    video_source_exists,
+    logical(1),
+    output = links_output
+  )))
+})
+
+test_that("named video resolves from final Quarto HTML", {
+  skip_if(Sys.which("quarto") == "", "Quarto not available")
+  skip_if_not_installed("pkgload")
+  skip_if_no_av()
+  skip_if_no_chrome()
+  dir <- withr::local_tempdir()
+  absolute <- file.path(dir, "outside.mp4")
+  input <- file.path(dir, "record-video.qmd")
+  package_root <- normalizePath(test_path("..", ".."))
+  fixture <- normalizePath(record_fixture_file())
+  writeLines(
+    c(
+      "---",
+      "format: html",
+      "---",
+      "",
+      "```{r}",
+      "#| echo: false",
+      sprintf("pkgload::load_all(%s, quiet = TRUE)", deparse(package_root)),
+      sprintf("page <- pz_open(%s)", deparse(fixture)),
+      sprintf(
+        'pz_record(page, %s, { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
+        deparse(absolute)
+      ),
+      "pz_close(page)",
+      "```"
+    ),
+    input
+  )
+  result <- processx::run(
+    Sys.which("quarto"),
+    c("render", input, "--to", "html"),
+    wd = dir,
+    error_on_status = FALSE,
+    timeout = 120000
+  )
+  expect_identical(
+    result$status,
+    0L,
+    info = paste(result$stdout, result$stderr)
+  )
+  output <- file.path(dir, "record-video.html")
+  src <- video_sources(paste(readLines(output, warn = FALSE), collapse = "\n"))
+  expect_length(src, 1L)
+  expect_true(file.exists(absolute))
+  expect_true(video_source_exists(output, src[[1]]))
 })
 
 test_that("knitted recordings return media only at completion", {
   skip_if_not_installed("knitr")
   skip_if_not_installed("gifski")
   skip_if_no_av()
+  prior_format <- knitr::opts_knit$get("rmarkdown.pandoc.to")
+  withr::defer(knitr::opts_knit$set(rmarkdown.pandoc.to = prior_format))
+  knitr::opts_knit$set(rmarkdown.pandoc.to = "html")
   page <- local_record_page()
   dir <- withr::local_tempdir()
   withr::local_dir(dir)
@@ -134,13 +283,14 @@ test_that("knitted recordings return media only at completion", {
   expect_true(file.exists("named.gif"))
   expect_match(markdown, "named.gif", fixed = TRUE)
   expect_true(file.exists("named.mp4"))
+  expect_match(markdown, "named.mp4", fixed = TRUE)
   expect_match(
     markdown,
-    '<video controls preload="metadata" src="named.mp4">',
+    "<video controls preload=\"metadata\" src=\"",
     fixed = TRUE
   )
   expect_true(file.exists("split.webm"))
-  expect_match(markdown, 'src="split.webm"', fixed = TRUE)
+  expect_match(markdown, "split.webm", fixed = TRUE)
 })
 
 test_that("pz_record encodes on error and returns ctx invisibly", {
@@ -164,6 +314,63 @@ test_that("pz_record encodes on error and returns ctx invisibly", {
   expect_false(res$visible)
   expect_identical(res$value, page)
   expect_true(file.exists(out2))
+})
+
+test_that("an interrupt stops the recorder and permits another recording", {
+  page <- local_record_page()
+  skip_if_no_av()
+  interrupted <- withr::local_tempfile(fileext = ".mp4")
+  condition <- structure(
+    list(message = "record interrupted"),
+    class = c("interrupt", "condition")
+  )
+  caught <- tryCatch(
+    pz_record(
+      page,
+      interrupted,
+      {
+        pz_wait(page, 0.2)
+        stop(condition)
+      },
+      fps = 5,
+      hold = c(0, 0)
+    ),
+    interrupt = identity
+  )
+  expect_s3_class(caught, "interrupt")
+  expect_match(conditionMessage(caught), "record interrupted")
+  expect_null(page_recorder(page$page))
+  expect_true(file.exists(interrupted))
+  next_path <- withr::local_tempfile(fileext = ".mp4")
+  pz_record(page, next_path, pz_wait(page, 0.2), fps = 5, hold = c(0, 0))
+  expect_true(file.exists(next_path))
+})
+
+test_that("block error wins over stop failure and the page can record again", {
+  page <- local_record_page()
+  skip_if_no_av()
+  failed <- withr::local_tempfile(fileext = ".mp4")
+  with_mocked_bindings(
+    expect_error(
+      pz_record(
+        page,
+        failed,
+        {
+          pz_wait(page, 0.2)
+          stop("block failed")
+        },
+        fps = 5,
+        hold = c(0, 0)
+      ),
+      "block failed",
+      class = "simpleError"
+    ),
+    record_encode = function(...) stop("stop failed")
+  )
+  expect_null(page_recorder(page$page))
+  next_path <- withr::local_tempfile(fileext = ".mp4")
+  pz_record(page, next_path, pz_wait(page, 0.2), fps = 5, hold = c(0, 0))
+  expect_true(file.exists(next_path))
 })
 
 test_that("pz_record_hold extends the video and is a no-op otherwise", {
