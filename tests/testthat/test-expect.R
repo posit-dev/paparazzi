@@ -764,6 +764,7 @@ test_that("pz_expect_attr validates attribute pairs", {
     "at least"
   )
   expect_error(
+    # jarl-ignore duplicated_arguments: duplicated href is the negative test asserting the unique-args error
     pz_expect_attr(page, "#link-one", href = "x", href = "y"),
     "unique"
   )

@@ -119,7 +119,12 @@ pz_stage <- function(
     if (is.null(cursor_scale)) {
       overrides[["cursor_scale"]] <- NULL
     } else {
-      check_number_decimal(cursor_scale, min = 0, max = 5, allow_infinite = FALSE)
+      check_number_decimal(
+        cursor_scale,
+        min = 0,
+        max = 5,
+        allow_infinite = FALSE
+      )
       if (cursor_scale == 0) {
         cli::cli_abort("{.arg cursor_scale} must be greater than 0.")
       }
@@ -178,7 +183,9 @@ pz_stage <- function(
       cursor_draw(ctx, visible = TRUE)
     }
   } else if (
-    !missing(cursor_scale) && !is.null(cur) && !is.null(cur$x) &&
+    !missing(cursor_scale) &&
+      !is.null(cur) &&
+      !is.null(cur$x) &&
       cursor_visible(page)
   ) {
     cursor_draw(ctx, visible = TRUE)

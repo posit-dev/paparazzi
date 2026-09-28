@@ -993,7 +993,10 @@ test_that("pz_scroll validates its modes", {
   )
   expect_error(pz_scroll(page, by = "lots"), class = "paparazzi_error_input")
   expect_error(pz_scroll(page, by = 100, duration = -1), class = "rlang_error")
-  expect_error(pz_scroll(page, to = "top", duration = Inf), class = "rlang_error")
+  expect_error(
+    pz_scroll(page, to = "top", duration = Inf),
+    class = "rlang_error"
+  )
   expect_error(
     pz_scroll(page, target = "#rich", duration = "slow"),
     class = "rlang_error"

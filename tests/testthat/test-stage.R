@@ -170,11 +170,12 @@ test_that("pz_scroll duration overrides staged wheels for by, to, and target", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |> pz_stage(cursor_speed = 500)
-  page |> pz_record_start(
-    withr::local_tempfile(fileext = ".mp4"),
-    fps = 10,
-    hold = c(0, 0)
-  )
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
 
   wheel_durations <- numeric()
   original_wheel <- stage_wheel
@@ -217,11 +218,12 @@ test_that("pz_scroll duration overrides staged wheels for by, to, and target", {
 test_that("zero-duration scrolls land instantly without queued wheel events", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_record_start(
-    withr::local_tempfile(fileext = ".mp4"),
-    fps = 10,
-    hold = c(0, 0)
-  )
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
 
   page |> pz_scroll(by = c(0, 300), duration = 0L)
   expect_equal(pz_js(page, "window.scrollY"), 300)

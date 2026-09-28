@@ -158,9 +158,12 @@ test_that("recorded click frames keep pointing cursor ink at the target", {
       x_range = c(635, 700)
     )
   })
-  at_target <- Filter(function(ink) {
-    ink$count > 20 && abs(ink$x - 660) < 25 && abs(ink$y - 322) < 20
-  }, inks)
+  at_target <- Filter(
+    function(ink) {
+      ink$count > 20 && abs(ink$x - 660) < 25 && abs(ink$y - 322) < 20
+    },
+    inks
+  )
   expect_gt(length(at_target), 0)
 })
 
