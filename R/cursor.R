@@ -157,6 +157,11 @@ pz_cursor_hide <- function(ctx, ...) {
 #' @inheritParams pz_cursor_show
 #' @param duration Glide duration in seconds; `NULL` computes one from
 #'   the distance and the `cursor_speed` staging setting.
+#' @param offset Landing offset in viewport CSS pixels, `c(x, y)` with
+#'   positive x to the right and positive y downward. A single number is
+#'   recycled to both axes; `NULL` (the default) means no offset. It applies
+#'   only to this call and only to the drawn overlay, not to page pointer
+#'   events. The cursor may land outside the viewport without clamping.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -177,8 +182,16 @@ pz_cursor_hide <- function(ctx, ...) {
 #' pz_close(page)
 #'
 #' @export
-pz_cursor_move <- function(ctx, target, ..., duration = NULL, icon = NULL) {
+pz_cursor_move <- function(
+  ctx,
+  target,
+  ...,
+  duration = NULL,
+  icon = NULL,
+  offset = NULL
+) {
   icon <- cursor_check_icon(icon)
+  offset <- if (is.null(offset)) c(0, 0) else check_offset(offset)
   check_context(ctx)
   check_dots_empty()
   check_number_decimal(
@@ -191,8 +204,15 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL, icon = NULL) {
   cur <- page_cursor(ctx$page)
   cur$visibility <- "shown"
 
-  point <- cursor_target_point(ctx, target)
-  cursor_show_at(ctx, point, duration = duration, icon = icon)
+  destination <- cursor_target_point(ctx, target)
+  point <- structure(destination + offset, rect = attr(destination, "rect"))
+  cursor_show_at(
+    ctx,
+    point,
+    duration = duration,
+    icon = icon,
+    destination = destination
+  )
   invisible(ctx)
 }
 
@@ -433,7 +453,8 @@ cursor_show_at <- function(
   point,
   duration = NULL,
   from = NULL,
-  icon = NULL
+  icon = NULL,
+  destination = NULL
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -453,10 +474,18 @@ cursor_show_at <- function(
         stage_glide_duration(start, point, stage$cursor_speed),
       from = start,
       icon = icon,
-      rect = rect
+      rect = rect,
+      destination = destination
     )
   } else if (!has_pos) {
-    cursor_apply(ctx, point, fade = TRUE, icon = icon, rect = rect)
+    cursor_apply(
+      ctx,
+      point,
+      fade = TRUE,
+      icon = icon,
+      rect = rect,
+      destination = destination
+    )
   } else {
     start <- c(x = cur$x, y = cur$y)
     cursor_apply(
@@ -465,7 +494,8 @@ cursor_show_at <- function(
       duration = duration %||%
         stage_glide_duration(start, point, stage$cursor_speed),
       icon = icon,
-      rect = rect
+      rect = rect,
+      destination = destination
     )
   }
   invisible(ctx)
@@ -568,7 +598,8 @@ cursor_apply <- function(
   from = NULL,
   fade = FALSE,
   icon = NULL,
-  rect = NULL
+  rect = NULL,
+  destination = NULL
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -594,18 +625,28 @@ cursor_apply <- function(
     # No destination rect (an untargeted entrance): the intended
     # destination IS the landing point, so the flip waits for it.
     at <- if (is.null(rect)) 1 else cursor_entry_time(start, point, rect)
-    if (!is.null(at)) {
-      landing <- cursor_command(
+    landing <- cursor_command(
+      ctx,
+      list(x = state$x, y = state$y, resolveOnly = TRUE)
+    )
+    entered <- if (is.null(destination)) {
+      landing
+    } else {
+      cursor_command(
         ctx,
         list(
-          x = state$x,
-          y = state$y,
+          x = unname(destination[["x"]]),
+          y = unname(destination[["y"]]),
           resolveOnly = TRUE
         )
       )
-      if (!identical(cur$icon, landing)) {
-        state$switch <- list(at = at, from = cur$icon, to = landing)
-      }
+    }
+    if (!is.null(at) && !identical(cur$icon, entered)) {
+      state$switch <- list(at = at, from = cur$icon, to = entered)
+    }
+    prior <- if (is.null(at)) cur$icon else entered
+    if (!identical(prior, landing)) {
+      state$land <- list(from = prior, to = landing)
     }
   }
   cur$icon <- cursor_command(ctx, state)
@@ -743,16 +784,43 @@ cursor_command_js <- r"(function(state) {
     }
   }
   if (state.resolveOnly) return icon;
-  const switching = state.switch && state.anim && state.duration > 0 &&
-    state.switch.from !== state.switch.to && state.switch.to === icon &&
-    state.switch.at > 0;
+  const boundaries = [];
+  if (state.anim && state.duration > 0) {
+    if (state.switch && state.switch.from !== state.switch.to) {
+      boundaries.push({at: state.switch.at * 100, to: state.switch.to});
+    }
+    if (state.land && state.land.from !== state.land.to) {
+      boundaries.push({at: 100, to: state.land.to});
+    }
+  }
+  const switching = boundaries.length > 0 &&
+    boundaries[boundaries.length - 1].to === icon;
   const style = layer.querySelector('.pz-icon-keyframes');
   style.textContent = '';
+  const startIcon = state.switch ? state.switch.from : state.land?.from;
+  const participating = switching
+    ? [...new Set([startIcon, ...boundaries.map(b => b.to)])]
+    : [];
   if (switching) {
-    const at = Math.min(100, Math.max(0, state.switch.at * 100));
-    const before = Math.max(0, at - 0.1);
-    style.textContent = '@keyframes pz-icon-in { 0%, ' + before + '% { visibility:hidden; } ' + at + '% , 100% { visibility:visible; } } ' +
-      '@keyframes pz-icon-out { 0%, ' + before + '% { visibility:visible; } ' + at + '% , 100% { visibility:hidden; } }';
+    style.textContent = participating.map((keyword) => {
+      let visible = keyword === startIcon;
+      let previous = 0;
+      const frames = [];
+      for (const boundary of boundaries) {
+        const at = Math.min(100, Math.max(0, boundary.at));
+        if (at > 0) {
+          const before = Math.max(previous, at - 0.1);
+          frames.push((previous === 0 ? '0%, ' : '') + before + '% { visibility:' + (visible ? 'visible' : 'hidden') + '; }');
+        }
+        visible = keyword === boundary.to;
+        frames.push(at + '% { visibility:' + (visible ? 'visible' : 'hidden') + '; }');
+        previous = at;
+      }
+      frames.push('100% { visibility:' + (visible ? 'visible' : 'hidden') + '; }');
+      const name = keyword === startIcon ? 'pz-icon-out' :
+        keyword === boundaries[0].to ? 'pz-icon-in' : 'pz-icon-land';
+      return '@keyframes ' + name + ' { ' + frames.join(' ') + ' }';
+    }).join(' ');
   }
   for (const svg of icons) {
     const keyword = svg.classList[1].slice('pz-icon-'.length);
@@ -763,11 +831,11 @@ cursor_command_js <- r"(function(state) {
     void inner.offsetWidth;
     for (const svg of icons) {
       const keyword = svg.classList[1].slice('pz-icon-'.length);
-      if (keyword === state.switch.from) {
-        svg.style.animation = 'pz-icon-out ' + state.duration + 's forwards';
-      } else if (keyword === state.switch.to) {
-        svg.style.animation = 'pz-icon-in ' + state.duration + 's forwards';
-      }
+      const index = participating.indexOf(keyword);
+      if (index < 0) continue;
+      const name = index === 0 ? 'pz-icon-out' :
+        keyword === boundaries[0].to ? 'pz-icon-in' : 'pz-icon-land';
+      svg.style.animation = name + ' ' + state.duration + 's forwards';
     }
   }
   if (state.from) {

@@ -60,9 +60,11 @@
 <div id="spacer"></div>
 <button id="below">Below</button>
 <script>
-window.__log = { clicks: 0, darkClicks: 0, belowClicks: 0, wheels: 0, wheelsTrusted: true,
+window.__log = { enters: 0, moves: 0, clicks: 0, darkClicks: 0, belowClicks: 0, wheels: 0, wheelsTrusted: true,
                  inputs: { name: 0, bio: 0, edit: 0 } };
 document.getElementById("btn").addEventListener("click", () => window.__log.clicks++);
+document.getElementById("btn").addEventListener("mouseenter", () => window.__log.enters++);
+document.getElementById("btn").addEventListener("mousemove", () => window.__log.moves++);
 document.getElementById("dark-btn").addEventListener("click", () => window.__log.darkClicks++);
 document.getElementById("below").addEventListener("click", () => window.__log.belowClicks++);
 for (const id of ["name", "bio", "edit"]) {

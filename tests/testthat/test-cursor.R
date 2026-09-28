@@ -791,3 +791,141 @@ test_that("cursor move offsets validate and land in viewport coordinates", {
   page |> pz_cursor_move("#btn")
   expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
 })
+
+test_that("offset still puts pointer ink beside the button label", {
+  page <- local_cursor_page()
+  shot <- withr::local_tempfile(fileext = ".png")
+  page |> pz_cursor_move("#btn", offset = c(-40, 15)) |> pz_screenshot(shot)
+  ink <- cursor_png_ink(page, shot, band = c(325, 344), x_range = c(605, 645))
+  label <- cursor_png_ink(page, shot, band = c(325, 344), x_range = c(650, 685))
+  expect_gt(ink$count, 20)
+  expect_lt(abs(ink$x - 620), 22)
+  expect_equal(label$count, 0)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
+})
+
+test_that("offset does not dispatch real pointer events", {
+  page <- local_cursor_page()
+  page |> pz_cursor_move("#plain", offset = c(500, 0))
+  expect_equal(
+    unlist(pz_js(
+      page,
+      "[window.__log.enters, window.__log.moves, window.__log.clicks]"
+    )),
+    c(0, 0, 0)
+  )
+  page |> pz_hover("#btn")
+  events <- unlist(pz_js(
+    page,
+    "[window.__log.enters, window.__log.moves, window.__log.clicks]"
+  ))
+  expect_gt(events[[1]], 0)
+  expect_gt(events[[2]], 0)
+  expect_equal(events[[3]], 0)
+})
+
+test_that("off-frame offset stays shown and becomes the next glide start", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_cursor_move("#btn", offset = c(-900, 15))
+  expect_equal(cursor_overlay_state(page)[2:3], c(-240, 337))
+  expect_equal(cursor_overlay_state(page)[[1]], 1)
+  expect_identical(page_cursor(page)$visibility, "shown")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  page |> pz_cursor_move("#btn", duration = 1)
+  rules <- pz_js(
+    page,
+    "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
+  )
+  boundary <- as.numeric(regmatches(
+    rules,
+    regexec("pz-icon-in \\{ 0%, ([0-9.]+)%", rules)
+  )[[1]][[2]]) +
+    0.1
+  # Crossing x = 600 from -240 to 660 is 93.33% of the segment,
+  # reached at 81.88% of the CSS ease-in-out glide.
+  expect_equal(boundary, 81.88, tolerance = 0.5)
+  expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
+  expect_equal(c(page_cursor(page)$x, page_cursor(page)$y), c(660, 322))
+  page |> pz_record_stop()
+})
+
+test_that("offset records landing ink and two icon boundaries outside target", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_cursor_show("#btn") |> pz_cursor_leave("left")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 15, hold = c(0, 0), keep_frames = TRUE)
+  page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.8)
+  rules <- pz_js(
+    page,
+    "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
+  )
+  expect_match(rules, "pz-icon-in")
+  expect_match(rules, "pz-icon-out")
+  expect_match(rules, "pz-icon-in.*100% \\{ visibility:hidden;")
+  expect_match(rules, "pz-icon-out.*100% \\{ visibility:visible;")
+  expect_identical(page_cursor(page)$icon, "pointer")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
+  page |> pz_record_stop()
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
+  frames <- tail(list.files(frames_dir, full.names = TRUE), 3)
+  inks <- lapply(frames, function(frame) {
+    cursor_png_ink(page, frame, band = c(300, 344), x_range = c(640, 710))
+  })
+  expect_true(any(vapply(
+    inks,
+    function(ink) {
+      ink$count > 20 && abs(ink$x - 660) < 25 && abs(ink$y - 322) < 20
+    },
+    logical(1)
+  )))
+})
+
+test_that("inside-target offset has one entry flip and explicit icon has none", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_cursor_move("#plain")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  page |> pz_cursor_move("#btn", offset = c(-40, 15), duration = 0.5)
+  rules <- function() {
+    pz_js(
+      page,
+      "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
+    )
+  }
+  expect_match(rules(), "pz-icon-in")
+  expect_false(grepl("pz-icon-land", rules()))
+  expect_identical(page_cursor(page)$icon, "pointer")
+  page |>
+    pz_cursor_move(
+      "#plain",
+      offset = c(500, 0),
+      icon = "crosshair",
+      duration = 0.5
+    )
+  expect_identical(rules(), "")
+  expect_identical(page_cursor(page)$icon, "crosshair")
+  page |> pz_record_stop()
+})
+
+test_that("entry and landing can schedule three distinct icon layers", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |>
+    pz_cursor_show("#plain", icon = "crosshair") |>
+    pz_cursor_leave("left")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.5)
+  animations <- unlist(pz_js(
+    page,
+    "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.style.animation.match(/pz-icon-(out|in|land)/)[0])"
+  ))
+  expect_setequal(animations, c("pz-icon-out", "pz-icon-in", "pz-icon-land"))
+  expect_identical(page_cursor(page)$icon, "pointer")
+  page |> pz_record_stop()
+})

@@ -4,7 +4,7 @@
 \alias{pz_cursor_move}
 \title{Move the overlay cursor to an element}
 \usage{
-pz_cursor_move(ctx, target, ..., duration = NULL, icon = NULL)
+pz_cursor_move(ctx, target, ..., duration = NULL, icon = NULL, offset = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -35,6 +35,12 @@ until it enters the destination and switches there; an explicit
 and any press. The artwork tracks CSS zoom and the device pixel
 ratio internally, and a navigation re-injects the overlay with its
 last icon.}
+
+\item{offset}{Landing offset in viewport CSS pixels, \code{c(x, y)} with
+positive x to the right and positive y downward. A single number is
+recycled to both axes; \code{NULL} (the default) means no offset. It applies
+only to this call and only to the drawn overlay, not to page pointer
+events. The cursor may land outside the viewport without clamping.}
 }
 \value{
 \code{ctx}, invisibly.
