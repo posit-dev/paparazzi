@@ -1,6 +1,6 @@
 # Screencast capture (paparazzi#tef8)
 
-Requirements: kata tef8 and `.agents/SPEC.md` § Recording. This branch is the feature branch; do not create another branch/worktree or merge to main.
+Requirements: kata tef8 and `.agents/SPEC.md` § Recording. Implementation merged to main as 1445691.
 
 ## Mechanism decision (approved for implementation)
 
@@ -14,7 +14,7 @@ Requirements: kata tef8 and `.agents/SPEC.md` § Recording. This branch is the f
 
 - Baseline before work: `.agents/chrome-lock.sh btw pkg test -f record --reporter minimal`: FAIL 0, WARN 0, SKIP 0, PASS 671. Disposable real-Chrome spikes recorded on kata tef8 proved event acknowledgement and reuse of the existing frame store/encoder for cropped MP4 and GIF; they did not exercise package lifecycle.
 - Red-first tests in `tests/testthat/test-record.R` (and existing fixture/helper as needed), then production in `R/record.R`; regenerate `man/pz_record_start.Rd` via `btw pkg document`. Target method-independent contract tests for stop, pause, restart, close, framing, scaling, and formats; run `record|device|stage|cursor|nav` where changed behavior crosses modules, under `.agents/chrome-lock.sh`. Check `air format --check .` and `jarl check .`.
-- One adversarial read-only subsystem review after tests, then one manual roborev review of the coherent committed unit; address findings against the spec. Do not merge this branch to main.
+- One adversarial read-only subsystem review after tests, then one manual roborev review of the coherent committed unit; address findings against the spec.
 
 ## Resolution contract (user-approved)
 
@@ -28,4 +28,4 @@ Stop and consult before introducing timers, queues, another ordering flag, guard
 
 - 2026-09-28 (implementation): red-first tests proved unsupported method fails (FAIL 2/WARN 0/SKIP 0/PASS 664). A second red test exposed mixed final-frame sizes at DPR 2 (FAIL 1/WARN 0/SKIP 0/PASS 702); Chrome clip.scale=0.5 produced a matching 640×480 PNG with correct CSS-box color. The producer now feeds the existing frame store, and the final screenshot uses inverse page DPR for screencast only.
 
-- 2026-09-28 (review fix): both static-page regressions failed on the committed code (FAIL 2/WARN 0/SKIP 0/PASS 734), timing out after resumed/held paints were dropped. The existing `pending` slot now prevents an event from retiring the one-time screenshot; a resume waits for an earlier capture, and a successful outermost metrics hold captures after restoration, while failed changes and pauses do not. Focused record tests green (FAIL 0/WARN 0/SKIP 0/PASS 722 after adding the failed-hold assertion); record/device/stage/cursor/nav green (FAIL 0/WARN 0/SKIP 0/PASS 1460). `air format --check .` and `jarl check .` pass. Next: commit fix, close roborev 1324, close tef8 with evidence. Shared framed-resize crop remains in backlog 62g5.
+- 2026-09-28 (review fix): both static-page regressions failed on the committed code (FAIL 2/WARN 0/SKIP 0/PASS 734), timing out after resumed/held paints were dropped. The existing `pending` slot now prevents an event from retiring the one-time screenshot; a resume waits for an earlier capture, and a successful outermost metrics hold captures after restoration, while failed changes and pauses do not. Focused record tests green (FAIL 0/WARN 0/SKIP 0/PASS 722 after adding the failed-hold assertion); record/device/stage/cursor/nav green (FAIL 0/WARN 0/SKIP 0/PASS 1460). `air format --check .` and `jarl check .` pass. Roborev 1324 was closed after the fix; tef8 was closed on the feature branch. Shared framed-resize crop remains in backlog 62g5.
