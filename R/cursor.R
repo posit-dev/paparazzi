@@ -475,7 +475,7 @@ cursor_command_js <- r"(function(state) {
       '<path d="M4 1 L4 19 L8.5 14.8 L11.5 21 L14 20 L11 13.5 L17.5 13.5 Z" fill="#111" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>' +
       '</svg>' +
       '<svg class="pz-hand" width="20" height="20" viewBox="0 0 24 24" style="display:none;pointer-events:none;">' +
-      '<path d="M8 3.5 C8 2.7 8.7 2 9.5 2 C10.3 2 11 2.7 11 3.5 L11 10 L12 10 L12 4.5 C12 3.7 12.7 3 13.5 3 C14.3 3 15 3.7 15 4.5 L15 10.5 L16 10.5 L16 6 C16 5.2 16.7 4.5 17.5 4.5 C18.3 4.5 19 5.2 19 6 L19 14 C19 18 16.5 21 12.5 21 C9.5 21 7.5 19.6 6.2 17.2 L3.6 12.6 C3.2 11.9 3.5 11 4.2 10.6 C4.9 10.2 5.7 10.4 6.1 11 L8 13.5 Z" fill="#111" stroke="#fff" stroke-width="1" stroke-linejoin="round"/>' +
+      '<path d="M5 1.7 C4.1 1.3 3.1 1.8 2.7 2.8 L1.1 6.1 C0.6 7.2 1 8.3 2 9 L8.7 13.7 L7 15.4 C6.3 16.1 6.3 17.2 7 17.9 L10.5 21.2 C11.1 21.8 12 22 12.8 22 L16.6 22 C19.1 22 21 20 21 17.5 L21 12 C21 10.8 20.1 9.9 18.9 9.9 C18.1 9.9 17.4 10.4 17 11.1 L17 10.2 C17 9 16.1 8.1 14.9 8.1 C14.1 8.1 13.4 8.6 13 9.3 L13 9 C13 7.8 12.1 6.9 10.9 6.9 C10.2 6.9 9.5 7.3 9.1 7.9 L7.2 3 C6.9 2.2 6 1.7 5 1.7 Z" fill="#111" stroke="#fff" stroke-width="1" stroke-linejoin="round"/>' +
       '</svg>' +
       '</div></div>';
     root.appendChild(layer);

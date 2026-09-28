@@ -45,21 +45,34 @@ cursor_overlay_scale <- function(page) {
 }
 
 # Scan a PNG for near-black pixels (the cursor ink; the fixture keeps
-# everything else lighter than the threshold): count, CSS-pixel
-# centroid, and ink height (max - min y), optionally restricted to a
-# horizontal band (CSS y range).
-cursor_png_ink <- function(page, path, band = NULL, dpr = page_dpr(page)) {
-  region <- if (is.null(band)) {
-    "0, 0, img.width, img.height"
+# everything else lighter than the threshold), or near-white pixels on a
+# dark target. Return count, CSS-pixel centroid, and ink height, optionally
+# restricted to a horizontal band and x range.
+cursor_png_ink <- function(
+  page,
+  path,
+  band = NULL,
+  dpr = page_dpr(page),
+  x_range = NULL,
+  tone = "dark"
+) {
+  tone <- match.arg(tone, c("dark", "light"))
+  x0 <- if (is.null(x_range)) 0 else floor(x_range[[1]] * dpr)
+  x1 <- if (is.null(x_range)) NULL else ceiling(x_range[[2]] * dpr)
+  y0 <- if (is.null(band)) 0 else floor(band[[1]] * dpr)
+  y1 <- if (is.null(band)) NULL else ceiling(band[[2]] * dpr)
+  region <- paste(
+    x0,
+    y0,
+    if (is.null(x1)) "img.width" else x1 - x0,
+    if (is.null(y1)) "img.height" else y1 - y0,
+    sep = ", "
+  )
+  threshold <- if (tone == "dark") {
+    "d[p] < 60 && d[p + 1] < 60 && d[p + 2] < 60"
   } else {
-    sprintf(
-      "0, %d, img.width, %d",
-      floor(band[[1]] * dpr),
-      ceiling((band[[2]] - band[[1]]) * dpr)
-    )
+    "d[p] > 220 && d[p + 1] > 220 && d[p + 2] > 220"
   }
-  # Pixel rows are region-relative; yoff shifts them back to absolute.
-  yoff <- if (is.null(band)) 0 else floor(band[[1]] * dpr)
   body <- paste0(
     "const d = c.getImageData(",
     region,
@@ -67,9 +80,17 @@ cursor_png_ink <- function(page, path, band = NULL, dpr = page_dpr(page)) {
     "let n = 0, sx = 0, sy = 0, minY = Infinity, maxY = -Infinity;",
     "const w = img.width;",
     "for (let p = 0; p < d.length; p += 4) {",
-    "  if (d[p] < 60 && d[p + 1] < 60 && d[p + 2] < 60 && d[p + 3] > 200) {",
-    "    const px = (p / 4) % w, py = Math.floor(p / 4 / w) + ",
-    yoff,
+    "  if (",
+    threshold,
+    " && d[p + 3] > 200) {",
+    "    const px = (p / 4) % ",
+    if (is.null(x1)) "w" else x1 - x0,
+    " + ",
+    x0,
+    ", py = Math.floor(p / 4 / ",
+    if (is.null(x1)) "w" else x1 - x0,
+    ") + ",
+    y0,
     ";",
     "    n++; sx += px; sy += py;",
     "    if (py < minY) minY = py;",
