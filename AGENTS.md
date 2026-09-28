@@ -6,6 +6,16 @@
 
 ## R Package Development
 
+1. **Honor the package's API contracts.** `pz_find*()` returns its context
+   visibly without mutating the page; other chainable functions return
+   invisibly unless specified otherwise. R >= 4.1.0 is required, so `|>` is
+   supported. For local `file://` pages, don't work around browser history
+   limitations by adding special navigation machinery; recommend serving the
+   page over HTTP when history behavior matters.
+1. **Keep formatting and lint checks clean:** `air format --check .` and
+   `jarl check .`. `jarl.toml` deliberately ignores `implicit_assignment` for
+   callback `<<-` assignments. In each R file, put exported functions before
+   private helpers and separate top-level definitions with one blank line.
 1. **Internal helpers are undocumented by default.** No roxygen; an unusually
    complicated helper may have a short block ending in `@noRd`.
 1. **Test files mirror source files.** `R/foo.R` -> `tests/testthat/test-foo.R`.

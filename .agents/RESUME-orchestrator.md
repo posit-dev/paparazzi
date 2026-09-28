@@ -1,0 +1,13 @@
+# Orchestrator workflow
+
+Project-wide conventions live in `AGENTS.md`; the issue and spec hold task decisions. Use `git log`, `kata`, and `.agents/phases/` to reconstruct previous work rather than recording a status snapshot here.
+
+1. Read `AGENTS.md`, the kata-feature-process skill, the relevant issue, and its normative spec. Use `kata quickstart --agent` for issue mechanics. Reconcile `git log`, `git status`, and `git worktree list` with the issue before starting; inspect work before discarding it.
+2. Before starting feature work, run the full `btw pkg test` suite on main inside `.agents/chrome-lock.sh`. Read the reported FAIL/WARN totals, not just the exit code. Resolve or explicitly park a red baseline before building on it.
+3. Delegate implementation to scoped `-aws` subagents, with one worktree per task under `../paparazzi.worktrees/`. Give each agent the issue ref, normative spec sections, file ownership, required tests, and a prohibition on merging, pushing, requesting reviews, or closing the issue. Require a signed-off phase note in `.agents/phases/` before coding, followed by a handoff and kata comment. Independently verify reported test results.
+4. Ask for a discriminating test (red before implementation where practical), then targeted tests for changed sources and cross-module seams. Run `btw pkg document` when documentation changes. Serialize Chrome-heavy work across worktrees with `.agents/chrome-lock.sh`; run the full suite on main as the merge gate. Avoid concurrent pkgdown builds and test runs. Record red gates honestly.
+5. Land one coherent task at a time. Request one manual roborev review for the completed unit (see `AGENTS.md`). Triage findings against the spec; add regression tests for accepted fixes and record declined or deferred findings in kata. Close the review when fixes are committed.
+6. Apply the escalation tripwires in `AGENTS.md` before expanding scope. Make a real out-of-scope concern a backlog issue.
+7. The orchestrator writes human-facing documentation prose, per garrick's instruction, using the explain-code-writing and docs-guard skills. Subagents fact-check it against source and run examples. Regenerate and inspect rendered outputs rather than assuming they are correct: `rmarkdown::render("README.Rmd")` with the package loaded, and `pkgdown::build_site(install = TRUE, new_process = FALSE)`.
+8. Commits are signed through 1Password. If signing fails, ask garrick to unlock it rather than bypassing signing.
+9. Before removing a worktree, inspect its status and `git log main..<branch>`. At session exit, leave main green and committed, keep kata truthful, and record unfinished work on its issue, not in this file.
