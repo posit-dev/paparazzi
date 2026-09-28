@@ -18,3 +18,9 @@ Requirements: kata m6kv, `.agents/SPEC.md` § Camera, annotations, and captions 
 ## Escalation / sign-off decisions
 
 Stop before changing init/restore/device metrics, adding a timer/queue/second ordering flag, storing display-shaped content, or adding a guard for a guard. In particular, no recorder change merely to prevent already-started captures from completing after the call. Orchestrator confirmed: (1) opaque near-black base below user color, including translucent or invalid colors, documented in one sentence; (2) explicit `color` with `method = 'blur'` raises a clear cli error; (3) cursor stays above redaction. Screencast smoke test is optional to stay within the few-minutes Chrome budget.
+
+## Handoff (2026-09-28)
+
+- Landed `40e6bd3`: `pz_annotate_redact()` and page-side entry in the existing Map, near-black backing for custom fill, 32px backdrop blur, last-box retention, immediate clear, docs and pkgdown index. No recorder or screenshot changes; no timers, queues or ordering flags.
+- Red-first `.agents/chrome-lock.sh btw pkg test -f annotate --reporter minimal`: FAIL 1 / WARN 0 / SKIP 0 / PASS 49 (missing API). Final focused annotate: FAIL 0 / WARN 0 / SKIP 0 / PASS 84. Cross-module `annotate|screenshot|record|stage|cursor|nav`: FAIL 0 / WARN 0 / SKIP 0 / PASS 1484 (run before the final anonymous-id test, which passed in focused gate). `btw pkg document`, `air format --check .`, `jarl check .` passed.
+- Tested opaque fill on text in still and post-call poll frames, translucent/invalid color fallback, blur pixel changes, multiple matches, stale geometry/pixels, scroll and scope, shared ids and immediate clear. Screencast-specific repaint smoke test omitted to keep Chrome time bounded; the DOM draw is synchronous and the merged screencast path captures page repaints. No known deviations from the signed-off mechanism; coordinator to review/merge.
