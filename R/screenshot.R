@@ -113,15 +113,6 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   invisible(ctx)
 }
 
-knit_capture_path <- function(ext) {
-  # fig_path() does not advance for external images; magick uses knitr's
-  # plot counter to avoid overwriting earlier captures in the chunk.
-  number <- getFromNamespace("plot_counter", "knitr")()
-  path <- knitr::fig_path(ext, number = number)
-  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-  path
-}
-
 #' @export
 #' @noRd
 print.paparazzi_preview <- function(x, ...) {
@@ -132,6 +123,15 @@ print.paparazzi_preview <- function(x, ...) {
     utils::browseURL(unclass(x))
   }
   invisible(x)
+}
+
+knit_capture_path <- function(ext) {
+  # fig_path() does not advance for external images; magick uses knitr's
+  # plot counter to avoid overwriting earlier captures in the chunk.
+  number <- getFromNamespace("plot_counter", "knitr")()
+  path <- knitr::fig_path(ext, number = number)
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  path
 }
 
 # The clip for a root-context capture: the viewport in document coordinates.
