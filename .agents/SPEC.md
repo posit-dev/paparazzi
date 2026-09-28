@@ -31,10 +31,10 @@ Known bugs to fix while porting:
 
 ### Chaining
 
-- Every function takes a **context** as its first argument and returns it invisibly, so whole scripts can be one `|>` chain.
+- Actions take a **context** as their first argument and normally return it invisibly, so whole scripts can be one `|>` chain. Knitted media captures are terminal exceptions: pathless screenshots and completed recordings return printable results. Knitr includes a result when it is the visible last call of a top-level chunk expression. An interactive pathless screenshot also returns a printable preview. Explicit-path screenshots and recordings outside knitting still return the context invisibly.
 - The exception is the `pz_find*()` family (`pz_find()`, `pz_find_first()`, `pz_find_last()`, `pz_find_nth()`, `pz_find_pop()`, `pz_find_reset()`), which returns its context visibly. Scope lives only in the returned context, so a scoped context that is neither assigned nor piped onward prints at the console instead of disappearing silently.
 - A context is either the page (root) or a scoped context created by `pz_find*()`.
-- Page-level functions (`pz_press()`, recording, cursor, navigation) work from any context and return it unchanged.
+- Page-level functions (`pz_press()`, recording, cursor, navigation) work from any context. Recording start remains chainable; during knitting, recording stop and the completed block form return media rather than a context.
 
 ### Argument order
 
@@ -53,6 +53,8 @@ Known bugs to fix while porting:
 pz_click(ctx, target = NULL, ...)
 pz_type(ctx, text, ..., target = NULL)
 pz_screenshot(ctx, path, ..., target = NULL, frame = NULL)
+# path may be omitted while knitting (numbered PNG in the chunk's figure directory)
+# or at an interactive console (temporary PNG preview); otherwise it is required.
 pz_set_files(ctx, files, ..., target = NULL)
 pz_select_text(ctx, text, ..., target = NULL)
 pz_press(ctx, key, ...)
@@ -296,11 +298,11 @@ air and styler flatten pipe indentation, so scope depth can't be shown with inde
 Lifecycle:
 
 - Recorder state lives on the page, so recording happens inside a single chain.
-- `pz_record_start(ctx, path, ...)`: `path` is the main input.
-- `pz_record_stop(ctx)`: encodes and writes the file.
+- `pz_record_start(ctx, path, ...)`: `path` is the main input. If omitted while knitting, a numbered `.gif` path in the chunk's figure directory is used. Outside knitting, `path` is required. Start always returns the context for chaining.
+- `pz_record_stop(ctx)`: encodes and writes the file. During knitting, the completed recording is returned as printable media, including when the path was explicit; outside knitting it returns the context.
 - `pz_record_pause()` / `pz_record_resume()`: cut stretches out of the recording. There's no cancel.
 - `pz_record_hold(ctx, seconds)`: hold the frame while recording; no-op otherwise. Unlike `pz_wait()`, which always waits, debugging runs without recording don't pay for video-only pauses.
-- Block form, withr-style with an embraced expression rather than a function. It stops and encodes on exit (including on error) and returns `ctx` invisibly, not the block's value:
+- Block form, with an embraced expression rather than a function. It stops and encodes on exit (including on error). Outside knitting it returns `ctx` invisibly, not the block's value; during knitting, it returns the completed media instead. With no path, supply the expression by name as `pz_record(code = { ... })` (the `(ctx, path, code, ...)` argument order is unchanged):
 
   ```r
   page |>
@@ -315,6 +317,7 @@ Lifecycle:
 
 Capture:
 
+- During knitting, a visible, top-level GIF result uses knitr's image-figure handling (including figure options). MP4/WebM recordings use an HTML video element for HTML output and a link for other outputs; they are not images. An intermediate result inside a pipe is not automatically included. Quarto uses the same knitr capture path; no Quarto-specific API is needed.
 - Two methods: timer-driven polling (default) and `Page.startScreencast` (frames must be acked).
 - Both capture the **full viewport**; cropping happens at encode time. The frame can therefore be measured against the final layout, which replaces the blog's two-pass trick. The cost is lower polling fps; a `clip_at = "start"` option could clip during capture.
 

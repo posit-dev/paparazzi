@@ -20,7 +20,9 @@ pz_record_start(
 \item{ctx}{A paparazzi context.}
 
 \item{path}{Output file path; the extension (\code{.mp4}, \code{.webm}, or
-\code{.gif}) selects the format. An existing file is overwritten.}
+\code{.gif}) selects the format. An existing file is overwritten. When
+knitting, an omitted path uses a numbered \code{.gif} in the chunk's
+figure directory. Outside knitting a path is required.}
 
 \item{...}{Checked empty; reserved for future use.}
 

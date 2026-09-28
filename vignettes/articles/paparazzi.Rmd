@@ -4,25 +4,13 @@ title: "Get started with paparazzi"
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
-
-# Screenshots and recordings are written to the working directory, as a
-# reader's would be; this moves each one into knitr's figure directory so
-# the rendered article can show it.
-show_capture <- function(file) {
-  dest <- knitr::fig_path(paste0("-", file))
-  dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
-  file.rename(file, dest)
-  knitr::include_graphics(dest)
-}
 ```
 
 Suppose you've written a guide to a web app, and it has a dozen screenshots. Every time the app changes, someone has to open it, click through to the right state, and take each screenshot again. paparazzi lets you write those steps down in R instead: open the page, click and type your way to the state you want, check that the page shows what you expect, and save a screenshot or a video. Rerunning the script updates every image.
 
-This article walks through that workflow on a small task-tracker page that ships with paparazzi. By the end you'll have driven the page with actions, checked it with expectations, captured screenshots, and recorded this video:
+This article walks through that workflow on a small task-tracker page that ships with paparazzi. By the end you'll have driven the page with actions, checked it with expectations, captured screenshots, and recorded a GIF of the task being added.
 
-![A cursor glides to the task form, types "Repot the fern", and adds it. The new task appears at the top of the list.](paparazzi_files/figure-html/demo.gif)
-
-You'll need Chrome or another Chromium-based browser, which paparazzi controls through the [chromote](https://rstudio.github.io/chromote/) package. Recording videos also needs the av package.
+You'll need Chrome or another Chromium-based browser, which paparazzi controls through the [chromote](https://rstudio.github.io/chromote/) package. The GIF recording in this article needs gifski; MP4 and WebM recordings need av.
 
 ```{r setup}
 library(paparazzi)
@@ -41,12 +29,8 @@ Printing the page shows where the browser is and how it's set up: a 720 by 800 p
 
 Here's what the page looks like:
 
-```{r}
-page |> pz_screenshot("tasks.png")
-```
-
-```{r, echo = FALSE, fig.alt = "The task tracker: a form for new tasks, filter links, a list of seven tasks, a notes area, and a file input."}
-show_capture("tasks.png")
+```{r, fig.alt = "The task tracker: a form for new tasks, filter links, a list of seven tasks, a notes area, and a file input."}
+page |> pz_screenshot()
 ```
 
 ## Find elements
@@ -148,27 +132,19 @@ If you call `pz_find()` at the console without assigning its result, it prints t
 
 `pz_screenshot()` saves a PNG. At the root it captures the viewport. Give it a `target` and it captures just that element; in a scope it captures the scope element. Adding a frame with `pz_frame()` pads the capture or changes its shape. Padding is one number for every side, or four for the top, right, bottom, and left; here the bottom gets less, to stop short of the status line below the form:
 
-```{r}
+```{r, fig.alt = "The new-task form with Call the plumber typed into the title."}
 page |>
   pz_find("#new-task") |>
   pz_type("Call the plumber", target = "#task-title") |>
-  pz_screenshot("form.png", frame = pz_frame(pad = c(16, 16, 6, 16)))
-```
-
-```{r, echo = FALSE, fig.alt = "The new-task form with \"Call the plumber\" typed into the title."}
-show_capture("form.png")
+  pz_screenshot(frame = pz_frame(pad = c(16, 16, 6, 16)))
 ```
 
 The page also has a dark theme that follows the browser's color scheme. `pz_device()` can switch it, or emulate a phone:
 
-```{r}
+```{r, fig.alt = "The task tracker on a narrow phone screen, in dark mode."}
 page |>
   pz_device(width = 390, height = 700, mobile = TRUE, color_scheme = "dark") |>
-  pz_screenshot("phone.png")
-```
-
-```{r, echo = FALSE, fig.alt = "The task tracker on a narrow phone screen, in dark mode."}
-show_capture("phone.png")
+  pz_screenshot()
 ```
 
 Device settings stay in place until you change them, so let's switch back before we record:
@@ -179,32 +155,26 @@ page |> pz_device(width = 720, height = 800, mobile = FALSE, color_scheme = "lig
 
 ## Record a video
 
-To record a video, wrap the steps in `pz_record()`. It starts recording, runs the code in braces, then stops and writes the file, even if the code throws an error. The file extension picks the format: `.mp4`, `.webm`, or `.gif`.
+To record a video, wrap the steps in `pz_record()`. It starts recording, runs the code in braces, then stops and writes the file, even if the code throws an error. In a knitted document, leaving out the path produces a GIF in the chunk's figure directory; with a path, the extension picks `.mp4`, `.webm`, or `.gif`. Use `code =` when you leave out the path. A completed recording at the end of a chunk expression appears in the document.
 
 While recording, paparazzi **stages** the steps so they look like a person using the page. A cursor glides to each element before clicking, and text is typed one character at a time. `pz_stage()` controls the staging; here the cursor enters from the left and each action is followed by a short pause.
 
 We'll start again from a fresh page. The default cursor is 1.75 times the original size, and the default glide speed is 500 pixels per second: slow enough to follow, rather than as fast as a real mouse. Try 400-600 for a deliberate glide; smaller values take longer. Before re-recording, estimate a 300-pixel move at speed 400 with `0.25 + 300 / 400`: it takes 1 second. The actual duration stays between 0.5 and 2 seconds. For one-off timing, `pz_cursor_move(duration = ...)` and `pz_scroll(duration = ...)` override the staging speed while recording. Set `cursor_scale = 1` in `pz_stage()` for the original cursor size. `scale = 0.6` shrinks the video, which keeps the GIF small:
 
-```{r}
+```{r, fig.alt = "A cursor glides to the task form, types Repot the fern, and adds it. The new task appears at the top of the list."}
 page |>
   pz_nav_reload() |>
   pz_stage(enter = "left", pause = 0.4) |>
-  pz_record("demo.gif", scale = 0.6, {
+  pz_record(code = {
     page |>
       pz_type("Repot the fern", target = "#task-title") |>
       pz_click("#add-task") |>
       pz_expect_text("Repot the fern", target = pz_loc(".task-title", which = "first")) |>
       pz_cursor_leave()
-  })
+  }, scale = 0.6)
 ```
 
-```{r, include = FALSE}
-fig_dir <- knitr::opts_chunk$get("fig.path")
-dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
-file.rename("demo.gif", file.path(fig_dir, "demo.gif"))
-```
-
-That's the video at the top of this article. `pz_cursor_leave()` moves the cursor out of the frame at the end, so it doesn't cover the new task. To record only part of the page, pass a `frame`, such as `frame = pz_frame(".task-list", pad = 16)`.
+The GIF above shows the full interaction. `pz_cursor_leave()` moves the cursor out of the frame at the end, so it doesn't cover the new task. To record only part of the page, pass a `frame`, such as `frame = pz_frame(".task-list", pad = 16)`.
 
 Staging only happens during a recording. If you remove `pz_record()`, the same steps run at full speed, which is handy while you're working out the steps.
 
