@@ -47,7 +47,8 @@
 #' pz_close(page)
 #'
 #' @export
-pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL) {
+pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL, icon = NULL) {
+  icon <- cursor_check_icon(icon)
   check_context(ctx)
   check_dots_empty()
   from <- if (!is.null(from)) {
@@ -73,7 +74,7 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL) {
       cursor_current_point(ctx)
     }
   }
-  cursor_show_at(ctx, point, from = from)
+  cursor_show_at(ctx, point, from = from, icon = icon)
   invisible(ctx)
 }
 
@@ -149,7 +150,8 @@ pz_cursor_hide <- function(ctx, ...) {
 #' pz_close(page)
 #'
 #' @export
-pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
+pz_cursor_move <- function(ctx, target, ..., duration = NULL, icon = NULL) {
+  icon <- cursor_check_icon(icon)
   check_context(ctx)
   check_dots_empty()
   check_number_decimal(
@@ -163,7 +165,7 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
   cur$visibility <- "shown"
 
   point <- cursor_target_point(ctx, target)
-  cursor_show_at(ctx, point, duration = duration)
+  cursor_show_at(ctx, point, duration = duration, icon = icon)
   invisible(ctx)
 }
 
@@ -197,7 +199,8 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
 #' pz_close(page)
 #'
 #' @export
-pz_cursor_leave <- function(ctx, side = "right") {
+pz_cursor_leave <- function(ctx, side = "right", icon = NULL) {
+  icon <- cursor_check_icon(icon)
   check_context(ctx)
   side <- parse_direction(side, valid = STAGE_DIRECTIONS, arg = "side")
   check_cursor_enabled(ctx)
@@ -212,7 +215,12 @@ pz_cursor_leave <- function(ctx, side = "right") {
       page_stage(page)$cursor_speed
     )
   }
-  cursor_apply(ctx, point, duration = duration %||% 0)
+  cursor_apply(
+    ctx,
+    point,
+    duration = duration %||% 0,
+    icon = icon %||% cur$icon
+  )
   # Set after cursor_apply(), which clears it: the cursor stays visible
   # but off-frame, and the next action glides back in from this side.
   cur$off_frame <- side
@@ -245,6 +253,7 @@ page_cursor <- function(page) {
   if (is.null(cur)) {
     cur <- new.env(parent = emptyenv())
     cur$visibility <- "auto"
+    cur$icon <- "default"
     cur$x <- NULL
     cur$y <- NULL
     cur$off_frame <- NULL
@@ -342,7 +351,13 @@ cursor_off_frame_point <- function(ctx, side, point) {
 # otherwise glide from the last position. An explicit duration wins over
 # the computed glide. Everything collapses to a static jump when not
 # recording (handled in cursor_apply()).
-cursor_show_at <- function(ctx, point, duration = NULL, from = NULL) {
+cursor_show_at <- function(
+  ctx,
+  point,
+  duration = NULL,
+  from = NULL,
+  icon = NULL
+) {
   page <- ctx$page
   cur <- page_cursor(page)
   stage <- page_stage(page)
@@ -358,20 +373,105 @@ cursor_show_at <- function(ctx, point, duration = NULL, from = NULL) {
       point,
       duration = duration %||%
         stage_glide_duration(start, point, stage$cursor_speed),
-      from = start
+      from = start,
+      icon = icon
     )
   } else if (!has_pos) {
-    cursor_apply(ctx, point, fade = TRUE)
+    cursor_apply(ctx, point, fade = TRUE, icon = icon)
   } else {
     start <- c(x = cur$x, y = cur$y)
     cursor_apply(
       ctx,
       point,
       duration = duration %||%
-        stage_glide_duration(start, point, stage$cursor_speed)
+        stage_glide_duration(start, point, stage$cursor_speed),
+      icon = icon
     )
   }
   invisible(ctx)
+}
+
+
+# Each keyword owns a layer, even where path geometry is shared: later
+# glide choreography can switch any pair by animating visibility.
+CURSOR_ART <- list(
+  default = list(
+    path = "M4 1 L4 19 L8.5 14.8 L11.5 21 L14 20 L11 13.5 L17.5 13.5 Z",
+    x = 0,
+    y = 0
+  ),
+  pointer = list(
+    path = "M5 1.7 C4.1 1.3 3.1 1.8 2.7 2.8 L1.1 6.1 C0.6 7.2 1 8.3 2 9 L8.7 13.7 L7 15.4 C6.3 16.1 6.3 17.2 7 17.9 L10.5 21.2 C11.1 21.8 12 22 12.8 22 L16.6 22 C19.1 22 21 20 21 17.5 L21 12 C21 10.8 20.1 9.9 18.9 9.9 C18.1 9.9 17.4 10.4 17 11.1 L17 10.2 C17 9 16.1 8.1 14.9 8.1 C14.1 8.1 13.4 8.6 13 9.3 L13 9 C13 7.8 12.1 6.9 10.9 6.9 C10.2 6.9 9.5 7.3 9.1 7.9 L7.2 3 C6.9 2.2 6 1.7 5 1.7 Z",
+    x = 0,
+    y = 0,
+    stroke = 1
+  ),
+  text = list(
+    path = "M5 3 H19 M12 3 V21 M5 21 H19 M9 6 H15 M9 18 H15",
+    x = -6,
+    y = -8
+  ),
+  `not-allowed` = list(
+    path = "M21 12 A9 9 0 1 1 3 12 A9 9 0 1 1 21 12 Z M5.7 5.7 L18.3 18.3",
+    x = -6,
+    y = -8
+  ),
+  crosshair = list(
+    path = "M12 2 V8 M12 16 V22 M2 12 H8 M16 12 H22 M16 12 A4 4 0 1 1 8 12 A4 4 0 1 1 16 12 Z",
+    x = -6,
+    y = -8
+  ),
+  grab = list(
+    path = "M4 11 L4 7 Q4 5 6 5 Q8 5 8 7 L8 4 Q8 2 10 2 Q12 2 12 4 L12 3 Q12 1 14 1 Q16 1 16 3 L16 5 Q16 3 18 3 Q20 3 20 5 L20 14 Q20 21 14 22 L10 22 Q6 22 4 18 L2 14 Q1 12 2 11 Q3 10 4 11 Z",
+    x = -6,
+    y = -8
+  ),
+  grabbing = list(
+    path = "M3 11 Q2 9 4 8 L7 7 L7 5 Q7 3 9 3 Q11 3 11 5 L12 4 Q12 2 14 2 Q16 2 16 4 Q18 3 19 5 L21 12 Q22 15 19 19 Q17 22 13 22 L9 22 Q5 22 3 18 Z",
+    x = -6,
+    y = -8
+  ),
+  `ew-resize` = list(
+    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
+    x = -6,
+    y = -8
+  ),
+  `ns-resize` = list(
+    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
+    x = -6,
+    y = -8,
+    transform = "rotate(90 12 12)"
+  ),
+  `nesw-resize` = list(
+    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
+    x = -6,
+    y = -8,
+    transform = "rotate(-45 12 12)"
+  ),
+  `nwse-resize` = list(
+    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
+    x = -6,
+    y = -8,
+    transform = "rotate(45 12 12)"
+  ),
+  `row-resize` = list(
+    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
+    x = -6,
+    y = -8,
+    transform = "rotate(90 12 12)"
+  ),
+  `col-resize` = list(
+    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
+    x = -6,
+    y = -8
+  )
+)
+
+cursor_check_icon <- function(icon) {
+  if (is.null(icon)) {
+    return(NULL)
+  }
+  arg_match(icon, values = names(CURSOR_ART))
 }
 
 # The one mover: draw the cursor at `point` (visible, unpressed, shape
@@ -381,7 +481,14 @@ cursor_show_at <- function(ctx, point, duration = NULL, from = NULL) {
 # recording every variant is a static jump. Updates the cursor state and
 # the new-document script, and pumps the child loop for the animation,
 # so the recorder's ticks capture it.
-cursor_apply <- function(ctx, point, duration = 0, from = NULL, fade = FALSE) {
+cursor_apply <- function(
+  ctx,
+  point,
+  duration = 0,
+  from = NULL,
+  fade = FALSE,
+  icon = NULL
+) {
   page <- ctx$page
   cur <- page_cursor(page)
   recording <- stage_recording(page)
@@ -389,14 +496,15 @@ cursor_apply <- function(ctx, point, duration = 0, from = NULL, fade = FALSE) {
     x = unname(point[["x"]]),
     y = unname(point[["y"]]),
     visible = TRUE,
-    shape = "auto",
+    icon = icon,
+    previous = cur$icon,
     pressed = FALSE,
     duration = if (recording) duration else 0,
     from = if (recording && !is.null(from)) unname(from),
     fade = recording && fade,
     anim = recording
   )
-  cursor_command(ctx, state)
+  cur$icon <- cursor_command(ctx, state)
   cur$x <- state$x
   cur$y <- state$y
   cur$off_frame <- NULL
@@ -421,7 +529,7 @@ cursor_draw <- function(ctx, visible, pressed = FALSE) {
       x = cur$x %||% 0,
       y = cur$y %||% 0,
       visible = visible,
-      shape = "auto",
+      icon = cur$icon,
       pressed = pressed,
       duration = 0,
       anim = stage_recording(ctx$page)
@@ -444,9 +552,9 @@ cursor_press <- function(ctx, pressed) {
 # fresh document after navigation -- can always be driven forward.
 cursor_command <- function(ctx, state) {
   state$scale <- page_stage(ctx$page)$cursor_scale
+  state$icons <- CURSOR_ART
   json <- jsonlite::toJSON(state, auto_unbox = TRUE, null = "null")
   pz_js(ctx, paste0("(", cursor_command_js, ")(", json, ")"), await = FALSE)
-  invisible(ctx)
 }
 
 # Boot: the cursor layer under the existing overlay host's shadow root.
@@ -473,37 +581,71 @@ cursor_command_js <- r"(function(state) {
     layer = document.createElement('div');
     layer.className = 'pz-cursor';
     layer.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;';
-    layer.innerHTML =
-      '<div class="pz-glide" style="pointer-events:none;">' +
-      '<div class="pz-inner" style="pointer-events:none;opacity:0;transform-origin:4px 2px;">' +
-      '<svg class="pz-arrow" width="20" height="20" viewBox="0 0 24 24" style="display:block;pointer-events:none;">' +
-      '<path d="M4 1 L4 19 L8.5 14.8 L11.5 21 L14 20 L11 13.5 L17.5 13.5 Z" fill="#111" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>' +
-      '</svg>' +
-      '<svg class="pz-hand" width="20" height="20" viewBox="0 0 24 24" style="display:none;pointer-events:none;">' +
-      '<path d="M5 1.7 C4.1 1.3 3.1 1.8 2.7 2.8 L1.1 6.1 C0.6 7.2 1 8.3 2 9 L8.7 13.7 L7 15.4 C6.3 16.1 6.3 17.2 7 17.9 L10.5 21.2 C11.1 21.8 12 22 12.8 22 L16.6 22 C19.1 22 21 20 21 17.5 L21 12 C21 10.8 20.1 9.9 18.9 9.9 C18.1 9.9 17.4 10.4 17 11.1 L17 10.2 C17 9 16.1 8.1 14.9 8.1 C14.1 8.1 13.4 8.6 13 9.3 L13 9 C13 7.8 12.1 6.9 10.9 6.9 C10.2 6.9 9.5 7.3 9.1 7.9 L7.2 3 C6.9 2.2 6 1.7 5 1.7 Z" fill="#111" stroke="#fff" stroke-width="1" stroke-linejoin="round"/>' +
-      '</svg>' +
-      '</div></div>';
+    layer.innerHTML = '<div class="pz-glide" style="pointer-events:none;"><div class="pz-inner" style="pointer-events:none;opacity:0;transform-origin:4px 2px;position:relative;width:20px;height:20px;"></div></div>';
+    const inner = layer.querySelector('.pz-inner');
+    for (const [keyword, art] of Object.entries(state.icons)) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'pz-icon pz-icon-' + keyword);
+      svg.setAttribute('width', '20');
+      svg.setAttribute('height', '20');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.style.cssText = 'position:absolute;pointer-events:none;visibility:hidden;left:' + art.x + 'px;top:' + art.y + 'px;';
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', art.path);
+      path.setAttribute('fill', '#111');
+      path.setAttribute('stroke', '#fff');
+      path.setAttribute('stroke-width', art.stroke || '1.4');
+      path.setAttribute('stroke-linejoin', 'round');
+      if (art.transform) path.setAttribute('transform', art.transform);
+      svg.appendChild(path);
+      inner.appendChild(svg);
+    }
+    const style = document.createElement('style');
+    style.textContent = '@keyframes pz-icon-in { 0%, 99.9% { visibility:hidden; } 100% { visibility:visible; } } @keyframes pz-icon-out { 0%, 99.9% { visibility:visible; } 100% { visibility:hidden; } }';
+    layer.appendChild(style);
     root.appendChild(layer);
   }
   const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   layer.style.zoom = String(1 / z);
-  const glide = layer.firstChild;
-  const inner = glide.firstChild;
-  let shape = state.shape;
-  if (shape === 'auto') {
-    shape = 'arrow';
+  const glide = layer.querySelector('.pz-glide');
+  const inner = layer.querySelector('.pz-inner');
+  const icons = layer.querySelectorAll('.pz-icon');
+  let icon = state.icon;
+  if (!icon) {
+    icon = 'default';
     let el = document.elementFromPoint(state.x, state.y);
-    while (el && el !== document.documentElement) {
-      const c = getComputedStyle(el).cursor;
-      if (c !== 'auto') {
-        shape = c === 'pointer' ? 'hand' : 'arrow';
-        break;
-      }
-      el = el.parentElement;
+    for (; el; el = el.parentElement) {
+      const cursor = getComputedStyle(el).cursor;
+      if (cursor === 'auto') continue;
+      // Chrome serializes cursor URLs with a trailing keyword when a
+      // CSS fallback is present. A bare URL has no supported fallback.
+      const keyword = cursor.startsWith('url(')
+        ? (cursor.match(/\)\s*([a-z-]+)\s*$/) || [])[1]
+        : cursor;
+      if (Object.prototype.hasOwnProperty.call(state.icons, keyword)) icon = keyword;
+      break;
     }
   }
-  layer.querySelector('.pz-arrow').style.display = shape === 'hand' ? 'none' : 'block';
-  layer.querySelector('.pz-hand').style.display = shape === 'hand' ? 'block' : 'none';
+  const deferSwitch = state.anim && state.duration > 0 && !state.icon &&
+    state.previous && state.previous !== icon;
+  for (const svg of icons) {
+    const keyword = svg.classList[1].slice('pz-icon-'.length);
+    svg.style.animation = 'none';
+    svg.style.visibility = keyword === icon ? 'visible' : 'hidden';
+  }
+  if (deferSwitch) {
+    // Keep the previous artwork through the glide. A later phase
+    // moves the discrete visibility boundary to destination entry.
+    void inner.offsetWidth;
+    for (const svg of icons) {
+      const keyword = svg.classList[1].slice('pz-icon-'.length);
+      if (keyword === state.previous) {
+        svg.style.animation = 'pz-icon-out ' + state.duration + 's forwards';
+      } else if (keyword === icon) {
+        svg.style.animation = 'pz-icon-in ' + state.duration + 's forwards';
+      }
+    }
+  }
   if (state.from) {
     glide.style.transition = 'none';
     glide.style.transform = 'translate(' + state.from[0] + 'px,' + state.from[1] + 'px)';
@@ -512,23 +654,18 @@ cursor_command_js <- r"(function(state) {
     inner.style.transition = 'none';
     inner.style.opacity = '0';
   }
-  if (state.from || state.fade) {
-    void glide.offsetWidth;
-  }
+  if (state.from || state.fade) void glide.offsetWidth;
   glide.style.transition = state.duration > 0
     ? 'transform ' + state.duration + 's cubic-bezier(0.42,0,0.58,1)'
     : 'none';
   glide.style.transform = 'translate(' + state.x + 'px,' + state.y + 'px)';
-  // Opacity/press transitions only run for animated (recording) states;
-  // a static draw must land at full opacity in the very next capture.
   inner.style.transition = state.anim
     ? 'opacity 0.25s ease, transform 0.12s ease'
     : 'none';
   inner.style.opacity = state.visible ? '1' : '0';
   inner.style.transform = 'scale(' + state.scale * (state.pressed ? 0.8 : 1) + ')';
-  return true;
+  return icon;
 })"
-
 # The new-document script: the same boot+apply with the last state baked
 # in, registered so a navigation re-injects the overlay at its last
 # position. Page.enable() is required for the script to run (probed on
@@ -557,11 +694,12 @@ cursor_register_init <- function(ctx) {
     x = cur$x %||% 0,
     y = cur$y %||% 0,
     visible = cursor_visible(page) && !is.null(cur$x),
-    shape = "auto",
+    icon = cur$icon,
     pressed = FALSE,
     duration = 0,
     anim = FALSE,
-    scale = page_stage(page)$cursor_scale
+    scale = page_stage(page)$cursor_scale,
+    icons = CURSOR_ART
   )
   json <- jsonlite::toJSON(state, auto_unbox = TRUE, null = "null")
   # New-document scripts run before the document element exists, so the
