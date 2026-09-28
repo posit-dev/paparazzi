@@ -108,7 +108,9 @@ test_that("the cursor switches to a hand over cursor:pointer elements", {
 })
 
 test_that("pointing cursor ink is visible on light and dark pointer targets", {
-  page <- local_cursor_page()
+  # The dark button sits at x = 800..920, past every other fixture
+  # element; pin the viewport so its coordinates cannot scroll.
+  page <- local_page(cursor_fixture_file(), width = 1000, height = 700)
   shot <- withr::local_tempfile(fileext = ".png")
 
   page |> pz_cursor_move("#btn")
@@ -122,6 +124,17 @@ test_that("pointing cursor ink is visible on light and dark pointer targets", {
   expect_gt(light$count, 50)
   expect_lt(abs(light$x - 660), 25)
   expect_lt(abs(light$y - 322), 20)
+  # The pointing fingertip is the only ink in the window at the landing
+  # point: at the 1.75x scale (transform-origin 4px 2px) the tip renders
+  # just left of the hotspot, while the old four-finger hand's nearest
+  # ink sat ~9px right of it, beyond the window's edge.
+  tip_light <- cursor_png_ink(
+    page,
+    shot,
+    band = c(322, 330),
+    x_range = c(658, 666)
+  )
+  expect_gt(tip_light$count, 0)
 
   page |> pz_cursor_move("#dark-btn")
   page |> pz_screenshot(shot)
@@ -135,6 +148,14 @@ test_that("pointing cursor ink is visible on light and dark pointer targets", {
   expect_gt(dark$count, 10)
   expect_lt(abs(dark$x - 860), 25)
   expect_lt(abs(dark$y - 232), 20)
+  tip_dark <- cursor_png_ink(
+    page,
+    shot,
+    band = c(232, 240),
+    x_range = c(858, 866),
+    tone = "light"
+  )
+  expect_gt(tip_dark$count, 0)
 })
 
 test_that("recorded click frames keep pointing cursor ink at the target", {
@@ -165,6 +186,19 @@ test_that("recorded click frames keep pointing cursor ink at the target", {
     inks
   )
   expect_gt(length(at_target), 0)
+
+  # The same fingertip window distinguishes the pointing hand on frame
+  # captures: at least one kept frame carries tip ink at the landing
+  # point, which the old four-finger silhouette would leave empty.
+  tips <- lapply(frames, function(frame) {
+    cursor_png_ink(
+      page,
+      frame,
+      band = c(322, 330),
+      x_range = c(658, 666)
+    )
+  })
+  expect_gt(sum(unlist(lapply(tips, `[[`, "count")) > 0), 0)
 })
 
 test_that("cursor = TRUE draws a static cursor in screenshots; FALSE never draws", {
