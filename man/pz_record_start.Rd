@@ -26,16 +26,18 @@ figure directory. Outside knitting a path is required.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{method}{Capture method. Only \code{"poll"} is implemented;
-\code{"screencast"} (\code{Page.startScreencast}) is reserved.}
+\item{method}{Capture method: \code{"poll"} (the default) for regular,
+higher-resolution captures, or \code{"screencast"} for captures driven
+by visual changes. See \emph{Choosing a capture method} for tradeoffs.}
 
-\item{frame}{Framing applied at encode time: \code{NULL} (the default)
-uses the page's default framing set with \code{\link[=pz_stage_frame]{pz_stage_frame()}} if
-there is one, else records the full viewport; a \code{\link[=pz_frame]{pz_frame()}} spec
-replaces any default entirely; \code{FALSE} disables framing.}
+\item{frame}{Area to show in the finished recording: \code{NULL} uses
+the page default set with \code{\link[=pz_stage_frame]{pz_stage_frame()}}, if any, or shows the
+full viewport; a \code{\link[=pz_frame]{pz_frame()}} spec replaces that default;
+\code{FALSE} ignores it.}
 
-\item{fps}{Output frame rate. Captures are resampled to this
-constant rate at encode time.}
+\item{fps}{Frames per second in the finished recording. Poll aims
+to capture at this rate; screencast capture depends on visual
+changes.}
 
 \item{scale}{Output size: \code{NULL} (the default) keeps the captured
 size; a number up to 4 is a scale factor; a larger number is the
@@ -60,37 +62,45 @@ the recording, and \code{\link[=pz_record_hold]{pz_record_hold()}} lingers on th
 expression and stops on exit, including on error.
 
 The output format comes from the \code{path} extension: \code{.mp4} (h264),
-\code{.webm}, or \code{.gif}. Frames are captured at the page's current device
-pixel ratio and resampled to a constant \code{fps} at encode time, so a
-skipped capture shows up as a repeated frame rather than a timing
-shift.
+\code{.webm}, or \code{.gif}. Both methods produce a video at the requested
+\code{fps}; when a new frame is not available, the previous frame is
+repeated.
 }
-\section{How recording works}{
+\section{Choosing a capture method}{
 
-A timer on chromote's private event loop captures a full-viewport
-PNG roughly every \code{1/fps} seconds using asynchronous browser calls.
-The timer fires while that loop is pumped -- during every synchronous
-paparazzi/chromote call and during \code{\link[=pz_wait]{pz_wait()}} -- so recording
-proceeds while a chain of steps runs. \strong{Long-running plain R code
-between steps freezes the recording}: the timer can't fire while R
-is busy, and the missed stretch collapses to a held frame.
+\code{"poll"} (the default) takes screenshots at roughly the requested
+\code{fps}. Choose it when resolution matters: it captures at the page's
+full pixel density. \code{"screencast"} records when the page changes,
+which can capture more intermediate states of an animation. It does
+not guarantee a capture rate and may have lower resolution. For
+example, with a 640-by-480 viewport on a 2x display, poll frames
+are 1280-by-960 pixels while screencast frames may be 640-by-480
+pixels. The \code{scale} argument sets output size, but enlarging a
+lower-resolution frame does not add detail.
+
+Both methods record while paparazzi runs browser actions or
+\code{\link[=pz_wait]{pz_wait()}}. Long-running R code between browser actions, including
+\code{Sys.sleep()}, can cause intermediate changes to be missed;
+use \code{pz_wait()} when you want a visible wait in the video.
+}
+
+\section{Output and framing}{
 
 Stopping always captures one final frame of the page state at
 \code{pz_record_stop()}, so a change made just before the stop still
 appears; the last-frame hold repeats that final frame.
 
-Cropping never happens at capture time. A \code{\link[=pz_frame]{pz_frame()}} spec (or the
-page default from \code{\link[=pz_stage_frame]{pz_stage_frame()}}) is measured once -- at the
-start for \code{pz_frame(when = "start")}, at the end for the default
-\code{when = "stop"}, i.e. against the final layout -- and the crop is
-applied to every frame during encoding. \code{.mp4} dimensions are
-rounded down to multiples of 4 and \code{.webm} to even pixels; \code{.gif}
-keeps whole pixels.
+Use \code{\link[=pz_frame]{pz_frame()}} (or the page default set with
+\code{\link[=pz_stage_frame]{pz_stage_frame()}}) to crop the finished recording. By default the
+frame follows the layout at stop; \code{pz_frame(when = "start")} fixes it
+to the layout at start. If the page navigates, a frame tied to the
+previous page falls back to the full viewport unless it was fixed at
+the start. MP4 dimensions are rounded down to multiples of 4 and
+WebM to even pixels; GIF keeps whole pixels.
 
 \code{.mp4} and \code{.webm} recordings require \pkg{av}. All \code{.gif} recordings
-require \pkg{gifski}; framed GIFs also require \pkg{png} to crop the
-captured frames before encoding. Packages are checked at
-\code{pz_record_start()}.
+require \pkg{gifski}; framed GIFs also require \pkg{png}.
+Packages are checked at \code{pz_record_start()}.
 }
 
 \examples{
