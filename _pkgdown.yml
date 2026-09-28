@@ -111,6 +111,7 @@ reference:
       Mark page elements in screenshots and recordings.
     contents:
       - pz_annotate
+      - pz_annotate_redact
       - pz_annotate_clear
 
   - title: Escape hatches and debugging

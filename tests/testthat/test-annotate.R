@@ -237,3 +237,265 @@ test_that("paused recording skips fade on draw and clear", {
   expect_length(annotation_state(page), 0)
   page |> pz_record_resume() |> pz_record_stop()
 })
+
+test_that("redaction fills every match immediately and remains after disconnection", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    "document.querySelectorAll('.mark').forEach(el => el.textContent = 'SECRET')"
+  )
+  page |> pz_stage(annotate_color = "#ff0000")
+  expect_identical(
+    pz_annotate_redact(page, ".mark", id = "secret", pad = 2),
+    page
+  )
+  nodes <- pz_js(
+    page,
+    "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); return [...layer.querySelectorAll('.pz-redaction')].map(n => ({x:parseFloat(n.style.left),y:parseFloat(n.style.top),visible:n.style.display !== 'none',animations:n.getAnimations().length,color:getComputedStyle(n).backgroundColor})); })()"
+  )
+  expect_length(nodes, 2)
+  expect_equal(nodes[[2]]$x, 198, tolerance = 1)
+  expect_identical(nodes[[2]]$color, "rgb(23, 23, 23)")
+  expect_equal(nodes[[2]]$animations, 0)
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  at <- function(x, y) {
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  expect_equal(at(220, 330), rep(23 / 255, 3), tolerance = 0.03)
+  pz_js(page, "document.getElementById('box').remove()")
+  pump_loop(page$child_loop, 0.05)
+  after <- pz_js(
+    page,
+    "(() => { const n = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')[1]; return [n.style.display, parseFloat(n.style.left), parseFloat(n.style.top)]; })()"
+  )
+  expect_equal(unlist(after), c("", "198", "308"))
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  expect_equal(at(220, 330), rep(23 / 255, 3), tolerance = 0.03)
+  page |> pz_annotate_clear("secret")
+  expect_length(annotation_state(page), 0)
+})
+
+test_that("redaction follows scroll and scoped targets without restyling elements", {
+  page <- annotation_page()
+  scoped <- pz_find(page, "#outer")
+  scoped |> pz_annotate_redact("#inner", id = "inner")
+  page |> pz_annotate_redact("#fixed", id = "fixed")
+  rects <- function() {
+    pz_js(
+      page,
+      "[...document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')].map(n => [parseFloat(n.style.top), parseFloat(n.style.left)])"
+    )
+  }
+  before <- rects()
+  expect_identical(
+    pz_js(page, "document.getElementById('inner').style.backgroundColor"),
+    ""
+  )
+  pz_js(
+    page,
+    "window.scrollTo(0, 80); document.getElementById('outer').scrollTop = 30"
+  )
+  pump_loop(page$child_loop, 0.06)
+  after <- rects()
+  expect_equal(
+    as.numeric(after[[1]][[1]]),
+    as.numeric(before[[1]][[1]]) - 110,
+    tolerance = 2
+  )
+  expect_equal(
+    as.numeric(after[[2]][[1]]),
+    as.numeric(before[[2]][[1]]),
+    tolerance = 2
+  )
+  page |> pz_annotate_clear()
+})
+
+test_that("redaction uses the current scope and anonymous ids", {
+  page <- annotation_page()
+  scoped <- pz_find(page, "#outer")
+  scoped |> pz_annotate_redact()
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+    ),
+    1
+  )
+  page |> pz_annotate_redact()
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+    ),
+    2
+  )
+  page |> pz_annotate_clear()
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+    ),
+    0
+  )
+})
+
+test_that("redaction shares ids, stays above later marks, and rejects unsafe starts", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  page |> pz_annotate("#box", id = "shared", reveal = "none")
+  page |>
+    pz_annotate_redact("#box", id = "shared", color = "rgba(255, 0, 0, 0.5)")
+  expect_length(annotation_state(page), 0)
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+    ),
+    1
+  )
+  page |> pz_annotate("#box", id = "mark", reveal = "none", color = "#00ff00")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  rgb <- function(x, y) {
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  expect_equal(
+    rgb(225, 311),
+    c(139 / 255, 11.5 / 255, 11.5 / 255),
+    tolerance = 0.06
+  )
+  expect_equal(
+    rgb(225, 330),
+    c(139 / 255, 11.5 / 255, 11.5 / 255),
+    tolerance = 0.06
+  )
+  page |> pz_annotate_redact("#fixed", id = "other", color = "not-a-color")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  expect_equal(rgb(45, 35), rep(23 / 255, 3), tolerance = 0.03)
+  pz_js(page, "document.getElementById('fixed').style.display = 'none'")
+  pump_loop(page$child_loop, 0.05)
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  expect_equal(rgb(45, 35), rep(23 / 255, 3), tolerance = 0.03)
+  expect_error(
+    pz_annotate_redact(page, "#fixed", id = "shared"),
+    "rendered box"
+  )
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+    ),
+    2
+  )
+  expect_error(
+    pz_annotate_redact(page, "#box", method = "blur", color = "red"),
+    "color"
+  )
+  expect_error(pz_annotate_redact(page, "#box", method = "pixelate"))
+  expect_error(pz_annotate_redact(page, "#box", id = "caption"))
+  page |> pz_annotate_clear("shared")
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+    ),
+    1
+  )
+  page |> pz_annotate_clear()
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+    ),
+    0
+  )
+})
+
+test_that("blur changes text pixels and keeps its box when target stops rendering", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=secret style=\"position:absolute;left:110px;top:410px;width:400px;height:120px;background:white;color:black;font:56px monospace\">SECRET</div>')"
+  )
+  before <- withr::local_tempfile(fileext = ".png")
+  after <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(before)
+  page |> pz_annotate_redact("#secret", method = "blur", id = "blur")
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.backdropFilter"
+    ),
+    "blur(32px)"
+  )
+  page |> pz_screenshot(after)
+  dpr <- page_dpr(page)
+  rows <- (440:460) * dpr + 1
+  cols <- (130:360) * dpr + 1
+  sharp <- png::readPNG(before)[rows, cols, 1]
+  soft <- png::readPNG(after)[rows, cols, 1]
+  expect_gt(mean(abs(sharp - soft)), 0.05)
+  pz_js(page, "document.getElementById('secret').style.display = 'none'")
+  pump_loop(page$child_loop, 0.05)
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
+    ),
+    ""
+  )
+})
+
+test_that("poll captures started after redaction returns are covered", {
+  skip_if_not_installed("av")
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  path <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(path, fps = 12, hold = c(0, 0), keep_frames = TRUE)
+  defer_record_stop(page)
+  page |> pz_annotate_redact("#box", id = "secret")
+  pending <- page_recorder(page)$pending
+  deadline <- Sys.time() + 2
+  while (
+    identical(page_recorder(page)$pending, pending) &&
+      !is.null(pending) &&
+      Sys.time() < deadline
+  ) {
+    pump_loop(page$child_loop, 0.02)
+  }
+  expect_false(
+    identical(page_recorder(page)$pending, pending) && !is.null(pending)
+  )
+  before <- length(page_recorder(page)$files)
+  pump_loop(page$child_loop, 0.3)
+  captured <- page_recorder(page)$files
+  expect_gt(length(captured), before)
+  dpr <- page_dpr(page)
+  redacted <- vapply(
+    captured[-seq_len(before)],
+    function(file) {
+      png::readPNG(file)[round(330 * dpr) + 1, round(225 * dpr) + 1, 1]
+    },
+    0.0
+  )
+  expect_true(all(abs(redacted - 23 / 255) < 0.04))
+  page |> pz_annotate_clear("secret")
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+    ),
+    0
+  )
+  page |> pz_record_stop()
+})

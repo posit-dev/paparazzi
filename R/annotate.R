@@ -126,6 +126,81 @@ pz_annotate <- function(
   invisible(ctx)
 }
 
+#' Redact page elements
+#'
+#' Covers every element matched by `target` with an instant opaque fill or
+#' backdrop blur in screenshots and recordings. Fill is the safe choice for
+#' secrets: blur can leave text partly legible. Redactions follow elements
+#' as they move; if an element disconnects or stops rendering, its last box
+#' remains until cleared. They belong to the current document and are lost
+#' on navigation.
+#'
+#' @inheritParams pz_annotate
+#' @param method `"fill"` (default) or `"blur"` (32 CSS px backdrop blur).
+#' @param pad Extra CSS pixels around each element; `NULL` uses zero.
+#' @param id Optional nonempty id; reusing it replaces the old annotation.
+#'   `"spotlight"` and `"caption"` are reserved.
+#' @param color CSS color for fill; `NULL` uses near-black (`#171717`), not
+#'   the staged mark color. A near-black opaque base stays underneath even
+#'   when a custom color is translucent or invalid. Cannot be set for blur.
+#' @return `ctx`, invisibly.
+#' @seealso [pz_annotate()], [pz_annotate_clear()]
+#' @export
+pz_annotate_redact <- function(
+  ctx,
+  target = NULL,
+  ...,
+  method = c("fill", "blur"),
+  pad = NULL,
+  id = NULL,
+  color = NULL
+) {
+  check_context(ctx)
+  check_dots_empty()
+  method <- rlang::arg_match(method)
+  if (!is.null(id)) {
+    check_string(id)
+    if (!nzchar(id) || id %in% c("spotlight", "caption")) {
+      cli::cli_abort(
+        "{.arg id} must be nonempty and cannot be {.val spotlight} or {.val caption}."
+      )
+    }
+  }
+  if (!is.null(color)) {
+    check_string(color)
+    if (method == "blur") {
+      cli::cli_abort(
+        "{.arg color} is only supported with {.code method = 'fill'}."
+      )
+    }
+  }
+  pad <- check_pad(pad %||% 0, arg = "pad")
+  els <- loc_resolve(ctx, target, multiple = "all")
+  withr::defer(release_elements(els))
+  annotate_register_init(ctx)
+  options <- list(id = id, method = method, pad = unname(pad), color = color)
+  json <- jsonlite::toJSON(options, auto_unbox = TRUE, null = "null")
+  timeout <- ctx$page$default_timeout
+  res <- cdp_call(
+    ctx$page$session$Runtime$callFunctionOn(
+      paste0(
+        "function() { return (",
+        annotate_boot_js,
+        ")().pz.redact(this, ",
+        json,
+        "); }"
+      ),
+      objectId = els$object_id,
+      returnByValue = TRUE,
+      timeout_ = timeout
+    ),
+    timeout,
+    "redacting the elements"
+  )
+  cdp_check_exception(res, "redacting the elements")
+  invisible(ctx)
+}
+
 #' Clear page annotations
 #'
 #' Remove an annotation by id, or remove every annotation when `id` is
@@ -224,7 +299,10 @@ annotate_boot_js <- r"(function() {
     for (const entry of entries.values()) {
       entry.elements.forEach((el, i) => {
         const box = entry.nodes[i];
-        if (!el.isConnected || !el.getClientRects().length) { box.style.display = 'none'; return; }
+        if (!el.isConnected || !el.getClientRects().length) {
+          if (!entry.redact) box.style.display = 'none';
+          return;
+        }
         const r = el.getBoundingClientRect();
         const p = entry.pad;
         box.style.display = '';
@@ -296,6 +374,38 @@ annotate_boot_js <- r"(function() {
         return box;
       });
       entries.set(id, {elements:[...elements], nodes, pad:opts.pad, reveal:opts.reveal});
+      sync();
+      if (frame === null) frame = requestAnimationFrame(tick);
+      return id;
+    },
+    redact: (elements, opts) => {
+      if (elements.some(el => !el.isConnected || !el.getClientRects().length)) {
+        throw new Error('Cannot redact an element without a rendered box.');
+      }
+      let id = opts.id;
+      if (id === null) {
+        do { id = '__pz_auto_' + (++next); } while (entries.has(id));
+      }
+      remove(id, false);
+      const nodes = elements.map(() => {
+        const box = document.createElement('div');
+        box.className = 'pz-redaction';
+        box.style.cssText = 'position:fixed;box-sizing:border-box;pointer-events:none;z-index:1;';
+        if (opts.method === 'blur') {
+          box.style.backdropFilter = 'blur(32px)';
+        } else {
+          box.style.backgroundColor = '#171717';
+          if (opts.color !== null) {
+            const tint = document.createElement('div');
+            tint.style.cssText = 'position:absolute;inset:0;';
+            tint.style.backgroundColor = opts.color;
+            box.appendChild(tint);
+          }
+        }
+        layer.appendChild(box);
+        return box;
+      });
+      entries.set(id, {elements:[...elements], nodes, pad:opts.pad, reveal:'none', redact:true});
       sync();
       if (frame === null) frame = requestAnimationFrame(tick);
       return id;
