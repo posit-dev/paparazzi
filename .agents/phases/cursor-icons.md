@@ -120,6 +120,37 @@ offset). Each lands as its own unit on main with one roborev review.
   the visible keyword for the next move's starting frame. An initial
   off-frame entrance starts with `default` unless explicitly overridden.
 
+## k6vz implementation decisions
+
+- Entry means the cursor anchor point (the `.pz-glide` translation at
+  viewport coordinates) first crosses the intended destination element's
+  viewport bounding rect along the straight segment from start S to landing
+  D. Boundaries count as inside; a start already inside flips at 0%. The
+  target's rect, not other elements crossed by the segment, determines entry.
+- Clip the segment against the four rect half-planes in linear progress
+  `u` (Liang-Barsky slab intersection); clamp the first intersection to
+  [0, 1]. Invert CSS ease-in-out by bisection on its monotone cubic
+  Bezier output `y(v) = 3(1-v)v² + v³`, then evaluate its Bezier time
+  `x(v) = 3(1-v)²v*0.42 + 3(1-v)v²*0.58 + v³`. This gives the fraction
+  of the glide duration when its anchor enters the rect. Degenerate or
+  non-intersecting segments have no scheduled change.
+- The transient `state$switch` JSON object holds `at` (time fraction
+  in [0, 1]), `from` and `to` (the two icon keywords). R sends it only
+  for an automatic recorded glide whose inferred landing keyword differs
+  from the previous keyword. The JS fills the destination keyword from
+  its existing landing-point inference; the state carries the R-computed
+  entry fraction and previous keyword. No switch for explicit icons,
+  static draws, or a zero-duration glide.
+- For the two participating SVGs only, JS writes `pz-icon-in` and
+  `pz-icon-out` keyframes at the computed percentage: hold the prior
+  visibility until up to 0.1 percentage points before entry, then set
+  the new visibility at entry. Both run for the glide duration with
+  forwards fill; the next command clears animations. Entry at 0%
+  applies the new icon immediately. No opacity animation, timer, or
+  additional pump phase. The later offset unit can extend the transient
+  schedule with a second landing-point flip when landing outside target;
+  no offset parameters or second flip are added here.
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
