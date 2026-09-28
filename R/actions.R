@@ -194,9 +194,11 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #' currently has focused, e.g. `"Enter"`, `"Control+A"`,
 #' `c("Shift+Tab", "Escape")`. A vector presses each combination fully
 #' (down then up) in order. Specs are `"Mod+Mod+Key"` strings with the
-#' modifiers Control, Shift, Alt, and Meta (matched case-insensitively)
+#' modifiers Control, Shift, Alt, Meta, and Mod (matched case-insensitively)
 #' and a named key (Enter, Tab, Escape, Backspace, arrows, F1-F12, ...) or
-#' a single printable character. Following Playwright, an uppercase
+#' a single printable character. `Mod` resolves to Meta on browsers reporting
+#' a Mac platform (`navigator.userAgentData.platform` or `navigator.platform`),
+#' and Control otherwise. Following Playwright, an uppercase
 #' letter or shifted symbol implies Shift: `"Control+A"` sends
 #' Control+Shift+A.
 #'
@@ -236,8 +238,16 @@ pz_press <- function(ctx, key, ...) {
 
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
+  mod <- NULL
+  if (any(grepl("(^|\\+)mod\\+", key, ignore.case = TRUE))) {
+    mac <- pz_js(
+      ctx,
+      "/^mac/i.test(navigator.userAgentData?.platform || navigator.platform || '')"
+    )
+    mod <- if (isTRUE(mac)) "Meta" else "Control"
+  }
   for (spec in key) {
-    events <- key_events(key_parse(spec))
+    events <- key_events(key_parse(spec, mod = mod))
     for (event in events) {
       action_cdp(
         ctx,

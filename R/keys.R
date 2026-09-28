@@ -13,6 +13,7 @@ key_modifier_names <- c(
   alt = "Alt",
   control = "Control",
   meta = "Meta",
+  mod = "Mod",
   shift = "Shift"
 )
 
@@ -138,7 +139,7 @@ for (punctuation in punctuation_keys) {
 #   $modifier_keys character: only the modifiers written in the spec, in
 #                 spec order; these alone get their own down/up events
 #   $key           the key table entry's key/code/keyCode plus `text`
-key_parse <- function(spec, call = caller_env()) {
+key_parse <- function(spec, call = caller_env(), mod = NULL) {
   check_string(spec, arg = "key", call = call)
   if (!nzchar(spec)) {
     cli::cli_abort(
@@ -178,14 +179,31 @@ key_parse <- function(spec, call = caller_env()) {
     cli::cli_abort(
       c(
         "{.val {token}} is not a modifier in {.val {spec}}.",
-        i = "Modifiers are Control, Shift, Alt, and Meta, matched case-insensitively."
+        i = "Modifiers are Control, Shift, Alt, Meta, and Mod, matched case-insensitively."
       ),
       class = "paparazzi_error_key",
       call = call
     )
   }
+  if ("Mod" %in% explicit) {
+    if (is.null(mod)) {
+      cli::cli_abort(
+        "{.val Mod} needs the browser platform to resolve in {.val {spec}}.",
+        class = "paparazzi_error_key",
+        call = call
+      )
+    }
+    explicit[explicit == "Mod"] <- mod
+  }
   if (anyDuplicated(explicit)) {
     token <- modifier_tokens[which(duplicated(explicit))[1]]
+    if ("Mod" %in% key_modifier_names[tolower(modifier_tokens)]) {
+      cli::cli_abort(
+        "{.val Mod} resolved to {.val {mod}} on this platform; {.val {token}} appears more than once in {.val {spec}}.",
+        class = "paparazzi_error_key",
+        call = call
+      )
+    }
     cli::cli_abort(
       "{.val {token}} appears more than once in {.val {spec}}.",
       class = "paparazzi_error_key",

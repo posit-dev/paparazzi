@@ -112,6 +112,31 @@ test_that("key_parse parses modifier combos", {
   expect_identical(shift_tab$key$key, "Tab")
 })
 
+test_that("Mod resolves to a physical modifier before generating events", {
+  mac <- key_parse("mOd+k", mod = "Meta")
+  expect_identical(mac$modifiers, "Meta")
+  expect_identical(mac$modifier_keys, "Meta")
+  expect_identical(mac$key$key, "k")
+  expect_identical(key_events(mac)[[2]]$modifiers, 4L)
+
+  other <- key_parse("Shift+Mod+k", mod = "Control")
+  expect_identical(other$modifiers, c("Control", "Shift"))
+  expect_identical(other$modifier_keys, c("Shift", "Control"))
+  expect_identical(key_events(other)[[3]]$modifiers, 10L)
+  expect_identical(
+    key_parse("Mod+Control+k", mod = "Meta")$modifier_keys,
+    c("Meta", "Control")
+  )
+
+  expect_error(
+    key_parse("Mod+Control+k", mod = "Control"),
+    "Mod.*resolved to.*Control"
+  )
+  expect_error(key_parse("Meta+Mod+k", mod = "Meta"), "Mod.*resolved to.*Meta")
+  expect_error(key_parse("Mod+k"), "Mod")
+  expect_error(key_parse("Mod"), class = "paparazzi_error_key")
+})
+
 test_that("modifiers match case-insensitively and normalize", {
   parsed <- key_parse("cOnTrOl+aLt+Delete")
   expect_identical(parsed$modifier_keys, c("Control", "Alt"))
@@ -144,6 +169,7 @@ test_that("key_parse rejects bad specs with paparazzi_error_key", {
 
   # Unknown modifier.
   expect_error(key_parse("CapsLock+A"), class = "paparazzi_error_key")
+  expect_error(key_parse("CapsLock+A"), "Mod")
   expect_error(key_parse("CapsLock+A"), "CapsLock")
   expect_error(key_parse("Meta+Enter"), NA)
 

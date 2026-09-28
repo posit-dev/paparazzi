@@ -149,6 +149,76 @@ test_that("pz_press sends keydown and keyup to the focused element", {
   expect_true(all(vapply(enter, function(e) isTRUE(e$isTrusted), logical(1))))
 })
 
+test_that("pz_press resolves Mod using the browser's reported platform", {
+  page <- local_actions_page()
+  pz_js(
+    page,
+    paste0(
+      "window.__modKeys = []; document.addEventListener('keydown', e => {",
+      "if (e.key.toLowerCase() === 'k') window.__modKeys.push({metaKey: e.metaKey, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey});",
+      "});"
+    )
+  )
+  pz_click(page, "#name")
+
+  platforms <- list(
+    list(ua = "macOS", legacy = "Win32", meta = TRUE),
+    list(ua = "Windows", legacy = "MacIntel", meta = FALSE),
+    list(ua = "", legacy = "MacIntel", meta = TRUE),
+    list(ua = "", legacy = "Win32", meta = FALSE)
+  )
+  for (platform in platforms) {
+    pz_js(
+      page,
+      sprintf(
+        paste0(
+          "Object.defineProperty(navigator, 'userAgentData', ",
+          "{configurable: true, value: {platform: '%s'}}); ",
+          "Object.defineProperty(navigator, 'platform', ",
+          "{configurable: true, value: '%s'});"
+        ),
+        platform$ua,
+        platform$legacy
+      )
+    )
+    pz_js(page, "window.__modKeys = []")
+    pz_press(page, if (identical(platform$ua, "macOS")) "Mod+K" else "Mod+k")
+    keys <- pz_js(page, "window.__modKeys")
+    expect_length(keys, 1L)
+    key <- keys[[1]]
+    expect_identical(key$metaKey, platform$meta)
+    expect_identical(key$ctrlKey, !platform$meta)
+    if (identical(platform$ua, "macOS")) {
+      expect_identical(key$shiftKey, TRUE)
+    }
+  }
+
+  pz_js(
+    page,
+    "Object.defineProperty(navigator, 'userAgentData', {configurable: true, value: undefined})"
+  )
+  pz_js(page, "window.__modKeys = []")
+  pz_press(page, "Mod+k")
+  keys <- pz_js(page, "window.__modKeys")
+  expect_length(keys, 1L)
+  key <- keys[[1]]
+  expect_identical(key$metaKey, FALSE)
+  expect_identical(key$ctrlKey, TRUE)
+
+  pz_js(page, "window.__modKeys = []")
+  pz_press(page, "Control+k")
+  keys <- pz_js(page, "window.__modKeys")
+  expect_length(keys, 1L)
+  expect_identical(keys[[1]]$ctrlKey, TRUE)
+  expect_identical(keys[[1]]$metaKey, FALSE)
+  pz_js(page, "window.__modKeys = []")
+  pz_press(page, "Meta+k")
+  keys <- pz_js(page, "window.__modKeys")
+  expect_length(keys, 1L)
+  expect_identical(keys[[1]]$metaKey, TRUE)
+  expect_identical(keys[[1]]$ctrlKey, FALSE)
+})
+
 test_that("Enter implicitly submits a form from a text input", {
   page <- local_actions_page()
   pz_js(

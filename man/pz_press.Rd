@@ -21,9 +21,11 @@ Presses one or more key combinations against whatever the page
 currently has focused, e.g. \code{"Enter"}, \code{"Control+A"},
 \code{c("Shift+Tab", "Escape")}. A vector presses each combination fully
 (down then up) in order. Specs are \code{"Mod+Mod+Key"} strings with the
-modifiers Control, Shift, Alt, and Meta (matched case-insensitively)
+modifiers Control, Shift, Alt, Meta, and Mod (matched case-insensitively)
 and a named key (Enter, Tab, Escape, Backspace, arrows, F1-F12, ...) or
-a single printable character. Following Playwright, an uppercase
+a single printable character. \code{Mod} resolves to Meta on browsers reporting
+a Mac platform (\code{navigator.userAgentData.platform} or \code{navigator.platform}),
+and Control otherwise. Following Playwright, an uppercase
 letter or shifted symbol implies Shift: \code{"Control+A"} sends
 Control+Shift+A.
 
