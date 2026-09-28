@@ -345,6 +345,42 @@ cursor_target_point <- function(ctx, target, call = caller_env()) {
   )
 }
 
+# First eased time when the cursor anchor enters a viewport rect.
+# Clip in line-progress space, then invert the monotone CSS ease curve.
+cursor_entry_time <- function(start, end, rect) {
+  lower <- 0
+  upper <- 1
+  for (axis in c("x", "y")) {
+    delta <- end[[axis]] - start[[axis]]
+    edge <- rect[[axis]] + if (axis == "x") rect[["width"]] else rect[["height"]]
+    if (delta == 0) {
+      if (start[[axis]] < rect[[axis]] || start[[axis]] > edge) {
+        return(NULL)
+      }
+      next
+    }
+    limits <- sort((c(rect[[axis]], edge) - start[[axis]]) / delta)
+    lower <- max(lower, limits[[1]])
+    upper <- min(upper, limits[[2]])
+  }
+  if (lower > upper || upper < 0 || lower > 1) {
+    return(NULL)
+  }
+  progress <- max(0, lower)
+  if (progress == 0 || progress == 1) {
+    return(progress)
+  }
+  lo <- 0
+  hi <- 1
+  for (i in seq_len(55)) {
+    v <- (lo + hi) / 2
+    y <- 3 * (1 - v) * v^2 + v^3
+    if (y < progress) lo <- v else hi <- v
+  }
+  v <- (lo + hi) / 2
+  3 * (1 - v)^2 * v * 0.42 + 3 * (1 - v) * v^2 * 0.58 + v^3
+}
+
 # A point 40px past the named frame edge, at the target's coordinate on
 # the other axis: where an entering cursor starts and a leaving cursor
 # ends up. Corner directions offset both axes and ignore the target's

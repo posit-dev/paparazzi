@@ -531,3 +531,19 @@ test_that("representative icon families put ink near their hotspots", {
     expect_lt(abs(ink$y - 322), 12)
   }
 })
+
+test_that("entry inversion follows the CSS easing and clips to the rect", {
+  rect <- c(x = 60, y = 10, width = 20, height = 20)
+  start <- c(x = 0, y = 20)
+  end <- c(x = 100, y = 20)
+  expect_equal(cursor_entry_time(start, end, rect), 0.5585, tolerance = 0.0002)
+  expect_equal(cursor_entry_time(end, start, rect), 0.31, tolerance = 0.002)
+  expect_equal(cursor_entry_time(c(x = 65, y = 20), end, rect), 0, tolerance = 1e-12)
+  expect_null(cursor_entry_time(c(x = 0, y = 40), c(x = 100, y = 40), rect))
+  expect_null(cursor_entry_time(c(x = 0, y = 20), c(x = 30, y = 20), rect))
+  expect_equal(cursor_entry_time(c(x = 0, y = 20), c(x = 60, y = 20), rect), 1, tolerance = 1e-12)
+  times <- vapply(c(20, 40, 60, 80), function(x) {
+    cursor_entry_time(start, end, c(x = x, y = 10, width = 5, height = 20))
+  }, numeric(1))
+  expect_true(all(diff(times) > 0))
+})
