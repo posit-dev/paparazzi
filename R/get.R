@@ -334,11 +334,7 @@ get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
 # JS null/undefined reads become NA_character_, preserving positions:
 # unlist() silently drops NULLs.
 chr_or_na <- function(x) {
-  vapply(
-    x,
-    function(v) if (is.null(v)) NA_character_ else as.character(v),
-    character(1)
-  )
+  map_chr(x, function(v) if (is.null(v)) NA_character_ else as.character(v))
 }
 
 # Pin one single-element set off a matched array: the element column's

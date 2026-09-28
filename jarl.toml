@@ -2,3 +2,7 @@
 # Every hit is deliberate: `<<-` inside callback lambdas, or assignment
 # inside capture.output()/withCallingHandlers().
 ignore = ["implicit_assignment"]
+
+# map2 is vendored in R/utils-purrr.R only because it backs imap.
+[lint.per-file-ignores]
+"R/utils-purrr.R" = ["unused_function"]

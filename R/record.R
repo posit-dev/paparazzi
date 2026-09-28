@@ -917,8 +917,8 @@ record_resample <- function(rec) {
     }),
     list(list(vt = vt_end, seconds = rec$hold_last))
   )
-  holds <- holds[order(vapply(holds, `[[`, numeric(1), "vt"))]
-  total <- vt_end + sum(vapply(holds, `[[`, numeric(1), "seconds"))
+  holds <- holds[order(map_dbl(holds, `[[`, "vt"))]
+  total <- vt_end + sum(map_dbl(holds, `[[`, "seconds"))
   n_ticks <- max(1L, round(total * rec$fps))
   ticks <- (seq_len(n_ticks) - 1) / rec$fps
   vts <- ticks_to_vt(ticks, holds)

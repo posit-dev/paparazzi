@@ -213,7 +213,7 @@ DIRECTIONS <- list(
 )
 
 direction_labels <- function(valid = DIRECTIONS) {
-  vapply(valid, function(tokens) paste(tokens, collapse = " "), character(1))
+  map_chr(valid, paste, collapse = " ")
 }
 
 # Normalize a direction string to its sorted token set: lowercase,
@@ -232,7 +232,7 @@ parse_direction <- function(
   tokens <- sort(unique(strsplit(tolower(trimws(x)), "[[:space:]]+|-+")[[1]]))
   ok <- length(tokens) > 0 &&
     !anyNA(match(tokens, DIRECTION_TOKENS)) &&
-    any(vapply(valid, function(t) identical(t, tokens), logical(1)))
+    some(valid, function(t) identical(t, tokens))
   if (!ok) {
     cli::cli_abort(
       c(
@@ -439,10 +439,10 @@ frame_measure <- function(
   # A binding clamp assigned its edge exactly; coinciding edges count as
   # pinned too. Round these inward so the pixel clip stays within bounds.
   pinned <- c(
-    any(vapply(clamps, function(clamp) clamp[1] >= box[1], logical(1))),
-    any(vapply(clamps, function(clamp) clamp[2] >= box[2], logical(1))),
-    any(vapply(clamps, function(clamp) clamp[3] <= box[3], logical(1))),
-    any(vapply(clamps, function(clamp) clamp[4] <= box[4], logical(1)))
+    some(clamps, function(clamp) clamp[1] >= box[1]),
+    some(clamps, function(clamp) clamp[2] >= box[2]),
+    some(clamps, function(clamp) clamp[3] <= box[3]),
+    some(clamps, function(clamp) clamp[4] <= box[4])
   )
   list(box = box, pinned = pinned, geometry = geometry)
 }

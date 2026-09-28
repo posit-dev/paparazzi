@@ -127,10 +127,10 @@ inspect_resolve_matches <- function(ctx, target, call = caller_env()) {
       )
     })
     rects <- tibble::tibble(
-      x = vapply(rows, function(r) r$x, numeric(1)),
-      y = vapply(rows, function(r) r$y, numeric(1)),
-      width = vapply(rows, function(r) r$width, numeric(1)),
-      height = vapply(rows, function(r) r$height, numeric(1))
+      x = map_dbl(rows, function(r) r$x),
+      y = map_dbl(rows, function(r) r$y),
+      width = map_dbl(rows, function(r) r$width),
+      height = map_dbl(rows, function(r) r$height)
     )
   }
 

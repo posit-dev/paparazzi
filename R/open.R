@@ -291,7 +291,7 @@ is_shiny_app_file <- function(name) {
 file_url <- function(path) {
   path <- normalizePath(path, winslash = "/", mustWork = TRUE)
   segs <- strsplit(path, "/", fixed = TRUE)[[1]]
-  enc <- vapply(
+  enc <- map_chr(
     segs,
     function(seg) {
       # Leave Windows drive letters ("C:") alone; encode everything else.
@@ -300,8 +300,7 @@ file_url <- function(path) {
       } else {
         utils::URLencode(seg, reserved = TRUE, repeated = TRUE)
       }
-    },
-    character(1)
+    }
   )
   path <- paste(enc, collapse = "/")
   if (!startsWith(path, "/")) {

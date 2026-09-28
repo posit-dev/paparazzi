@@ -1,3 +1,6 @@
+#' @include utils-purrr.R
+NULL
+
 # The overlay cursor: a fake pointer drawn under the existing
 # #paparazzi-overlay-root host (its shadow root), as a sibling layer of
 # the inspect outlines. Living under that host is what excludes the
@@ -522,7 +525,7 @@ CURSOR_ART <- local({
       y = 2 - entry$hotspot[[2]] * 20 / 32
     )
   })
-  names(art) <- vapply(entries, `[[`, character(1), "cursor")
+  names(art) <- map_chr(entries, `[[`, "cursor")
   art$auto <- art$default
   art$none <- list(
     svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>',

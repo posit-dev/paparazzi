@@ -1169,10 +1169,9 @@ check_text_like <- function(js, values, match, not) {
     vals <- collapse_ws(chr_or_na(els_values(els, js)))
     if (length(values) == 1L) {
       # A single value applies to every match; at least one is required.
-      hits <- vapply(
+      hits <- map_lgl(
         vals,
         expect_text_hit,
-        logical(1),
         pattern = values,
         match = match
       )
@@ -1220,12 +1219,10 @@ expect_attr_pairs <- function(dots, call = caller_env()) {
       call = call
     )
   }
-  lapply(seq_along(dots), function(i) {
-    value <- dots[[i]]
-    check_character(value, arg = nms[[i]], call = call)
+  imap(dots, function(value, nm) {
+    check_character(value, arg = nm, call = call)
     collapse_ws(value)
-  }) |>
-    stats::setNames(nms)
+  })
 }
 
 check_attr_pairs <- function(pairs, match, not) {
@@ -1238,7 +1235,7 @@ check_attr_pairs <- function(pairs, match, not) {
     hits <- matrix(FALSE, nrow = els$count, ncol = length(pairs))
     observed <- character(length(pairs))
     for (p in seq_along(pairs)) {
-      actual <- collapse_ws(vapply(vals, `[[`, character(1), p))
+      actual <- collapse_ws(map_chr(vals, `[[`, p))
       expected <- pairs[[p]]
       if (length(expected) == 1L || length(expected) == els$count) {
         hits[, p] <- vapply(

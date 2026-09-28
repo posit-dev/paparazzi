@@ -77,7 +77,7 @@ pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
       # isn't in that match's computed style.
       cols <- lapply(
         out_props,
-        function(p) vapply(vals, function(v) v[[p]] %||% "", character(1))
+        function(p) map_chr(vals, function(v) v[[p]] %||% "")
       )
       names(cols) <- out_props
       new_get_tibble(ctx, els, target, !!!cols, call = call)
@@ -295,10 +295,9 @@ style_expect_pairs <- function(dots, call = caller_env()) {
       call = call
     )
   }
-  values <- vapply(
+  values <- map_chr(
     dots,
-    function(v) if (is_string(v)) v else NA_character_,
-    character(1)
+    function(v) if (is_string(v)) v else NA_character_
   )
   if (anyNA(values)) {
     cli::cli_abort(
@@ -336,7 +335,7 @@ check_style <- function(pairs, not, normalize, call = caller_env()) {
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
     vals <- els_values(els, js)
-    accepted <- vapply(vals[[1]], function(v) isTRUE(v$accepted), logical(1))
+    accepted <- map_lgl(vals[[1]], function(v) isTRUE(v$accepted))
     style_abort_invalid(accepted, pairs, call = call)
     hits <- style_hits(vals, pairs, normalize)
     pass <- if (not) !all(hits) else all(hits)
@@ -377,7 +376,7 @@ style_check_invalid <- function(page, pairs, call = caller_env()) {
     call
   )
   cdp_check_exception(res, "validating CSS", call)
-  vapply(res$result$value, isTRUE, logical(1))
+  map_lgl(res$result$value, isTRUE)
 }
 
 # Comparison matrix [match, pair]: identical strings pass; px values
@@ -417,13 +416,12 @@ style_px <- function(x) {
 }
 
 style_observed <- function(vals, props) {
-  rows <- vapply(
+  rows <- map_chr(
     vals,
     function(el) {
-      actuals <- vapply(el, function(v) v$actual %||% "", character(1))
+      actuals <- map_chr(el, function(v) v$actual %||% "")
       paste0(props, ": ", actuals, collapse = "; ")
-    },
-    character(1)
+    }
   )
   expect_truncate(paste0(rows, collapse = " | "))
 }

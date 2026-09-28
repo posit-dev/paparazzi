@@ -111,7 +111,7 @@ as_loc_list <- function(target, arg = caller_arg(target), call = caller_env()) {
 # detached-scope error.
 format_loc <- function(loc) {
   if (is_list(loc) && !inherits(loc, "paparazzi_loc")) {
-    return(paste(vapply(loc, format_loc, character(1)), collapse = " | "))
+    return(paste(map_chr(loc, format_loc), collapse = " | "))
   }
   if (!inherits(loc, "paparazzi_loc")) {
     # Only promoted targets reach here; a bare string would otherwise be
