@@ -1101,7 +1101,9 @@ test_that("pz_drag moves the cursor to the source before the destination", {
   pz_drag(page, "#dragbox", to = "#dropzone")
 
   expect_false(isTRUE(all.equal(source, destination, check.attributes = FALSE)))
-  expect_equal(unname(seen[[1]]), unname(source))
+  # The seam's point now carries the resolved target's rect for
+  # glide-entry timing; compare the coordinates only.
+  expect_equal(unname(seen[[1]]), unname(source), ignore_attr = TRUE)
   expect_equal(length(seen), 1L)
 })
 
