@@ -28,13 +28,14 @@
    only when the class is needed. Use paparazzi's own checkers in
    `R/utils-check.R` (e.g. `check_character()`, `check_page()`) where they
    fit; extend that file as new shared checkers come up.
-1. **Targeted tests verify branches; the full suite gates merges.** For
-   branch/task verification, run only the test files mirroring the changed
-   sources (`Rscript -e 'testthat::test_local(filter = "record|style")'`),
-   plus any files exercising cross-module seams the phase note names. The
-   full `btw pkg test` suite runs once on main as the merge gate —
-   integration breaks (internal-API signature changes across files)
-   surface there, not in filtered runs.
+1. **Targeted tests verify branches; the full suite gates merges.** On feature
+   branches, run the test files mirroring changed sources
+   (`Rscript -e 'testthat::test_local(filter = "record|style")'`), plus any
+   files exercising cross-module seams the phase note names. A full suite on
+   a feature branch is optional when the implementer judges it useful, not a
+   requirement before the orchestrator's full `btw pkg test` merge gate on
+   main. Integration breaks (internal-API signature changes across files)
+   surface at that gate, not necessarily in filtered runs.
 1. **Serialize Chrome-heavy test runs with `.agents/chrome-lock.sh`.**
    Wrap every `test_local()` and `btw pkg test` run in it, for example
    `.agents/chrome-lock.sh Rscript -e 'testthat::test_local(filter = "nav")'`.
