@@ -9,50 +9,58 @@
 #' expression and stops on exit, including on error.
 #'
 #' The output format comes from the `path` extension: `.mp4` (h264),
-#' `.webm`, or `.gif`. Frames are captured at the page's current device
-#' pixel ratio and resampled to a constant `fps` at encode time, so a
-#' skipped capture shows up as a repeated frame rather than a timing
-#' shift.
+#' `.webm`, or `.gif`. Both methods produce a video at the requested
+#' `fps`; when a new frame is not available, the previous frame is
+#' repeated.
 #'
-#' @section How recording works:
-#' A timer on chromote's private event loop captures a full-viewport
-#' PNG roughly every `1/fps` seconds using asynchronous browser calls.
-#' The timer fires while that loop is pumped -- during every synchronous
-#' paparazzi/chromote call and during [pz_wait()] -- so recording
-#' proceeds while a chain of steps runs. **Long-running plain R code
-#' between steps freezes the recording**: the timer can't fire while R
-#' is busy, and the missed stretch collapses to a held frame.
+#' @section Choosing a capture method:
+#' `"poll"` (the default) takes screenshots at roughly the requested
+#' `fps`. Choose it when resolution matters: it captures at the page's
+#' full pixel density. `"screencast"` records when the page changes,
+#' which can capture more intermediate states of an animation. It does
+#' not guarantee a capture rate and may have lower resolution. For
+#' example, with a 640-by-480 viewport on a 2x display, poll frames
+#' are 1280-by-960 pixels while screencast frames may be 640-by-480
+#' pixels. The `scale` argument sets output size, but enlarging a
+#' lower-resolution frame does not add detail.
 #'
+#' Both methods record while paparazzi runs browser actions or
+#' [pz_wait()]. Long-running R code between browser actions, including
+#' `Sys.sleep()`, can cause intermediate changes to be missed;
+#' use `pz_wait()` when you want a visible wait in the video.
+#'
+#' @section Output and framing:
 #' Stopping always captures one final frame of the page state at
 #' `pz_record_stop()`, so a change made just before the stop still
 #' appears; the last-frame hold repeats that final frame.
 #'
-#' Cropping never happens at capture time. A [pz_frame()] spec (or the
-#' page default from [pz_stage_frame()]) is measured once -- at the
-#' start for `pz_frame(when = "start")`, at the end for the default
-#' `when = "stop"`, i.e. against the final layout -- and the crop is
-#' applied to every frame during encoding. `.mp4` dimensions are
-#' rounded down to multiples of 4 and `.webm` to even pixels; `.gif`
-#' keeps whole pixels.
+#' Use [pz_frame()] (or the page default set with
+#' [pz_stage_frame()]) to crop the finished recording. By default the
+#' frame follows the layout at stop; `pz_frame(when = "start")` fixes it
+#' to the layout at start. If the page navigates, a frame tied to the
+#' previous page falls back to the full viewport unless it was fixed at
+#' the start. MP4 dimensions are rounded down to multiples of 4 and
+#' WebM to even pixels; GIF keeps whole pixels.
 #'
 #' `.mp4` and `.webm` recordings require \pkg{av}. All `.gif` recordings
-#' require \pkg{gifski}; framed GIFs also require \pkg{png} to crop the
-#' captured frames before encoding. Packages are checked at
-#' `pz_record_start()`.
+#' require \pkg{gifski}; framed GIFs also require \pkg{png}.
+#' Packages are checked at `pz_record_start()`.
 #'
 #' @inheritParams pz_click
 #' @param path Output file path; the extension (`.mp4`, `.webm`, or
 #'   `.gif`) selects the format. An existing file is overwritten. When
 #'   knitting, an omitted path uses a numbered `.gif` in the chunk's
 #'   figure directory. Outside knitting a path is required.
-#' @param method Capture method. Only `"poll"` is implemented;
-#'   `"screencast"` (`Page.startScreencast`) is reserved.
-#' @param frame Framing applied at encode time: `NULL` (the default)
-#'   uses the page's default framing set with [pz_stage_frame()] if
-#'   there is one, else records the full viewport; a [pz_frame()] spec
-#'   replaces any default entirely; `FALSE` disables framing.
-#' @param fps Output frame rate. Captures are resampled to this
-#'   constant rate at encode time.
+#' @param method Capture method: `"poll"` (the default) for regular,
+#'   higher-resolution captures, or `"screencast"` for captures driven
+#'   by visual changes. See *Choosing a capture method* for tradeoffs.
+#' @param frame Area to show in the finished recording: `NULL` uses
+#'   the page default set with [pz_stage_frame()], if any, or shows the
+#'   full viewport; a [pz_frame()] spec replaces that default;
+#'   `FALSE` ignores it.
+#' @param fps Frames per second in the finished recording. Poll aims
+#'   to capture at this rate; screencast capture depends on visual
+#'   changes.
 #' @param scale Output size: `NULL` (the default) keeps the captured
 #'   size; a number up to 4 is a scale factor; a larger number is the
 #'   output width in pixels (height scales proportionally).
@@ -99,12 +107,6 @@ pz_record_start <- function(
   }
   check_string(path)
   method <- arg_match(method)
-  if (identical(method, "screencast")) {
-    cli::cli_abort(
-      '{.code method = "screencast"} is not supported yet; use {.code method = "poll"}.',
-      class = "paparazzi_error_unsupported"
-    )
-  }
   check_number_decimal(fps, min = 1, max = 120)
   check_number_decimal(scale, min = 0, allow_null = TRUE)
   check_bool(keep_frames)
@@ -128,7 +130,8 @@ pz_record_start <- function(
     scale = scale,
     hold = hold,
     keep_frames = keep_frames,
-    frame = frame
+    frame = frame,
+    method = method
   )
   # Retain the framing context the recording started in: a when =
   # "stop" frame is measured against the final layout, but resolved
@@ -145,14 +148,27 @@ pz_record_start <- function(
   rec$frames_dir <- record_frames_dir(path, keep_frames)
 
   page_set_recorder(page, rec)
-  # Fire the first tick as soon as the loop pumps so short recordings
-  # still get an early frame; ticks re-arm at 1/fps from then on. The
-  # tick closure carries its recorder so it can't adopt a later one.
-  later::later(
-    function() record_tick(page, rec),
-    delay = 0,
-    loop = page$child_loop
-  )
+  if (identical(method, "screencast")) {
+    tryCatch(
+      record_start_screencast(page, rec),
+      error = function(e) {
+        rec$active <- FALSE
+        record_stop_screencast(page, rec)
+        page_set_recorder(page, NULL)
+        if (!rec$keep_frames) {
+          unlink(rec$frames_dir, recursive = TRUE)
+        }
+        stop(e)
+      }
+    )
+  } else {
+    # The tick closure carries its recorder so it can't adopt a later one.
+    later::later(
+      function() record_tick(page, rec),
+      delay = 0,
+      loop = page$child_loop
+    )
+  }
   invisible(ctx)
 }
 
@@ -193,6 +209,7 @@ pz_record_stop <- function(ctx) {
   # and can't issue captures while the stop settles its own.
   rec$active <- FALSE
   rec$vt_end <- rec_vt(rec)
+  record_stop_screencast(page, rec)
 
   # A capture issued before the stop may still be in flight; it belongs
   # to the recording, so let it settle before the final capture.
@@ -208,7 +225,15 @@ pz_record_stop <- function(ctx) {
   # the video (the last-frame hold repeats it, not an older frame), and
   # an immediate stop gets its one frame here. vt is pinned to vt_end so
   # the frame is kept (post-vt_end captures are dropped).
-  record_capture(rec, page, rec$vt_end)
+  # A screencast frame may have CSS-viewport resolution even at a higher
+  # device pixel ratio. Match it for the final screenshot so encode-time
+  # framing uses the same coordinates for every frame.
+  capture_scale <- if (identical(rec$method, "screencast")) {
+    1 / pz_js(page, "window.devicePixelRatio")
+  } else {
+    1
+  }
+  record_capture(rec, page, rec$vt_end, scale = capture_scale)
   tryCatch(
     pz_poll(
       function() is.null(rec$pending),
@@ -295,8 +320,14 @@ pz_record_resume <- function(ctx) {
   if (!rec$paused) {
     return(invisible(ctx))
   }
+  if (identical(rec$method, "screencast")) {
+    record_wait_pending(rec, ctx$page, "the frame capture before resuming")
+  }
   rec$active_since <- rec_now()
   rec$paused <- FALSE
+  if (identical(rec$method, "screencast")) {
+    record_screencast_snapshot(ctx$page, rec)
+  }
   invisible(ctx)
 }
 
@@ -471,7 +502,14 @@ record_hold <- function(page, code, call = caller_env()) {
     "the in-flight frame capture before changing the device metrics",
     call = call
   )
-  code
+  result <- code
+  rec$held <- held
+  if (
+    !held && rec$active && !rec$paused && identical(rec$method, "screencast")
+  ) {
+    record_screencast_snapshot(page, rec)
+  }
+  result
 }
 
 record_wait_pending <- function(rec, page, what, call = caller_env()) {
@@ -494,11 +532,14 @@ new_recorder <- function(
   scale,
   hold,
   keep_frames,
-  frame
+  frame,
+  method = "poll"
 ) {
   rec <- new.env(parent = emptyenv())
   rec$path <- path
   rec$format <- format
+  rec$method <- method
+  rec$deregister_screencast <- NULL
   rec$fps <- fps
   rec$scale <- scale
   rec$hold_first <- hold[1]
@@ -649,6 +690,7 @@ record_page_closed <- function(page) {
     return(invisible(FALSE))
   }
   rec$active <- FALSE
+  record_stop_screencast(page, rec)
   page_set_recorder(page, NULL)
   if (!rec$keep_frames && !is.null(rec$frames_dir)) {
     unlink(rec$frames_dir, recursive = TRUE)
@@ -656,15 +698,98 @@ record_page_closed <- function(page) {
   invisible(TRUE)
 }
 
-# Issue one async capture on the page: the tick's periodic capture and
-# the stop-time final frame both come through here. The pending slot
-# prevents overlapping captures; callbacks clear it when chromote
+record_start_screencast <- function(page, rec) {
+  session <- page$session
+  rec$deregister_screencast <- session$Page$screencastFrame(
+    callback_ = function(frame) record_screencast_frame(page, rec, frame)
+  )
+  session$Page$startScreencast(
+    format = "png",
+    timeout_ = page$default_timeout
+  )
+  invisible(rec)
+}
+
+record_stop_screencast <- function(page, rec) {
+  deregister <- rec$deregister_screencast
+  if (is.null(deregister)) {
+    return(invisible(NULL))
+  }
+  rec$deregister_screencast <- NULL
+  session <- page$session
+  tryCatch(
+    session$Page$stopScreencast(
+      wait_ = FALSE,
+      callback_ = function(...) NULL,
+      error_ = function(e) record_error(rec, e)
+    ),
+    error = function(e) record_error(rec, e)
+  )
+  tryCatch(deregister(), error = function(e) record_error(rec, e))
+  invisible(NULL)
+}
+
+record_screencast_frame <- function(page, rec, frame) {
+  session <- page$session
+  tryCatch(
+    session$Page$screencastFrameAck(
+      sessionId = frame$sessionId,
+      wait_ = FALSE,
+      callback_ = function(...) NULL,
+      error_ = function(e) record_error(rec, e)
+    ),
+    error = function(e) record_error(rec, e)
+  )
+  if (
+    !rec$active ||
+      rec$paused ||
+      rec$held ||
+      !is.null(rec$pending) ||
+      !identical(rec, page_recorder(page))
+  ) {
+    return(invisible(NULL))
+  }
+  tryCatch(
+    {
+      pending <- new.env(parent = emptyenv())
+      pending$vt <- rec_vt(rec)
+      pending$file <- file.path(
+        rec$frames_dir,
+        sprintf("frame-%06d.png", length(rec$files) + 1L)
+      )
+      rec$pending <- pending
+      record_frame_done(rec, pending, res = frame)
+    },
+    error = function(e) record_error(rec, e)
+  )
+  invisible(NULL)
+}
+
+record_screencast_snapshot <- function(page, rec) {
+  if (!is.null(rec$pending)) {
+    return(invisible(NULL))
+  }
+  tryCatch(
+    record_capture(
+      rec,
+      page,
+      rec_vt(rec),
+      scale = 1 / pz_js(page, "window.devicePixelRatio")
+    ),
+    error = function(e) record_error(rec, e)
+  )
+  invisible(NULL)
+}
+
+# Shared async screenshot for poll ticks, screencast boundary snapshots,
+# and the stop-time final frame. The pending slot prevents overlapping captures; callbacks clear it when chromote
 # invokes them on the child loop. A synchronous failure (e.g. a closed
 # session) clears it and lands in the recorder's error tally instead.
 # Unclipped surface captures at DPR 2 can remap concurrent mouse input
-# to half its coordinates; a viewport clip avoids that Chrome path while
-# retaining full-resolution PNGs for the encode-time crop.
-record_capture <- function(rec, page, vt) {
+# to half its coordinates; a viewport clip avoids that Chrome path.
+# The screencast stop capture uses a smaller clip scale so its PNG
+# matches the event frames' CSS-pixel resolution.
+record_capture <- function(rec, page, vt, scale = 1) {
   index <- length(rec$files) + 1L
   pending <- new.env(parent = emptyenv())
   pending$vt <- vt
@@ -689,7 +814,7 @@ record_capture <- function(rec, page, vt) {
               y = max(v$pageY, 0),
               width = v$clientWidth,
               height = v$clientHeight,
-              scale = 1
+              scale = scale
             )
             page$session$Page$captureScreenshot(
               format = "png",

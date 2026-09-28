@@ -1,0 +1,31 @@
+# Screencast capture (paparazzi#tef8)
+
+Requirements: kata tef8 and `.agents/SPEC.md` § Recording. This branch is the feature branch; do not create another branch/worktree or merge to main.
+
+## Mechanism decision (approved for implementation)
+
+- `method = "poll"` stays the default and unchanged. `method = "screencast"` registers one `Page.screencastFrame` listener, starts `Page.startScreencast(format = "png")`, and immediately acknowledges every received frame, including frames discarded during pause or teardown. The listener is bound to its recorder, never to the current page slot on delivery. No polling timer for this method, queue, secondary ordering flag, or buffered display content.
+- Stamp accepted events with the existing pause-aware `rec_vt()` at callback delivery. Ignore frames while paused/held, after stop, or when their recorder is no longer current; ack regardless. PNG bytes go through the existing disk frame store and resampling/encoding pipeline. Chrome's metadata describes the delivered frame; do not substitute the CDP wall-clock timestamp for the recorder's monotonic video clock. Use the PNG's actual dimensions for crop and encode; do not assume the screencast image is at the page's device-pixel ratio.
+- Stop deactivates the producer, stops screencasting and deregisters its callback before taking the existing final screenshot at `vt_end`. Give that final screenshot the screencast's CSS-pixel resolution (clip scale = inverse of the live page DPR), so encode-time framing sees consistent coordinates across event and final frames. Page close tears down the listener and producer while the session is still alive. A stale callback must not write to removed frame directories or a new recorder. Start failure must leave no page recorder/listener/temp frames. Keep Chromote's listener registration/auto-Page.enable and deregistration/auto-Page.disable behavior in view; verify page functions continue to work after stop.
+- Screencast is repaint-driven, not an fps guarantee. Idle intervals produce no new PNGs; resampling repeats the latest frame. Long-running plain R without a child-loop pump may miss intermediate animation frames. Retain the existing final screenshot so an immediate stop and last-frame hold reflect the final state. Document these differences.
+- On resume, and after a successful outermost device-metrics hold, a screencast recording needs one current-state screenshot: frames painted while paused/held were intentionally discarded and an idle page will not repaint again. The user explicitly approved this narrow change to the protected device-metrics window after roborev 1324. Reuse `record_capture()` at CSS-pixel scale and its existing single `pending` slot; acknowledge but do not ingest screencast events while a screenshot is pending. Wait for a prior capture to settle before issuing the resume snapshot. No timer, queue, second flag, or buffered image state. Do not capture on a failed device change, in a nested hold, or while paused. Add static-page red tests before changing code.
+
+## Gates and ownership
+
+- Baseline before work: `.agents/chrome-lock.sh btw pkg test -f record --reporter minimal`: FAIL 0, WARN 0, SKIP 0, PASS 671. Disposable real-Chrome spikes recorded on kata tef8 proved event acknowledgement and reuse of the existing frame store/encoder for cropped MP4 and GIF; they did not exercise package lifecycle.
+- Red-first tests in `tests/testthat/test-record.R` (and existing fixture/helper as needed), then production in `R/record.R`; regenerate `man/pz_record_start.Rd` via `btw pkg document`. Target method-independent contract tests for stop, pause, restart, close, framing, scaling, and formats; run `record|device|stage|cursor|nav` where changed behavior crosses modules, under `.agents/chrome-lock.sh`. Check `air format --check .` and `jarl check .`.
+- One adversarial read-only subsystem review after tests, then one manual roborev review of the coherent committed unit; address findings against the spec. Do not merge this branch to main.
+
+## Resolution contract (user-approved)
+
+A real-Chrome experiment at viewport 640×480, DPR 2 produced 640×480 screencast PNGs with metadata `deviceWidth=640`, `deviceHeight=480`, `pageScaleFactor=1`; `maxWidth/maxHeight` at 1280×960 and 2560×1920 had no effect. The poll method produces 1280×960 PNGs, and its framed #box MP4 is 200×120; a screencast-only prototype produced a 100×60 crop. The page DPR remains 2. The user approved documenting this method-specific lower resolution rather than upscaling or changing CSS zoom/device emulation. Amend the roxygen description that presently claims all frames are captured at the current DPR; test screencast's native PNG size and crop behavior instead of imposing poll parity. Do not touch emulation init/restore.
+
+## Escalation
+
+Stop and consult before introducing timers, queues, another ordering flag, guards for guards, display-shaped state, or modifying the init/restore window. If event delivery needs any of those, reevaluate the approach rather than patching around it.
+
+## Handoff
+
+- 2026-09-28 (implementation): red-first tests proved unsupported method fails (FAIL 2/WARN 0/SKIP 0/PASS 664). A second red test exposed mixed final-frame sizes at DPR 2 (FAIL 1/WARN 0/SKIP 0/PASS 702); Chrome clip.scale=0.5 produced a matching 640×480 PNG with correct CSS-box color. The producer now feeds the existing frame store, and the final screenshot uses inverse page DPR for screencast only.
+
+- 2026-09-28 (review fix): both static-page regressions failed on the committed code (FAIL 2/WARN 0/SKIP 0/PASS 734), timing out after resumed/held paints were dropped. The existing `pending` slot now prevents an event from retiring the one-time screenshot; a resume waits for an earlier capture, and a successful outermost metrics hold captures after restoration, while failed changes and pauses do not. Focused record tests green (FAIL 0/WARN 0/SKIP 0/PASS 722 after adding the failed-hold assertion); record/device/stage/cursor/nav green (FAIL 0/WARN 0/SKIP 0/PASS 1460). `air format --check .` and `jarl check .` pass. Next: commit fix, close roborev 1324, close tef8 with evidence. Shared framed-resize crop remains in backlog 62g5.

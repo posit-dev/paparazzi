@@ -1198,6 +1198,448 @@ test_that("keep_frames keeps the captured PNGs", {
   expect_false(dir.exists(frames_dir2))
 })
 
+test_that("screencast records real Chrome PNG events and acknowledges later frames", {
+  page <- local_record_page()
+  skip_if_no_av()
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
+  expect_invisible(pz_record_start(
+    page,
+    out,
+    method = "screencast",
+    fps = 10,
+    hold = c(0, 0),
+    keep_frames = TRUE
+  ))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_wait(page, 0.3)
+  before <- length(rec$files)
+  # A fresh paint must arrive even after the initial event has been acked.
+  pz_js(page, "document.getElementById('box').style.background = 'red'")
+  pz_wait(page, 0.35)
+  expect_gte(before, 1L)
+  expect_gt(length(rec$files), before)
+  expect_equal(rec$ticks, 0L) # events, not the poll capture chain
+  expect_equal(rec$n_errors, 0L)
+  page |> pz_record_stop()
+
+  expect_true(file.exists(out))
+  expect_gte(recorded_video_info(out)$frames, 1L)
+  files <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
+  expect_gte(length(files), 2L)
+  for (file in files) {
+    expect_identical(
+      readBin(file, "raw", n = 8),
+      as.raw(c(137, 80, 78, 71, 13, 10, 26, 10))
+    )
+  }
+})
+
+test_that("screencast holds the last frame on an idle page", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><div style="background:teal">Still</div>',
+    fileext = ".html"
+  )
+  page <- local_page(html)
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, method = "screencast", hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_wait(page, 0.4)
+  expect_gte(length(rec$files), 1L)
+  before <- length(rec$files)
+  pz_wait(page, 0.4)
+  expect_length(rec$files, before)
+  pz_record_stop(page)
+  expect_true(file.exists(out))
+})
+
+test_that("screencast immediate stop captures the final page state", {
+  page <- local_page(
+    record_fixture_file(),
+    width = 640,
+    height = 480,
+    scale = 2
+  )
+  skip_if_no_av()
+  testthat::skip_if_not_installed("png")
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
+  pz_record_start(
+    page,
+    out,
+    method = "screencast",
+    fps = 10,
+    hold = c(0, 0),
+    keep_frames = TRUE
+  )
+  defer_record_stop(page)
+  pz_js(page, "document.getElementById('box').style.background = 'red'")
+  pz_record_stop(page)
+
+  files <- sort(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE))
+  expect_gte(length(files), 1L)
+  if (length(files)) {
+    expect_equal(png_dimensions(tail(files, 1)), c(640L, 480L))
+    img <- png::readPNG(tail(files, 1))
+    expect_equal(
+      unname(img[51, 91, 1:3]),
+      c(1, 0, 0),
+      tolerance = 0.05
+    )
+  }
+  expect_true(file.exists(out))
+})
+
+test_that("screencast cuts paused paints and resumes event delivery", {
+  page <- local_record_page()
+  skip_if_no_av()
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(
+    page,
+    out,
+    method = "screencast",
+    fps = 10,
+    hold = c(0.2, 0.3)
+  )
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_wait(page, 0.35) # the fixture repaints its ticker every 100ms
+  expect_gte(length(rec$files), 2L)
+
+  pz_record_pause(page)
+  before <- length(rec$files)
+  pz_wait(page, 0.4)
+  expect_length(rec$files, before)
+  pz_record_resume(page)
+  pz_wait(page, 0.35)
+  expect_gt(length(rec$files), before)
+  expect_equal(rec$n_errors, 0L)
+  pz_record_hold(page, 0.2)
+  pz_record_stop(page)
+  expect_true(file.exists(out))
+  expect_gte(recorded_video_info(out)$duration, 1.0)
+  expect_lt(recorded_video_info(out)$duration, 2.0)
+})
+
+test_that("resume captures a paused change on an idle page", {
+  skip_if_no_av()
+  testthat::skip_if_not_installed("png")
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}#box{position:absolute;left:20px;top:20px;width:100px;height:60px;background:teal}</style><div id="box"></div>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(
+    page,
+    out,
+    method = "screencast",
+    hold = c(0, 0),
+    keep_frames = TRUE
+  )
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  defer_record_stop(page)
+  pz_poll(
+    function() length(rec$files) > 0,
+    timeout = 3,
+    loop = page$page$child_loop,
+    what = "the first screencast frame"
+  )
+
+  pz_record_pause(page)
+  before <- length(rec$files)
+  pz_js(page, "document.getElementById('box').style.background = 'red'")
+  pz_wait(page, 0.25)
+  expect_length(rec$files, before)
+  pz_record_resume(page)
+  pz_poll(
+    function() length(rec$files) > before && is.null(rec$pending),
+    timeout = 1,
+    loop = page$page$child_loop,
+    what = "the resumed page state"
+  )
+  expect_equal(png_dimensions(tail(rec$files, 1)), c(640L, 480L))
+  expect_equal(
+    unname(png::readPNG(tail(rec$files, 1))[31, 31, 1:3]),
+    c(1, 0, 0)
+  )
+  pz_record_stop(page)
+})
+
+test_that("a device change captures the new state after held paints", {
+  skip_if_no_av()
+  testthat::skip_if_not_installed("png")
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}#box{position:absolute;left:20px;top:20px;width:100px;height:60px;background:teal}</style><div id="box"></div>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(
+    page,
+    out,
+    method = "screencast",
+    hold = c(0, 0),
+    keep_frames = TRUE
+  )
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  defer_record_stop(page)
+  pz_poll(
+    function() length(rec$files) > 0,
+    timeout = 3,
+    loop = page$page$child_loop,
+    what = "the first screencast frame"
+  )
+
+  before <- length(rec$files)
+  record_hold(page$page, {
+    pz_device(page, width = 800, height = 600)
+    pz_js(page, "document.getElementById('box').style.background = 'red'")
+    pz_wait(page, 0.25)
+    expect_length(rec$files, before)
+  })
+  pz_poll(
+    function() length(rec$files) > before && is.null(rec$pending),
+    timeout = 1,
+    loop = page$page$child_loop,
+    what = "the held page state"
+  )
+  expect_equal(png_dimensions(tail(rec$files, 1)), c(800L, 600L))
+  expect_equal(
+    unname(png::readPNG(tail(rec$files, 1))[31, 31, 1:3]),
+    c(1, 0, 0)
+  )
+  expect_equal(pz_js(page, "window.innerWidth"), 800)
+  before_error <- length(rec$files)
+  expect_error(
+    record_hold(page$page, stop("failed override")),
+    "failed override"
+  )
+  expect_false(rec$held)
+  expect_length(rec$files, before_error)
+  pz_record_stop(page)
+})
+
+test_that("screencast uses CSS-size frames and crops at their actual resolution", {
+  page <- local_page(
+    record_fixture_file(),
+    width = 640,
+    height = 480,
+    scale = 2
+  )
+  skip_if_no_av()
+  expect_equal(page_dpr(page), 2)
+
+  capture <- function(method) {
+    out <- withr::local_tempfile(fileext = ".mp4")
+    frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+    withr::defer(unlink(frames_dir, recursive = TRUE))
+    pz_record_start(
+      page,
+      out,
+      method = method,
+      fps = 10,
+      hold = c(0, 0),
+      frame = pz_frame("#box"),
+      keep_frames = TRUE
+    )
+    defer_record_stop(page)
+    pz_wait(page, 0.4)
+    rec <- page_recorder(page)
+    # The PNG dimensions, not the page's DPR, determine the crop scale.
+    event_files <- rec$files
+    expect_gte(length(event_files), 1L)
+    event_sizes <- lapply(event_files, png_dimensions)
+    pz_record_stop(page)
+    files <- sort(list.files(
+      frames_dir,
+      pattern = "[.]png$",
+      full.names = TRUE
+    ))
+    list(
+      event_sizes = event_sizes,
+      final_size = png_dimensions(tail(files, 1)),
+      video = recorded_video_info(out)
+    )
+  }
+
+  poll <- capture("poll")
+  screencast <- capture("screencast")
+  expect_true(all(vapply(
+    poll$event_sizes,
+    identical,
+    logical(1),
+    c(1280L, 960L)
+  )))
+  expect_true(all(vapply(
+    screencast$event_sizes,
+    identical,
+    logical(1),
+    c(640L, 480L)
+  )))
+  expect_equal(poll$final_size, c(1280L, 960L))
+  expect_equal(screencast$final_size, c(640L, 480L))
+  expect_equal(c(poll$video$width, poll$video$height), c(200, 120))
+  expect_equal(c(screencast$video$width, screencast$video$height), c(100, 60))
+})
+
+test_that("screencast encodes framed, scaled webm and gif outputs", {
+  page <- local_record_page()
+  skip_if_no_av()
+  testthat::skip_if_not_installed("gifski")
+  testthat::skip_if_not_installed("png")
+
+  for (ext in c("webm", "gif")) {
+    out <- withr::local_tempfile(fileext = paste0(".", ext))
+    pz_record_start(
+      page,
+      out,
+      method = "screencast",
+      fps = 10,
+      hold = c(0, 0),
+      frame = pz_frame("#box"),
+      scale = 0.5
+    )
+    defer_record_stop(page)
+    pz_wait(page, 0.3)
+    pz_record_stop(page)
+    info <- recorded_video_info(out)
+    expect_true(file.exists(out))
+    expect_equal(c(info$width, info$height), c(50, 30))
+    if (ext == "webm") {
+      expect_equal(info$framerate, 10)
+    } else {
+      expect_equal(info$codec, "gif")
+      expect_gt(info$duration, 0)
+    }
+  }
+})
+
+test_that("screencast stops cleanly and can restart on the same page", {
+  page <- local_record_page()
+  skip_if_no_av()
+
+  first <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, first, method = "screencast", hold = c(0, 0))
+  defer_record_stop(page)
+  old <- page_recorder(page)
+  pz_wait(page, 0.2)
+  pz_record_stop(page)
+  expect_null(old$deregister_screencast)
+  expect_false(dir.exists(old$frames_dir))
+  expect_equal(pz_js(page, "document.readyState"), "complete")
+
+  second <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, second, method = "screencast", hold = c(0, 0))
+  defer_record_stop(page)
+  current <- page_recorder(page)
+  before <- length(current$files)
+  record_screencast_frame(page$page, old, list(sessionId = 1L))
+  expect_length(current$files, before)
+  pz_wait(page, 0.3)
+  expect_gte(length(current$files), 1L)
+  pz_record_stop(page)
+  expect_true(file.exists(second))
+  expect_equal(current$n_errors, 0L)
+})
+
+test_that("closing a screencast page releases its listener and frames", {
+  page <- local_record_page()
+  skip_if_no_av()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, method = "screencast")
+  rec <- page_recorder(page)
+  pz_close(page)
+
+  expect_null(page_recorder(page))
+  expect_false(rec$active)
+  expect_null(rec$deregister_screencast)
+  expect_false(dir.exists(rec$frames_dir))
+})
+
+test_that("screencast follows a viewport resize without losing recording", {
+  page <- local_page(
+    record_fixture_file(),
+    width = 640,
+    height = 480,
+    scale = 2
+  )
+  skip_if_no_av()
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(
+    page,
+    out,
+    method = "screencast",
+    fps = 10,
+    hold = c(0, 0),
+    keep_frames = TRUE
+  )
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  defer_record_stop(page)
+  pz_poll(
+    function() length(rec$files) > 0,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "the initial screencast frame"
+  )
+  expect_equal(png_dimensions(rec$files[[1]]), c(640L, 480L))
+
+  pz_device(page, width = 800, height = 600)
+  pz_poll(
+    function() {
+      length(rec$files) > 1 &&
+        identical(png_dimensions(tail(rec$files, 1)), c(800L, 600L))
+    },
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a screencast frame at the resized viewport"
+  )
+  pz_record_stop(page)
+  expect_equal(png_dimensions(tail(rec$files, 1)), c(800L, 600L))
+  expect_true(file.exists(out))
+})
+
+test_that("a failed screencast start leaves the page free to record", {
+  page <- local_record_page()
+  skip_if_no_av()
+  session <- page$page$session
+  domain <- session$Page
+  started <- NULL
+  wrapped <- domain
+  wrapped$startScreencast <- function(...) {
+    started <<- page_recorder(page)
+    stop("start failed")
+  }
+  session$Page <- wrapped
+  withr::defer(session$Page <- domain)
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  expect_error(
+    pz_record_start(page, out, method = "screencast"),
+    "start failed"
+  )
+  expect_null(page_recorder(page))
+  expect_null(started$deregister_screencast)
+  expect_false(dir.exists(started$frames_dir))
+  session$Page <- domain
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+  pz_record_stop(page)
+  expect_true(file.exists(out))
+})
+
 test_that("recording input and lifecycle errors are classed", {
   page <- local_record_page()
   skip_if_no_av()
@@ -1206,14 +1648,6 @@ test_that("recording input and lifecycle errors are classed", {
   expect_error(
     pz_record_start(page, withr::local_tempfile(fileext = ".mov")),
     class = "paparazzi_error_input"
-  )
-  expect_error(
-    pz_record_start(
-      page,
-      withr::local_tempfile(fileext = ".mp4"),
-      method = "screencast"
-    ),
-    class = "paparazzi_error_unsupported"
   )
   expect_error(
     pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = 1),
