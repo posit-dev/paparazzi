@@ -6,6 +6,8 @@
 \alias{paparazzi-package}
 \title{paparazzi: Pipeable Browser Automation with 'chromote'}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 Drive web pages from R with a pipeable interface built on 'chromote'. Find and interact with DOM elements, set input values, wait for page state, and assert on content and element state. Capture screenshots and record interactions as videos or GIFs, with optional cursor and typing animations for demos. Works with any page, including Shiny apps.
 }
 \seealso{

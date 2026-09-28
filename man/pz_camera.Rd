@@ -29,7 +29,8 @@ based on the pan and zoom distance.}
 }
 \description{
 Moves an encode-time camera over a recording. The target is an element,
-locator, or list of targets; without a target, the current scope is used.
-The camera does not change the live page or still screenshots. Outside a
-recording it does nothing.
+locator, or list of targets; without a target, the current scope is used
+(at the root, a target is required). The camera does not change the live
+page or still screenshots. Outside a recording it does nothing, and each
+\code{\link[=pz_record_start]{pz_record_start()}} begins at the recording frame.
 }

@@ -49,9 +49,11 @@ test_that("camera calls are no-ops outside recording and reset with the recorder
   skip_if_no_av()
   page <- local_record_page()
   expect_identical(
-    withVisible(pz_camera(page, "#missing", zoom = -1))$value,
+    withVisible(pz_camera(page, "#missing", zoom = 2))$value,
     page
   )
+  expect_error(pz_camera(page, "#missing", zoom = -1), "zoom")
+  expect_error(pz_camera(page), "target")
   expect_identical(withVisible(pz_camera_reset(page))$value, page)
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, out, hold = c(0, 0))

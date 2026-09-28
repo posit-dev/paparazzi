@@ -1,9 +1,10 @@
 #' Move the recording camera
 #'
 #' Moves an encode-time camera over a recording. The target is an element,
-#' locator, or list of targets; without a target, the current scope is used.
-#' The camera does not change the live page or still screenshots. Outside a
-#' recording it does nothing.
+#' locator, or list of targets; without a target, the current scope is used
+#' (at the root, a target is required). The camera does not change the live
+#' page or still screenshots. Outside a recording it does nothing, and each
+#' [pz_record_start()] begins at the recording frame.
 #'
 #' @inheritParams pz_click
 #' @param zoom Magnification relative to the recording frame. `NULL` fits
@@ -23,10 +24,6 @@ pz_camera <- function(
   duration = NULL
 ) {
   check_context(ctx)
-  rec <- page_recorder(ctx$page)
-  if (is.null(rec) || !rec$active) {
-    return(invisible(ctx))
-  }
   check_dots_empty()
   check_number_decimal(zoom, min = 0, allow_null = TRUE)
   if (!is.null(zoom) && zoom == 0) {
@@ -36,6 +33,10 @@ pz_camera <- function(
   pad <- check_pad(if (is.null(pad)) 24 else pad)
   if (is.null(target) && is.null(scope_root(ctx))) {
     cli::cli_abort("Supply a {.arg target} or use a scoped context.")
+  }
+  rec <- page_recorder(ctx$page)
+  if (is.null(rec) || !rec$active) {
+    return(invisible(ctx))
   }
   box <- frame_content_box(ctx, target, new_frame_spec())
   box <- box + c(-pad[4], -pad[1], pad[2], pad[3])
