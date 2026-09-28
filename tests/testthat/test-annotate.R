@@ -90,6 +90,12 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
     as.numeric(before[[3]]$rect[[2]]),
     tolerance = 2
   )
+  pz_js(page, "document.getElementById('inner').style.display = 'none'")
+  pump_loop(page$child_loop, 0.07)
+  expect_false(annotation_state(page)[[2]]$visible)
+  pz_js(page, "document.getElementById('inner').style.display = ''")
+  pump_loop(page$child_loop, 0.07)
+  expect_true(annotation_state(page)[[2]]$visible)
   pz_js(page, "document.getElementById('box').remove()")
   pump_loop(page$child_loop, 0.07)
   expect_false(annotation_state(page)[[1]]$visible)

@@ -224,7 +224,7 @@ annotate_boot_js <- r"(function() {
     for (const entry of entries.values()) {
       entry.elements.forEach((el, i) => {
         const box = entry.nodes[i];
-        if (!el.isConnected) { box.style.display = 'none'; return; }
+        if (!el.isConnected || !el.getClientRects().length) { box.style.display = 'none'; return; }
         const r = el.getBoundingClientRect();
         const p = entry.pad;
         box.style.display = '';
