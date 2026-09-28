@@ -357,3 +357,132 @@ test_that("the press animation scales the cursor down", {
   expect_true(pressed$height < unpressed$height * 0.9)
   expect_true(pressed$height > unpressed$height * 0.6)
 })
+
+test_that("all CSS cursor presets validate and select their own layer", {
+  page <- local_cursor_page()
+  keywords <- names(CURSOR_ART)
+  for (keyword in keywords) {
+    page |> pz_cursor_move("#plain", icon = keyword)
+    expect_identical(attr(cursor_overlay_state(page), "icon"), keyword)
+    expect_identical(page_cursor(page)$icon, keyword)
+    expect_equal(
+      pz_js(
+        page,
+        "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').length"
+      ),
+      1
+    )
+  }
+  for (fn in list(
+    function(icon) pz_cursor_show(page, "#btn", icon = icon),
+    function(icon) pz_cursor_move(page, "#btn", icon = icon),
+    function(icon) pz_cursor_leave(page, icon = icon)
+  )) {
+    expect_error(fn("move"), "default.*pointer", class = "rlang_error")
+    expect_error(fn("hand"), class = "rlang_error")
+    expect_error(fn(1), class = "rlang_error")
+    expect_no_error(fn(NULL))
+  }
+  expect_error(pz_cursor_hide(page, icon = "pointer"), class = "rlang_error")
+})
+
+test_that("automatic icons follow computed CSS at the landing point", {
+  page <- local_cursor_page()
+  for (case in list(
+    c("#btn", "pointer"),
+    c("#name", "text"),
+    c("#unsupported", "default"),
+    c("#url-fallback", "pointer"),
+    c("#url-bare", "default"),
+    c("#inherit-pointer span", "pointer"),
+    c("#plain", "default")
+  )) {
+    page |> pz_cursor_move(case[[1]])
+    expect_identical(attr(cursor_overlay_state(page), "icon"), case[[2]])
+  }
+})
+
+test_that("explicit icons hold for one call; later automatic calls infer again", {
+  page <- local_cursor_page()
+  page |> pz_cursor_show("#btn", icon = "crosshair")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "crosshair")
+  page |> pz_cursor_move("#plain", icon = "grabbing")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "grabbing")
+  page |> pz_cursor_move("#btn")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
+  page |> pz_cursor_leave("left", icon = "not-allowed")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "not-allowed")
+  page |> pz_cursor_show("#plain")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "default")
+})
+
+test_that("off-frame entries start with default and explicit icons can replace it", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(enter = "left")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  # At the beginning of the glide the default icon remains visible;
+  # after the landing the inferred pointer is the visible icon.
+  page |> pz_cursor_move("#btn")
+  expect_identical(page_cursor(page)$icon, "pointer")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
+  page |> pz_cursor_leave("left", icon = "grab")
+  expect_identical(page_cursor(page)$icon, "grab")
+  page |> pz_cursor_move("#plain", duration = 0.5)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "default")
+  page |> pz_cursor_move("#btn", icon = "text", duration = 0.5)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "text")
+  page |> pz_record_stop()
+  expect_true(file.exists(out))
+})
+
+test_that("a static still uses its inferred landing icon without a fade", {
+  page <- local_cursor_page()
+  shot <- withr::local_tempfile(fileext = ".png")
+  page |> pz_cursor_move("#name") |> pz_screenshot(shot)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "text")
+  expect_equal(cursor_overlay_state(page)[[1]], 1)
+  ink <- cursor_png_ink(page, shot, band = c(50, 100), x_range = c(100, 310))
+  expect_gt(ink$count, 10)
+})
+
+test_that("explicit icon survives navigation and recorded press", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_cursor_move("#btn", icon = "crosshair")
+  pz_chromote(page)$Page$reload()
+  pz_wait(page, 1)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "crosshair")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  page |> pz_cursor_move("#plain", icon = "not-allowed", duration = 0.5)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "not-allowed")
+  cursor_press(page, TRUE)
+  expect_equal(cursor_overlay_scale(page), 1.4)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "not-allowed")
+  cursor_press(page, FALSE)
+  page |> pz_record_stop()
+})
+
+test_that("non-default artwork stays aligned under CSS zoom and DPR", {
+  page <- local_page(cursor_fixture_file(), scale = 2)
+  pz_js(page, "document.documentElement.style.zoom = '1.5'")
+  page |> pz_cursor_move("#btn", icon = "crosshair")
+  center <- unlist(pz_js(
+    page,
+    "(() => { const r = document.querySelector('#btn').getBoundingClientRect(); return [r.x + r.width/2, r.y + r.height/2] })()"
+  ))
+  expect_equal(cursor_overlay_state(page)[2:3], center)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "crosshair")
+  shot <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(shot)
+  ink <- cursor_png_ink(
+    page,
+    shot,
+    band = center[[2]] + c(-18, 20),
+    x_range = center[[1]] + c(-18, 20)
+  )
+  expect_gt(ink$count, 10)
+  expect_lt(abs(ink$x - center[[1]]), 12)
+})
