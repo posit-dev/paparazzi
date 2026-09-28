@@ -360,7 +360,22 @@ test_that("the press animation scales the cursor down", {
 
 test_that("all CSS cursor presets validate and select their own layer", {
   page <- local_cursor_page()
-  keywords <- names(CURSOR_ART)
+  keywords <- c(
+    "default",
+    "pointer",
+    "text",
+    "not-allowed",
+    "crosshair",
+    "grab",
+    "grabbing",
+    "ew-resize",
+    "ns-resize",
+    "nesw-resize",
+    "nwse-resize",
+    "row-resize",
+    "col-resize"
+  )
+  expect_setequal(names(CURSOR_ART), keywords)
   for (keyword in keywords) {
     page |> pz_cursor_move("#plain", icon = keyword)
     expect_identical(attr(cursor_overlay_state(page), "icon"), keyword)

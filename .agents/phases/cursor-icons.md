@@ -127,7 +127,7 @@ offset). Each lands as its own unit on main with one roborev review.
 - 2026-09-28 (2vqb): landed the per-call `icon` API, 13-keyword SVG
   registry with visibility selection, landing-point CSS inference and URL
   fallback, persistent last-visible state for navigation, help pages and
-  cursor tests; focused cursor|stage 295 PASS, full suite 3008 PASS, both
+  cursor tests; focused cursor|stage 296 PASS, full suite 3008 PASS, both
   0 FAIL/WARN; changed-file air and jarl clean.
   Next: k6vz moves the automatic visibility flip from the landing edge
   to destination entry along the glide; 9a2n adds landing offsets.
