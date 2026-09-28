@@ -152,7 +152,12 @@ pz_cursor_hide <- function(ctx, ...) {
 pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
   check_context(ctx)
   check_dots_empty()
-  check_number_decimal(duration, min = 0, allow_null = TRUE)
+  check_number_decimal(
+    duration,
+    min = 0,
+    allow_null = TRUE,
+    allow_infinite = FALSE
+  )
   check_cursor_enabled(ctx)
   cur <- page_cursor(ctx$page)
   cur$visibility <- "shown"

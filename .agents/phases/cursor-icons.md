@@ -91,6 +91,9 @@ offset). Each lands as its own unit on main with one roborev review.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-28 (rny6): landed finite-duration validation and regression coverage in `pz_cursor_move()`.
+  Next: df7d pointer artwork, then 2vqb as the icon API keystone.
+  Provisional: repo-wide style checks still flag unrelated existing files; the approved scope excludes them.
 - 2026-09-28 (start): landed only this mechanism note; no package code
   yet. Next: rny6 + df7d in parallel worktrees, then 2vqb as the
   keystone, k6vz, 9a2n. Provisional: zw7w deferred to a later session;

@@ -64,6 +64,19 @@ test_that("corner directions enter and leave past both frame edges", {
   expect_identical(page_stage(page)$enter, c("left", "top"))
 })
 
+test_that("pz_cursor_move rejects infinite durations", {
+  page <- local_cursor_page()
+
+  expect_error(
+    pz_cursor_move(page, "#btn", duration = Inf),
+    class = "rlang_error"
+  )
+
+  expect_no_error(pz_cursor_move(page, "#btn", duration = 0))
+  expect_no_error(pz_cursor_move(page, "#btn", duration = NULL))
+  expect_no_error(pz_cursor_move(page, "#btn", duration = 0.1))
+})
+
 test_that("cursor function and stage validation is classed", {
   page <- local_cursor_page()
 
@@ -138,11 +151,12 @@ test_that("cursor_scale changes ink size and NULL restores the default", {
 test_that("changing cursor_scale redraws a visible recording cursor", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_record_start(
-    withr::local_tempfile(fileext = ".mp4"),
-    fps = 10,
-    hold = c(0, 0)
-  )
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
   page |> pz_cursor_move("#btn")
   page |> pz_stage(cursor_scale = 1)
   expect_equal(cursor_overlay_scale(page), 1)
