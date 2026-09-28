@@ -87,6 +87,39 @@ offset). Each lands as its own unit on main with one roborev review.
   point per k6vz. SPEC amendment in this unit: `pz_cursor_move()`
   signature gains `offset`, with the sign convention documented.
 
+## 2vqb implementation decisions
+
+- Keyword to artwork: `default` uses the existing arrow; `pointer` uses
+  df7d's pointing hand; `text` uses an I-beam; `not-allowed` uses a barred
+  circle; `crosshair` uses a symmetric cross; `grab` uses an open hand and
+  `grabbing` a closed fist. `ew-resize` uses a horizontal double arrow;
+  `ns-resize` rotates that arrow 90 degrees; `row-resize` uses the
+  vertical double arrow and `col-resize` the horizontal one (CSS row
+  boundaries move vertically, column boundaries horizontally).
+  `nwse-resize` uses a diagonal double arrow, mirrored horizontally for
+  `nesw-resize`. Each keyword has its own SVG (shared path geometry is
+  rotated/mirrored in its own SVG), so visibility can be independently
+  animated later.
+- Hotspots in 24x24 SVG coordinates: default (4, 2), pointer (2, 2),
+  and every other icon (12, 12). The default and pointer retain their
+  existing unshifted 20px SVG box and `.pz-inner` press transform origin
+  (4px, 2px); centered icons shift their SVG box by (-6px, -8px), so
+  their 20px-box center meets that origin even when scaled or pressed.
+- Classes are `.pz-icon` plus `.pz-icon-<CSS keyword>` (including
+  hyphens), one inline SVG per keyword stacked in `.pz-inner` with
+  absolute positioning and `visibility: hidden|visible`, never display
+  switching. Boot JS receives the R keyword-to-artwork registry as a
+  JSON object alongside each state; it uses its keys to validate
+  computed CSS cursor inference, keeping supported names in one R table.
+- R page cursor state carries `cur$icon`, the last **visible keyword**
+  (initially `default`). The caller supplies an optional per-call icon;
+  JS resolves automatic landings at `elementFromPoint`, returns the
+  resolved keyword to R, and R stores it in `cur$icon`. Press/hide,
+  scale redraws and the baked new-document script use that stored icon,
+  not fresh inference; an explicit icon affects only its call and leaves
+  the visible keyword for the next move's starting frame. An initial
+  off-frame entrance starts with `default` unless explicitly overridden.
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
