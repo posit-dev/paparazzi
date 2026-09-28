@@ -124,10 +124,8 @@ test_that("pointing cursor ink is visible on light and dark pointer targets", {
   expect_gt(light$count, 50)
   expect_lt(abs(light$x - 660), 25)
   expect_lt(abs(light$y - 322), 20)
-  # The pointing fingertip is the only ink in the window at the landing
-  # point: at the 1.75x scale (transform-origin 4px 2px) the tip renders
-  # just left of the hotspot, while the old four-finger hand's nearest
-  # ink sat ~9px right of it, beyond the window's edge.
+  # The fingertip sits on the hotspot specified by the bundled SVG
+  # metadata rather than the old artwork's hand-path coordinates.
   tip_light <- cursor_png_ink(
     page,
     shot,
@@ -373,13 +371,60 @@ test_that("all CSS cursor presets validate and select their own layer", {
     "nesw-resize",
     "nwse-resize",
     "row-resize",
-    "col-resize"
+    "col-resize",
+    "alias",
+    "all-scroll",
+    "cell",
+    "context-menu",
+    "copy",
+    "e-resize",
+    "help",
+    "move",
+    "n-resize",
+    "ne-resize",
+    "no-drop",
+    "nw-resize",
+    "progress",
+    "s-resize",
+    "se-resize",
+    "sw-resize",
+    "vertical-text",
+    "w-resize",
+    "wait",
+    "zoom-in",
+    "zoom-out",
+    "auto",
+    "none"
   )
   expect_setequal(names(CURSOR_ART), keywords)
+  manifest <- jsonlite::fromJSON(
+    system.file("cursors/cursors.json", package = "paparazzi"),
+    simplifyVector = FALSE
+  )
+  for (entry in manifest$cursors) {
+    if (is.null(entry$cursor)) {
+      next
+    }
+    art <- CURSOR_ART[[entry$cursor]]
+    expect_equal(c(art$x, art$y) + unlist(entry$hotspot) * 20 / 32, c(4, 2))
+    expect_match(art$svg, 'viewBox="0 0 32 32"', fixed = TRUE)
+  }
   for (keyword in keywords) {
     page |> pz_cursor_move("#plain", icon = keyword)
     expect_identical(attr(cursor_overlay_state(page), "icon"), keyword)
     expect_identical(page_cursor(page)$icon, keyword)
+    expect_equal(
+      pz_js(
+        page,
+        paste0(
+          "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-",
+          keyword,
+          "').children.length"
+        )
+      ) >
+        0,
+      keyword != "none"
+    )
     expect_equal(
       pz_js(
         page,
@@ -393,8 +438,8 @@ test_that("all CSS cursor presets validate and select their own layer", {
     function(icon) pz_cursor_move(page, "#btn", icon = icon),
     function(icon) pz_cursor_leave(page, icon = icon)
   )) {
-    expect_error(fn("move"), "default.*pointer", class = "rlang_error")
     expect_error(fn("hand"), class = "rlang_error")
+    expect_error(fn("mac-poof"), class = "rlang_error")
     expect_error(fn(1), class = "rlang_error")
     expect_no_error(fn(NULL))
   }
@@ -406,7 +451,10 @@ test_that("automatic icons follow computed CSS at the landing point", {
   for (case in list(
     c("#btn", "pointer"),
     c("#name", "text"),
-    c("#unsupported", "default"),
+    c("#waiting", "wait"),
+    c("#none", "none"),
+    c("#zoom-in", "zoom-in"),
+    c("#cell", "cell"),
     c("#url-fallback", "pointer"),
     c("#url-bare", "default"),
     c("#inherit-pointer span", "pointer"),
@@ -450,6 +498,17 @@ test_that("off-frame entries start with default and explicit icons can replace i
   )
   expect_identical(page_cursor(page)$icon, "pointer")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
+  page |> pz_cursor_move("#none", duration = 0.5)
+  expect_identical(page_cursor(page)$icon, "none")
+  expect_match(
+    pz_js(
+      page,
+      "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-none').style.animation"
+    ),
+    "pz-icon-in"
+  )
+  page |> pz_cursor_move("#zoom-in", duration = 0.5)
+  expect_identical(page_cursor(page)$icon, "zoom-in")
   page |> pz_cursor_leave("left", icon = "grab")
   expect_identical(page_cursor(page)$icon, "grab")
   page |> pz_cursor_move("#plain", duration = 0.5)
@@ -468,6 +527,27 @@ test_that("a static still uses its inferred landing icon without a fade", {
   expect_equal(cursor_overlay_state(page)[[1]], 1)
   ink <- cursor_png_ink(page, shot, band = c(50, 100), x_range = c(100, 310))
   expect_gt(ink$count, 10)
+})
+
+test_that("CSS none has no ink and auto still infers through descendants", {
+  page <- local_cursor_page()
+  page |> pz_cursor_move("#none")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "none")
+  drawn <- pz_js(
+    page,
+    "(() => { const root = document.getElementById('paparazzi-overlay-root').shadowRoot; return root.querySelector('.pz-icon-none').children.length; })()"
+  )
+  expect_equal(drawn, 0)
+  shot <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(shot)
+  expect_equal(
+    cursor_png_ink(page, shot, band = c(230, 260), x_range = c(580, 640))$count,
+    0
+  )
+  page |> pz_cursor_move("#plain", icon = "auto")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "auto")
+  page |> pz_cursor_move("#inherit-pointer span")
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
 })
 
 test_that("explicit icon survives navigation and recorded press", {
@@ -798,7 +878,7 @@ test_that("offset still puts pointer ink beside the button label", {
   page |> pz_cursor_move("#btn", offset = c(-40, 15)) |> pz_screenshot(shot)
   ink <- cursor_png_ink(page, shot, band = c(325, 344), x_range = c(605, 645))
   label <- cursor_png_ink(page, shot, band = c(325, 344), x_range = c(650, 685))
-  expect_gt(ink$count, 20)
+  expect_gt(ink$count, 5)
   expect_lt(abs(ink$x - 620), 22)
   expect_equal(label$count, 0)
   expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")

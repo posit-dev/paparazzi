@@ -27,14 +27,15 @@
 #' @param icon CSS cursor keyword to show for this call. `NULL` (the
 #'   default) infers the icon at the actual landing point: the first
 #'   computed `cursor` other than `auto` on the element under the point
-#'   or an ancestor. Supported values: `default`, `pointer`, `text`,
-#'   `not-allowed`, `crosshair`, `grab`, `grabbing`, `ew-resize`,
-#'   `ns-resize`, `nesw-resize`, `nwse-resize`, `row-resize`, and
-#'   `col-resize`. An unsupported CSS keyword or bare `url()` uses
-#'   `default`; a `url()` with a supported keyword fallback uses that
-#'   keyword. An explicit icon lasts through this call's landing but
-#'   does not override the next call's automatic inference. The last
-#'   visible icon stays on the cursor until the next destination; the
+#'   or an ancestor. Every CSS cursor keyword is supported: for example,
+#'   `default`, `pointer`, `text`, `crosshair`, `wait`, `zoom-in`, and the
+#'   resize keywords. `none` hides the artwork without changing the
+#'   overlay's position; an explicit `auto` shows the default arrow.
+#'   A bare `url()` uses `default`; a `url()` with a supported keyword
+#'   fallback uses that keyword. Custom URL images are not drawn. An
+#'   explicit icon lasts through this call's landing but
+#'   does not override the next call's automatic inference. The selected
+#'   icon stays on the cursor until the next destination; the
 #'   first off-frame entrance starts with `default` unless overridden.
 #'   While recording, an automatic move keeps the icon already visible
 #'   until it enters the destination and switches there; an explicit
@@ -502,80 +503,34 @@ cursor_show_at <- function(
 }
 
 
-# Each keyword owns a layer, even where path geometry is shared: later
-# glide choreography can switch any pair by animating visibility.
-CURSOR_ART <- list(
-  default = list(
-    path = "M4 1 L4 19 L8.5 14.8 L11.5 21 L14 20 L11 13.5 L17.5 13.5 Z",
+# Each keyword needs its own layer so glide keyframes can animate visibility.
+CURSOR_ART <- local({
+  directory <- system.file("cursors", package = "paparazzi")
+  manifest <- jsonlite::fromJSON(
+    file.path(directory, "cursors.json"),
+    simplifyVector = FALSE
+  )
+  entries <- Filter(function(entry) !is.null(entry$cursor), manifest$cursors)
+  art <- lapply(entries, function(entry) {
+    svg <- paste(
+      readLines(file.path(directory, entry$file), warn = FALSE),
+      collapse = "\n"
+    )
+    list(
+      svg = svg,
+      x = 4 - entry$hotspot[[1]] * 20 / 32,
+      y = 2 - entry$hotspot[[2]] * 20 / 32
+    )
+  })
+  names(art) <- vapply(entries, `[[`, character(1), "cursor")
+  art$auto <- art$default
+  art$none <- list(
+    svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"></svg>',
     x = 0,
     y = 0
-  ),
-  pointer = list(
-    path = "M5 1.7 C4.1 1.3 3.1 1.8 2.7 2.8 L1.1 6.1 C0.6 7.2 1 8.3 2 9 L8.7 13.7 L7 15.4 C6.3 16.1 6.3 17.2 7 17.9 L10.5 21.2 C11.1 21.8 12 22 12.8 22 L16.6 22 C19.1 22 21 20 21 17.5 L21 12 C21 10.8 20.1 9.9 18.9 9.9 C18.1 9.9 17.4 10.4 17 11.1 L17 10.2 C17 9 16.1 8.1 14.9 8.1 C14.1 8.1 13.4 8.6 13 9.3 L13 9 C13 7.8 12.1 6.9 10.9 6.9 C10.2 6.9 9.5 7.3 9.1 7.9 L7.2 3 C6.9 2.2 6 1.7 5 1.7 Z",
-    x = 0,
-    y = 0,
-    stroke = 1
-  ),
-  text = list(
-    path = "M5 2 H19 V5 H14 V19 H19 V22 H5 V19 H10 V5 H5 Z",
-    x = -6,
-    y = -8
-  ),
-  `not-allowed` = list(
-    path = "M21 12 A9 9 0 1 1 3 12 A9 9 0 1 1 21 12 Z M5.7 5.7 L18.3 18.3",
-    x = -6,
-    y = -8
-  ),
-  crosshair = list(
-    path = "M10 2 H14 V10 H22 V14 H14 V22 H10 V14 H2 V10 H10 Z",
-    x = -6,
-    y = -8
-  ),
-  grab = list(
-    path = "M4 11 L4 7 Q4 5 6 5 Q8 5 8 7 L8 4 Q8 2 10 2 Q12 2 12 4 L12 3 Q12 1 14 1 Q16 1 16 3 L16 5 Q16 3 18 3 Q20 3 20 5 L20 14 Q20 21 14 22 L10 22 Q6 22 4 18 L2 14 Q1 12 2 11 Q3 10 4 11 Z",
-    x = -6,
-    y = -8
-  ),
-  grabbing = list(
-    path = "M3 11 Q2 9 4 8 L7 7 L7 5 Q7 3 9 3 Q11 3 11 5 L12 4 Q12 2 14 2 Q16 2 16 4 Q18 3 19 5 L21 12 Q22 15 19 19 Q17 22 13 22 L9 22 Q5 22 3 18 Z",
-    x = -6,
-    y = -8
-  ),
-  `ew-resize` = list(
-    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
-    x = -6,
-    y = -8
-  ),
-  `ns-resize` = list(
-    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
-    x = -6,
-    y = -8,
-    transform = "rotate(90 12 12)"
-  ),
-  `nesw-resize` = list(
-    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
-    x = -6,
-    y = -8,
-    transform = "rotate(-45 12 12)"
-  ),
-  `nwse-resize` = list(
-    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
-    x = -6,
-    y = -8,
-    transform = "rotate(45 12 12)"
-  ),
-  `row-resize` = list(
-    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
-    x = -6,
-    y = -8,
-    transform = "rotate(90 12 12)"
-  ),
-  `col-resize` = list(
-    path = "M2 12 L9 5 V9 H15 V5 L22 12 L15 19 V15 H9 V19 Z",
-    x = -6,
-    y = -8
   )
-)
+  art
+})
 
 cursor_check_icon <- function(icon) {
   if (is.null(icon)) {
@@ -729,21 +684,12 @@ cursor_command_js <- r"(function(state) {
     layer.innerHTML = '<div class="pz-glide" style="pointer-events:none;"><div class="pz-inner" style="pointer-events:none;opacity:0;transform-origin:4px 2px;position:relative;width:20px;height:20px;"></div></div>';
     const inner = layer.querySelector('.pz-inner');
     for (const [keyword, art] of Object.entries(state.icons)) {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      inner.insertAdjacentHTML('beforeend', art.svg);
+      const svg = inner.lastElementChild;
       svg.setAttribute('class', 'pz-icon pz-icon-' + keyword);
       svg.setAttribute('width', '20');
       svg.setAttribute('height', '20');
-      svg.setAttribute('viewBox', '0 0 24 24');
       svg.style.cssText = 'position:absolute;pointer-events:none;visibility:hidden;left:' + art.x + 'px;top:' + art.y + 'px;';
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', art.path);
-      path.setAttribute('fill', '#111');
-      path.setAttribute('stroke', '#fff');
-      path.setAttribute('stroke-width', art.stroke || '1.4');
-      path.setAttribute('stroke-linejoin', 'round');
-      if (art.transform) path.setAttribute('transform', art.transform);
-      svg.appendChild(path);
-      inner.appendChild(svg);
     }
     const style = document.createElement('style');
     style.className = 'pz-icon-keyframes';

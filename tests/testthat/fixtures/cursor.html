@@ -25,7 +25,10 @@
          font-size: 16px; cursor: pointer; }
   #dark-btn { position: absolute; left: 800px; top: 210px; width: 120px; height: 44px;
               background: #222; border: 0; cursor: pointer; }
-  #unsupported { position: absolute; left: 100px; top: 230px; width: 60px; height: 30px; cursor: wait; }
+  #waiting { position: absolute; left: 100px; top: 230px; width: 60px; height: 30px; cursor: wait; }
+  #none { position: absolute; left: 580px; top: 230px; width: 60px; height: 30px; cursor: none; }
+  #zoom-in { position: absolute; left: 660px; top: 230px; width: 60px; height: 30px; cursor: zoom-in; }
+  #cell { position: absolute; left: 740px; top: 230px; width: 60px; height: 30px; cursor: cell; }
   #url-fallback { position: absolute; left: 180px; top: 230px; width: 60px; height: 30px; cursor: url("missing.cur"), pointer; }
   #url-bare { position: absolute; left: 260px; top: 230px; width: 60px; height: 30px; cursor: url("missing.cur"); }
   #inherit-pointer { position: absolute; left: 350px; top: 230px; width: 60px; height: 30px; cursor: pointer; }
@@ -51,7 +54,10 @@
 <button id="btn">Go</button>
 <button id="nested"><span id="nested-core" style="display:block;width:40px;height:24px;margin:10px auto 0;"></span></button>
 <button id="dark-btn" aria-label="Dark clickable region"></button>
-<span id="unsupported"></span>
+<span id="waiting"></span>
+<span id="none"></span>
+<span id="zoom-in"></span>
+<span id="cell"></span>
 <span id="url-fallback"></span>
 <span id="url-bare"></span>
 <span id="inherit-pointer"><span>inside</span></span>

@@ -1,0 +1,346 @@
+{
+  "cursors": [
+    {
+      "id": "alias",
+      "file": "svg/alias.svg",
+      "hotspot": [
+        6,
+        3
+      ],
+      "cursor": "alias"
+    },
+    {
+      "id": "all-scroll",
+      "file": "svg/all-scroll.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "all-scroll"
+    },
+    {
+      "id": "cell",
+      "file": "svg/cell.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "cell"
+    },
+    {
+      "id": "col-resize",
+      "file": "svg/col-resize.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "col-resize"
+    },
+    {
+      "id": "context-menu",
+      "file": "svg/context-menu.svg",
+      "hotspot": [
+        6,
+        3
+      ],
+      "cursor": "context-menu"
+    },
+    {
+      "id": "copy",
+      "file": "svg/copy.svg",
+      "hotspot": [
+        6,
+        3
+      ],
+      "cursor": "copy"
+    },
+    {
+      "id": "crosshair",
+      "file": "svg/crosshair.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "crosshair"
+    },
+    {
+      "id": "default",
+      "file": "svg/default.svg",
+      "hotspot": [
+        6,
+        3
+      ],
+      "cursor": "default"
+    },
+    {
+      "id": "e-resize",
+      "file": "svg/e-resize.svg",
+      "hotspot": [
+        8.6,
+        16.0
+      ],
+      "cursor": "e-resize"
+    },
+    {
+      "id": "ew-resize",
+      "file": "svg/ew-resize.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "ew-resize"
+    },
+    {
+      "id": "grab",
+      "file": "svg/grab.svg",
+      "hotspot": [
+        17,
+        15
+      ],
+      "cursor": "grab"
+    },
+    {
+      "id": "grabbing",
+      "file": "svg/grabbing.svg",
+      "hotspot": [
+        17,
+        17
+      ],
+      "cursor": "grabbing"
+    },
+    {
+      "id": "help",
+      "file": "svg/help.svg",
+      "hotspot": [
+        6,
+        3
+      ],
+      "cursor": "help"
+    },
+    {
+      "id": "poof",
+      "file": "svg/mac-poof.svg",
+      "hotspot": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "screenshotselection",
+      "file": "svg/mac-screenshot-selection.svg",
+      "hotspot": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "screenshotwindow",
+      "file": "svg/mac-screenshot-window.svg",
+      "hotspot": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "move",
+      "file": "svg/move.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "move"
+    },
+    {
+      "id": "n-resize",
+      "file": "svg/n-resize.svg",
+      "hotspot": [
+        16.0,
+        23.4
+      ],
+      "cursor": "n-resize"
+    },
+    {
+      "id": "ne-resize",
+      "file": "svg/ne-resize.svg",
+      "hotspot": [
+        14.5,
+        17.5
+      ],
+      "cursor": "ne-resize"
+    },
+    {
+      "id": "nesw-resize",
+      "file": "svg/nesw-resize.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "nesw-resize"
+    },
+    {
+      "id": "no-drop",
+      "file": "svg/no-drop.svg",
+      "hotspot": [
+        6,
+        3
+      ],
+      "cursor": "no-drop"
+    },
+    {
+      "id": "not-allowed",
+      "file": "svg/not-allowed.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "not-allowed"
+    },
+    {
+      "id": "ns-resize",
+      "file": "svg/ns-resize.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "ns-resize"
+    },
+    {
+      "id": "nw-resize",
+      "file": "svg/nw-resize.svg",
+      "hotspot": [
+        17.5,
+        17.5
+      ],
+      "cursor": "nw-resize"
+    },
+    {
+      "id": "nwse-resize",
+      "file": "svg/nwse-resize.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "nwse-resize"
+    },
+    {
+      "id": "pointer",
+      "file": "svg/pointer.svg",
+      "hotspot": [
+        11.7,
+        2
+      ],
+      "cursor": "pointer"
+    },
+    {
+      "id": "progress",
+      "file": "svg/progress.svg",
+      "hotspot": [
+        6,
+        3
+      ],
+      "cursor": "progress"
+    },
+    {
+      "id": "row-resize",
+      "file": "svg/row-resize.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "row-resize"
+    },
+    {
+      "id": "s-resize",
+      "file": "svg/s-resize.svg",
+      "hotspot": [
+        16.0,
+        8.6
+      ],
+      "cursor": "s-resize"
+    },
+    {
+      "id": "se-resize",
+      "file": "svg/se-resize.svg",
+      "hotspot": [
+        14.5,
+        14.5
+      ],
+      "cursor": "se-resize"
+    },
+    {
+      "id": "sw-resize",
+      "file": "svg/sw-resize.svg",
+      "hotspot": [
+        17.5,
+        14.5
+      ],
+      "cursor": "sw-resize"
+    },
+    {
+      "id": "text",
+      "file": "svg/text.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "text"
+    },
+    {
+      "id": "vertical-text",
+      "file": "svg/vertical-text.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "vertical-text"
+    },
+    {
+      "id": "w-resize",
+      "file": "svg/w-resize.svg",
+      "hotspot": [
+        23.4,
+        16.0
+      ],
+      "cursor": "w-resize"
+    },
+    {
+      "id": "wait",
+      "file": "svg/wait.svg",
+      "hotspot": [
+        16,
+        16
+      ],
+      "cursor": "wait"
+    },
+    {
+      "id": "zoom-in",
+      "file": "svg/zoom-in.svg",
+      "hotspot": [
+        13.6,
+        13.6
+      ],
+      "cursor": "zoom-in"
+    },
+    {
+      "id": "zoom-out",
+      "file": "svg/zoom-out.svg",
+      "hotspot": [
+        13.6,
+        13.6
+      ],
+      "cursor": "zoom-out"
+    }
+  ],
+  "meta": {
+    "no_artwork": [
+      {
+        "cursor": "auto",
+        "reason": "alias of `default`; resolves to the platform arrow cursor"
+      },
+      {
+        "cursor": "none",
+        "reason": "cursor is hidden; there is nothing to draw"
+      }
+    ]
+  }
+}
