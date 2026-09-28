@@ -25,4 +25,4 @@ Scope pivot/deletion pass: delete any contemplated custom `knit_print.PaparazziC
 Handoff:
 - Landed: screenshot-only vertical slice, with top-level knitr figures, preview printing, numbering, and DPI tests. Targeted screenshot run: FAIL 0, WARN 0, SKIP 0, PASS 44. Bare knitr and Quarto probes passed; actual-browser Quarto smoke is pending.
 - Next: check actual Quarto output and review the screenshot slice, then prototype video fallback and implement recordings, README/articles, and the SPEC amendment.
-- Provisional: plain R Markdown emits raw HTML video without a chunk `fig.cap` caption; choose a tested caption strategy before promising video figure-option parity. No timer, queue, or page flag is authorized.
+- Provisional: plain R Markdown emits raw HTML video without a chunk `fig.cap` caption; choose a tested caption strategy before promising video figure-option parity. `pz_record()` currently stops in `withr::defer()`; terminal printing needs its stop result before return. Find a single error-safe stop path rather than a second ordering flag, preserving the block error's priority over stop errors. No timer, queue, or page flag is authorized.
