@@ -4,7 +4,7 @@
 \alias{pz_cursor_leave}
 \title{Move the overlay cursor out of the frame}
 \usage{
-pz_cursor_leave(ctx, side = "right")
+pz_cursor_leave(ctx, side = "right", icon = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -12,6 +12,19 @@ pz_cursor_leave(ctx, side = "right")
 \item{side}{A side (\code{"top"}, \code{"bottom"}, \code{"left"}, \code{"right"}) or
 corner (\code{"top left"}, \code{"bottom right"}, ...) of the frame to leave
 through. Defaults to \code{"right"}.}
+
+\item{icon}{CSS cursor keyword to show for this call. \code{NULL} (the
+default) infers the icon at the actual landing point: the first
+computed \code{cursor} other than \code{auto} on the element under the point
+or an ancestor. Supported values: \code{default}, \code{pointer}, \code{text},
+\code{not-allowed}, \code{crosshair}, \code{grab}, \code{grabbing}, \code{ew-resize},
+\code{ns-resize}, \code{nesw-resize}, \code{nwse-resize}, \code{row-resize}, and
+\code{col-resize}. An unsupported CSS keyword or bare \code{url()} uses
+\code{default}; a \code{url()} with a supported keyword fallback uses that
+keyword. An explicit icon lasts through this call's landing but
+does not override the next call's automatic inference. The last
+visible icon stays on the cursor until the next destination; the
+first off-frame entrance starts with \code{default} unless overridden.}
 }
 \value{
 \code{ctx}, invisibly.
@@ -31,7 +44,7 @@ page |>
     page |>
       pz_click("#toggle-help") |>
       # Move the cursor out of the way so the help text is unobstructed
-      pz_cursor_leave("right") |>
+      pz_cursor_leave("right", icon = "default") |>
       pz_record_hold(1)
   })
 pz_close(page)

@@ -24,6 +24,18 @@
 #'   specs. The cursor centers on the match. `NULL` uses the current
 #'   scope's element or, at the root context, shows the cursor at its
 #'   last position (or the viewport center the first time).
+#' @param icon CSS cursor keyword to show for this call. `NULL` (the
+#'   default) infers the icon at the actual landing point: the first
+#'   computed `cursor` other than `auto` on the element under the point
+#'   or an ancestor. Supported values: `default`, `pointer`, `text`,
+#'   `not-allowed`, `crosshair`, `grab`, `grabbing`, `ew-resize`,
+#'   `ns-resize`, `nesw-resize`, `nwse-resize`, `row-resize`, and
+#'   `col-resize`. An unsupported CSS keyword or bare `url()` uses
+#'   `default`; a `url()` with a supported keyword fallback uses that
+#'   keyword. An explicit icon lasts through this call's landing but
+#'   does not override the next call's automatic inference. The last
+#'   visible icon stays on the cursor until the next destination; the
+#'   first off-frame entrance starts with `default` unless overridden.
 #' @param from A side (`"top"`, `"bottom"`, `"left"`, `"right"`) or
 #'   corner (`"top left"`, `"bottom right"`, ...) of the frame to enter
 #'   from. `NULL` (the default) re-enters from the direction the cursor
@@ -42,7 +54,7 @@
 #'
 #' # Outside a recording the cursor appears at once, ready for a still
 #' page |>
-#'   pz_cursor_show("#add-task") |>
+#'   pz_cursor_show("#add-task", icon = "pointer") |>
 #'   pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 24))
 #' pz_close(page)
 #'
@@ -128,6 +140,7 @@ pz_cursor_hide <- function(ctx, ...) {
 #' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs. The cursor centers on the match.
+#' @inheritParams pz_cursor_show
 #' @param duration Glide duration in seconds; `NULL` computes one from
 #'   the distance and the `cursor_speed` staging setting.
 #'
@@ -145,7 +158,7 @@ pz_cursor_hide <- function(ctx, ...) {
 #'     page |>
 #'       pz_cursor_show(".filters", from = "left") |>
 #'       pz_cursor_move("#toggle-help", duration = 1) |>
-#'       pz_cursor_move("#add-task")
+#'       pz_cursor_move("#add-task", icon = "crosshair")
 #'   })
 #' pz_close(page)
 #'
@@ -177,6 +190,7 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL, icon = NULL) {
 #' glides it back in from that side.
 #'
 #' @inheritParams pz_click
+#' @inheritParams pz_cursor_show
 #' @param side A side (`"top"`, `"bottom"`, `"left"`, `"right"`) or
 #'   corner (`"top left"`, `"bottom right"`, ...) of the frame to leave
 #'   through. Defaults to `"right"`.
@@ -193,7 +207,7 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL, icon = NULL) {
 #'     page |>
 #'       pz_click("#toggle-help") |>
 #'       # Move the cursor out of the way so the help text is unobstructed
-#'       pz_cursor_leave("right") |>
+#'       pz_cursor_leave("right", icon = "default") |>
 #'       pz_record_hold(1)
 #'   })
 #' pz_close(page)
@@ -407,7 +421,7 @@ CURSOR_ART <- list(
     stroke = 1
   ),
   text = list(
-    path = "M5 3 H19 M12 3 V21 M5 21 H19 M9 6 H15 M9 18 H15",
+    path = "M5 2 H19 V5 H14 V19 H19 V22 H5 V19 H10 V5 H5 Z",
     x = -6,
     y = -8
   ),
@@ -417,7 +431,7 @@ CURSOR_ART <- list(
     y = -8
   ),
   crosshair = list(
-    path = "M12 2 V8 M12 16 V22 M2 12 H8 M16 12 H22 M16 12 A4 4 0 1 1 8 12 A4 4 0 1 1 16 12 Z",
+    path = "M10 2 H14 V10 H22 V14 H14 V22 H10 V14 H2 V10 H10 Z",
     x = -6,
     y = -8
   ),
@@ -509,7 +523,7 @@ cursor_apply <- function(
   cur$y <- state$y
   cur$off_frame <- NULL
   if (state$duration > 0) {
-    pump_loop(page$child_loop, state$duration)
+    pump_loop(page$child_loop, state$duration + 0.05)
   }
   if (isTRUE(state$fade)) {
     pump_loop(page$child_loop, 0.3)
@@ -620,7 +634,7 @@ cursor_command_js <- r"(function(state) {
       // Chrome serializes cursor URLs with a trailing keyword when a
       // CSS fallback is present. A bare URL has no supported fallback.
       const keyword = cursor.startsWith('url(')
-        ? (cursor.match(/\)\s*([a-z-]+)\s*$/) || [])[1]
+        ? (cursor.match(/\)\s*,\s*([a-z-]+)\s*$/) || [])[1]
         : cursor;
       if (Object.prototype.hasOwnProperty.call(state.icons, keyword)) icon = keyword;
       break;

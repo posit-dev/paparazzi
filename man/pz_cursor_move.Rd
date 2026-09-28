@@ -4,7 +4,7 @@
 \alias{pz_cursor_move}
 \title{Move the overlay cursor to an element}
 \usage{
-pz_cursor_move(ctx, target, ..., duration = NULL)
+pz_cursor_move(ctx, target, ..., duration = NULL, icon = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -16,6 +16,19 @@ specs. The cursor centers on the match.}
 
 \item{duration}{Glide duration in seconds; \code{NULL} computes one from
 the distance and the \code{cursor_speed} staging setting.}
+
+\item{icon}{CSS cursor keyword to show for this call. \code{NULL} (the
+default) infers the icon at the actual landing point: the first
+computed \code{cursor} other than \code{auto} on the element under the point
+or an ancestor. Supported values: \code{default}, \code{pointer}, \code{text},
+\code{not-allowed}, \code{crosshair}, \code{grab}, \code{grabbing}, \code{ew-resize},
+\code{ns-resize}, \code{nesw-resize}, \code{nwse-resize}, \code{row-resize}, and
+\code{col-resize}. An unsupported CSS keyword or bare \code{url()} uses
+\code{default}; a \code{url()} with a supported keyword fallback uses that
+keyword. An explicit icon lasts through this call's landing but
+does not override the next call's automatic inference. The last
+visible icon stays on the cursor until the next destination; the
+first off-frame entrance starts with \code{default} unless overridden.}
 }
 \value{
 \code{ctx}, invisibly.
@@ -37,7 +50,7 @@ page |>
     page |>
       pz_cursor_show(".filters", from = "left") |>
       pz_cursor_move("#toggle-help", duration = 1) |>
-      pz_cursor_move("#add-task")
+      pz_cursor_move("#add-task", icon = "crosshair")
   })
 pz_close(page)
 \dontshow{\}) # examplesIf}
