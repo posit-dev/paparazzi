@@ -693,3 +693,82 @@ test_that("off-frame entrances and staged actions use destination entry", {
   )
   page |> pz_record_stop()
 })
+
+test_that("untargeted entrances keep the start icon until landing", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  page |> pz_cursor_show("#btn", icon = "crosshair")
+  visible <- function() {
+    unlist(pz_js(
+      page,
+      "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').map(e => e.classList[1])"
+    ))
+  }
+  # No target means no destination rect: the flip must wait for the
+  # landing instead of applying at the glide's dispatch. The glide
+  # pumps inside the call, so the schedule itself is the assertion:
+  # its boundary sits at 100% of the glide, not at the dispatch.
+  page |> pz_cursor_show(from = "left")
+  keyframes <- pz_js(
+    page,
+    "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
+  )
+  boundary <- as.numeric(
+    regmatches(keyframes, regexec("pz-icon-in \\{ 0%, ([0-9.]+)%", keyframes))[[
+      1
+    ]][2]
+  ) +
+    0.1
+  expect_lt(abs(boundary - 100), 0.2)
+  expect_setequal(visible(), "pz-icon-pointer")
+  expect_identical(page_cursor(page)$icon, "pointer")
+  page |> pz_record_stop()
+})
+
+test_that("pointer actions switch at the resolved target's edge", {
+  # The actionable point sits on #nested-core, a small descendant
+  # covering the button's center; entry timing must use the button's
+  # rect, not the span's.
+  page <- local_cursor_page()
+  els <- loc_resolve(page, "#nested")
+  withr::defer(release_elements(els))
+  point <- el_pointer_point(page, els)
+  expect_identical(
+    attr(point, "rect"),
+    c(x = 440, y = 300, width = 120, height = 44)
+  )
+
+  skip_if_no_av()
+  rec <- local_cursor_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  rec |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  rec |> pz_cursor_move("#plain")
+  rec |> pz_hover("#nested")
+  keyframes <- pz_js(
+    rec,
+    "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
+  )
+  boundary <- as.numeric(
+    regmatches(keyframes, regexec("pz-icon-in \\{ 0%, ([0-9.]+)%", keyframes))[[
+      1
+    ]][2]
+  ) +
+    0.1
+  at_button <- cursor_entry_time(
+    c(x = 160, y = 322),
+    c(x = 500, y = 322),
+    c(x = 440, y = 300, width = 120, height = 44)
+  ) *
+    100
+  at_core <- cursor_entry_time(
+    c(x = 160, y = 322),
+    c(x = 500, y = 322),
+    c(x = 480, y = 310, width = 40, height = 24)
+  ) *
+    100
+  expect_lt(abs(boundary - at_button), 0.5)
+  expect_gt(abs(boundary - at_core), 0.5)
+  rec |> pz_record_stop()
+})

@@ -160,6 +160,16 @@ offset). Each lands as its own unit on main with one roborev review.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-28 (k6vz review round): roborev #1316 found two Medium gaps, both
+  accepted and fixed on main: untargeted entrances (no destination rect) now
+  schedule their flip at the landing (at = 1) instead of applying the
+  landing icon at dispatch, and el_pointer_point() threads the resolved
+  target's rect to the staging seam so entry timing uses the target's edge
+  even when a descendant (the new #nested/#nested-core fixture) covers the
+  actionable point. Tests assert the schedule boundary directly; all three
+  initial failures were orchestrator test bugs (regexpr full-match parsing,
+  a fixture change breaking an existing hit-test assertion), not
+  implementation defects. Focused cursor|stage green at FAIL 0 / PASS 331.
 - 2026-09-28 (k6vz): landed analytic eased rect entry, rect threading,
   discrete schedule-driven icon keyframes and sampled glide regressions;
   focused cursor|stage 325 PASS / 0 FAIL / 0 WARN / 0 SKIP; air and jarl clean.

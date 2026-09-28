@@ -945,6 +945,16 @@ format_pointer_blocker <- function(blocker) {
 # are the staging seams (stage_scroll_into_view(), stage_move_cursor()).
 el_pointer_point <- function(ctx, els, call = caller_env()) {
   point <- el_actionable_point(ctx, els, call = call)
+  # The actionable point may sit on a descendant covering the target;
+  # entry timing uses the RESOLVED target's rect, so glide-icon switches
+  # happen at the target's edge, not a covering child's.
+  rects <- el_rects(els, call = call)
+  attr(point, "rect") <- c(
+    x = rects$x[[1]],
+    y = rects$y[[1]],
+    width = rects$width[[1]],
+    height = rects$height[[1]]
+  )
   stage_move_cursor(ctx, point)
   point
 }

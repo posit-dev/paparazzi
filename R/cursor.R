@@ -590,14 +590,10 @@ cursor_apply <- function(
   } else if (!is.null(cur$x)) {
     c(x = cur$x, y = cur$y)
   }
-  if (
-    recording &&
-      duration > 0 &&
-      is.null(icon) &&
-      !is.null(rect) &&
-      !is.null(start)
-  ) {
-    at <- cursor_entry_time(start, point, rect)
+  if (recording && duration > 0 && is.null(icon) && !is.null(start)) {
+    # No destination rect (an untargeted entrance): the intended
+    # destination IS the landing point, so the flip waits for it.
+    at <- if (is.null(rect)) 1 else cursor_entry_time(start, point, rect)
     if (!is.null(at)) {
       landing <- cursor_command(
         ctx,

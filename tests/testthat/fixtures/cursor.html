@@ -15,6 +15,11 @@
   #plain { position: absolute; left: 100px; top: 300px; width: 120px; height: 44px; background: #eee; }
   #crossed { position: absolute; left: 350px; top: 300px; width: 40px; height: 44px;
              background: #eee; cursor: pointer; }
+  /* The core span covers the actionable point, so staged entry timing
+     must use the button's rect, not the span's. Light colors keep the
+     glide band free of near-black ink. */
+  #nested { position: absolute; left: 440px; top: 300px; width: 120px; height: 44px;
+            background: #eee; border: 0; cursor: pointer; }
   #btn { position: absolute; left: 600px; top: 300px; width: 120px; height: 44px;
          background: steelblue; color: #fff; border: 0; border-radius: 6px;
          font-size: 16px; cursor: pointer; }
@@ -44,6 +49,7 @@
 <div id="plain"></div>
 <span id="crossed"></span>
 <button id="btn">Go</button>
+<button id="nested"><span id="nested-core" style="display:block;width:40px;height:24px;margin:10px auto 0;"></span></button>
 <button id="dark-btn" aria-label="Dark clickable region"></button>
 <span id="unsupported"></span>
 <span id="url-fallback"></span>
