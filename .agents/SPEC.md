@@ -424,10 +424,10 @@ Staging only animates while recording, so commenting out the recording runs the 
 Cursor functions:
 
 ```r
-pz_cursor_show(ctx, target = NULL, ..., from = NULL)
+pz_cursor_show(ctx, target = NULL, ..., from = NULL, icon = NULL)
 pz_cursor_hide(ctx, ...)
-pz_cursor_move(ctx, target, ..., duration = NULL)
-pz_cursor_leave(ctx, side = "right")
+pz_cursor_move(ctx, target, ..., duration = NULL, icon = NULL)
+pz_cursor_leave(ctx, side = "right", icon = NULL)
 pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)
 ```
 
@@ -441,7 +441,7 @@ Movement and look:
 
 - Glide duration scales with distance (roughly `clamp(0.25 + distance / cursor_speed, 0.5, 2)` seconds), cubic ease-in-out, short pauses before (~0.15s) and after (~0.2s) clicks. The 500 px/s default is deliberately slower than natural pointing so viewers can follow it; 400-600 px/s is a useful range. Staged scrolling uses the same duration bounds; `pz_scroll(duration > 0)` overrides the per-wheel-scroll duration and `duration = 0` scrolls instantly.
 - Press animation scales the 1.75x default cursor down relative to its base size; `cursor_scale = 1` restores the original 20px artwork.
-- The cursor switches to a hand when the element under it has computed `cursor: pointer`. This is the only extra in the first version; ripple and cursor styles come later.
+- The cursor icon follows the element under its landing point. `icon` names follow CSS cursor keywords; the bundled set is `default`, `pointer`, `text`, `not-allowed`, `crosshair`, `grab`, `grabbing`, and the resize families (`ew-resize`, `ns-resize`, `nesw-resize`, `nwse-resize`, `row-resize`, `col-resize`), with shared rotated artwork where keywords are equivalent. A computed `cursor: url(...)` with a supported fallback keyword uses the fallback; anything unsupported falls back to `default`. An explicit `icon` on a cursor call overrides inference for that call only: it holds through the call's landing and does not persist, and the next automatic move starts with the icon left visible. A first off-frame entrance uses `default` unless the call sets `icon`. Ripple and broader cursor styles come later.
 - CSS zoom and device pixel ratio are handled internally.
 
 Typing: one `Input.insertText` per character with randomized delays around `typing_speed`. Works for `<input>`, `<textarea>` and contenteditable/ProseMirror. No typo simulation.
@@ -723,10 +723,10 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 | Function | Signature | Name |
 |---|---|---|
 | `pz_stage()` | `(ctx, ..., cursor, cursor_speed, cursor_scale, enter, typing, typing_speed, pause)` | confirmed |
-| `pz_cursor_show()` | `(ctx, target = NULL, ..., from = NULL)` | confirmed |
+| `pz_cursor_show()` | `(ctx, target = NULL, ..., from = NULL, icon = NULL)` | confirmed |
 | `pz_cursor_hide()` | `(ctx, ...)` | confirmed |
-| `pz_cursor_move()` | `(ctx, target, ..., duration = NULL)` | confirmed |
-| `pz_cursor_leave()` | `(ctx, side = "right")` | confirmed |
+| `pz_cursor_move()` | `(ctx, target, ..., duration = NULL, icon = NULL)` | confirmed |
+| `pz_cursor_leave()` | `(ctx, side = "right", icon = NULL)` | confirmed |
 
 Arguments: `cursor_speed`, `cursor_scale`, `typing_speed` and `pause` are confirmed.
 
