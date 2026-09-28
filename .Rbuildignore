@@ -19,3 +19,4 @@
 ^vignettes/articles$
 ^AGENTS\.md$
 ^\.git$
+^assets$

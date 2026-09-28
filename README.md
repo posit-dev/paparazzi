@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# paparazzi
+# paparazzi <a href="https://posit-dev.github.io/paparazzi/"><img src="man/figures/logo.png" align="right" height="138" alt="paparazzi website" /></a>
 
 <!-- badges: start -->
 

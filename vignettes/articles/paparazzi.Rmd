@@ -157,14 +157,14 @@ page |> pz_device(width = 720, height = 800, mobile = FALSE, color_scheme = "lig
 
 To record a video, wrap the steps in `pz_record()`. It starts recording, runs the code in braces, then stops and writes the file, even if the code throws an error. In a knitted document, leaving out the path produces a GIF in the chunk's figure directory; with a path, the extension picks `.mp4`, `.webm`, or `.gif`. Use `code =` when you leave out the path. A completed recording at the end of a chunk expression appears in the document.
 
-While recording, paparazzi **stages** the steps so they look like a person using the page. A cursor glides to each element before clicking, and text is typed one character at a time. `pz_stage()` controls the staging; here the cursor enters from the left and each action is followed by a short pause.
+While recording, paparazzi **stages** the steps so they look like a person using the page. A cursor glides to each element before clicking, and text is typed one character at a time. `pz_stage()` controls the staging; here the cursor enters from the top and each action is followed by a short pause.
 
 We'll start again from a fresh page. The default cursor is 1.75 times the original size, and the default glide speed is 500 pixels per second: slow enough to follow, rather than as fast as a real mouse. Try 400-600 for a deliberate glide; smaller values take longer. Before re-recording, estimate a 300-pixel move at speed 400 with `0.25 + 300 / 400`: it takes 1 second. The actual duration stays between 0.5 and 2 seconds. For one-off timing, `pz_cursor_move(duration = ...)` and `pz_scroll(duration = ...)` override the staging speed while recording. Set `cursor_scale = 1` in `pz_stage()` for the original cursor size. `scale = 0.6` shrinks the video, which keeps the GIF small:
 
 ```{r, fig.alt = "A cursor glides to the task form, types Repot the fern, and adds it. The new task appears at the top of the list."}
 page |>
   pz_nav_reload() |>
-  pz_stage(enter = "left", pause = 0.4) |>
+  pz_stage(enter = "top", pause = 0.4) |>
   pz_record(code = {
     page |>
       pz_type("Repot the fern", target = "#task-title") |>
