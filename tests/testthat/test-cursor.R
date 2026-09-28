@@ -772,3 +772,22 @@ test_that("pointer actions switch at the resolved target's edge", {
   expect_gt(abs(boundary - at_core), 0.5)
   rec |> pz_record_stop()
 })
+
+test_that("cursor move offsets validate and land in viewport coordinates", {
+  page <- local_cursor_page()
+  for (bad in list(NA_real_, Inf, "10", numeric(), c(1, 2, 3))) {
+    expect_error(
+      pz_cursor_move(page, "#btn", offset = bad),
+      class = "paparazzi_error_input"
+    )
+  }
+  page |> pz_cursor_move("#btn", offset = -40)
+  expect_equal(cursor_overlay_state(page)[2:3], c(620, 282))
+  page |> pz_cursor_move("#btn", offset = c(-40, 15))
+  expect_equal(cursor_overlay_state(page)[2:3], c(620, 337))
+  expect_equal(c(page_cursor(page)$x, page_cursor(page)$y), c(620, 337))
+  page |> pz_cursor_move("#btn", offset = c(0, 0))
+  expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
+  page |> pz_cursor_move("#btn")
+  expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
+})
