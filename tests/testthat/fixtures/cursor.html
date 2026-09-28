@@ -16,6 +16,8 @@
   #btn { position: absolute; left: 600px; top: 300px; width: 120px; height: 44px;
          background: steelblue; color: #fff; border: 0; border-radius: 6px;
          font-size: 16px; cursor: pointer; }
+  #dark-btn { position: absolute; left: 800px; top: 210px; width: 120px; height: 44px;
+              background: #222; border: 0; cursor: pointer; }
   #scroller { position: absolute; left: 450px; top: 60px; width: 200px; height: 150px;
               overflow: auto; border: 2px solid steelblue; }
   #scroller > div { height: 800px; background: linear-gradient(#efe, #cfc); }
@@ -33,13 +35,15 @@
 <div id="edit" contenteditable="true"></div>
 <div id="plain"></div>
 <button id="btn">Go</button>
+<button id="dark-btn" aria-label="Dark clickable region"></button>
 <div id="scroller"><div>inner</div></div>
 <div id="spacer"></div>
 <button id="below">Below</button>
 <script>
-window.__log = { clicks: 0, belowClicks: 0, wheels: 0, wheelsTrusted: true,
+window.__log = { clicks: 0, darkClicks: 0, belowClicks: 0, wheels: 0, wheelsTrusted: true,
                  inputs: { name: 0, bio: 0, edit: 0 } };
 document.getElementById("btn").addEventListener("click", () => window.__log.clicks++);
+document.getElementById("dark-btn").addEventListener("click", () => window.__log.darkClicks++);
 document.getElementById("below").addEventListener("click", () => window.__log.belowClicks++);
 for (const id of ["name", "bio", "edit"]) {
   document.getElementById(id).addEventListener("input", () => window.__log.inputs[id]++);

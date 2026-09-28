@@ -91,6 +91,16 @@ offset). Each lands as its own unit on main with one roborev review.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-28 (df7d): landed the pointing-finger artwork replacing the
+  four-finger .pz-hand path, a dark-background clickable fixture region
+  (#dark-btn), and cursor_png_ink() extended with an x_range and a
+  light-ink tone for scans on dark targets; pixel tests cover light and
+  dark stills plus recorded-frame hand ink at the click point. Focused
+  cursor|stage suite green (0 FAIL/WARN). Next: repo-wide air formatting
+  sweep on main, then 2vqb as the keystone. Provisional: neither the
+  implementer subagent nor the orchestrator model can view rendered
+  images in this environment, so artwork legibility rests on the
+  pixel-scan geometry tests; garrick should eyeball a demo capture.
 - 2026-09-28 (rny6): landed finite-duration validation and regression coverage in `pz_cursor_move()`.
   Next: df7d pointer artwork, then 2vqb as the icon API keystone.
   Provisional: repo-wide style checks still flag unrelated existing files; the approved scope excludes them.

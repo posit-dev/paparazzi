@@ -107,6 +107,63 @@ test_that("the cursor switches to a hand over cursor:pointer elements", {
   expect_equal(cursor_overlay_state(page)[[4]], 0)
 })
 
+test_that("pointing cursor ink is visible on light and dark pointer targets", {
+  page <- local_cursor_page()
+  shot <- withr::local_tempfile(fileext = ".png")
+
+  page |> pz_cursor_move("#btn")
+  page |> pz_screenshot(shot)
+  light <- cursor_png_ink(
+    page,
+    shot,
+    band = c(300, 344),
+    x_range = c(600, 720)
+  )
+  expect_gt(light$count, 50)
+  expect_lt(abs(light$x - 660), 25)
+  expect_lt(abs(light$y - 322), 20)
+
+  page |> pz_cursor_move("#dark-btn")
+  page |> pz_screenshot(shot)
+  dark <- cursor_png_ink(
+    page,
+    shot,
+    band = c(210, 254),
+    x_range = c(800, 920),
+    tone = "light"
+  )
+  expect_gt(dark$count, 10)
+  expect_lt(abs(dark$x - 860), 25)
+  expect_lt(abs(dark$y - 232), 20)
+})
+
+test_that("recorded click frames keep pointing cursor ink at the target", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
+  page |> pz_click("#btn")
+  page |> pz_record_stop()
+
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
+  frames <- list.files(frames_dir, full.names = TRUE)
+  expect_gt(length(frames), 0)
+
+  inks <- lapply(frames, function(frame) {
+    cursor_png_ink(
+      page,
+      frame,
+      band = c(300, 344),
+      x_range = c(635, 700)
+    )
+  })
+  at_target <- Filter(function(ink) {
+    ink$count > 20 && abs(ink$x - 660) < 25 && abs(ink$y - 322) < 20
+  }, inks)
+  expect_gt(length(at_target), 0)
+})
+
 test_that("cursor = TRUE draws a static cursor in screenshots; FALSE never draws", {
   page <- local_cursor_page()
   page |> pz_stage(cursor = TRUE)
