@@ -84,9 +84,11 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL, icon = NULL) {
       check_scope_single(scoped)
       stage_scroll_into_view(ctx, scoped)
       rects <- el_rects(scoped)
-      c(
-        x = rects$x[[1]] + rects$width[[1]] / 2,
-        y = rects$y[[1]] + rects$height[[1]] / 2
+      structure(
+        c(x = rects$x[[1]] + rects$width[[1]] / 2,
+          y = rects$y[[1]] + rects$height[[1]] / 2),
+        rect = c(x = rects$x[[1]], y = rects$y[[1]],
+          width = rects$width[[1]], height = rects$height[[1]])
       )
     } else {
       cursor_current_point(ctx)
@@ -339,9 +341,11 @@ cursor_target_point <- function(ctx, target, call = caller_env()) {
   withr::defer(release_elements(els))
   stage_scroll_into_view(ctx, els, call = call)
   rects <- el_rects(els, call = call)
-  c(
-    x = rects$x[[1]] + rects$width[[1]] / 2,
-    y = rects$y[[1]] + rects$height[[1]] / 2
+  structure(
+    c(x = rects$x[[1]] + rects$width[[1]] / 2,
+      y = rects$y[[1]] + rects$height[[1]] / 2),
+    rect = c(x = rects$x[[1]], y = rects$y[[1]],
+      width = rects$width[[1]], height = rects$height[[1]])
   )
 }
 
@@ -421,6 +425,7 @@ cursor_show_at <- function(
   page <- ctx$page
   cur <- page_cursor(page)
   stage <- page_stage(page)
+  rect <- attr(point, "rect")
   has_pos <- !is.null(cur$x)
   entry <- from %||%
     if (!has_pos || !is.null(cur$off_frame)) {
@@ -434,10 +439,11 @@ cursor_show_at <- function(
       duration = duration %||%
         stage_glide_duration(start, point, stage$cursor_speed),
       from = start,
-      icon = icon
+      icon = icon,
+      rect = rect
     )
   } else if (!has_pos) {
-    cursor_apply(ctx, point, fade = TRUE, icon = icon)
+    cursor_apply(ctx, point, fade = TRUE, icon = icon, rect = rect)
   } else {
     start <- c(x = cur$x, y = cur$y)
     cursor_apply(
@@ -445,7 +451,8 @@ cursor_show_at <- function(
       point,
       duration = duration %||%
         stage_glide_duration(start, point, stage$cursor_speed),
-      icon = icon
+      icon = icon,
+      rect = rect
     )
   }
   invisible(ctx)
