@@ -1,21 +1,17 @@
-**Use the `btw` CLI** for R package development tasks (`btw pkg` — check, test, document; also source lookup via `btw pkg src`) and for reading package documentation (`btw docs` — help pages, vignettes, NEWS). See `btw --help` for usage.
+**Use `btw`** for R package development (`btw pkg`, `btw pkg src`) and package documentation (`btw docs`). See `btw --help`.
 
-**Kata is the system of record** (the `kata` CLI issue tracker; the session environment provides its usage conventions). One issue per work item; decisions and dispositions land on issues, never only in chat scrollback. See `kata quickstart --agent` for usage details.
+**Kata is the system of record.** One issue per work item; record decisions and dispositions there. See `kata quickstart --agent`.
 
-**roborev provides external review, requested manually.** We DO NOT USE the post-commit hook. Request one review per completed unit of work, never per commit: `roborev review <sha>`, then `roborev show <job_id> --job`. Close reviews when the fix is committed (`roborev close`).
+**Request roborev manually**, once per completed unit, not per commit; no post-commit hook. Use `roborev review <sha>`, then `roborev show <job_id> --job`; close reviews after fixes are committed.
 
 ## R Package Development
 
-1. **Honor the package's API contracts.** `pz_find*()` returns its context
-   visibly without mutating the page; other chainable functions return
-   invisibly unless specified otherwise. R >= 4.1.0 is required, so `|>` is
-   supported. For local `file://` pages, don't work around browser history
-   limitations by adding special navigation machinery; recommend serving the
-   page over HTTP when history behavior matters.
-1. **Keep formatting and lint checks clean:** `air format --check .` and
-   `jarl check .`. `jarl.toml` deliberately ignores `implicit_assignment` for
-   callback `<<-` assignments. In each R file, put exported functions before
-   private helpers and separate top-level definitions with one blank line.
+1. **Preserve API contracts.** `pz_find*()` returns a context visibly without
+   mutating the page. `file://` lacks bfcache; recommend HTTP instead of
+   navigation workarounds.
+1. **Style checks:** `air format --check .` and `jarl check .`. Put exported
+   functions before private helpers, with one blank line between top-level
+   definitions.
 1. **Internal helpers are undocumented by default.** No roxygen; an unusually
    complicated helper may have a short block ending in `@noRd`.
 1. **Test files mirror source files.** `R/foo.R` -> `tests/testthat/test-foo.R`.
@@ -28,23 +24,14 @@
    only when the class is needed. Use paparazzi's own checkers in
    `R/utils-check.R` (e.g. `check_character()`, `check_page()`) where they
    fit; extend that file as new shared checkers come up.
-1. **Targeted tests verify branches; the full suite gates merges.** On feature
-   branches, run the test files mirroring changed sources
-   (`Rscript -e 'testthat::test_local(filter = "record|style")'`), plus any
-   files exercising cross-module seams the phase note names. A full suite on
-   a feature branch is optional when the implementer judges it useful, not a
-   requirement before the orchestrator's full `btw pkg test` merge gate on
-   main. Integration breaks (internal-API signature changes across files)
-   surface at that gate, not necessarily in filtered runs.
-1. **Serialize Chrome-heavy test runs with `.agents/chrome-lock.sh`.**
-   Wrap every `test_local()` and `btw pkg test` run in it, for example
-   `.agents/chrome-lock.sh Rscript -e 'testthat::test_local(filter = "nav")'`.
-   Parallel worktrees running 5-worker suites at once overload the machine
-   and cause chromote command timeouts that look like real failures. The
-   script waits on a shared `mkdir` lock in `/tmp` and reclaims it when the
-   holder has died. Read the reported `[ FAIL … | WARN … ]` totals, not
-   the exit code. PASS counts vary between runs because some expectations
-   run in loops.
+1. **Test scope:** On feature branches, run tests mirroring changed sources
+   and cross-module seams named in the phase note; a full run is optional at
+   the implementer's discretion. Run `btw pkg test` on main as the merge gate;
+   filtered tests may miss integration breaks.
+1. **Serialize Chrome-heavy tests:** wrap every `test_local()` or
+   `btw pkg test` run in `.agents/chrome-lock.sh` to prevent contention
+   between worktrees. Judge results by reported FAIL/WARN, not exit code or
+   variable PASS counts.
 
 ## Work Mechanics
 
