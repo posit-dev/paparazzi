@@ -47,6 +47,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Collate: 
     'actions.R'
+    'annotate.R'
     'app.R'
     'context.R'
     'utils-purrr.R'

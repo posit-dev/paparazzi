@@ -95,8 +95,8 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
     clip_rects_union(ctx, el_rects(els))
   }
 
-  # Overlay outlines (from pz_inspect()) must never appear in a capture:
-  # hide the overlay host for the CDP capture only, then restore it.
+  # Hide only inspect outlines for the capture; annotations and the
+  # visible cursor belong in stills.
   overlay_display <- overlay_hide(ctx)
   on.exit(overlay_restore(ctx, overlay_display), add = TRUE)
   res <- screenshot_capture(ctx, clip)
@@ -176,6 +176,10 @@ clip_rects_union <- function(ctx, rects, call = caller_env()) {
 # exactly the current dpr (chromote passes scale/pixel_ratio for the
 # same reason).
 screenshot_capture <- function(ctx, clip, call = caller_env()) {
+  pz_js(
+    ctx,
+    "document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations')?.pz?.sync()"
+  )
   timeout <- ctx$page$default_timeout
   cdp_call(
     ctx$page$session$Page$captureScreenshot(

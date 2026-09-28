@@ -74,7 +74,8 @@ to restore the default.}
 }
 \description{
 Sets the staging options that animate pointer actions, typing, and
-scrolling while the page is recording. Only supplied arguments
+scrolling while the page is recording, as well as defaults for new
+annotations. Only supplied arguments
 change -- an omitted argument leaves its setting alone, while an
 explicit \code{NULL} restores the default for that setting (so
 \code{pz_stage(cursor = FALSE)} can be undone with \code{pz_stage(cursor = NULL)}). Settings live on the page and persist across recordings, so

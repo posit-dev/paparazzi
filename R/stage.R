@@ -11,7 +11,8 @@
 #' Stage the page for recording
 #'
 #' Sets the staging options that animate pointer actions, typing, and
-#' scrolling while the page is recording. Only supplied arguments
+#' scrolling while the page is recording, as well as defaults for new
+#' annotations. Only supplied arguments
 #' change -- an omitted argument leaves its setting alone, while an
 #' explicit `NULL` restores the default for that setting (so
 #' `pz_stage(cursor = FALSE)` can be undone with `pz_stage(cursor =

@@ -99,6 +99,13 @@ reference:
       - pz_cursor_move
       - pz_cursor_leave
 
+  - title: Annotations
+    desc: >
+      Mark page elements in screenshots and recordings.
+    contents:
+      - pz_annotate
+      - pz_annotate_clear
+
   - title: Escape hatches and debugging
     contents:
       - pz_inspect

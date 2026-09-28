@@ -684,7 +684,7 @@ cursor_command_js <- r"(function(state) {
     layer = document.createElement('div');
     layer.className = 'pz-cursor';
     layer.setAttribute('aria-hidden', 'true');
-    layer.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;';
+    layer.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;z-index:1;';
     layer.innerHTML = '<div class="pz-glide" style="pointer-events:none;"><div class="pz-inner" style="pointer-events:none;opacity:0;transform-origin:4px 2px;position:relative;width:20px;height:20px;"></div></div>';
     const inner = layer.querySelector('.pz-inner');
     for (const [keyword, art] of Object.entries(state.icons)) {
