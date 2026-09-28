@@ -88,6 +88,13 @@ reference:
       - pz_frame
       - pz_stage_frame
 
+  - title: Camera
+    desc: >
+      Move the view within a recording frame without changing the live page.
+    contents:
+      - pz_camera
+      - pz_camera_reset
+
   - title: Cursor and staging
     desc: >
       Animate the cursor and typing so recordings look like a person is using

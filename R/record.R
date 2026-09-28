@@ -551,6 +551,10 @@ new_recorder <- function(
   rec$frames_dir <- NULL
   rec$times <- numeric(0)
   rec$files <- character(0)
+  rec$scroll <- list()
+  rec$camera <- list()
+  rec$camera_viewport_width <- NULL
+  rec$camera_warned <- FALSE
   rec$holds <- list()
   # Video clock: vt = vt_base + (now - active_since) while running.
   # Pausing folds the elapsed stretch into vt_base, so paused time
@@ -753,6 +757,11 @@ record_screencast_frame <- function(page, rec, frame) {
     {
       pending <- new.env(parent = emptyenv())
       pending$vt <- rec_vt(rec)
+      pending$scroll <- c(
+        frame$metadata$scrollOffsetX,
+        frame$metadata$scrollOffsetY
+      )
+      pending$viewport_width <- frame$metadata$deviceWidth
       pending$file <- file.path(
         rec$frames_dir,
         sprintf("frame-%06d.png", length(rec$files) + 1L)
@@ -809,6 +818,8 @@ record_capture <- function(rec, page, vt, scale = 1) {
         tryCatch(
           {
             v <- metrics$cssVisualViewport
+            pending$scroll <- c(max(v$pageX, 0), max(v$pageY, 0))
+            pending$viewport_width <- v$clientWidth
             clip <- list(
               x = max(v$pageX, 0),
               y = max(v$pageY, 0),
@@ -857,6 +868,10 @@ record_frame_done <- function(rec, pending, res = NULL, err = NULL) {
       if (is.null(rec$vt_end) || pending$vt <= rec$vt_end) {
         rec$times <- c(rec$times, pending$vt)
         rec$files <- c(rec$files, pending$file)
+        rec$scroll[[length(rec$files)]] <- pending$scroll
+        if (is.null(rec$camera_viewport_width)) {
+          rec$camera_viewport_width <- pending$viewport_width
+        }
       } else {
         unlink(pending$file)
       }
@@ -1048,16 +1063,43 @@ record_resample <- function(rec) {
   ticks <- (seq_len(n_ticks) - 1) / rec$fps
   vts <- ticks_to_vt(ticks, holds)
   index <- pmax(findInterval(vts, times), 1L)
-  list(files = rec$files[index], total = total, n_ticks = n_ticks)
+  list(
+    files = rec$files[index],
+    vts = vts + t0,
+    index = index,
+    total = total,
+    n_ticks = n_ticks
+  )
 }
 
 record_encode <- function(rec, call = caller_env()) {
   resampled <- record_resample(rec)
   png_size <- png_read_size(rec$files[[1]], call = call)
   out <- record_output_spec(rec, png_size, call = call)
+  if (length(rec$camera)) {
+    out$vfilter <- camera_filter(rec, resampled, out, png_size, call = call)
+  }
   if (identical(rec$format, "gif")) {
     files <- resampled$files
-    if (!is.null(out$crop)) {
+    if (length(rec$camera)) {
+      crop_dir <- tempfile("paparazzi-camera-")
+      dir.create(crop_dir)
+      on.exit(unlink(crop_dir, recursive = TRUE), add = TRUE)
+      sequence <- file.path(crop_dir, "camera-%04d.png")
+      av::av_encode_video(
+        files,
+        output = sequence,
+        framerate = rec$fps,
+        vfilter = out$vfilter,
+        codec = "png",
+        verbose = FALSE
+      )
+      files <- sort(Sys.glob(file.path(crop_dir, "camera-*.png")))
+      if (length(files) < resampled$n_ticks) {
+        cli::cli_abort("The camera rendered fewer GIF frames than requested.")
+      }
+      files <- files[seq_len(resampled$n_ticks)]
+    } else if (!is.null(out$crop)) {
       crop_dir <- tempfile("paparazzi-crop-")
       dir.create(crop_dir)
       on.exit(unlink(crop_dir, recursive = TRUE), add = TRUE)

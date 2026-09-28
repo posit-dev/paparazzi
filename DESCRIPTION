@@ -49,6 +49,7 @@ Collate:
     'actions.R'
     'annotate.R'
     'app.R'
+    'camera.R'
     'context.R'
     'utils-purrr.R'
     'cursor.R'
