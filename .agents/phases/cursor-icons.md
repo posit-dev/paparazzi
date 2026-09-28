@@ -156,6 +156,25 @@ offset). Each lands as its own unit on main with one roborev review.
   schedule with a second landing-point flip when landing outside target;
   no offset parameters or second flip are added here.
 
+## 9a2n implementation decisions
+
+- Keep `state$switch` for the entry flip (`at`, `from`, `to`), and add
+  `state$land` (`from`, `to`) for a different resting icon at 100%.
+  The JS generates visibility keyframes from the ordered boundaries for
+  each participating icon; a repeated icon can become visible again.
+  An entry at 0% applies immediately, and a landing at 100% still has
+  a discrete boundary. No timers or crossfades.
+- Probe the destination center separately with `resolveOnly` for the
+  entry icon, and the actual landing point for the resting icon. The
+  drawing command confirms the latter. An explicit icon or static draw
+  bypasses scheduling and uses the requested/landing icon immediately.
+- `check_offset()` returns an unnamed two-element vector, so adding it
+  to the named `c(x, y)` point preserves coordinate names but drops the
+  point's `rect` attribute. Save that rect before arithmetic and attach
+  it to the landing for `cursor_show_at()` and entry clipping. `NULL`
+  means `c(0, 0)` without changing the destination; no offset enters
+  persistent cursor state.
+
 ## Handoff log
 
 (newest first; three lines per session: landed / next / provisional)
