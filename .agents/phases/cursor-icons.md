@@ -177,6 +177,10 @@ offset). Each lands as its own unit on main with one roborev review.
 
 ## Handoff log
 
+- 2026-09-28 (9a2n): landed per-call viewport offsets, two-boundary discrete icon scheduling, still/recorded and pointer-isolation coverage; focused cursor|stage 369 PASS / 0 FAIL / 0 WARN / 0 SKIP, changed-file air and jarl clean.
+  Next: orchestrator reviews and merges this unit; SPEC amendment remains with the orchestrator.
+  Provisional: off-viewport resting icon falls back to default as `elementFromPoint()` has no element there; cursor coordinates remain off-frame and the next glide starts there.
+
 (newest first; three lines per session: landed / next / provisional)
 
 - 2026-09-28 (k6vz review round): roborev #1316 found two Medium gaps, both
