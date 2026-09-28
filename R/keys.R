@@ -139,7 +139,7 @@ for (punctuation in punctuation_keys) {
 #   $modifier_keys character: only the modifiers written in the spec, in
 #                 spec order; these alone get their own down/up events
 #   $key           the key table entry's key/code/keyCode plus `text`
-key_parse <- function(spec, call = caller_env(), mod = NULL) {
+key_parse <- function(spec, mod = NULL, call = caller_env()) {
   check_string(spec, arg = "key", call = call)
   if (!nzchar(spec)) {
     cli::cli_abort(
