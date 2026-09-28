@@ -22,3 +22,9 @@ Requirements: kata aq35, `.agents/SPEC.md` § Camera, annotations, and captions 
 
 - Orchestrator sign-off: caption defaults are white text, staged annotation font family, caption-specific 20 CSS px; VTT requires MP4/WebM; GIF caption burn uses the video filtergraph/PNG-sequence route, with R blending confined to stills. The orchestrator will amend SPEC.md.
 - Do not touch the protected init/restore window or add timers, queues, ordering flags, display-shaped recorder state or guards-for-guards. Escalate if target transparency, relative font loading, path escaping or long filtergraphs force one of those approaches. The camera/annotation branches own their respective files; keep the clear hook minimal.
+
+## Stage 2 handoff (blocked)
+
+- Signed-off mechanism note committed as `8ad3899` before code. Red-first caption test run: FAIL 1/WARN 1/SKIP 0/PASS 1 (API absent; unexpected snapshot warning corrected). Initial focused tests after code: FAIL 0/WARN 0/SKIP 0/PASS 5.
+- The required early two-window MP4 + camera move probe used an output directory with spaces and an apostrophe. `av::av_encode_video()` rejects the `movie='...a'\\''b...':loop=1` filtergraph: FFmpeg reports `No option name near '1'` and `avfilter_graph_parse_ptr: Invalid argument` around the second movie source. Focused probe run: FAIL 1/WARN 1/SKIP 0/PASS 7 (warning is camera softness at capture density 1x). The separate-target still compositing test passed. Stop here as directed; do not quietly bypass the path or build another encoding mechanism.
+- Production code, generated docs and tests are intentionally **uncommitted and not green** pending orchestrator guidance on escaping. No full cross-module test/style gate was run. The kata issue carries the same blocker. Resume with a minimal single-path/movie parser probe and explicit decision before any additional production work.
