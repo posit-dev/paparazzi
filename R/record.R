@@ -320,8 +320,14 @@ pz_record_resume <- function(ctx) {
   if (!rec$paused) {
     return(invisible(ctx))
   }
+  if (identical(rec$method, "screencast")) {
+    record_wait_pending(rec, ctx$page, "the frame capture before resuming")
+  }
   rec$active_since <- rec_now()
   rec$paused <- FALSE
+  if (identical(rec$method, "screencast")) {
+    record_screencast_snapshot(ctx$page, rec)
+  }
   invisible(ctx)
 }
 
@@ -496,7 +502,14 @@ record_hold <- function(page, code, call = caller_env()) {
     "the in-flight frame capture before changing the device metrics",
     call = call
   )
-  code
+  result <- code
+  rec$held <- held
+  if (
+    !held && rec$active && !rec$paused && identical(rec$method, "screencast")
+  ) {
+    record_screencast_snapshot(page, rec)
+  }
+  result
 }
 
 record_wait_pending <- function(rec, page, what, call = caller_env()) {
@@ -731,6 +744,7 @@ record_screencast_frame <- function(page, rec, frame) {
     !rec$active ||
       rec$paused ||
       rec$held ||
+      !is.null(rec$pending) ||
       !identical(rec, page_recorder(page))
   ) {
     return(invisible(NULL))
@@ -751,9 +765,24 @@ record_screencast_frame <- function(page, rec, frame) {
   invisible(NULL)
 }
 
-# Issue one async capture on the page: the tick's periodic capture and
-# the stop-time final frame both come through here. The pending slot
-# prevents overlapping captures; callbacks clear it when chromote
+record_screencast_snapshot <- function(page, rec) {
+  if (!is.null(rec$pending)) {
+    return(invisible(NULL))
+  }
+  tryCatch(
+    record_capture(
+      rec,
+      page,
+      rec_vt(rec),
+      scale = 1 / pz_js(page, "window.devicePixelRatio")
+    ),
+    error = function(e) record_error(rec, e)
+  )
+  invisible(NULL)
+}
+
+# Shared async screenshot for poll ticks, screencast boundary snapshots,
+# and the stop-time final frame. The pending slot prevents overlapping captures; callbacks clear it when chromote
 # invokes them on the child loop. A synchronous failure (e.g. a closed
 # session) clears it and lands in the recorder's error tally instead.
 # Unclipped surface captures at DPR 2 can remap concurrent mouse input
