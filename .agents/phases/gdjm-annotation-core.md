@@ -1,4 +1,4 @@
-# Annotation core (gdjm; signed off by orchestrator)
+# Annotation core (gdjm) (signed off by orchestrator)
 
 Requirements: kata gdjm; `.agents/SPEC.md` § Camera, annotations, and captions (Annotations), § Cursor and staging, § Recording, § Framing; rationale on kata 1a3m. Reveal spike 3hzw confirms shadow-root animation; wipe is later work. The orchestrator will amend SPEC.md to clarify navigation; do not edit it here.
 
@@ -20,3 +20,9 @@ Requirements: kata gdjm; `.agents/SPEC.md` § Camera, annotations, and captions 
 ## Escalation
 
 Stop before touching emulation/device-metrics init/restore, adding a timer/queue/second ordering flag, saving display-shaped content, or adding a guard for a guard. Cross-document annotation rebinding is explicitly out of scope.
+
+## Handoff (2026-09-28)
+
+- Landed `08c2cbd` (stage defaults) and `3fcff32` (document-bound shadow-root Map, fixed box/label layer below cursor, rAF layout follow, page-side fade/reverse, paused/idle instant path, navigation-only layer boot, synchronous still sync, docs and tests). No `R/record.R` or SPEC edits. Annotations do not rebind after navigation, per sign-off.
+- Red-first `.agents/chrome-lock.sh btw pkg test -f annotate --reporter minimal`: FAIL 4 / WARN 0 / SKIP 0 / PASS 0 (missing API/stage options). Green annotate: FAIL 0 / WARN 0 / SKIP 0 / PASS 46 (24.66s wall). Final integration `.agents/chrome-lock.sh btw pkg test -f 'annotate|stage|cursor|inspect|screenshot|resolve|nav|record' --reporter minimal`: FAIL 0 / WARN 0 / SKIP 0 / PASS 1579. `btw pkg document`, `air format --check .`, `jarl check .` passed. Stills and fade frames are checked by sampled PNG pixels, not just DOM counts.
+- No bfcache-restore test: existing `file://` nav fixtures do not support bfcache; browser restoration should preserve the old document's Map without any annotation hook. The orchestrator will amend SPEC and track cross-document rebinding separately. Next: coordinator sign-off/review/merge; no pending local work.
