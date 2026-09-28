@@ -28,10 +28,10 @@
    and cross-module seams named in the phase note; a full run is optional at
    the implementer's discretion. Run `btw pkg test` on main as the merge gate;
    filtered tests may miss integration breaks.
-1. **Serialize Chrome-heavy tests:** wrap every `test_local()` or
-   `btw pkg test` run in `.agents/chrome-lock.sh` to prevent contention
-   between worktrees. Judge results by reported FAIL/WARN, not exit code or
-   variable PASS counts.
+1. **Serialize competing Chrome-heavy runs:** use `.agents/chrome-lock.sh`
+   when test runs across worktrees might overlap and overload Chrome. Don't
+   lock browser-free or isolated runs. Judge test results by reported
+   FAIL/WARN, not exit code or variable PASS counts.
 
 ## Work Mechanics
 
