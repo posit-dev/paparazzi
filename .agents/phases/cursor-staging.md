@@ -46,7 +46,7 @@ R/resolve.R).
 
 - Decision: keep px/s, use a 500 px/s default with [0.5, 2] second bounds for both cursor glides and staged wheel scrolls; document arithmetic as the no-recording estimate rather than exporting a helper. `pz_scroll(duration =)` overrides each wheel scroll in target/by/to paths.
 - Size: use the existing `.pz-inner` wrapper, with a 1.75x default and a 0.8 press multiplier. No SVG geometry, extra wrapper, or zoom bookkeeping changes.
-- Handoff: focused `btw pkg test --filter 'cursor|stage|actions'` passed (443, no failures/warnings), including custom-size navigation. Full main-branch suite passed (2859, no failures/warnings) before that test-only addition. User approved passing scale through existing new-document init state. Manual roborev review remains before issue closure.
+- Handoff: focused `btw pkg test --filter 'stage|cursor|actions'` passed (453, no failures/warnings) and the full main-branch suite passed (2871, no failures/warnings) after the roborev #1309 zero-duration fix. User approved the instant zero-duration path and scale in the existing new-document init state. Close review #1309 when this follow-up commit lands. Pre-existing `pz_cursor_move(duration = Inf)` tracked separately as backlog rny6.
 
 ## Decisions
 
@@ -122,7 +122,9 @@ R/resolve.R).
   `cubic-bezier(0.42, 0, 0.58, 1)` (ease-in-out). An explicit
   `duration =` (pz_cursor_move) wins. A pz_scroll(duration =)
   override controls each staged wheel scroll, including into-view
-  rounds; otherwise scroll timing uses the same bounds with the largest
+  rounds; `duration = 0` routes to the existing instant-scroll path
+  instead of dispatching asynchronous wheels without a settling pump.
+  Otherwise scroll timing uses the same bounds with the largest
   absolute axis delta as its distance. Off-frame entry/exit points are
   computed from the viewport box and the side tokens: 40px past the
   named edge(s), at the target's coordinate on the other axis.

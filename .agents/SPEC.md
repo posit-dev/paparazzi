@@ -68,7 +68,7 @@ Pointer and keyboard:
 - `pz_click()`, `pz_hover()`, `pz_type()` as above.
 - `pz_press(ctx, key, ...)`: Playwright-style key syntax, e.g. `"Enter"`, `"Control+A"`, `"Meta+Enter"`, `"Shift+Tab"`. A vector presses keys in sequence: `pz_press(c("ArrowDown", "Enter"))`.
 - `pz_focus(ctx, target = NULL, ...)` / `pz_blur(ctx, ...)`: e.g. focus to show an input's enabled look, blur to remove focus rings before a screenshot.
-- `pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)`: with a target, scroll it into view; with `by = c(x, y)` or `to = "bottom"` (direction vocabulary), scroll the current scope's container. While recording, scrolling is smooth, using real `mouseWheel` events with the cursor over the container; `duration` overrides the staged time per wheel scroll. Auto-scroll before other actions is animated the same way.
+- `pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)`: with a target, scroll it into view; with `by = c(x, y)` or `to = "bottom"` (direction vocabulary), scroll the current scope's container. While recording, scrolling is smooth, using real `mouseWheel` events with the cursor over the container; positive `duration` overrides the staged time per wheel scroll, while `duration = 0` uses the existing instant path (no queued wheels). Auto-scroll before other actions is animated the same way.
 - `pz_drag(ctx, target, to, ..., by = NULL)`: `to` is a target, or use an offset `by = c(x, y)`. Real mouse press/move/release; the cursor glides while holding when recording. HTML5 drag and drop (`dragstart`/`drop`) needs `Input.setInterceptDrags` + `Input.dispatchDragEvent`, chosen when the source is `draggable`.
 - `pz_select_text(ctx, text, ..., target = NULL)`: highlights an exact substring inside an element, as if dragging across it (TreeWalker over text nodes, DOM `Range`, window selection; works across inline tags). Typing afterwards replaces the selection. While recording, it's staged as a real mouse drag from the start of the text to the end.
 
@@ -439,7 +439,7 @@ Pointer actions while recording:
 
 Movement and look:
 
-- Glide duration scales with distance (roughly `clamp(0.25 + distance / cursor_speed, 0.5, 2)` seconds), cubic ease-in-out, short pauses before (~0.15s) and after (~0.2s) clicks. The 500 px/s default is deliberately slower than natural pointing so viewers can follow it; 400-600 px/s is a useful range. Staged scrolling uses the same duration bounds; `pz_scroll(duration =)` overrides the per-wheel-scroll duration.
+- Glide duration scales with distance (roughly `clamp(0.25 + distance / cursor_speed, 0.5, 2)` seconds), cubic ease-in-out, short pauses before (~0.15s) and after (~0.2s) clicks. The 500 px/s default is deliberately slower than natural pointing so viewers can follow it; 400-600 px/s is a useful range. Staged scrolling uses the same duration bounds; `pz_scroll(duration > 0)` overrides the per-wheel-scroll duration and `duration = 0` scrolls instantly.
 - Press animation scales the 1.75x default cursor down relative to its base size; `cursor_scale = 1` restores the original 20px artwork.
 - The cursor switches to a hand when the element under it has computed `cursor: pointer`. This is the only extra in the first version; ripple and cursor styles come later.
 - CSS zoom and device pixel ratio are handled internally.

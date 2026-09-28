@@ -119,12 +119,10 @@ pz_stage <- function(
     if (is.null(cursor_scale)) {
       overrides[["cursor_scale"]] <- NULL
     } else {
-      check_number_decimal(
-        cursor_scale,
-        min = .Machine$double.eps,
-        max = 5,
-        allow_infinite = FALSE
-      )
+      check_number_decimal(cursor_scale, min = 0, max = 5, allow_infinite = FALSE)
+      if (cursor_scale == 0) {
+        cli::cli_abort("{.arg cursor_scale} must be greater than 0.")
+      }
       overrides$cursor_scale <- cursor_scale
     }
   }
@@ -251,7 +249,7 @@ stage_scroll_into_view <- function(
   duration = NULL,
   call = caller_env()
 ) {
-  if (!stage_recording(ctx$page)) {
+  if (!stage_recording(ctx$page) || isTRUE(duration == 0)) {
     return(el_scroll_into_view(els, call = call))
   }
   stage_wheel_into_view(ctx, els, duration = duration, call = call)

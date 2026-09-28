@@ -586,7 +586,8 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
 #' @param duration Seconds per staged wheel scroll; `NULL` computes the
 #'   time from the scroll distance and `cursor_speed` in [pz_stage()].
 #'   Applies only while recording, including `target` and any scroll
-#'   needed to bring a scoped container into view.
+#'   needed to bring a scoped container into view. Use 0 to scroll
+#'   instantly without wheel animation.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -656,7 +657,7 @@ pz_scroll <- function(
   if (!is.null(scoped)) {
     check_scope_single(scoped)
   }
-  if (stage_recording(ctx$page)) {
+  if (stage_recording(ctx$page) && !isTRUE(duration == 0)) {
     scroll_staged(ctx, scoped, by, to, duration = duration)
     stage_action_pause(ctx)
     return(invisible(ctx))

@@ -135,6 +135,22 @@ test_that("cursor_scale changes ink size and NULL restores the default", {
   expect_lt(restored$height, larger$height)
 })
 
+test_that("changing cursor_scale redraws a visible recording cursor", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_record_start(
+    withr::local_tempfile(fileext = ".mp4"),
+    fps = 10,
+    hold = c(0, 0)
+  )
+  page |> pz_cursor_move("#btn")
+  page |> pz_stage(cursor_scale = 1)
+  expect_equal(cursor_overlay_scale(page), 1)
+  page |> pz_stage(cursor_scale = NULL)
+  expect_equal(cursor_overlay_scale(page), 1.75)
+  page |> pz_record_stop()
+})
+
 test_that("the overlay is excluded from resolution and hit-testing", {
   page <- local_cursor_page()
   before <- pz_get_count(page, target = "div")
@@ -220,23 +236,14 @@ test_that("the press animation scales the cursor down", {
   shot <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(shot)
   unpressed <- cursor_png_ink(page, shot, band = c(280, 370))
-  scale <- function(page) {
-    pz_js(
-      page,
-      paste0(
-        "parseFloat(document.getElementById('paparazzi-overlay-root')",
-        ".shadowRoot.querySelector('.pz-inner').style.transform.slice(6))"
-      )
-    )
-  }
-  expect_equal(scale(page), 1.75)
+  expect_equal(cursor_overlay_scale(page), 1.75)
 
   cursor_press(page, TRUE)
   pump_loop(page$child_loop, 0.2)
   shot2 <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(shot2)
   pressed <- cursor_png_ink(page, shot2, band = c(280, 370))
-  expect_equal(scale(page), 1.4)
+  expect_equal(cursor_overlay_scale(page), 1.4)
 
   expect_true(pressed$count > 20)
   expect_true(pressed$height < unpressed$height * 0.9)

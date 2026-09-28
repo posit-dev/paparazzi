@@ -23,7 +23,8 @@ axes).}
 \item{duration}{Seconds per staged wheel scroll; \code{NULL} computes the
 time from the scroll distance and \code{cursor_speed} in \code{\link[=pz_stage]{pz_stage()}}.
 Applies only while recording, including \code{target} and any scroll
-needed to bring a scoped container into view.}
+needed to bring a scoped container into view. Use 0 to scroll
+instantly without wheel animation.}
 }
 \value{
 \code{ctx}, invisibly.

@@ -34,6 +34,16 @@ cursor_overlay_state <- function(page) {
   unlist(v)
 }
 
+cursor_overlay_scale <- function(page) {
+  pz_js(
+    page,
+    paste0(
+      "parseFloat(document.getElementById('paparazzi-overlay-root')",
+      ".shadowRoot.querySelector('.pz-inner').style.transform.slice(6))"
+    )
+  )
+}
+
 # Scan a PNG for near-black pixels (the cursor ink; the fixture keeps
 # everything else lighter than the threshold): count, CSS-pixel
 # centroid, and ink height (max - min y), optionally restricted to a

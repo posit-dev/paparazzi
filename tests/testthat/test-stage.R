@@ -72,6 +72,8 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_error(pz_stage(page, cursor_scale = 5.1), class = "rlang_error")
   expect_error(pz_stage(page, cursor_scale = Inf), class = "rlang_error")
   expect_error(pz_stage(page, cursor_scale = "large"), class = "rlang_error")
+  page |> pz_stage(cursor_scale = 5)
+  expect_equal(page_stage(page)$cursor_scale, 5)
   expect_error(pz_stage(page, enter = "up"), class = "paparazzi_error_input")
   expect_error(pz_stage(page, typing = "slow"), class = "rlang_error")
   expect_error(pz_stage(page, typing_speed = -1), class = "rlang_error")
@@ -205,6 +207,35 @@ test_that("pz_scroll duration overrides staged wheels for by, to, and target", {
   ))
   expect_true(length(wheel_durations) > 0)
   expect_true(all(wheel_durations == 0.05))
+
+  before <- pz_js(page, "window.scrollY")
+  page |> pz_scroll(by = c(0, 0), duration = 0)
+  expect_equal(pz_js(page, "window.scrollY"), before)
+  page |> pz_record_stop()
+})
+
+test_that("zero-duration scrolls land instantly without queued wheel events", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_record_start(
+    withr::local_tempfile(fileext = ".mp4"),
+    fps = 10,
+    hold = c(0, 0)
+  )
+
+  page |> pz_scroll(by = c(0, 300), duration = 0L)
+  expect_equal(pz_js(page, "window.scrollY"), 300)
+  page |> pz_scroll(to = "bottom", duration = 0)
+  expect_equal(
+    pz_js(page, "window.scrollY"),
+    pz_js(page, "document.scrollingElement.scrollHeight - window.innerHeight")
+  )
+  page |> pz_scroll(target = "#plain", duration = 0)
+  expect_true(pz_js(
+    page,
+    "document.getElementById('plain').getBoundingClientRect().y >= 0"
+  ))
+  expect_equal(pz_js(page, "window.__log.wheels"), 0)
   page |> pz_record_stop()
 })
 
@@ -397,11 +428,22 @@ test_that("an off-screen scope is brought into view with staged wheels too", {
       fps = 10,
       hold = c(0, 0)
     )
+  wheel_durations <- numeric()
+  original_wheel <- stage_wheel
+  testthat::local_mocked_bindings(
+    stage_wheel = function(ctx, point, dx, dy, duration, call = caller_env()) {
+      wheel_durations <<- c(wheel_durations, duration)
+      original_wheel(ctx, point, dx, dy, duration, call = call)
+    }
+  )
   # The scope's container is already at its target (top), so every
   # wheel has to come from the into-view: a recorded scoped scroll
   # must animate the scope on screen, not jump it with scrollIntoView.
-  page |> pz_find("#deep-scope") |> pz_scroll(to = "top")
+  page |> pz_find("#deep-scope") |> pz_scroll(to = "top", duration = 0.05)
   page |> pz_record_stop()
+
+  expect_true(length(wheel_durations) > 0)
+  expect_true(all(wheel_durations == 0.05))
 
   expect_true(pz_js(page, "window.__log.wheels") > 0)
   expect_equal(
