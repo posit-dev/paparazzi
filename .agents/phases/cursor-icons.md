@@ -124,6 +124,17 @@ offset). Each lands as its own unit on main with one roborev review.
 
 (newest first; three lines per session: landed / next / provisional)
 
+- 2026-09-28 (2vqb): landed the per-call `icon` API, 13-keyword SVG
+  registry with visibility selection, landing-point CSS inference and URL
+  fallback, persistent last-visible state for navigation, help pages and
+  cursor tests; focused cursor|stage 295 PASS, full suite 3008 PASS, both
+  0 FAIL/WARN; changed-file air and jarl clean.
+  Next: k6vz moves the automatic visibility flip from the landing edge
+  to destination entry along the glide; 9a2n adds landing offsets.
+  Provisional: the current automatic glide switches at its final frame
+  using CSS keyframes (no timers); artwork legibility is pinned by
+  hotspot ink tests but deserves a human visual check in a demo.
+
 - 2026-09-28 (df7d): landed the pointing-finger artwork replacing the
   four-finger .pz-hand path, a dark-background clickable fixture region
   (#dark-btn), and cursor_png_ink() extended with an x_range and a

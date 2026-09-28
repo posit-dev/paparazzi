@@ -425,6 +425,13 @@ test_that("off-frame entries start with default and explicit icons can replace i
   # At the beginning of the glide the default icon remains visible;
   # after the landing the inferred pointer is the visible icon.
   page |> pz_cursor_move("#btn")
+  expect_match(
+    pz_js(
+      page,
+      "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-default').style.animation"
+    ),
+    "pz-icon-out"
+  )
   expect_identical(page_cursor(page)$icon, "pointer")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
   page |> pz_cursor_leave("left", icon = "grab")
@@ -485,4 +492,26 @@ test_that("non-default artwork stays aligned under CSS zoom and DPR", {
   )
   expect_gt(ink$count, 10)
   expect_lt(abs(ink$x - center[[1]]), 12)
+})
+
+
+test_that("representative icon families put ink near their hotspots", {
+  page <- local_cursor_page()
+  shot <- withr::local_tempfile(fileext = ".png")
+  for (icon in c(
+    "text",
+    "not-allowed",
+    "crosshair",
+    "grab",
+    "grabbing",
+    "ew-resize",
+    "ns-resize",
+    "nesw-resize"
+  )) {
+    page |> pz_cursor_move("#plain", icon = icon) |> pz_screenshot(shot)
+    ink <- cursor_png_ink(page, shot, band = c(305, 348), x_range = c(145, 185))
+    expect_gt(ink$count, 10)
+    expect_lt(abs(ink$x - 160), 12)
+    expect_lt(abs(ink$y - 322), 12)
+  }
 })
