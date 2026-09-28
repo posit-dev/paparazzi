@@ -13,7 +13,10 @@ pz_stage(
   enter,
   typing,
   typing_speed,
-  pause
+  pause,
+  annotate_color,
+  annotate_font_family,
+  annotate_font_size
 )
 }
 \arguments{
@@ -56,6 +59,15 @@ Supply \code{NULL} to restore the default.}
 
 \item{pause}{Seconds to hold after each action while recording.
 Supply \code{NULL} to restore the default.}
+
+\item{annotate_color}{CSS color for new annotations. Supply \code{NULL} to
+restore the default.}
+
+\item{annotate_font_family}{CSS font family for new annotation badges.
+Supply \code{NULL} to restore the default.}
+
+\item{annotate_font_size}{Badge font size in CSS pixels. Supply \code{NULL}
+to restore the default.}
 }
 \value{
 \code{ctx}, invisibly.

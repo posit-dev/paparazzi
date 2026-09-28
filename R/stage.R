@@ -51,6 +51,12 @@
 #'   Supply `NULL` to restore the default.
 #' @param pause Seconds to hold after each action while recording.
 #'   Supply `NULL` to restore the default.
+#' @param annotate_color CSS color for new annotations. Supply `NULL` to
+#'   restore the default.
+#' @param annotate_font_family CSS font family for new annotation badges.
+#'   Supply `NULL` to restore the default.
+#' @param annotate_font_size Badge font size in CSS pixels. Supply `NULL`
+#'   to restore the default.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -90,7 +96,10 @@ pz_stage <- function(
   enter,
   typing,
   typing_speed,
-  pause
+  pause,
+  annotate_color,
+  annotate_font_family,
+  annotate_font_size
 ) {
   check_context(ctx)
   check_dots_empty()
@@ -165,6 +174,33 @@ pz_stage <- function(
       overrides$pause <- pause
     }
   }
+  if (!missing(annotate_color)) {
+    if (is.null(annotate_color)) {
+      overrides[["annotate_color"]] <- NULL
+    } else {
+      check_string(annotate_color)
+      overrides$annotate_color <- annotate_color
+    }
+  }
+  if (!missing(annotate_font_family)) {
+    if (is.null(annotate_font_family)) {
+      overrides[["annotate_font_family"]] <- NULL
+    } else {
+      check_string(annotate_font_family)
+      overrides$annotate_font_family <- annotate_font_family
+    }
+  }
+  if (!missing(annotate_font_size)) {
+    if (is.null(annotate_font_size)) {
+      overrides[["annotate_font_size"]] <- NULL
+    } else {
+      check_number_decimal(annotate_font_size, min = 0, allow_infinite = FALSE)
+      if (annotate_font_size == 0) {
+        cli::cli_abort("{.arg annotate_font_size} must be greater than 0.")
+      }
+      overrides$annotate_font_size <- annotate_font_size
+    }
+  }
   page_set_stage(page, overrides)
 
   # The cursor setting applies immediately: FALSE hides a drawn cursor;
@@ -203,7 +239,10 @@ STAGE_DEFAULTS <- list(
   enter = NULL,
   typing = "natural",
   typing_speed = 16,
-  pause = 0
+  pause = 0,
+  annotate_color = "#e11d48",
+  annotate_font_family = "sans-serif",
+  annotate_font_size = 14
 )
 
 page_stage <- function(page) {
