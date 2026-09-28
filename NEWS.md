@@ -1,5 +1,9 @@
 # paparazzi 0.0.0.9000
 
+* Cursor overlays now use bundled SVG artwork for the full set of CSS cursor
+  keywords, including `wait`, `zoom-in`, directional resize, and `none`. CSS
+  cursor URLs use their fallback keyword; custom URL images are not drawn.
+
 * First development version. paparazzi drives a headless Chrome browser from R
   through chromote, with one `|>` chain per script: open pages and Shiny apps
   (`pz_open()`, `pz_app()`), find elements (`pz_loc()`, `pz_find()`), act on

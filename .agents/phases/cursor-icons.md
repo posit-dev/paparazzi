@@ -5,9 +5,9 @@ the cursor overlay in R/cursor.R and the decisions in
 `cursor-staging.md` (overlay structure, glide math, pump driver,
 navigation re-injection). Durable requirements live in `.agents/SPEC.md`
 ("Cursor and staging"); this note holds mechanism-level choices and
-session handoffs for this phase only. zw7w (full CSS cursor
-compatibility + url() research) is deferred to a later session by
-garrick's decision on 2026-09-28; it stays blocked on 2vqb.
+session handoffs for this phase only. zw7w resumes the CSS keyword
+expansion in this session; its URL-image investigation does not imply
+support for arbitrary URL inputs.
 
 Order: rny6 (validation fix) -> df7d (pointer artwork) -> 2vqb (icon
 API, the keystone) -> k6vz (glide-entry switching) -> 9a2n (landing
@@ -86,6 +86,29 @@ offset). Each lands as its own unit on main with one roborev review.
   no clamping. The resting icon is inferred at the actual landing
   point per k6vz. SPEC amendment in this unit: `pz_cursor_move()`
   signature gains `offset`, with the sign convention documented.
+
+## zw7w implementation decisions (2026-09-28)
+
+- Bundle the authored MIT SVGs and `cursors.json` under `inst/cursors/`.
+  Load the CSS-keyword files and their fractional 32-unit hotspots at package
+  load, keeping the 20px overlay box, 1.75 default scale, 4px/2px press origin,
+  and each keyword's separately animatable `visibility` layer. Exclude the
+  three `mac-*` extras, which have no CSS keyword.
+- `auto` is an explicit alias for the default arrow but computed `auto` still
+  walks up the element chain; `none` uses a blank SVG layer so it hides only
+  the ink, not the cursor's position or animation state. The existing CSS URL
+  fallback-keyword inference remains; do not load arbitrary URL images into
+  the overlay or accept them as explicit `icon` values.
+- Preserve the existing glide switch and navigation re-injection mechanisms;
+  changing artwork must not add timers, queues, or new ordering flags.
+- URL images remain unsupported: computed CSS exposes the URL, optional
+  hotspot, and fallback keyword, but not the browser's chosen bitmap (or
+  whether a candidate loaded). Fetching page-provided URLs into the overlay
+  would need rules for relative bases, CORS, failures, SVG safety, and
+  navigation persistence; storing resolved bitmap content would also cross
+  the display-shaped-state tripwire. The bundled fallback is deterministic
+  and avoids initiating a second asset load. Revisit URL images only as a
+  separately scoped design decision.
 
 ## 2vqb implementation decisions
 
@@ -176,6 +199,13 @@ offset). Each lands as its own unit on main with one roborev review.
   persistent cursor state.
 
 ## Handoff log
+
+- 2026-09-28 (zw7w): bundled authored SVGs and MIT license, replaced legacy
+  paths with manifest hotspots, covered all CSS cursor keywords including
+  blank `none` and explicit `auto`; cursor|stage|actions tests and style checks
+  green. Garrick approved light/dark pointer, text, and crosshair captures.
+  Next: review this unit and close zw7w. Provisional: URL-image loading
+  remains deferred; computed fallback keywords remain supported.
 
 (newest first; three lines per session: landed / next / provisional)
 
