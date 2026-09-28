@@ -53,6 +53,15 @@ test_that("camera calls are no-ops outside recording and reset with the recorder
     page
   )
   expect_error(pz_camera(page, "#missing", zoom = -1), "zoom")
+  expect_error(pz_camera(page, "#missing", zoom = Inf), "zoom")
+  expect_error(pz_camera(page, "#missing", duration = Inf), "duration")
+  pz_js(
+    page,
+    "document.body.appendChild(document.createElement('p')).id = 'gone'"
+  )
+  gone <- pz_find(page, "#gone")
+  pz_js(page, "document.getElementById('gone').remove()")
+  expect_identical(pz_camera(gone), gone)
   expect_error(pz_camera(page), "target")
   expect_identical(withVisible(pz_camera_reset(page))$value, page)
   out <- withr::local_tempfile(fileext = ".mp4")

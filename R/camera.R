@@ -25,13 +25,23 @@ pz_camera <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  check_number_decimal(zoom, min = 0, allow_null = TRUE)
+  check_number_decimal(
+    zoom,
+    min = 0,
+    allow_infinite = FALSE,
+    allow_null = TRUE
+  )
   if (!is.null(zoom) && zoom == 0) {
     cli::cli_abort("{.arg zoom} must be greater than zero.")
   }
-  check_number_decimal(duration, min = 0, allow_null = TRUE)
+  check_number_decimal(
+    duration,
+    min = 0,
+    allow_infinite = FALSE,
+    allow_null = TRUE
+  )
   pad <- check_pad(if (is.null(pad)) 24 else pad)
-  if (is.null(target) && is.null(scope_root(ctx))) {
+  if (is.null(target) && is.null(scope_top(ctx))) {
     cli::cli_abort("Supply a {.arg target} or use a scoped context.")
   }
   rec <- page_recorder(ctx$page)

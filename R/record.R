@@ -1094,11 +1094,11 @@ record_encode <- function(rec, call = caller_env()) {
         codec = "png",
         verbose = FALSE
       )
-      files <- sort(Sys.glob(file.path(crop_dir, "camera-*.png")))
-      if (length(files) < resampled$n_ticks) {
+      # av can emit one extra terminal frame; keep exactly the ticks.
+      files <- sprintf(sequence, seq_len(resampled$n_ticks))
+      if (!all(file.exists(files))) {
         cli::cli_abort("The camera rendered fewer GIF frames than requested.")
       }
-      files <- files[seq_len(resampled$n_ticks)]
     } else if (!is.null(out$crop)) {
       crop_dir <- tempfile("paparazzi-crop-")
       dir.create(crop_dir)
