@@ -46,6 +46,24 @@ test_that("pz_cursor_show(from =) starts off-frame on that side", {
   expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
 })
 
+test_that("corner directions enter and leave past both frame edges", {
+  page <- local_cursor_page()
+
+  # Leaving through a corner ends past both edges at once.
+  page |> pz_cursor_show("#btn") |> pz_cursor_leave("top-left")
+  st <- cursor_overlay_state(page)
+  expect_true(st[[2]] < 0)
+  expect_true(st[[3]] < 0)
+
+  # A corner from re-enters to the target (static jump when not
+  # recording); tokens normalize in either order and casing.
+  page |> pz_cursor_show("#btn", from = "bottom right")
+  expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
+
+  page |> pz_stage(enter = "Left-top")
+  expect_identical(page_stage(page)$enter, c("left", "top"))
+})
+
 test_that("cursor function and stage validation is classed", {
   page <- local_cursor_page()
 

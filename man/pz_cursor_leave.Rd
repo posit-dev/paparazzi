@@ -9,8 +9,9 @@ pz_cursor_leave(ctx, side = "right")
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{side}{A side of the frame to leave through: \code{"top"},
-\code{"bottom"}, \code{"left"}, or \code{"right"}. Defaults to \code{"right"}.}
+\item{side}{A side (\code{"top"}, \code{"bottom"}, \code{"left"}, \code{"right"}) or
+corner (\code{"top left"}, \code{"bottom right"}, ...) of the frame to leave
+through. Defaults to \code{"right"}.}
 }
 \value{
 \code{ctx}, invisibly.

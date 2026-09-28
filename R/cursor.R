@@ -22,11 +22,12 @@
 #'   specs. The cursor centers on the match. `NULL` uses the current
 #'   scope's element or, at the root context, shows the cursor at its
 #'   last position (or the viewport center the first time).
-#' @param from A side of the frame to enter from: `"top"`, `"bottom"`,
-#'   `"left"`, or `"right"`. `NULL` (the default) re-enters from the side
-#'   the cursor last left through (see [pz_cursor_leave()]); a cursor that
-#'   has never been shown uses the `enter` setting of [pz_stage()].
-#'   Otherwise the cursor glides from its current position.
+#' @param from A side (`"top"`, `"bottom"`, `"left"`, `"right"`) or
+#'   corner (`"top left"`, `"bottom right"`, ...) of the frame to enter
+#'   from. `NULL` (the default) re-enters from the direction the cursor
+#'   last left through (see [pz_cursor_leave()]); a cursor that has never
+#'   been shown uses the `enter` setting of [pz_stage()]. Otherwise the
+#'   cursor glides from its current position.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -48,7 +49,7 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL) {
   check_context(ctx)
   check_dots_empty()
   from <- if (!is.null(from)) {
-    parse_direction(from, valid = STAGE_SIDES, arg = "from")
+    parse_direction(from, valid = STAGE_DIRECTIONS, arg = "from")
   }
   check_cursor_enabled(ctx)
   cur <- page_cursor(ctx$page)
@@ -167,8 +168,9 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
 #' glides it back in from that side.
 #'
 #' @inheritParams pz_click
-#' @param side A side of the frame to leave through: `"top"`,
-#'   `"bottom"`, `"left"`, or `"right"`. Defaults to `"right"`.
+#' @param side A side (`"top"`, `"bottom"`, `"left"`, `"right"`) or
+#'   corner (`"top left"`, `"bottom right"`, ...) of the frame to leave
+#'   through. Defaults to `"right"`.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -190,7 +192,7 @@ pz_cursor_move <- function(ctx, target, ..., duration = NULL) {
 #' @export
 pz_cursor_leave <- function(ctx, side = "right") {
   check_context(ctx)
-  side <- parse_direction(side, valid = STAGE_SIDES, arg = "side")
+  side <- parse_direction(side, valid = STAGE_DIRECTIONS, arg = "side")
   check_cursor_enabled(ctx)
   page <- ctx$page
   cur <- page_cursor(page)
@@ -210,9 +212,19 @@ pz_cursor_leave <- function(ctx, side = "right") {
   invisible(ctx)
 }
 
-# The sides-only subset of the direction vocabulary, for pz_stage(enter
-# =), pz_cursor_show(from =), and pz_cursor_leave(side =).
-STAGE_SIDES <- list(c("top"), c("bottom"), c("left"), c("right"))
+# The sides-and-corners subset of the direction vocabulary, for
+# pz_stage(enter =), pz_cursor_show(from =), and pz_cursor_leave(side =).
+# Corners enter/leave past both edges at once.
+STAGE_DIRECTIONS <- list(
+  c("top"),
+  c("bottom"),
+  c("left"),
+  c("right"),
+  c("left", "top"),
+  c("right", "top"),
+  c("bottom", "left"),
+  c("bottom", "right")
+)
 
 # The cursor runtime state: a mutable environment in the page's reserved
 # private$staging_$cursor slot, created on first cursor use and reached
@@ -295,17 +307,26 @@ cursor_target_point <- function(ctx, target, call = caller_env()) {
 
 # A point 40px past the named frame edge, at the target's coordinate on
 # the other axis: where an entering cursor starts and a leaving cursor
-# ends up.
+# ends up. Corner directions offset both axes and ignore the target's
+# coordinates entirely.
 cursor_off_frame_point <- function(ctx, side, point) {
   v <- unlist(pz_js(ctx, "[window.innerWidth, window.innerHeight]"))
   margin <- 40
-  switch(
-    side,
-    top = c(x = unname(point[["x"]]), y = -margin),
-    bottom = c(x = unname(point[["x"]]), y = v[2] + margin),
-    left = c(x = -margin, y = unname(point[["y"]])),
-    right = c(x = v[1] + margin, y = unname(point[["y"]]))
-  )
+  x <- if ("left" %in% side) {
+    -margin
+  } else if ("right" %in% side) {
+    v[1] + margin
+  } else {
+    point[["x"]]
+  }
+  y <- if ("top" %in% side) {
+    -margin
+  } else if ("bottom" %in% side) {
+    v[2] + margin
+  } else {
+    point[["y"]]
+  }
+  c(x = unname(x), y = unname(y))
 }
 
 # Show the cursor at a point, choosing the entrance from the current

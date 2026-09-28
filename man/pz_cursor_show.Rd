@@ -16,11 +16,12 @@ last position (or the viewport center the first time).}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{from}{A side of the frame to enter from: \code{"top"}, \code{"bottom"},
-\code{"left"}, or \code{"right"}. \code{NULL} (the default) re-enters from the side
-the cursor last left through (see \code{\link[=pz_cursor_leave]{pz_cursor_leave()}}); a cursor that
-has never been shown uses the \code{enter} setting of \code{\link[=pz_stage]{pz_stage()}}.
-Otherwise the cursor glides from its current position.}
+\item{from}{A side (\code{"top"}, \code{"bottom"}, \code{"left"}, \code{"right"}) or
+corner (\code{"top left"}, \code{"bottom right"}, ...) of the frame to enter
+from. \code{NULL} (the default) re-enters from the direction the cursor
+last left through (see \code{\link[=pz_cursor_leave]{pz_cursor_leave()}}); a cursor that has never
+been shown uses the \code{enter} setting of \code{\link[=pz_stage]{pz_stage()}}. Otherwise the
+cursor glides from its current position.}
 }
 \value{
 \code{ctx}, invisibly.

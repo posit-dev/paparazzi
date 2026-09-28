@@ -21,8 +21,9 @@ default.}
 
 \item{enter}{Where a cursor that has never been shown first appears:
 \code{NULL} (the default) fades in on the target; a side (\code{"top"},
-\code{"bottom"}, \code{"left"}, \code{"right"}) starts off-frame on that side and
-glides in. Supply \code{NULL} to restore the default.}
+\code{"bottom"}, \code{"left"}, \code{"right"}) or corner (\code{"top left"},
+\code{"bottom right"}, ...) starts off-frame past that edge and glides
+in. Supply \code{NULL} to restore the default.}
 
 \item{typing}{Typing style while recording: \code{"natural"} (the
 default) inserts one character at a time with randomized delays;

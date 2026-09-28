@@ -31,8 +31,9 @@
 #'   default.
 #' @param enter Where a cursor that has never been shown first appears:
 #'   `NULL` (the default) fades in on the target; a side (`"top"`,
-#'   `"bottom"`, `"left"`, `"right"`) starts off-frame on that side and
-#'   glides in. Supply `NULL` to restore the default.
+#'   `"bottom"`, `"left"`, `"right"`) or corner (`"top left"`,
+#'   `"bottom right"`, ...) starts off-frame past that edge and glides
+#'   in. Supply `NULL` to restore the default.
 #' @param typing Typing style while recording: `"natural"` (the
 #'   default) inserts one character at a time with randomized delays;
 #'   `"instant"` inserts the whole string at once. Supply `NULL` to
@@ -110,7 +111,7 @@ pz_stage <- function(
     } else {
       overrides$enter <- parse_direction(
         enter,
-        valid = STAGE_SIDES,
+        valid = STAGE_DIRECTIONS,
         arg = "enter"
       )
     }
