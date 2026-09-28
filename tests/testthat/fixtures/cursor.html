@@ -13,6 +13,8 @@
   #edit { position: absolute; left: 100px; top: 160px; width: 200px; height: 40px; font-size: 16px; border: 1px solid #ccc; }
   /* #plain and #btn share the clean glide band at y = 300. */
   #plain { position: absolute; left: 100px; top: 300px; width: 120px; height: 44px; background: #eee; }
+  #crossed { position: absolute; left: 350px; top: 300px; width: 40px; height: 44px;
+             background: #eee; cursor: pointer; }
   #btn { position: absolute; left: 600px; top: 300px; width: 120px; height: 44px;
          background: steelblue; color: #fff; border: 0; border-radius: 6px;
          font-size: 16px; cursor: pointer; }
@@ -40,6 +42,7 @@
 <textarea id="bio"></textarea>
 <div id="edit" contenteditable="true"></div>
 <div id="plain"></div>
+<span id="crossed"></span>
 <button id="btn">Go</button>
 <button id="dark-btn" aria-label="Dark clickable region"></button>
 <span id="unsupported"></span>

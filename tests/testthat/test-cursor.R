@@ -532,18 +532,164 @@ test_that("representative icon families put ink near their hotspots", {
   }
 })
 
+test_that("automatic glide switches icon on destination entry, not landing", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_cursor_move("#plain")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  cursor_command(
+    page,
+    list(
+      x = 660,
+      y = 322,
+      visible = TRUE,
+      icon = NULL,
+      previous = "default",
+      pressed = FALSE,
+      duration = 2,
+      switch = list(
+        at = cursor_entry_time(
+          c(x = 160, y = 322),
+          c(x = 660, y = 322),
+          c(x = 600, y = 300, width = 120, height = 44)
+        ),
+        from = "default",
+        to = "pointer"
+      ),
+      anim = TRUE
+    )
+  )
+  visible <- function() {
+    unlist(pz_js(
+      page,
+      "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').map(e => e.classList[1])"
+    ))
+  }
+  pump_loop(page$child_loop, 0.7)
+  expect_identical(visible(), "pz-icon-default")
+  pump_loop(page$child_loop, 0.45)
+  expect_identical(visible(), "pz-icon-default")
+  pump_loop(page$child_loop, 0.55)
+  expect_identical(visible(), "pz-icon-pointer")
+  pump_loop(page$child_loop, 0.35)
+  cursor_command(
+    page,
+    list(
+      x = 160,
+      y = 322,
+      visible = TRUE,
+      icon = NULL,
+      previous = "pointer",
+      pressed = FALSE,
+      duration = 2,
+      switch = list(
+        at = cursor_entry_time(
+          c(x = 660, y = 322),
+          c(x = 160, y = 322),
+          c(x = 100, y = 300, width = 120, height = 44)
+        ),
+        from = "pointer",
+        to = "default"
+      ),
+      anim = TRUE
+    )
+  )
+  pump_loop(page$child_loop, 0.7)
+  expect_identical(visible(), "pz-icon-pointer")
+  pump_loop(page$child_loop, 1)
+  expect_identical(visible(), "pz-icon-default")
+  page |> pz_record_stop()
+})
+
 test_that("entry inversion follows the CSS easing and clips to the rect", {
   rect <- c(x = 60, y = 10, width = 20, height = 20)
   start <- c(x = 0, y = 20)
   end <- c(x = 100, y = 20)
   expect_equal(cursor_entry_time(start, end, rect), 0.5585, tolerance = 0.0002)
   expect_equal(cursor_entry_time(end, start, rect), 0.31, tolerance = 0.002)
-  expect_equal(cursor_entry_time(c(x = 65, y = 20), end, rect), 0, tolerance = 1e-12)
+  expect_equal(
+    cursor_entry_time(c(x = 65, y = 20), end, rect),
+    0,
+    tolerance = 1e-12
+  )
   expect_null(cursor_entry_time(c(x = 0, y = 40), c(x = 100, y = 40), rect))
   expect_null(cursor_entry_time(c(x = 0, y = 20), c(x = 30, y = 20), rect))
-  expect_equal(cursor_entry_time(c(x = 0, y = 20), c(x = 60, y = 20), rect), 1, tolerance = 1e-12)
-  times <- vapply(c(20, 40, 60, 80), function(x) {
-    cursor_entry_time(start, end, c(x = x, y = 10, width = 5, height = 20))
-  }, numeric(1))
+  expect_equal(
+    cursor_entry_time(c(x = 0, y = 20), c(x = 60, y = 20), rect),
+    1,
+    tolerance = 1e-12
+  )
+  times <- vapply(
+    c(20, 40, 60, 80),
+    function(x) {
+      cursor_entry_time(start, end, c(x = x, y = 10, width = 5, height = 20))
+    },
+    numeric(1)
+  )
   expect_true(all(diff(times) > 0))
+})
+
+test_that("recorded moves schedule one entry flip for the intended target", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_cursor_move("#plain")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  keyframes <- function() {
+    pz_js(
+      page,
+      "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
+    )
+  }
+  animations <- function() {
+    unlist(pz_js(
+      page,
+      "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.classList[1])"
+    ))
+  }
+  page |> pz_cursor_move("#btn", duration = 0.5)
+  expect_setequal(animations(), c("pz-icon-default", "pz-icon-pointer"))
+  expect_match(keyframes(), "pz-icon-in")
+  expect_match(keyframes(), "7[0-9]\\.")
+  expect_identical(page_cursor(page)$icon, "pointer")
+  page |> pz_cursor_move("#plain", duration = 0.5)
+  expect_setequal(animations(), c("pz-icon-default", "pz-icon-pointer"))
+  expect_match(keyframes(), "pz-icon-out")
+  expect_identical(page_cursor(page)$icon, "default")
+  # #crossed is cursor:pointer but lies between the two destinations.
+  page |> pz_cursor_move("#btn", duration = 0.5)
+  expect_length(animations(), 2)
+  expect_identical(page_cursor(page)$icon, "pointer")
+  page |> pz_cursor_move("#plain", icon = "crosshair", duration = 0.5)
+  expect_identical(keyframes(), "")
+  expect_identical(page_cursor(page)$icon, "crosshair")
+  page |> pz_cursor_move("#btn", icon = "text", duration = 0.5)
+  expect_identical(keyframes(), "")
+  expect_identical(page_cursor(page)$icon, "text")
+  page |> pz_record_stop()
+})
+
+test_that("off-frame entrances and staged actions use destination entry", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(enter = "left")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  page |> pz_cursor_show("#btn", from = "left")
+  animations <- unlist(pz_js(
+    page,
+    "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.classList[1])"
+  ))
+  expect_setequal(animations, c("pz-icon-default", "pz-icon-pointer"))
+  page |> pz_hover("#plain")
+  expect_identical(page_cursor(page)$icon, "default")
+  expect_match(
+    pz_js(
+      page,
+      "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
+    ),
+    "pz-icon-in"
+  )
+  page |> pz_record_stop()
 })

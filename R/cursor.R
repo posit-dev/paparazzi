@@ -37,8 +37,8 @@
 #'   visible icon stays on the cursor until the next destination; the
 #'   first off-frame entrance starts with `default` unless overridden.
 #'   While recording, an automatic move keeps the icon already visible
-#'   through the glide and switches as it lands; an explicit `icon`
-#'   applies from the start of the glide and stays through its landing
+#'   until it enters the destination and switches there; an explicit
+#'   `icon` applies from the start of the glide and stays through its landing
 #'   and any press. The artwork tracks CSS zoom and the device pixel
 #'   ratio internally, and a navigation re-injects the overlay with its
 #'   last icon.
@@ -85,10 +85,16 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL, icon = NULL) {
       stage_scroll_into_view(ctx, scoped)
       rects <- el_rects(scoped)
       structure(
-        c(x = rects$x[[1]] + rects$width[[1]] / 2,
-          y = rects$y[[1]] + rects$height[[1]] / 2),
-        rect = c(x = rects$x[[1]], y = rects$y[[1]],
-          width = rects$width[[1]], height = rects$height[[1]])
+        c(
+          x = rects$x[[1]] + rects$width[[1]] / 2,
+          y = rects$y[[1]] + rects$height[[1]] / 2
+        ),
+        rect = c(
+          x = rects$x[[1]],
+          y = rects$y[[1]],
+          width = rects$width[[1]],
+          height = rects$height[[1]]
+        )
       )
     } else {
       cursor_current_point(ctx)
@@ -342,10 +348,16 @@ cursor_target_point <- function(ctx, target, call = caller_env()) {
   stage_scroll_into_view(ctx, els, call = call)
   rects <- el_rects(els, call = call)
   structure(
-    c(x = rects$x[[1]] + rects$width[[1]] / 2,
-      y = rects$y[[1]] + rects$height[[1]] / 2),
-    rect = c(x = rects$x[[1]], y = rects$y[[1]],
-      width = rects$width[[1]], height = rects$height[[1]])
+    c(
+      x = rects$x[[1]] + rects$width[[1]] / 2,
+      y = rects$y[[1]] + rects$height[[1]] / 2
+    ),
+    rect = c(
+      x = rects$x[[1]],
+      y = rects$y[[1]],
+      width = rects$width[[1]],
+      height = rects$height[[1]]
+    )
   )
 }
 
@@ -356,7 +368,8 @@ cursor_entry_time <- function(start, end, rect) {
   upper <- 1
   for (axis in c("x", "y")) {
     delta <- end[[axis]] - start[[axis]]
-    edge <- rect[[axis]] + if (axis == "x") rect[["width"]] else rect[["height"]]
+    edge <- rect[[axis]] +
+      if (axis == "x") rect[["width"]] else rect[["height"]]
     if (delta == 0) {
       if (start[[axis]] < rect[[axis]] || start[[axis]] > edge) {
         return(NULL)
@@ -554,7 +567,8 @@ cursor_apply <- function(
   duration = 0,
   from = NULL,
   fade = FALSE,
-  icon = NULL
+  icon = NULL,
+  rect = NULL
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -571,6 +585,33 @@ cursor_apply <- function(
     fade = recording && fade,
     anim = recording
   )
+  start <- if (!is.null(state$from)) {
+    setNames(state$from, c("x", "y"))
+  } else if (!is.null(cur$x)) {
+    c(x = cur$x, y = cur$y)
+  }
+  if (
+    recording &&
+      duration > 0 &&
+      is.null(icon) &&
+      !is.null(rect) &&
+      !is.null(start)
+  ) {
+    at <- cursor_entry_time(start, point, rect)
+    if (!is.null(at)) {
+      landing <- cursor_command(
+        ctx,
+        list(
+          x = state$x,
+          y = state$y,
+          resolveOnly = TRUE
+        )
+      )
+      if (!identical(cur$icon, landing)) {
+        state$switch <- list(at = at, from = cur$icon, to = landing)
+      }
+    }
+  }
   cur$icon <- cursor_command(ctx, state)
   cur$x <- state$x
   cur$y <- state$y
@@ -668,7 +709,7 @@ cursor_command_js <- r"(function(state) {
       inner.appendChild(svg);
     }
     const style = document.createElement('style');
-    style.textContent = '@keyframes pz-icon-in { 0%, 99.9% { visibility:hidden; } 100% { visibility:visible; } } @keyframes pz-icon-out { 0%, 99.9% { visibility:visible; } 100% { visibility:hidden; } }';
+    style.className = 'pz-icon-keyframes';
     layer.appendChild(style);
     root.appendChild(layer);
   }
@@ -705,22 +746,30 @@ cursor_command_js <- r"(function(state) {
       el = el.parentElement || el.getRootNode().host || null;
     }
   }
-  const deferSwitch = state.anim && state.duration > 0 && !state.icon &&
-    state.previous && state.previous !== icon;
+  if (state.resolveOnly) return icon;
+  const switching = state.switch && state.anim && state.duration > 0 &&
+    state.switch.from !== state.switch.to && state.switch.to === icon &&
+    state.switch.at > 0;
+  const style = layer.querySelector('.pz-icon-keyframes');
+  style.textContent = '';
+  if (switching) {
+    const at = Math.min(100, Math.max(0, state.switch.at * 100));
+    const before = Math.max(0, at - 0.1);
+    style.textContent = '@keyframes pz-icon-in { 0%, ' + before + '% { visibility:hidden; } ' + at + '% , 100% { visibility:visible; } } ' +
+      '@keyframes pz-icon-out { 0%, ' + before + '% { visibility:visible; } ' + at + '% , 100% { visibility:hidden; } }';
+  }
   for (const svg of icons) {
     const keyword = svg.classList[1].slice('pz-icon-'.length);
     svg.style.animation = 'none';
     svg.style.visibility = keyword === icon ? 'visible' : 'hidden';
   }
-  if (deferSwitch) {
-    // Keep the previous artwork through the glide. A later phase
-    // moves the discrete visibility boundary to destination entry.
+  if (switching) {
     void inner.offsetWidth;
     for (const svg of icons) {
       const keyword = svg.classList[1].slice('pz-icon-'.length);
-      if (keyword === state.previous) {
+      if (keyword === state.switch.from) {
         svg.style.animation = 'pz-icon-out ' + state.duration + 's forwards';
-      } else if (keyword === icon) {
+      } else if (keyword === state.switch.to) {
         svg.style.animation = 'pz-icon-in ' + state.duration + 's forwards';
       }
     }

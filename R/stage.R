@@ -246,14 +246,22 @@ stage_move_cursor <- function(ctx, point) {
   if (is.null(attr(point, "rect"))) {
     # The action seam supplies an actionable viewport point, not its
     # resolved element; hit-testing that point recovers its visible rect.
-    rect <- pz_js(ctx, paste0(
-      "(() => { const el = document.elementFromPoint(",
-      point[["x"]], ",", point[["y"]],
-      "); if (!el) return null; const r = el.getBoundingClientRect();",
-      " return [r.x, r.y, r.width, r.height]; })()"
-    ))
+    rect <- pz_js(
+      ctx,
+      paste0(
+        "(() => { const el = document.elementFromPoint(",
+        point[["x"]],
+        ",",
+        point[["y"]],
+        "); if (!el) return null; const r = el.getBoundingClientRect();",
+        " return [r.x, r.y, r.width, r.height]; })()"
+      )
+    )
     if (!is.null(rect)) {
-      attr(point, "rect") <- setNames(unlist(rect), c("x", "y", "width", "height"))
+      attr(point, "rect") <- setNames(
+        unlist(rect),
+        c("x", "y", "width", "height")
+      )
     }
   }
   cursor_show_at(ctx, point)

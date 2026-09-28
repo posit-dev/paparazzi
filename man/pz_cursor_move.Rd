@@ -30,8 +30,8 @@ does not override the next call's automatic inference. The last
 visible icon stays on the cursor until the next destination; the
 first off-frame entrance starts with \code{default} unless overridden.
 While recording, an automatic move keeps the icon already visible
-through the glide and switches as it lands; an explicit \code{icon}
-applies from the start of the glide and stays through its landing
+until it enters the destination and switches there; an explicit
+\code{icon} applies from the start of the glide and stays through its landing
 and any press. The artwork tracks CSS zoom and the device pixel
 ratio internally, and a navigation re-injects the overlay with its
 last icon.}
