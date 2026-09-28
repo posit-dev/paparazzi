@@ -102,9 +102,9 @@ test_that("cursor function and stage validation is classed", {
 test_that("the cursor switches to a hand over cursor:pointer elements", {
   page <- local_cursor_page()
   page |> pz_cursor_move("#btn")
-  expect_equal(cursor_overlay_state(page)[[4]], 1)
+  expect_equal(attr(cursor_overlay_state(page), "icon"), "pointer")
   page |> pz_cursor_move("#plain")
-  expect_equal(cursor_overlay_state(page)[[4]], 0)
+  expect_equal(attr(cursor_overlay_state(page), "icon"), "default")
 })
 
 test_that("pointing cursor ink is visible on light and dark pointer targets", {

@@ -6,9 +6,9 @@ local_cursor_page <- function(.env = parent.frame()) {
   local_page(cursor_fixture_file(), .env = .env)
 }
 
-# The overlay cursor's drawn state as c(opacity, x, y, hand): opacity of
+# The overlay cursor's drawn state as numeric c(opacity, x, y), with an icon attribute: opacity of
 # the inner layer, the glide translate (viewport CSS px), and whether
-# the hand shape is showing. NULL when no cursor layer exists.
+# the visible icon keyword. NULL when no cursor layer exists.
 cursor_overlay_state <- function(page) {
   v <- pz_js(
     page,
@@ -24,14 +24,14 @@ cursor_overlay_state <- function(page) {
       "parseFloat(i.style.opacity || '1'),",
       "m ? parseFloat(m[1]) : 0,",
       "m ? parseFloat(m[2]) : 0,",
-      "l.querySelector('.pz-hand').style.display !== 'none' ? 1 : 0",
+      "[...l.querySelectorAll('.pz-icon')].find(svg => getComputedStyle(svg).visibility === 'visible')?.classList[1].slice('pz-icon-'.length) || null",
       "];})()"
     )
   )
   if (is.null(v)) {
     return(NULL)
   }
-  unlist(v)
+  structure(unlist(v[1:3]), icon = v[[4]])
 }
 
 cursor_overlay_scale <- function(page) {
