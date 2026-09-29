@@ -755,7 +755,7 @@ test_that("camera moves wait only when asked; holds and stops let them land", {
   suppressWarnings(pz_record_stop(page))
 })
 
-test_that("camera calls settle earlier moves and skip non-moves", {
+test_that("camera calls settle earlier moves and keyframe non-moves", {
   skip_if_no_av()
   html <- withr::local_tempfile(
     lines = '<!doctype html><style>body{margin:0}button{position:absolute;width:70px;height:50px}#near{left:90px;top:90px}#far{left:490px;top:290px}</style><button id="near">near</button><button id="far">far</button>',
@@ -772,9 +772,10 @@ test_that("camera calls settle earlier moves and skip non-moves", {
   expect_length(rec$camera, 2)
   expect_gte(rec$camera[[2]]$start, rec$camera[[1]]$end - 0.05)
 
-  # Already there: no keyframe without a duration.
+  # Already there: an instantaneous keyframe records the anchor without pumping.
   pz_camera(page, "#far", zoom = 2)
-  expect_length(rec$camera, 2)
+  expect_length(rec$camera, 3)
+  expect_equal(rec$camera[[3]]$end, rec$camera[[3]]$start)
 
   # With a duration, staying put is a still keyframe that can be waited on.
   pumped <- numeric()
@@ -784,12 +785,13 @@ test_that("camera calls settle earlier moves and skip non-moves", {
       pumped <<- c(pumped, seconds)
     }
   )
-  expect_length(rec$camera, 3)
+  expect_length(rec$camera, 4)
   expect_equal(pumped, 0.7)
 
   pz_camera_reset(page, wait = TRUE)
   pz_camera_reset(page)
-  expect_length(rec$camera, 4)
+  expect_length(rec$camera, 6)
+  expect_equal(rec$camera[[6]]$end, rec$camera[[6]]$start)
   suppressWarnings(pz_record_stop(page))
 })
 
@@ -823,51 +825,90 @@ test_that("follow tests the shot when the action lands", {
   suppressWarnings(pz_record_stop(page))
 })
 
-test_that("a clamped shot that looks the same but moves the anchor is a move", {
+test_that("a clamped same-viewport keyframe changes the later scroll anchor", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0;height:1500px}.target{position:absolute;width:40px;height:40px}#first{left:700px;top:500px}#beyond{left:760px;top:560px}#next{left:250px;top:350px}</style><div class="target" id="first"></div><div class="target" id="beyond"></div><div class="target" id="next"></div>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 800, height = 600, scale = 2)
+  pz_stage(page, cursor = FALSE, camera_follow = FALSE)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_camera(page, "#first", zoom = 2, pad = 0, duration = 0)
   home <- c(0, 0, 800, 600)
-  rec <- new.env()
-  rec$camera <- list(list(
-    start = 0,
-    end = 0,
-    box = c(700, 500, 790, 590),
-    zoom = 2,
-    reset = FALSE,
-    scroll = c(0, 0)
-  ))
-  from <- camera_viewport(
-    camera_shot(rec$camera[[1]]$box, home, 2),
+  before <- camera_viewport(
+    as.numeric(camera_at(rec$camera, rec_vt(rec), home, 2)),
     c(0, 0),
     home
   )
-  same <- camera_shot(c(700, 500, 790, 590), home, 2)
-  beyond <- camera_shot(c(760, 560, 800, 600), home, 2)
-  expect_equal(camera_viewport(beyond, c(0, 0), home), from)
-  expect_true(camera_same_shot(rec, from, same, FALSE, c(0, 0), home, 1))
-  expect_false(camera_same_shot(rec, from, beyond, FALSE, c(0, 0), home, 1))
-  rec$camera[[2]] <- list(
-    start = 0,
-    end = 0,
-    box = NULL,
-    zoom = NULL,
-    reset = TRUE,
-    scroll = c(0, 0)
+  pz_camera(page, "#beyond", zoom = 2, pad = 0)
+  expect_length(rec$camera, 2)
+  expect_equal(rec$camera[[2]]$end, rec$camera[[2]]$start)
+  expect_equal(rec$camera[[2]]$box, c(760, 560, 800, 600))
+  after <- camera_viewport(
+    as.numeric(camera_at(rec$camera, rec_vt(rec), home, 2)),
+    c(0, 0),
+    home
   )
-  scrolled <- home + c(0, 300, 0, 300)
-  expect_true(camera_same_shot(
-    rec,
-    scrolled,
-    scrolled,
-    TRUE,
-    c(0, 300),
-    home,
-    1
-  ))
-  rec$camera <- list()
-  expect_true(camera_same_shot(rec, home, home, TRUE, c(0, 0), home, 1))
-  expect_false(camera_same_shot(rec, home, home, FALSE, c(0, 0), home, 1))
+  expect_equal(after, before, tolerance = 0.5)
+  pz_js(page, "window.scrollTo(0, 200)")
+  scroll <- c(0, 200)
+  anchor <- camera_at(rec$camera, rec_vt(rec), home, 2)
+  expected <- camera_viewport(
+    camera_shot(rec$camera[[2]]$box, home, 2, 2),
+    scroll,
+    home
+  ) +
+    rep(scroll, 2)
+  expect_equal(as.numeric(anchor), camera_shot(rec$camera[[2]]$box, home, 2, 2))
+  pz_camera(page, "#next", zoom = 2, pad = 0, duration = 0.5)
+  expect_equal(rec$camera[[3]]$scroll, scroll)
+  expect_equal(
+    as.numeric(camera_at(rec$camera, rec$camera[[3]]$start, home, 2)),
+    expected,
+    tolerance = 0.5
+  )
+  suppressWarnings(pz_record_stop(page))
 })
 
-test_that("a repeated reset after a page scroll records no move", {
+test_that("repeated target and reset add no camera time or settle pump", {
+  skip_if_no_av()
+  page <- local_record_page()
+  pz_stage(page, camera_follow = FALSE, cursor = FALSE)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_camera(page, "#box", zoom = 2, duration = 0)
+  pumped <- numeric()
+  before <- rec_vt(rec)
+  testthat::with_mocked_bindings(
+    {
+      pz_camera(page, "#box", zoom = 2, wait = TRUE)
+      camera_settle(page$page, rec)
+    },
+    pump_loop = function(loop, seconds) pumped <<- c(pumped, seconds)
+  )
+  expect_length(pumped, 0)
+  expect_equal(rec$camera[[2]]$end, rec$camera[[2]]$start)
+  expect_lt(rec_vt(rec) - before, 0.5)
+  pz_camera_reset(page, wait = TRUE)
+  before <- rec_vt(rec)
+  testthat::with_mocked_bindings(
+    {
+      pz_camera_reset(page, wait = TRUE)
+      camera_settle(page$page, rec)
+    },
+    pump_loop = function(loop, seconds) pumped <<- c(pumped, seconds)
+  )
+  expect_length(pumped, 0)
+  expect_equal(rec$camera[[4]]$end, rec$camera[[4]]$start)
+  expect_lt(rec_vt(rec) - before, 0.5)
+  suppressWarnings(pz_record_stop(page))
+})
+
+test_that("a repeated reset after a page scroll records its new anchor", {
   skip_if_no_av()
   html <- withr::local_tempfile(
     lines = '<!doctype html><style>body{margin:0;height:2000px}#a{position:absolute;left:90px;top:90px;width:70px;height:50px}</style><button id="a">A</button>',
@@ -883,6 +924,8 @@ test_that("a repeated reset after a page scroll records no move", {
   n <- length(rec$camera)
   pz_js(page, "window.scrollTo(0, 400)")
   pz_camera_reset(page)
-  expect_length(rec$camera, n)
+  expect_length(rec$camera, n + 1L)
+  expect_equal(tail(rec$camera, 1)[[1]]$scroll, c(0, 400))
+  expect_equal(tail(rec$camera, 1)[[1]]$end, tail(rec$camera, 1)[[1]]$start)
   suppressWarnings(pz_record_stop(page))
 })
