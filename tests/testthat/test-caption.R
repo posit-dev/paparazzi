@@ -266,3 +266,83 @@ test_that("still alpha blend changes only caption rows and channels", {
   expect_equal(result[1, 3, 1:3], rep(0.8, 3), tolerance = 1 / 255)
   expect_equal(result[2, 2, 1:3], rep(0.8, 3), tolerance = 1 / 255)
 })
+
+test_that("recording caption pixels follow CSS size at DPR 2", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  pill_height <- function(scale) {
+    page <- local_page(
+      record_fixture_file(),
+      width = 320,
+      height = 240,
+      scale = scale
+    )
+    expect_equal(page_dpr(page), scale)
+    out <- withr::local_tempfile(fileext = ".mp4")
+    pz_annotate_caption(page, "DPR")
+    pz_record_start(page, out, fps = 8, hold = c(0.3, 0.1))
+    defer_record_stop(page)
+    pz_wait(page, 0.15)
+    pz_record_stop(page)
+    frames <- tempfile("caption-dpr-")
+    withr::defer(unlink(frames, recursive = TRUE))
+    image <- av::av_video_images(out, destdir = frames, format = "png")
+    pixels <- png::readPNG(image[[1]])
+    center <- pixels[, round(dim(pixels)[2] / 2), 1]
+    sum(center < 0.4 & seq_along(center) > length(center) * 0.65)
+  }
+  height_1 <- pill_height(1)
+  height_2 <- pill_height(2)
+  expect_gt(height_1, 20)
+  expect_equal(height_2 / height_1, 2, tolerance = 0.3)
+})
+
+test_that("VTT keeps text after empty lines within one cue", {
+  rec <- list(path = withr::local_tempfile(fileext = ".mp4"))
+  path <- caption_vtt(
+    rec,
+    list(list(
+      start = 0,
+      end = 1,
+      caption = list(text = "a\n\nb")
+    ))
+  )
+  lines <- readLines(path)
+  expect_equal(lines[4:5], c("a", "b"))
+  expect_equal(
+    lines,
+    c("WEBVTT", "", "00:00:00.000 --> 00:00:01.000", "a", "b", "")
+  )
+})
+
+test_that("still blend preserves straight alpha on transparent pixels", {
+  skip_if_not_installed("png")
+  base <- withr::local_tempfile(fileext = ".png")
+  overlay <- withr::local_tempfile(fileext = ".png")
+  bottom <- array(0, dim = c(2, 2, 4))
+  bottom[1, 1, ] <- c(0, 0, 1, 0.25)
+  top <- array(0, dim = c(2, 2, 4))
+  top[1, 1, ] <- c(1, 0, 0, 0.5)
+  png::writePNG(bottom, base)
+  png::writePNG(top, overlay)
+  caption_blend_still(base, overlay)
+  result <- png::readPNG(base)
+  expect_equal(result[1, 1, 4], 0.625, tolerance = 1 / 255)
+  expect_equal(result[1, 1, 1:3], c(0.8, 0, 0.2), tolerance = 1 / 255)
+  expect_equal(result[2, 2, 4], 0)
+})
+
+test_that("still blend works for single-pixel dimensions", {
+  skip_if_not_installed("png")
+  for (dims in list(c(1, 3), c(3, 1), c(1, 1))) {
+    base <- withr::local_tempfile(fileext = ".png")
+    overlay <- withr::local_tempfile(fileext = ".png")
+    png::writePNG(array(0, dim = c(dims, 4)), base)
+    top <- array(0, dim = c(dims, 4))
+    top[1, 1, ] <- c(1, 0, 0, 1)
+    png::writePNG(top, overlay)
+    caption_blend_still(base, overlay)
+    result <- png::readPNG(base)
+    expect_equal(result[1, 1, ], c(1, 0, 0, 1), tolerance = 1 / 255)
+  }
+})

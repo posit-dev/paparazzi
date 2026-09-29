@@ -139,15 +139,30 @@ caption_render <- function(page, caption, width, height, font_scale, path) {
 caption_blend_still <- function(path, overlay) {
   base <- png::readPNG(path)
   top <- png::readPNG(overlay)
-  rows <- which(rowSums(top[,, 4, drop = TRUE] > 0) > 0)
+  top_alpha <- matrix(top[,, 4, drop = FALSE], nrow = dim(top)[1])
+  rows <- which(rowSums(top_alpha > 0) > 0)
   if (!length(rows)) {
     return(invisible(path))
   }
   rows <- seq.int(min(rows), max(rows))
-  alpha <- top[rows, , 4]
+  alpha <- top_alpha[rows, , drop = FALSE]
+  base_alpha <- if (dim(base)[3] == 4) {
+    matrix(base[rows, , 4, drop = FALSE], nrow = length(rows))
+  } else {
+    matrix(1, nrow = length(rows), ncol = dim(base)[2])
+  }
+  out_alpha <- alpha + base_alpha * (1 - alpha)
   for (channel in 1:3) {
-    base[rows, , channel] <-
-      base[rows, , channel] * (1 - alpha) + top[rows, , channel] * alpha
+    bottom <- matrix(base[rows, , channel, drop = FALSE], nrow = length(rows))
+    above <- matrix(top[rows, , channel, drop = FALSE], nrow = length(rows))
+    base[rows, , channel] <- ifelse(
+      out_alpha > 0,
+      (above * alpha + bottom * base_alpha * (1 - alpha)) / out_alpha,
+      0
+    )
+  }
+  if (dim(base)[3] == 4) {
+    base[rows, , 4] <- out_alpha
   }
   png::writePNG(base, path)
   invisible(path)
@@ -214,6 +229,7 @@ caption_vtt <- function(rec, windows) {
     text <- gsub("&", "&amp;", window$caption$text, fixed = TRUE)
     text <- gsub("<", "&lt;", text, fixed = TRUE)
     text <- gsub(">", "&gt;", text, fixed = TRUE)
+    text <- gsub("\n(?:[ \t]*\n)+", "\n", text, perl = TRUE)
     c(paste0(time(window$start), " --> ", time(window$end)), text, "")
   }))
   writeLines(c("WEBVTT", "", cues), path, useBytes = TRUE)
@@ -223,13 +239,12 @@ caption_vtt <- function(rec, windows) {
 caption_filter <- function(rec, page, sampled, out, windows, dir) {
   base <- out$vfilter
   chains <- paste0("[in]", base, "[b0]")
-  # The base (pre-scale) dimensions come from the output spec's crop or input.
-  input_width <- if (is.null(out$crop)) {
-    png_read_size(rec$files[[1]])$width
+  home_width <- if (is.null(rec$crop)) {
+    pz_js(page, "window.innerWidth")
   } else {
-    out$crop$width
+    rec$crop$width
   }
-  scale <- out$width / input_width
+  scale <- out$width / home_width
   for (i in seq_along(windows)) {
     window <- windows[[i]]
     file <- file.path(dir, paste0("caption-", i, ".png"))
