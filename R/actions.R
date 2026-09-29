@@ -226,7 +226,8 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #'   `"none"`). `"words"` shows named modifier keycaps, `"mac"` uses
 #'   Mac symbols, and `"both"` shows `Mod` as `Ctrl / ⌘`.
 #'   Keystroke callouts appear only in recordings; subsequent calls replace
-#'   earlier ones. A vector is displayed as a single sequence.
+#'   earlier ones. A vector is displayed as a single sequence. In a GIF
+#'   recording, keystroke callouts need the av package.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -274,6 +275,9 @@ pz_press <- function(ctx, key, ..., show_keys = NULL) {
     !isTRUE(rec$paused) &&
     show_keys != "none"
   if (showing) {
+    if (identical(rec$format, "gif")) {
+      rlang::check_installed("av", reason = "to show keystrokes in GIFs.")
+    }
     started <- rec_vt(rec)
     pressed <- vector("list", length(key))
   }

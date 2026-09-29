@@ -17,7 +17,8 @@ pz_press(ctx, key, ..., show_keys = NULL)
 \code{"none"}). \code{"words"} shows named modifier keycaps, \code{"mac"} uses
 Mac symbols, and \code{"both"} shows \code{Mod} as \verb{Ctrl / ⌘}.
 Keystroke callouts appear only in recordings; subsequent calls replace
-earlier ones. A vector is displayed as a single sequence.}
+earlier ones. A vector is displayed as a single sequence. In a GIF
+recording, keystroke callouts need the av package.}
 }
 \value{
 \code{ctx}, invisibly.

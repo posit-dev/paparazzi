@@ -431,6 +431,26 @@ test_that("key callout windows replace and expire on output ticks", {
   expect_equal(windows[[1]]$end, 1.3)
 })
 
+test_that("a vector key callout expires from its last key", {
+  rec <- new_recorder(
+    tempfile(fileext = ".mp4"),
+    "mp4",
+    10,
+    NULL,
+    c(0, 0),
+    FALSE,
+    NULL
+  )
+  rec$keypresses <- list(
+    list(vt = 0.2, last = 0.7, style = "words", keys = list("a", "b"))
+  )
+  sampled <- list(vts = seq(0, 3, by = 0.1), n_ticks = 31L)
+  windows <- key_callout_windows(rec, sampled)
+  expect_equal(windows[[1]]$start, 0.2)
+  expect_equal(windows[[1]]$fade_start, 1.7)
+  expect_equal(windows[[1]]$end, 2.0)
+})
+
 test_that("decoded keycaps stack above a burned bottom caption", {
   skip_if_no_av()
   skip_if_not_installed("png")
