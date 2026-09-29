@@ -28,6 +28,15 @@ spotlight_image <- function(page, path) {
   png::readPNG(path)
 }
 
+spotlight_viewport_image <- function(page, path) {
+  shot <- page$session$Page$captureScreenshot(
+    format = "png",
+    fromSurface = TRUE
+  )
+  writeBin(jsonlite::base64_dec(shot$data), path)
+  png::readPNG(path)
+}
+
 spotlight_rgb <- function(img, page, x, y) {
   dpr <- page_dpr(page)
   as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
@@ -49,6 +58,35 @@ test_that("spotlight leaves its cutout unchanged and dims the outside in stills"
   expect_equal(
     spotlight_rgb(lit, page, 350, 140),
     spotlight_rgb(baseline, page, 350, 140) * 0.4,
+    tolerance = 0.04
+  )
+})
+
+test_that("spotlight dims the visible bottom of a tall document", {
+  skip_if_not_installed("png")
+  page <- local_page(
+    pz_example("tasks"),
+    width = 720,
+    height = 800,
+    color_scheme = "light"
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  doc_height <- pz_js(page, "document.documentElement.scrollHeight")
+  expect_gt(doc_height, 800)
+  expect_gt(780, doc_height * 0.9)
+  baseline <- spotlight_viewport_image(page, path)
+  page |>
+    pz_annotate_spotlight(
+      list("#task-title", "#add-task"),
+      dim = 0.75,
+      reveal = "none"
+    )
+  dimmed <- spotlight_viewport_image(page, path)
+  baseline_rgb <- spotlight_rgb(baseline, page, 20, 780)
+  expect_gt(mean(baseline_rgb), 0.7)
+  expect_equal(
+    spotlight_rgb(dimmed, page, 20, 780),
+    baseline_rgb * 0.25,
     tolerance = 0.04
   )
 })
