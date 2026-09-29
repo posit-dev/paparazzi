@@ -57,7 +57,8 @@ starts every \verb{|>} chain.
 \code{pz_open()} opens pages in chromote's default browser
 (\code{\link[chromote:default_chromote_object]{chromote::default_chromote_object()}}) and starts it if none is running.
 A browser paparazzi starts keeps its profile in \code{\link[=tempdir]{tempdir()}}, so the
-profile is removed when R exits. A default set with
+profile is removed when R exits, unless a \code{--user-data-dir} is already set
+with \code{\link[chromote:set_chrome_args]{chromote::set_chrome_args()}}. A default set with
 \code{\link[chromote:set_default_chromote_object]{chromote::set_default_chromote_object()}} is used as-is.
 }
 

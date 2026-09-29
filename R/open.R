@@ -34,7 +34,8 @@
 #' `pz_open()` opens pages in chromote's default browser
 #' ([chromote::default_chromote_object()]) and starts it if none is running.
 #' A browser paparazzi starts keeps its profile in [tempdir()], so the
-#' profile is removed when R exits. A default set with
+#' profile is removed when R exits, unless a `--user-data-dir` is already set
+#' with [chromote::set_chrome_args()]. A default set with
 #' [chromote::set_default_chromote_object()] is used as-is.
 #'
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
