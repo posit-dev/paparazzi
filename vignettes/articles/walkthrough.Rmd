@@ -57,14 +57,19 @@ page |>
   pz_record_start(frame = card, fps = 8, scale = 0.6) |>
   pz_annotate_caption("Finish the task, then check the Done list") |>
   pz_camera(".task-list", wait = TRUE) |>
-  pz_annotate_callout("The new task", target = pz_loc(".task", has_text = "Prepare release notes"), side = "bottom", id = "new-task") |>
+  pz_annotate_callout(
+    "The new task",
+    target = pz_loc(".task", has_text = "Prepare release notes"),
+    side = "bottom",
+    id = "new-task"
+  ) |>
   pz_record_hold(0.9) |>
   pz_annotate_clear(id = "new-task") |>
   pz_find(pz_loc(".task", has_text = "Prepare release notes")) |>
   pz_click(".task-done") |>
   pz_find_reset() |>
   pz_click(".filters a[href='#done']") |>
-  pz_expect_visible(target = pz_loc(".task", has_text = "Prepare release notes")) |>
+  pz_expect_visible(pz_loc(".task", has_text = "Prepare release notes")) |>
   pz_camera_reset() |>
   pz_record_hold(0.6)
 ```
@@ -75,29 +80,34 @@ The callout draws attention to one row, then leaves before the click. This time 
 page |> pz_annotate_clear(id = "caption")
 ```
 
-## Part 3: Hide a note before showing help
+## Part 3: Hide high-priority tasks before showing help
 
-The note in this example contains ordinary sample text. We'll treat it as private to show where a redaction belongs in a recording script. Make the note visible and cover it **before** starting the recorder: if you add a redaction after recording starts, earlier frames can already contain the text. Use the opaque fill, not blur, when the content must be unreadable.
+Two high-priority tasks sit near the top of the list. We'll treat their titles as private to show where redactions belong in a recording script. After switching back to All, wait until “File tax return” is visible: the filter changes after the URL fragment changes. Cover both titles **before** starting the recorder, since earlier frames can already contain them. Use the opaque fill, not blur, when content must be unreadable.
 
 ```{r}
 page |>
   pz_click(".filters a[href='#all']") |>
+  pz_expect_visible(pz_loc(".task", has_text = "File tax return")) |>
   pz_scroll("#toggle-help") |>
-  pz_annotate_redact("#notes", method = "fill", id = "private-note")
+  pz_annotate_redact(
+    "[data-priority=\"high\"] .task-title",
+    method = "fill",
+    id = "private-tasks"
+  )
 ```
 
-Now record the help panel opening. The redaction stays over the note even if the page moves; the caption stays at the top of the video, leaving the help panel visible.
+Now record the help panel opening. The redactions follow the two task titles while the page moves; the caption stays at the top of the video, leaving the help panel visible.
 
 ```{r part-help}
 page |>
   pz_record_start(frame = card, fps = 8, scale = 0.6) |>
-  pz_annotate_caption("Open help without showing the note", side = "top") |>
+  pz_annotate_caption("Open help without showing high-priority tasks", side = "top") |>
   pz_click("#toggle-help") |>
   pz_expect_visible(target = "#help") |>
   pz_record_hold(1)
 ```
 
-The solid cover remains over the note for the whole clip, including its first frame. Once we've finished the tour, remove the overlays and close the browser:
+The solid covers remain over both titles for the whole clip, including its first frame. Once we've finished the tour, remove the overlays and close the browser:
 
 ```{r}
 page |> pz_annotate_clear()

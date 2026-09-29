@@ -20,6 +20,34 @@ test_that("pz_example() errors on unknown names", {
 })
 
 
+test_that("walkthrough keeps both high-priority task titles in view", {
+  page <- local_page(pz_example("tasks"), width = 800, height = 900)
+  page |>
+    pz_type("Prepare release notes", target = "#task-title") |>
+    pz_click("#add-task") |>
+    pz_expect_text(
+      "Prepare release notes",
+      target = pz_loc(".task-title", which = "first")
+    ) |>
+    pz_find(pz_loc(".task", has_text = "Prepare release notes")) |>
+    pz_click(".task-done") |>
+    pz_find_reset() |>
+    pz_click(".filters a[href='#done']") |>
+    pz_click(".filters a[href='#all']") |>
+    pz_expect_visible(pz_loc(".task", has_text = "File tax return")) |>
+    pz_scroll("#toggle-help") |>
+    pz_annotate_redact("[data-priority='high'] .task-title")
+  rows <- pz_js(
+    page,
+    "(() => { const list = document.querySelector('.task-list'); const clip = list.getBoundingClientRect(); return [...list.querySelectorAll('[data-priority=high] .task-title')].map(el => { const r = el.getBoundingClientRect(); return {title:el.textContent, visible:r.top >= clip.top + list.clientTop && r.bottom <= clip.top + list.clientTop + list.clientHeight}; }); })()"
+  )
+  expect_identical(
+    vapply(rows, `[[`, "", "title"),
+    c("Renew passport", "File tax return")
+  )
+  expect_true(all(vapply(rows, `[[`, logical(1), "visible")))
+})
+
 # Every help page's examples run here with the interactive guard forced on,
 # so an example that rots fails the suite instead of only a pkgdown build.
 example_rd_db <- function() {
