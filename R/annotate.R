@@ -550,7 +550,8 @@ annotate_boot_js <- r"(function() {
             }
           } else {
             const shape = node.querySelector('.pz-shape');
-            include(shape.getBoundingClientRect(), shape.tagName.toLowerCase() === 'svg' ? 1.5 : 0);
+            const svg = shape.tagName.toLowerCase() === 'svg';
+            include((svg ? shape.firstChild : shape).getBoundingClientRect(), svg ? 1.5 : 0);
           }
           const badge = node.querySelector('span');
           if (badge) include(badge.getBoundingClientRect());

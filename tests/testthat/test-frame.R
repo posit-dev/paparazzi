@@ -102,6 +102,38 @@ test_that("marks add their badge but only for selected targets", {
   expect_equal(frame_content_box(page, NULL, spec), c(100, 80, 220, 170))
 })
 
+test_that("an inset circle does not enlarge its target frame", {
+  page <- local_frame_page()
+  pz_annotate(page, "#card", type = "circle", pad = 0, reveal = "none")
+  box <- frame_content_box(
+    page,
+    NULL,
+    pz_frame("#card", pad = 0, target_box = "annotated")
+  )
+  expect_lte(max(abs(box - c(100, 80, 220, 170))), 1)
+})
+
+test_that("multi-match marks contribute only the framed match", {
+  page <- local_frame_page()
+  pz_annotate(page, "#card, #small", label = TRUE, reveal = "none")
+  card <- frame_content_box(
+    page,
+    NULL,
+    pz_frame("#card", pad = 0, target_box = "annotated")
+  )
+  expect_lte(max(abs(card[c(1, 3, 4)] - c(100, 220, 170))), 1)
+  expect_gt(card[2], 50)
+  expect_lt(card[2], 75)
+  expect_lt(card[3], 400)
+  small <- frame_content_box(
+    page,
+    NULL,
+    pz_frame("#small", pad = 0, target_box = "annotated")
+  )
+  expect_gte(small[3], 460)
+  expect_lt(small[2], 60)
+})
+
 test_that("pz_frame returns a normalized spec", {
   spec <- pz_frame()
   expect_s3_class(spec, "paparazzi_frame")
