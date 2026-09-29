@@ -361,6 +361,19 @@ test_that("redaction uses the current scope and anonymous ids", {
     ),
     0
   )
+  pz_find(page, "#fixed, #box") |> pz_annotate_redact()
+  expect_equal(
+    pz_js(
+      page,
+      "[...document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')].map(n => [parseFloat(n.style.left), parseFloat(n.style.top), parseFloat(n.style.width), parseFloat(n.style.height)]).sort((a, b) => a[1] - b[1])"
+    ),
+    pz_js(
+      page,
+      "['#fixed', '#box'].map(s => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })"
+    ),
+    tolerance = 1
+  )
+  page |> pz_annotate_clear()
 })
 
 test_that("redaction shares ids, stays above later marks, and rejects unsafe starts", {
