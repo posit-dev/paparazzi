@@ -1,0 +1,317 @@
+spotlight_page <- function(.env = parent.frame()) {
+  page <- local_page(.env = .env)
+  pz_js(
+    page,
+    paste0(
+      "document.body.style.cssText = 'margin:0;background:white';",
+      "document.body.innerHTML = '<div id=one style=\"position:absolute;left:100px;top:100px;width:100px;height:80px;background:rgb(0, 200, 80)\"></div>' +",
+      "'<div id=two style=\"position:absolute;left:300px;top:100px;width:100px;height:80px;background:rgb(0, 100, 255)\"></div>' +",
+      "'<div style=\"height:1800px\"></div>';"
+    )
+  )
+  page
+}
+
+spotlight_layer <- function(page, expr) {
+  pz_js(
+    page,
+    paste0(
+      "(() => { const layer = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); return ",
+      expr,
+      "; })()"
+    )
+  )
+}
+
+spotlight_image <- function(page, path) {
+  page |> pz_screenshot(path)
+  png::readPNG(path)
+}
+
+spotlight_rgb <- function(img, page, x, y) {
+  dpr <- page_dpr(page)
+  as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+}
+
+test_that("spotlight leaves its cutout unchanged and dims the outside in stills", {
+  skip_if_not_installed("png")
+  page <- spotlight_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  baseline <- spotlight_image(page, path)
+  expect_identical(pz_annotate_spotlight(page, "#one", dim = 0.6), page)
+  lit <- spotlight_image(page, path)
+  expect_equal(
+    spotlight_rgb(lit, page, 150, 140),
+    spotlight_rgb(baseline, page, 150, 140),
+    tolerance = 0.03
+  )
+  expect_equal(spotlight_rgb(lit, page, 30, 30), rep(0.4, 3), tolerance = 0.04)
+  expect_equal(
+    spotlight_rgb(lit, page, 350, 140),
+    spotlight_rgb(baseline, page, 350, 140) * 0.4,
+    tolerance = 0.04
+  )
+})
+
+test_that("spotlight cuts out every match, including overlaps and padded corners", {
+  page <- spotlight_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate_spotlight(
+      list("#one", "#two"),
+      pad = c(8, 5, 8, 8),
+      reveal = "none"
+    )
+  img <- spotlight_image(page, path)
+  expect_equal(
+    spotlight_rgb(img, page, 150, 140),
+    c(0, 200 / 255, 80 / 255),
+    tolerance = 0.03
+  )
+  expect_equal(
+    spotlight_rgb(img, page, 350, 140),
+    c(0, 100 / 255, 1),
+    tolerance = 0.03
+  )
+  expect_equal(spotlight_rgb(img, page, 94, 140), rep(1, 3), tolerance = 0.03)
+  expect_equal(spotlight_rgb(img, page, 92, 92), rep(0.4, 3), tolerance = 0.04)
+  pz_js(page, "document.getElementById('two').style.left = '160px'")
+  img <- spotlight_image(page, path)
+  expect_equal(
+    spotlight_rgb(img, page, 180, 120),
+    c(0, 100 / 255, 1),
+    tolerance = 0.03
+  )
+  expect_equal(
+    spotlight_rgb(img, page, 270, 140),
+    rep(0.4, 3),
+    tolerance = 0.04
+  )
+})
+
+test_that("spotlight replaces its single slot and clears by reserved id or all", {
+  page <- spotlight_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_annotate_spotlight("#one", reveal = "none")
+  page |> pz_annotate_spotlight("#two", reveal = "none")
+  expect_equal(
+    spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
+    1
+  )
+  img <- spotlight_image(page, path)
+  expect_equal(
+    spotlight_rgb(img, page, 150, 140),
+    c(0, 200 / 255, 80 / 255) * 0.4,
+    tolerance = 0.04
+  )
+  expect_equal(
+    spotlight_rgb(img, page, 350, 140),
+    c(0, 100 / 255, 1),
+    tolerance = 0.03
+  )
+  page |> pz_annotate_clear("spotlight")
+  expect_equal(
+    spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
+    0
+  )
+  page |> pz_annotate_spotlight("#one") |> pz_annotate_clear()
+  expect_equal(
+    spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
+    0
+  )
+})
+
+test_that("spotlight follows page and inner scroll, then hides disconnected holes", {
+  page <- spotlight_page()
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=outer style=\"position:fixed;top:300px;left:30px;width:140px;height:100px;overflow:auto\"><div style=\"height:140px\"></div><div id=inner style=\"width:80px;height:40px;background:red\"></div></div>')"
+  )
+  page |> pz_annotate_spotlight(list("#one", "#inner"), reveal = "none")
+  holes <- function() {
+    spotlight_layer(
+      page,
+      "[...layer.querySelectorAll('.pz-spotlight mask rect')].slice(1).map(n => ({x:+n.getAttribute('x'),y:+n.getAttribute('y'),visible:n.style.display !== 'none'}))"
+    )
+  }
+  before <- holes()
+  pz_js(
+    page,
+    "window.scrollTo(0, 50); document.getElementById('outer').scrollTop = 60; document.getElementById('one').style.left = '120px'"
+  )
+  pump_loop(page$child_loop, 0.07)
+  after <- holes()
+  expect_equal(after[[1]]$x, before[[1]]$x + 20, tolerance = 2)
+  expect_equal(after[[1]]$y, before[[1]]$y - 50, tolerance = 2)
+  expect_equal(after[[2]]$y, before[[2]]$y - 60, tolerance = 2)
+  pz_js(page, "document.getElementById('inner').style.display = 'none'")
+  path <- withr::local_tempfile(fileext = ".png")
+  img <- spotlight_image(page, path)
+  expect_false(holes()[[2]]$visible)
+  expect_equal(spotlight_rgb(img, page, 50, 385), rep(0.4, 3), tolerance = 0.04)
+  pz_js(
+    page,
+    "document.getElementById('inner').style.display = ''; document.getElementById('one').remove()"
+  )
+  pump_loop(page$child_loop, 0.07)
+  expect_false(holes()[[1]]$visible)
+  expect_true(holes()[[2]]$visible)
+})
+
+test_that("spotlight stays under marks and opaque redactions in either draw order", {
+  page <- spotlight_page()
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=secret style=\"position:fixed;left:450px;top:100px;width:70px;height:70px;background:white\"></div>')"
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_annotate("#two", id = "mark", color = "#ff0000", reveal = "none")
+  page |> pz_annotate_redact("#secret", id = "redaction")
+  page |> pz_annotate_spotlight("#one", reveal = "none")
+  img <- spotlight_image(page, path)
+  expect_equal(spotlight_rgb(img, page, 301, 130), c(1, 0, 0), tolerance = 0.04)
+  expect_equal(
+    spotlight_rgb(img, page, 480, 130),
+    rep(23 / 255, 3),
+    tolerance = 0.04
+  )
+  page |> pz_annotate_clear("mark") |> pz_annotate_clear("redaction")
+  page |> pz_annotate_redact("#secret", id = "redaction")
+  page |> pz_annotate("#two", id = "mark", color = "#ff0000", reveal = "none")
+  img <- spotlight_image(page, path)
+  expect_equal(spotlight_rgb(img, page, 301, 130), c(1, 0, 0), tolerance = 0.04)
+  expect_equal(
+    spotlight_rgb(img, page, 480, 130),
+    rep(23 / 255, 3),
+    tolerance = 0.04
+  )
+})
+
+test_that("spotlight validates its options and dim endpoints", {
+  page <- spotlight_page()
+  for (bad in list(-0.1, 1.1, Inf, NA_real_, "0.6", c(0.1, 0.2))) {
+    expect_error(pz_annotate_spotlight(page, "#one", dim = bad))
+  }
+  for (bad in c("draw", "pop", "slide", "wipe", "invalid")) {
+    expect_error(
+      pz_annotate_spotlight(page, "#one", reveal = bad),
+      "fade.*none"
+    )
+  }
+  expect_error(pz_annotate_spotlight(page, "#one", pad = c(1, 2)))
+  expect_error(pz_annotate_spotlight(page, "#one", extra = TRUE))
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_annotate_spotlight("#one", dim = 0)
+  expect_equal(
+    spotlight_rgb(spotlight_image(page, path), page, 30, 30),
+    rep(1, 3),
+    tolerance = 0.03
+  )
+  page |> pz_annotate_spotlight("#one", dim = 1)
+  expect_equal(
+    spotlight_rgb(spotlight_image(page, path), page, 30, 30),
+    rep(0, 3),
+    tolerance = 0.03
+  )
+  expect_equal(
+    spotlight_rgb(spotlight_image(page, path), page, 150, 140),
+    c(0, 200 / 255, 80 / 255),
+    tolerance = 0.03
+  )
+})
+
+test_that("spotlight fade pumps during recording and reverses on clear", {
+  skip_if_not_installed("av")
+  page <- spotlight_page()
+  path <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(path, fps = 20, hold = c(0, 0), keep_frames = TRUE)
+  defer_record_stop(page)
+  page |> pz_annotate_spotlight("#one")
+  expect_equal(
+    spotlight_layer(
+      page,
+      "layer.querySelector('.pz-spotlight').getAnimations().length"
+    ),
+    0
+  )
+  pump_loop(page$child_loop, 0.3)
+  files <- page_recorder(page)$files
+  dpr <- page_dpr(page)
+  outside <- function(file) {
+    png::readPNG(file)[round(30 * dpr) + 1, round(30 * dpr) + 1, 1]
+  }
+  entering <- vapply(files, outside, 0.0)
+  expect_true(any(entering > 0.5 & entering < 0.9))
+  expect_lt(tail(entering, 1), 0.47)
+  page |> pz_annotate_clear("spotlight")
+  expect_equal(
+    spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
+    0
+  )
+  leaving <- vapply(page_recorder(page)$files[-seq_along(files)], outside, 0.0)
+  expect_true(any(leaving > 0.5 & leaving < 0.9))
+  page |> pz_record_stop()
+})
+
+test_that("paused spotlight and its clear are instant", {
+  skip_if_not_installed("av")
+  page <- spotlight_page()
+  path <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(path, fps = 10, hold = c(0, 0)) |> pz_record_pause()
+  defer_record_stop(page)
+  page |> pz_annotate_spotlight("#one")
+  expect_equal(
+    spotlight_layer(
+      page,
+      "layer.querySelector('.pz-spotlight').getAnimations().length"
+    ),
+    0
+  )
+  page |> pz_annotate_clear("spotlight")
+  expect_equal(
+    spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
+    0
+  )
+  page |> pz_record_resume() |> pz_record_stop()
+})
+
+test_that("spotlight accepts root and scoped NULL targets", {
+  page <- spotlight_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_annotate_spotlight(reveal = "none")
+  expect_equal(
+    spotlight_rgb(spotlight_image(page, path), page, 30, 30),
+    rep(1, 3),
+    tolerance = 0.03
+  )
+  scoped <- pz_find(page, "#one")
+  scoped |> pz_annotate_spotlight(reveal = "none")
+  img <- spotlight_image(page, path)
+  expect_equal(spotlight_rgb(img, page, 30, 30), rep(0.4, 3), tolerance = 0.04)
+  expect_equal(
+    spotlight_rgb(img, page, 150, 140),
+    c(0, 200 / 255, 80 / 255),
+    tolerance = 0.03
+  )
+})
+
+test_that("spotlight belongs to the current document", {
+  page <- local_nav_page()
+  page |> pz_annotate_spotlight("body", reveal = "none")
+  expect_equal(
+    spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
+    1
+  )
+  page |> pz_nav_goto(nav_fixture_url("b"))
+  expect_equal(
+    spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
+    0
+  )
+  page |>
+    pz_annotate_spotlight("body", reveal = "none") |>
+    pz_annotate_clear("spotlight")
+  expect_equal(
+    spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
+    0
+  )
+})

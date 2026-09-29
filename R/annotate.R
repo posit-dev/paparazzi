@@ -397,6 +397,38 @@ annotate_boot_js <- r"(function() {
     const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
     layer.style.zoom = String(1 / zoom);
     for (const entry of entries.values()) {
+      if (entry.spotlight) {
+        const svg = entry.nodes[0];
+        const mask = svg.querySelector('mask');
+        const width = window.innerWidth, height = window.innerHeight;
+        svg.setAttribute('width', width);
+        svg.setAttribute('height', height);
+        mask.setAttribute('width', width);
+        mask.setAttribute('height', height);
+        mask.firstChild.setAttribute('width', width);
+        mask.firstChild.setAttribute('height', height);
+        svg.lastChild.setAttribute('width', width);
+        svg.lastChild.setAttribute('height', height);
+        entry.elements.forEach((el, i) => {
+          const hole = entry.holes[i];
+          if (!el.isConnected || !el.getClientRects().length) {
+            hole.style.display = 'none';
+            return;
+          }
+          const r = el.getBoundingClientRect(), p = entry.pad;
+          const w = r.width + p[1] + p[3], h = r.height + p[0] + p[2];
+          if (w <= 0 || h <= 0) {
+            hole.style.display = 'none';
+            return;
+          }
+          hole.style.display = '';
+          hole.setAttribute('x', r.left - p[3]);
+          hole.setAttribute('y', r.top - p[0]);
+          hole.setAttribute('width', w);
+          hole.setAttribute('height', h);
+        });
+        continue;
+      }
       entry.elements.forEach((el, i) => {
         const box = entry.nodes[i];
         if (!el.isConnected || !el.getClientRects().length) {
@@ -463,6 +495,44 @@ annotate_boot_js <- r"(function() {
   layer.pz = {
     sync,
     finishClear,
+    spotlight: (elements, opts) => {
+      remove('spotlight', false);
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.classList.add('pz-spotlight');
+      svg.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;z-index:-1;overflow:visible;';
+      const mask = document.createElementNS(svgNS, 'mask');
+      const maskId = 'pz-spotlight-mask-' + (++next);
+      mask.id = maskId;
+      mask.setAttribute('maskUnits', 'userSpaceOnUse');
+      mask.setAttribute('maskContentUnits', 'userSpaceOnUse');
+      mask.style.maskType = 'luminance';
+      const backdrop = document.createElementNS(svgNS, 'rect');
+      backdrop.setAttribute('fill', 'white');
+      mask.appendChild(backdrop);
+      const holes = elements.map(() => {
+        const hole = document.createElementNS(svgNS, 'rect');
+        hole.setAttribute('fill', 'black');
+        hole.setAttribute('rx', 6);
+        hole.setAttribute('ry', 6);
+        mask.appendChild(hole);
+        return hole;
+      });
+      const defs = document.createElementNS(svgNS, 'defs');
+      defs.appendChild(mask);
+      svg.appendChild(defs);
+      const cover = document.createElementNS(svgNS, 'rect');
+      cover.setAttribute('fill', 'black');
+      cover.setAttribute('fill-opacity', opts.dim);
+      cover.setAttribute('mask', `url(#${maskId})`);
+      svg.appendChild(cover);
+      layer.appendChild(svg);
+      entries.set('spotlight', {elements:[...elements], nodes:[svg], holes,
+                               pad:opts.pad, reveal:opts.reveal, spotlight:true});
+      sync();
+      if (opts.animate && durations[opts.reveal]) start(svg, opts.reveal, true, null);
+      if (frame === null) frame = requestAnimationFrame(tick);
+      return opts.animate ? durations[opts.reveal] : 0;
+    },
     clear: ({id, animate}) => {
       let duration = 0;
       for (const key of id === null ? [...entries.keys()] : [id]) {

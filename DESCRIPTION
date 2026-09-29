@@ -48,6 +48,7 @@ Roxygen: list(markdown = TRUE)
 Collate: 
     'actions.R'
     'annotate-callout.R'
+    'annotate-spotlight.R'
     'annotate.R'
     'app.R'
     'camera.R'

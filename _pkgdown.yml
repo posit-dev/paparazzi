@@ -112,6 +112,7 @@ reference:
     contents:
       - pz_annotate
       - pz_annotate_callout
+      - pz_annotate_spotlight
       - pz_annotate_redact
       - pz_annotate_caption
       - pz_annotate_clear
