@@ -181,13 +181,11 @@ camera_same_shot <- function(rec, from, to, reset, scroll, home, density) {
     return(reset)
   }
   last <- rec$camera[[length(rec$camera)]]
-  last_to <- if (last$reset) {
-    home + rep(last$scroll, 2)
-  } else {
-    camera_shot(last$box, home, last$zoom, density)
+  # Home is anchored to the viewport, so any two resets are the same shot.
+  if (last$reset || reset) {
+    return(last$reset && reset)
   }
-  identical(last$reset, reset) &&
-    close(last_to, to) &&
+  close(camera_shot(last$box, home, last$zoom, density), to) &&
     close(last$scroll, scroll)
 }
 

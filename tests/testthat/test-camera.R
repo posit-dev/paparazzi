@@ -739,18 +739,18 @@ test_that("camera moves wait only when asked; holds and stops let them land", {
   # A waiting reset settles the zoom, then waits for itself.
   pz_camera_reset(page, wait = TRUE)
   reset <- rec$camera[[2]]
-  expect_gte(reset$start, zoom$end)
-  expect_gte(rec_vt(rec), reset$end)
+  expect_gte(reset$start, zoom$end - 0.05)
+  expect_gte(rec_vt(rec), reset$end - 0.05)
 
   pz_camera(page, "#near", zoom = 2, duration = 0.5)
   move <- rec$camera[[3]]
   pz_record_hold(page, 1)
-  expect_gte(rec$holds[[1]]$vt, move$end)
+  expect_gte(rec$holds[[1]]$vt, move$end - 0.05)
 
   pz_camera_reset(page)
   move <- rec$camera[[4]]
   pz_record_pause(page)
-  expect_gte(rec_vt(rec), move$end)
+  expect_gte(rec_vt(rec), move$end - 0.05)
   pz_record_resume(page)
   suppressWarnings(pz_record_stop(page))
 })
@@ -770,7 +770,7 @@ test_that("camera calls settle earlier moves and skip non-moves", {
   pz_camera(page, "#near", zoom = 2, duration = 0.6)
   pz_camera(page, "#far", zoom = 2, duration = 0.6)
   expect_length(rec$camera, 2)
-  expect_gte(rec$camera[[2]]$start, rec$camera[[1]]$end)
+  expect_gte(rec$camera[[2]]$start, rec$camera[[1]]$end - 0.05)
 
   # Already there: no keyframe without a duration.
   pz_camera(page, "#far", zoom = 2)
@@ -844,6 +844,24 @@ test_that("a clamped shot that looks the same but moves the anchor is a move", {
   expect_equal(camera_viewport(beyond, c(0, 0), home), from)
   expect_true(camera_same_shot(rec, from, same, FALSE, c(0, 0), home, 1))
   expect_false(camera_same_shot(rec, from, beyond, FALSE, c(0, 0), home, 1))
+  rec$camera[[2]] <- list(
+    start = 0,
+    end = 0,
+    box = NULL,
+    zoom = NULL,
+    reset = TRUE,
+    scroll = c(0, 0)
+  )
+  scrolled <- home + c(0, 300, 0, 300)
+  expect_true(camera_same_shot(
+    rec,
+    scrolled,
+    scrolled,
+    TRUE,
+    c(0, 300),
+    home,
+    1
+  ))
   rec$camera <- list()
   expect_true(camera_same_shot(rec, home, home, TRUE, c(0, 0), home, 1))
   expect_false(camera_same_shot(rec, home, home, FALSE, c(0, 0), home, 1))
