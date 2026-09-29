@@ -476,8 +476,14 @@ record_knit_media <- function(path) {
       cli::cli_abort("Could not copy recording to {.path {media_path}}.")
     }
   }
-  # Use the same output-relative path conversion as other knitr figures.
-  media_path <- as.character(knitr::include_graphics(media_path))
+  if (xfun::is_abs_path(media_path)) {
+    output_dir <- knitr::opts_knit$get("rmarkdown.output_dir")
+    output_dir <- output_dir %||% knitr::opts_knit$get("output.dir")
+    media_path <- xfun::relative_path(
+      media_path,
+      output_dir %||% getwd()
+    )
+  }
   # Percent-encode filename characters without encoding path separators.
   url <- gsub(
     "%2F",

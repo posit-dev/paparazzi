@@ -107,6 +107,82 @@ video_source_exists <- function(output, src) {
   file.exists(file.path(dirname(output), utils::URLdecode(src)))
 }
 
+test_that("absolute figure paths yield output-relative video sources", {
+  skip_if_not_installed("knitr")
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  dir.create("published")
+  writeBin(charToRaw("fixture"), "a & b.mp4")
+  figure_path <- file.path(dir, "published", "article_files", "figure-html", "")
+  prior_output <- knitr::opts_knit$get("output.dir")
+  withr::defer(knitr::opts_knit$set(output.dir = prior_output))
+  prior_format <- knitr::opts_knit$get("rmarkdown.pandoc.to")
+  withr::defer(knitr::opts_knit$set(rmarkdown.pandoc.to = prior_format))
+  knitr::opts_knit$set(
+    output.dir = file.path(dir, "published"),
+    rmarkdown.pandoc.to = "html"
+  )
+  withr::local_options(knitr.graphics.rel_path = FALSE)
+  input <- file.path(dir, "video.Rmd")
+  output <- file.path(dir, "published", "index.md")
+  writeLines(
+    c(
+      sprintf("```{r, echo=FALSE, fig.path=%s}", deparse(figure_path)),
+      sprintf(
+        'knitr::opts_knit$set(output.dir=%s)',
+        deparse(file.path(dir, "published"))
+      ),
+      'record_knit_media("a & b.mp4")',
+      "```"
+    ),
+    input
+  )
+  knitr::knit(input, output = output, envir = environment(), quiet = TRUE)
+  src <- video_sources(paste(readLines(output), collapse = "\n"))
+  expect_length(src, 1L)
+  expect_false(startsWith(src, "/"))
+  expect_match(src, "a%20%26%20b.mp4", fixed = TRUE)
+  expect_true(video_source_exists(
+    file.path(dir, "published", "index.html"),
+    src
+  ))
+})
+
+test_that("rmarkdown renders recordings with absolute fig.path", {
+  skip_if_not_installed("rmarkdown")
+  skip_if_no_av()
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  published <- file.path(dir, "published")
+  dir.create(published)
+  figure_path <- file.path(published, "article_files", "figure-html", "")
+  input <- file.path(dir, "absolute-fig-video.Rmd")
+  writeLines(
+    c(
+      "---",
+      "output:",
+      "  html_document:",
+      "    self_contained: false",
+      "---",
+      "",
+      sprintf('```{r, echo=FALSE, fig.path=%s}', deparse(figure_path)),
+      'pz_record(page, "clip.mp4", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
+      "```"
+    ),
+    input
+  )
+  output <- rmarkdown::render(
+    input,
+    output_dir = published,
+    envir = environment(),
+    quiet = TRUE
+  )
+  src <- video_sources(paste(readLines(output, warn = FALSE), collapse = "\n"))
+  expect_length(src, 1L)
+  expect_false(startsWith(src, "/"))
+  expect_true(video_source_exists(output, src))
+})
+
 test_that("named videos resolve from final rendered HTML", {
   skip_if_not_installed("rmarkdown")
   skip_if_no_av()

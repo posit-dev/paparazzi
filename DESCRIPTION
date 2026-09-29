@@ -37,7 +37,8 @@ Suggests:
     png,
     rstudioapi,
     shiny,
-    testthat (>= 3.2.0)
+    testthat (>= 3.2.0),
+    xfun
 Config/Needs/website: av, gifski, png, shiny
 Config/roxygen2/version: 8.1.0
 Config/testthat/edition: 3
