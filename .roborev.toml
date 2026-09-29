@@ -1,5 +1,6 @@
-review_agent = 'codex'
-review_model = 'openai.gpt-6-sol'
+review_agent     = 'claude-code'
+review_model     = 'claude-opus-5-5'
+review_reasoning = 'high'
 
 [kata_context]
 mode = 'current'
