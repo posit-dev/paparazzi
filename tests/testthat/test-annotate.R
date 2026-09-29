@@ -891,3 +891,57 @@ test_that("a drawn box has the same rounded outline as a still box", {
   )
   expect_equal(as.numeric(radius), 3.5)
 })
+
+
+test_that("anonymous kinds coexist across shared-id replacement and clear", {
+  page <- annotation_page()
+  layer_counts <- function() pz_js(page, paste0(
+    "(() => { const l = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); ",
+    "return ['pz-annotation','pz-callout','pz-redaction'].map(c => l.getElementsByClassName(c).length); })()"
+  ))
+  page |> pz_annotate("#box", reveal = "none")
+  page |> pz_annotate_callout("note", target = "#fixed", reveal = "none")
+  page |> pz_annotate_redact("#inner")
+  expect_equal(unlist(layer_counts()), c(1, 1, 1))
+  page |> pz_annotate("#fixed", id = "shared", reveal = "none")
+  page |> pz_annotate_callout("replacement", target = "#box", id = "shared", reveal = "none")
+  expect_equal(unlist(layer_counts()), c(1, 2, 1))
+  page |> pz_annotate_clear("shared")
+  expect_equal(unlist(layer_counts()), c(1, 1, 1))
+  page |> pz_annotate("#fixed", id = "__pz_auto_4", reveal = "none")
+  page |> pz_annotate("#fixed", reveal = "none")
+  page |> pz_annotate_clear("__pz_auto_4")
+  expect_equal(unlist(layer_counts()), c(2, 1, 1))
+  page |> pz_annotate_redact("#fixed", id = "shared")
+  page |> pz_annotate("#box", id = "shared", reveal = "none")
+  expect_equal(unlist(layer_counts()), c(3, 1, 1))
+  page |> pz_annotate_clear()
+  expect_equal(unlist(layer_counts()), c(0, 0, 0))
+  expect_equal(pz_js(page, "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"), 0)
+})
+
+test_that("overlay function sources parse in Chrome", {
+  page <- local_page()
+  parse_js <- function(source) pz_js(page, paste0(
+    "new Function('return (' + ",
+    jsonlite::toJSON(source, auto_unbox = TRUE),
+    " + ');'); true"
+  ))
+  boot <- if (is.function(annotate_boot_js)) annotate_boot_js() else annotate_boot_js
+  if (is.function(annotate_boot_js)) {
+    source <- paste(readLines(
+      system.file("js", "annotate.js", package = "paparazzi", mustWork = TRUE),
+      warn = FALSE
+    ), collapse = "\n")
+    expect_true(parse_js(source))
+  }
+  expect_true(parse_js(boot))
+  expect_true(parse_js(cursor_command_js))
+  expect_true(parse_js(if (grepl("const data = %s", overlay_draw_js, fixed = TRUE)) {
+    sub("%s", "null", overlay_draw_js, fixed = TRUE)
+  } else {
+    overlay_draw_js
+  }))
+  expect_error(system.file("js", "annotate-missing.js", package = "paparazzi", mustWork = TRUE))
+  expect_error(parse_js("function( {"))
+})
