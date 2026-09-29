@@ -384,7 +384,7 @@ pz_wait_for_navigation <- function(
   root <- wait_nav_reset(ctx)
   device_css_reapply(ctx$page)
   nav_settle_shiny(ctx$page, wait, timeout)
-  invisible(root)
+  ctx_return(root)
 }
 
 # The quiescence window for a navigation: how long the page's load state

@@ -481,6 +481,14 @@ test_that("recording chains return visibly until their recording stops", {
   expect_false(withVisible(pz_wait(rec, 0))$visible)
   expect_output(print(rec), "paparazzi page")
 
+  nav <- withr::local_tempfile(fileext = ".mp4")
+  chain <- pz_record_start(page, nav, fps = 5, hold = c(0, 0)) |>
+    pz_nav_reload()
+  expect_true(withVisible(pz_nav_reload(chain, wait = "none"))$visible)
+  print(chain)
+  expect_true(file.exists(nav))
+  expect_null(page_recorder(page))
+
   # A stale chain doesn't adopt a later recording.
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"))
   expect_false(withVisible(pz_wait(rec, 0))$visible)
@@ -522,6 +530,25 @@ test_that("interactive recordings without a path preview in the viewer", {
   webm <- pz_record(page, format = "webm", code = pz_wait(page, 0.1))
   expect_s3_class(webm, "paparazzi_preview")
   expect_equal(tools::file_ext(webm), "webm")
+})
+
+test_that("previews stage files the viewer can't serve", {
+  inside <- withr::local_tempfile(fileext = ".gif")
+  writeBin(charToRaw("gif"), inside)
+  expect_identical(preview_stage(inside), inside)
+
+  dir <- withr::local_tempdir(tmpdir = test_path())
+  outside <- file.path(dir, "outside.gif")
+  writeBin(charToRaw("gif"), outside)
+  staged <- preview_stage(outside)
+  expect_true(startsWith(normalizePath(staged), normalizePath(tempdir())))
+  expect_equal(basename(staged), "outside.gif")
+
+  video <- file.path(dir, "clip.mp4")
+  writeBin(charToRaw("mp4"), video)
+  page <- preview_stage(video)
+  expect_equal(basename(page), "index.html")
+  expect_true(file.exists(file.path(dirname(page), "clip.mp4")))
 })
 
 test_that("pz_record encodes on error and returns ctx invisibly", {

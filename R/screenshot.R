@@ -139,10 +139,7 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
 #' @export
 #' @noRd
 print.paparazzi_preview <- function(x, ...) {
-  path <- unclass(x)
-  if (tolower(tools::file_ext(path)) %in% c("mp4", "webm")) {
-    path <- preview_video_page(path)
-  }
+  path <- preview_stage(unclass(x))
   viewer <- getOption("viewer")
   if (is.function(viewer)) {
     viewer(path)
@@ -152,12 +149,20 @@ print.paparazzi_preview <- function(x, ...) {
   invisible(x)
 }
 
-# Viewers show images directly but need a page for video, and the
-# RStudio viewer only serves files under the session temp directory.
-preview_video_page <- function(path) {
+# The RStudio viewer only serves files under the session temp directory,
+# and viewers show images directly but need a page for video.
+preview_stage <- function(path) {
+  video <- tolower(tools::file_ext(path)) %in% c("mp4", "webm")
+  temp <- normalizePath(tempdir())
+  if (!video && startsWith(normalizePath(path), temp)) {
+    return(path)
+  }
   dir <- tempfile("paparazzi-preview-")
   dir.create(dir)
   file.copy(path, file.path(dir, basename(path)))
+  if (!video) {
+    return(file.path(dir, basename(path)))
+  }
   page <- file.path(dir, "index.html")
   writeLines(
     c(

@@ -368,6 +368,14 @@ test_that("pz_close is idempotent and functions reject closed pages", {
   expect_error(pz_wait(page, 0), class = "paparazzi_error_closed")
 })
 
+test_that("pz_close closes the page behind a context", {
+  skip_if_no_chrome()
+  page <- pz_open(fixture_file())
+  closed <- pz_find(page, "body") |> pz_close()
+  expect_identical(closed, page)
+  expect_true(page$is_closed())
+})
+
 test_that("a failed device setting after page creation closes the new session", {
   skip_if_no_chrome()
   browser <- chromote::default_chromote_object()
