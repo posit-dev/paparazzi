@@ -113,14 +113,14 @@ test_that("annotations belong to the current document and layer boots after navi
   expect_length(annotation_state(page), 0)
 })
 
-test_that("fade outside recording is instant, and unsupported types fail", {
+test_that("fade outside recording is instant, and invalid types fail", {
   page <- annotation_page()
   page |> pz_annotate("#box", id = "x")
   expect_equal(annotation_state(page)[[1]]$animations, 0)
   page |> pz_annotate_clear("x")
   expect_length(annotation_state(page), 0)
-  expect_error(pz_annotate(page, "#box", type = "circle"))
-  expect_error(pz_annotate(page, "#box", reveal = "wipe"))
+  expect_error(pz_annotate(page, "#box", type = "unknown"))
+  expect_error(pz_annotate(page, "#box", reveal = "unknown"))
   expect_error(pz_annotate(page, "#box", id = "caption"))
 })
 
@@ -551,4 +551,221 @@ test_that("poll captures started after redaction returns are covered", {
     0
   )
   page |> pz_record_stop()
+})
+
+test_that("mark types and reveal styles are accepted and have type defaults", {
+  page <- annotation_page()
+  for (type in c("box", "circle", "underline", "highlight")) {
+    page |> pz_annotate("#box", type = type, id = "mark", label = "A")
+    expect_equal(annotation_state(page)[[1]]$label, "A")
+    page |> pz_annotate_clear("mark")
+  }
+  for (reveal in c("draw", "pop", "slide", "wipe")) {
+    page |> pz_annotate("#box", reveal = reveal, id = "mark")
+    expect_length(annotation_state(page), 1)
+    page |> pz_annotate_clear("mark")
+  }
+  expect_error(pz_annotate(page, "#box", type = "unknown"), "type")
+  expect_error(pz_annotate(page, "#box", reveal = "unknown"), "reveal")
+})
+
+test_that("circle, underline, and highlight paint only their intended regions", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- page_dpr(page)
+  pixel <- function(x, y) {
+    image <- png::readPNG(path)
+    as.numeric(image[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  page |> pz_annotate("#box", type = "circle", color = "#ff0000")
+  page |> pz_screenshot(path)
+  expect_lt(pixel(250, 311)[2], 0.15)
+  expect_gt(pixel(250, 335)[2], 0.9)
+  expect_gt(pixel(201, 311)[2], 0.9)
+  page |> pz_annotate_clear()
+  page |> pz_annotate("#box", type = "underline", color = "#ff0000", pad = 3)
+  page |> pz_screenshot(path)
+  expect_lt(pixel(250, 359)[2], 0.15)
+  expect_gt(pixel(250, 308)[2], 0.9)
+  expect_gt(pixel(250, 325)[2], 0.9)
+  page |> pz_annotate_clear()
+  pz_js(
+    page,
+    "document.getElementById('box').innerHTML = '<span style=\"font: bold 40px sans-serif;color:black\">IIII</span>'"
+  )
+  page |> pz_screenshot(path)
+  unmarked <- png::readPNG(path)
+  rows <- round((313:350) * dpr) + 1
+  cols <- round((205:280) * dpr) + 1
+  expect_lt(min(unmarked[rows, cols, 1]), 0.15)
+  page |> pz_annotate("#box", type = "highlight", color = "#ff0000")
+  page |> pz_screenshot(path)
+  marked <- png::readPNG(path)
+  expect_lt(min(marked[rows, cols, 1]), 0.4)
+  expect_gt(max(marked[rows, cols, 1]) - min(marked[rows, cols, 1]), 0.5)
+  expect_gt(pixel(250, 335)[1], 0.9)
+  expect_lt(pixel(250, 335)[2], 0.8)
+  expect_gt(pixel(250, 335)[2], 0.4)
+  expect_gt(pixel(199, 335)[2], 0.9)
+})
+
+test_that("all reveals show sampled entry and reverse exit frames", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  page |>
+    pz_annotate("#box", id = "boot", reveal = "none") |>
+    pz_annotate_clear()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- page_dpr(page)
+  sample <- function() {
+    page |> pz_screenshot(path)
+    image <- png::readPNG(path)
+    image[round((308:363) * dpr) + 1, round((198:303) * dpr) + 1, 1:3]
+  }
+  for (reveal in c("fade", "draw", "pop", "slide", "wipe")) {
+    pz_js(
+      page,
+      paste0(
+        "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+        "l.pz.draw([document.querySelector('#box')], {id:'test',type:'box',pad:[0,0,0,0],",
+        "label:null,color:'#ff0000',fontFamily:'sans-serif',fontSize:14,reveal:'",
+        reveal,
+        "',animate:true}); l.querySelector('.pz-annotation').getAnimations({subtree:true})[0].pause(); })()"
+      )
+    )
+    entering <- lapply(c(0, 0.25, 0.5, 0.75, 1), function(fraction) {
+      pz_js(
+        page,
+        paste0(
+          "(() => { const a=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation').getAnimations({subtree:true})[0]; a.currentTime=",
+          fraction,
+          "*a.effect.getTiming().duration; })()"
+        )
+      )
+      sample()
+    })
+    for (i in 2:4) {
+      expect_gt(mean(abs(entering[[i]] - entering[[1]])), 0.001)
+      expect_gt(mean(abs(entering[[i]] - entering[[5]])), 0.001)
+    }
+    pz_js(
+      page,
+      "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.clear({id:'test',animate:true}); l.querySelector('.pz-exiting').getAnimations({subtree:true})[0].pause(); })()"
+    )
+    leaving <- lapply(c(0, 0.25, 0.5, 0.75, 1), function(fraction) {
+      pz_js(
+        page,
+        paste0(
+          "(() => { const a=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-exiting').getAnimations({subtree:true})[0]; a.currentTime=",
+          fraction,
+          "*a.effect.getTiming().duration; })()"
+        )
+      )
+      sample()
+    })
+    expect_lt(mean(abs(leaving[[1]] - entering[[5]])), 0.002)
+    expect_lt(mean(abs(leaving[[5]] - entering[[1]])), 0.002)
+    for (i in 2:4) {
+      expect_gt(mean(abs(leaving[[i]] - leaving[[1]])), 0.001)
+      expect_gt(mean(abs(leaving[[i]] - leaving[[5]])), 0.001)
+    }
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.finishClear()"
+    )
+    expect_length(annotation_state(page), 0)
+  }
+})
+
+test_that("wipe sweeps through recorded frames and reverses on clear", {
+  skip_if_not_installed("av")
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  path <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(path, fps = 20, hold = c(0, 0), keep_frames = TRUE)
+  defer_record_stop(page)
+  page |> pz_annotate("#box", id = "wipe", reveal = "wipe", color = "#ff0000")
+  pump_loop(page$child_loop, 0.3)
+  files <- page_recorder(page)$files
+  dpr <- page_dpr(page)
+  painted <- function(file) {
+    img <- png::readPNG(file)
+    region <- img[round((309:361) * dpr) + 1, round((199:301) * dpr) + 1, 1:3]
+    sum(region[,, 1] > 0.9 & region[,, 2] < 0.35)
+  }
+  entering <- vapply(files, painted, 0)
+  full <- max(entering)
+  expect_gt(full, 100)
+  expect_true(any(entering > full * 0.1 & entering < full * 0.9))
+  page |> pz_annotate_clear("wipe")
+  leaving <- vapply(page_recorder(page)$files[-seq_along(files)], painted, 0)
+  expect_true(any(leaving > full * 0.1 & leaving < full * 0.9))
+  expect_length(annotation_state(page), 0)
+  page |> pz_record_stop()
+  expect_true(file.exists(path))
+})
+
+test_that("draw leaves badge visible and removes it at start of reverse", {
+  page <- annotation_page()
+  page |>
+    pz_annotate("#box", id = "boot", reveal = "none") |>
+    pz_annotate_clear()
+  pz_js(
+    page,
+    "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.draw([document.querySelector('#box')], {id:'badge',type:'circle',pad:[0,0,0,0],label:'A',color:'red',fontFamily:'sans-serif',fontSize:14,reveal:'draw',animate:true}); l.querySelector('.pz-annotation').getAnimations({subtree:true})[0].pause(); })()"
+  )
+  expect_equal(annotation_state(page)[[1]]$label, "A")
+  pz_js(
+    page,
+    "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.clear({id:'badge',animate:true}); l.querySelector('.pz-exiting').getAnimations({subtree:true})[0].pause(); })()"
+  )
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-exiting span') === null"
+    ),
+    TRUE
+  )
+  pz_js(
+    page,
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.finishClear()"
+  )
+})
+
+test_that("default reveal is fade for boxes and draw for other marks", {
+  skip_if_not_installed("av")
+  page <- annotation_page()
+  path <- withr::local_tempfile(fileext = ".mp4")
+  pz_js(
+    page,
+    "window.__markAnimations = []; const originalAnimate = Element.prototype.animate; Element.prototype.animate = function(frames, options) { window.__markAnimations.push(frames); return originalAnimate.call(this, frames, options); };"
+  )
+  page |> pz_record_start(path, fps = 10, hold = c(0, 0))
+  defer_record_stop(page)
+  for (type in c("box", "circle", "underline", "highlight")) {
+    page |> pz_annotate("#box", type = type, id = "default")
+    page |> pz_annotate_clear("default")
+  }
+  first <- pz_js(
+    page,
+    "window.__markAnimations.filter((_, i) => i % 2 === 0).map(frames => Object.keys(frames[0]))"
+  )
+  expect_true("opacity" %in% first[[1]])
+  expect_true("strokeDashoffset" %in% first[[2]])
+  expect_true("transform" %in% first[[3]])
+  expect_true("transform" %in% first[[4]])
+  page |> pz_record_stop()
+})
+
+test_that("clear returns the longest active exit duration", {
+  page <- annotation_page()
+  page |>
+    pz_annotate("#box", id = "boot", reveal = "none") |>
+    pz_annotate_clear()
+  durations <- pz_js(
+    page,
+    "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); const el=document.querySelector('#box'); const o={type:'box',pad:[0,0,0,0],label:null,color:'red',fontFamily:'sans-serif',fontSize:14,animate:true}; const short=l.pz.draw([el], {...o,id:'short',reveal:'fade'}); const long=l.pz.draw([el], {...o,id:'long',reveal:'wipe'}); const clear=l.pz.clear({id:null,animate:true}); l.pz.finishClear(); return [short,long,clear,l.pz.clear({id:null,animate:true})]; })()"
+  )
+  expect_equal(unlist(durations), c(250, 400, 400, 0))
 })

@@ -18,5 +18,6 @@ pz_annotate_clear(ctx, id = NULL, ...)
 }
 \description{
 Remove an annotation by id, or remove every annotation when \code{id} is
-\code{NULL}. During a recording, fading boxes fade out before removal.
+\code{NULL}. During an active recording, marks play their reveal in reverse
+before removal; paused recordings and stills clear instantly.
 }

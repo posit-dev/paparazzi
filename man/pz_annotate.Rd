@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotate.R
 \name{pz_annotate}
 \alias{pz_annotate}
-\title{Draw a box around page elements}
+\title{Mark page elements}
 \usage{
 pz_annotate(
   ctx,
@@ -26,7 +26,8 @@ pz_annotate(
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{type}{Currently only \code{"box"} is supported.}
+\item{type}{\code{"box"} (outline), \code{"circle"} (ellipse), \code{"underline"} (bottom
+stroke), or \code{"highlight"} (translucent fill blended over the page).}
 
 \item{label}{Optional badge. \code{TRUE} numbers the matches 1, 2, ...;
 one string or number repeats on each match.}
@@ -34,8 +35,10 @@ one string or number repeats on each match.}
 \item{pad}{Extra CSS pixels around each element: one number or
 \code{c(top, right, bottom, left)}. \code{NULL} uses zero.}
 
-\item{reveal}{\code{"fade"} (the default) or \code{"none"}. Reveals animate only
-during an active, unpaused recording.}
+\item{reveal}{\code{"fade"}, \code{"draw"}, \code{"pop"}, \code{"slide"}, \code{"wipe"}, or
+\code{"none"}. \code{NULL} uses fade for boxes and draw for the other types.
+Reveals animate only during an active, unpaused recording; clearing
+reverses the reveal. Wipe sweeps clockwise from 12 o'clock.}
 
 \item{id}{Optional nonempty id. Reusing it replaces its annotations;
 \code{"spotlight"} and \code{"caption"} are reserved for other types.}

@@ -1,4 +1,4 @@
-#' Draw a box around page elements
+#' Mark page elements
 #'
 #' Draws an annotation for each element matched by `target`. Annotations
 #' follow their elements as the page scrolls or changes layout, and appear
@@ -9,13 +9,16 @@
 #' @param target A selector, [pz_loc()] spec, or list of targets.
 #'   `NULL` uses the current scope, or `document.body` at the root.
 #' @param ... Checked empty; reserved for future use.
-#' @param type Currently only `"box"` is supported.
+#' @param type `"box"` (outline), `"circle"` (ellipse), `"underline"` (bottom
+#'   stroke), or `"highlight"` (translucent fill blended over the page).
 #' @param label Optional badge. `TRUE` numbers the matches 1, 2, ...;
 #'   one string or number repeats on each match.
 #' @param pad Extra CSS pixels around each element: one number or
 #'   `c(top, right, bottom, left)`. `NULL` uses zero.
-#' @param reveal `"fade"` (the default) or `"none"`. Reveals animate only
-#'   during an active, unpaused recording.
+#' @param reveal `"fade"`, `"draw"`, `"pop"`, `"slide"`, `"wipe"`, or
+#'   `"none"`. `NULL` uses fade for boxes and draw for the other types.
+#'   Reveals animate only during an active, unpaused recording; clearing
+#'   reverses the reveal. Wipe sweeps clockwise from 12 o'clock.
 #' @param id Optional nonempty id. Reusing it replaces its annotations;
 #'   `"spotlight"` and `"caption"` are reserved for other types.
 #' @param color CSS color for the outline and badge, or `NULL` for the
@@ -43,17 +46,26 @@ pz_annotate <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  if (!identical(type, "box")) {
-    cli::cli_abort("Only {.val box} is supported for {.arg type}.")
+  if (
+    !is.character(type) ||
+      length(type) != 1L ||
+      is.na(type) ||
+      !type %in% c("box", "circle", "underline", "highlight")
+  ) {
+    cli::cli_abort(
+      "{.arg type} must be {.val box}, {.val circle}, {.val underline}, or {.val highlight}."
+    )
   }
-  reveal <- reveal %||% "fade"
+  reveal <- reveal %||% if (identical(type, "box")) "fade" else "draw"
   if (
     !is.character(reveal) ||
       length(reveal) != 1L ||
       is.na(reveal) ||
-      !reveal %in% c("fade", "none")
+      !reveal %in% c("fade", "draw", "pop", "slide", "wipe", "none")
   ) {
-    cli::cli_abort("{.arg reveal} must be {.val fade} or {.val none}.")
+    cli::cli_abort(
+      "{.arg reveal} must be {.val fade}, {.val draw}, {.val pop}, {.val slide}, {.val wipe}, or {.val none}."
+    )
   }
   check_annotation_id(id)
   if (!is.null(label)) {
@@ -86,6 +98,7 @@ pz_annotate <- function(
   recording <- annotate_recording(ctx$page)
   options <- list(
     id = id,
+    type = type,
     pad = unname(pad),
     label = label,
     color = color,
@@ -94,9 +107,9 @@ pz_annotate <- function(
     reveal = reveal,
     animate = recording
   )
-  annotate_call(ctx, els, "draw", options, "drawing the annotation")
-  if (recording && identical(reveal, "fade")) {
-    pump_loop(ctx$page$child_loop, 0.3)
+  duration <- annotate_call(ctx, els, "draw", options, "drawing the annotation")
+  if (recording && duration > 0) {
+    pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
   }
   invisible(ctx)
 }
@@ -157,7 +170,8 @@ pz_annotate_redact <- function(
 #' Clear page annotations
 #'
 #' Remove an annotation by id, or remove every annotation when `id` is
-#' `NULL`. During a recording, fading boxes fade out before removal.
+#' `NULL`. During an active recording, marks play their reveal in reverse
+#' before removal; paused recordings and stills clear instantly.
 #'
 #' @inheritParams pz_annotate
 #' @param id Id to clear; `NULL` clears all. Reserved ids are allowed.
@@ -178,7 +192,7 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
     auto_unbox = TRUE,
     null = "null"
   )
-  fades <- pz_js(
+  duration <- pz_js(
     ctx,
     paste0(
       "(() => { const h = document.getElementById('paparazzi-overlay-root'); ",
@@ -191,8 +205,8 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
   if (is.null(id) || identical(id, "caption")) {
     caption_clear(ctx$page)
   }
-  if (recording && isTRUE(fades)) {
-    pump_loop(ctx$page$child_loop, 0.3)
+  if (recording && duration > 0) {
+    pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
     pz_js(
       ctx,
       "document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations')?.pz?.finishClear()"
@@ -239,7 +253,7 @@ annotate_call <- function(ctx, els, fn, options, what) {
     what
   )
   cdp_check_exception(res, what)
-  invisible(res)
+  res$result$value
 }
 
 annotate_recording <- function(page) {
@@ -290,6 +304,45 @@ annotate_boot_js <- r"(function() {
   const entries = new Map();
   let frame = null;
   let next = 0;
+  const durations = {none:0, fade:250, draw:350, pop:250, slide:300, wipe:400};
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const keys = (reveal, path) => {
+    switch (reveal) {
+      case 'fade': return [{opacity:0},{opacity:1}];
+      case 'draw': return path ? [{strokeDashoffset:1},{strokeDashoffset:0}] :
+        [{transform:'scaleX(0)'},{transform:'scaleX(1)'}];
+      case 'pop': return [{opacity:0,transform:'scale(.85)'},
+                          {opacity:1,transform:'scale(1)'}];
+      case 'slide': return [{opacity:0,transform:'translateY(12px)'},
+                            {opacity:1,transform:'translateY(0)'}];
+      case 'wipe': return Array.from({length:73}, (_, i) => ({
+        maskImage:`conic-gradient(#000 ${i * 5}deg, transparent 0)`,
+        offset:i / 72
+      }));
+    }
+    return [];
+  };
+  const start = (node, reveal, entering, shape) => {
+    const target = reveal === 'draw' ? (shape.tagName === 'svg' ? shape.firstChild : shape) : node;
+    const anim = target.animate(keys(reveal, target instanceof SVGGeometryElement), {
+      duration:durations[reveal], fill:'forwards',
+      direction:entering ? 'normal' : 'reverse', easing:'linear'
+    });
+    if (entering) anim.onfinish = () => {
+      if (reveal === 'wipe') target.style.maskImage = 'none';
+      anim.cancel();
+    };
+    else anim.onfinish = () => node.remove();
+  };
+  const stroke = kind => {
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;overflow:visible;';
+    const path = document.createElementNS(svgNS, kind);
+    path.setAttribute('pathLength', '1');
+    path.style.cssText = 'fill:none;stroke:currentColor;stroke-width:3;vector-effect:non-scaling-stroke;stroke-dasharray:1;';
+    svg.appendChild(path);
+    return svg;
+  };
   const sync = () => {
     if (!entries.size) return;
     const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
@@ -307,7 +360,25 @@ annotate_boot_js <- r"(function() {
         box.style.left = (r.left - p[3]) + 'px';
         box.style.top = (r.top - p[0]) + 'px';
         box.style.width = Math.max(0, r.width + p[1] + p[3]) + 'px';
-        box.style.height = Math.max(0, r.height + p[0] + p[2]) + 'px';
+        const w = Math.max(0, r.width + p[1] + p[3]);
+        const h = Math.max(0, r.height + p[0] + p[2]);
+        box.style.height = h + 'px';
+        if (entry.type === 'circle' || (entry.type === 'box' && entry.reveal === 'draw')) {
+          const svg = box.querySelector('svg');
+          const path = svg.firstChild;
+          svg.setAttribute('viewBox', `0 0 ${Math.max(w, 1)} ${Math.max(h, 1)}`);
+          if (entry.type === 'circle') {
+            path.setAttribute('cx', w / 2);
+            path.setAttribute('cy', h / 2);
+            path.setAttribute('rx', Math.max(0, (w - 3) / 2));
+            path.setAttribute('ry', Math.max(0, (h - 3) / 2));
+          } else {
+            path.setAttribute('x', 1.5);
+            path.setAttribute('y', 1.5);
+            path.setAttribute('width', Math.max(0, w - 3));
+            path.setAttribute('height', Math.max(0, h - 3));
+          }
+        }
       });
     }
   };
@@ -325,24 +396,24 @@ annotate_boot_js <- r"(function() {
     entries.delete(id);
     if (!entries.size && frame !== null) { cancelAnimationFrame(frame); frame = null; }
     for (const node of entry.nodes) {
-      node.getAnimations().forEach(anim => anim.cancel());
-      if (animate && entry.reveal === 'fade') {
+      node.getAnimations({subtree:true}).forEach(anim => anim.cancel());
+      if (animate && durations[entry.reveal]) {
         node.classList.add('pz-exiting');
-        const anim = node.animate([{opacity:1},{opacity:0}], {duration:250,fill:'forwards'});
-        anim.onfinish = () => node.remove();
+        if (entry.reveal === 'draw') node.querySelector('span')?.remove();
+        start(node, entry.reveal, false, node.querySelector('.pz-shape'));
       } else node.remove();
     }
-    return animate && entry.reveal === 'fade';
+    return animate ? durations[entry.reveal] : 0;
   };
   layer.pz = {
     sync,
     finishClear,
     clear: ({id, animate}) => {
-      let fading = false;
+      let duration = 0;
       for (const key of id === null ? [...entries.keys()] : [id]) {
-        fading = remove(key, animate) || fading;
+        duration = Math.max(duration, remove(key, animate));
       }
-      return fading;
+      return duration;
     },
     draw: (elements, opts) => {
       let id = opts.id;
@@ -353,8 +424,35 @@ annotate_boot_js <- r"(function() {
       const nodes = elements.map((el, i) => {
         const box = document.createElement('div');
         box.className = 'pz-annotation';
-        box.style.cssText = 'position:fixed;box-sizing:border-box;pointer-events:none;border:3px solid;border-radius:5px;';
+        box.style.cssText = 'position:fixed;box-sizing:border-box;pointer-events:none;';
+        box.style.color = opts.color;
         box.style.borderColor = opts.color;
+        let shape = box;
+        if (opts.type === 'box') {
+          if (opts.reveal === 'draw') {
+            shape = stroke('rect');
+            shape.classList.add('pz-shape');
+            box.appendChild(shape);
+          } else {
+            box.style.border = '3px solid';
+            box.style.borderColor = opts.color;
+            box.style.borderRadius = '5px';
+          }
+        } else if (opts.type === 'circle') {
+          shape = stroke('ellipse');
+          shape.classList.add('pz-shape');
+          box.appendChild(shape);
+        } else {
+          shape = document.createElement('div');
+          shape.className = 'pz-shape';
+          shape.style.cssText = 'position:absolute;left:0;width:100%;transform-origin:left center;';
+          if (opts.type === 'underline') {
+            shape.style.cssText += 'height:3px;bottom:2px;background:currentColor;';
+          } else {
+            shape.style.cssText += 'top:0;height:100%;background:currentColor;opacity:.35;mix-blend-mode:multiply;';
+          }
+          box.appendChild(shape);
+        }
         if (opts.label !== null) {
           const badge = document.createElement('span');
           badge.textContent = opts.label === true ? String(i + 1) : String(opts.label);
@@ -365,16 +463,17 @@ annotate_boot_js <- r"(function() {
           box.appendChild(badge);
         }
         layer.appendChild(box);
-        if (opts.animate && opts.reveal === 'fade') {
-          const anim = box.animate([{opacity:0},{opacity:1}], {duration:250,fill:'forwards'});
-          anim.onfinish = () => { box.style.opacity = '1'; anim.cancel(); };
-        }
         return box;
       });
-      entries.set(id, {elements:[...elements], nodes, pad:opts.pad, reveal:opts.reveal});
+      entries.set(id, {elements:[...elements], nodes, pad:opts.pad,
+                       reveal:opts.reveal, type:opts.type});
       sync();
+      if (opts.animate && durations[opts.reveal]) {
+        nodes.forEach(node => start(node, opts.reveal, true,
+          node.querySelector('.pz-shape')));
+      }
       if (frame === null) frame = requestAnimationFrame(tick);
-      return id;
+      return opts.animate ? durations[opts.reveal] : 0;
     },
     redact: (elements, opts) => {
       for (const el of elements) {
