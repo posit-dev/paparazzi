@@ -398,19 +398,17 @@ camera_filter <- function(rec, sampled, out, png_size, call = caller_env()) {
     )
   }
   if (
-    !rec$camera_warned &&
-      any(vapply(
-        rec$camera,
-        function(move) {
-          !isTRUE(move$follow) && !is.null(move$zoom) && move$zoom > density
-        },
-        logical(1)
-      ))
+    any(vapply(
+      rec$camera,
+      function(move) {
+        !isTRUE(move$follow) && !is.null(move$zoom) && move$zoom > density
+      },
+      logical(1)
+    ))
   ) {
     cli::cli_warn(
       "Camera zoom exceeds the capture's {density}x pixel density; the image may look soft."
     )
-    rec$camera_warned <- TRUE
   }
   source <- if (is.null(out$crop)) {
     c(0, 0, png_size$width, png_size$height)

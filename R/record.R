@@ -684,7 +684,6 @@ new_recorder <- function(
   rec$captions <- list()
   rec$keypresses <- list()
   rec$camera_viewport_width <- NULL
-  rec$camera_warned <- FALSE
   rec$holds <- list()
   # Video clock: vt = vt_base + (now - active_since) while running.
   # Pausing folds the elapsed stretch into vt_base, so paused time
