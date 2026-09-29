@@ -431,7 +431,12 @@ key_callout_overlays <- function(rec, page, out, windows, captions, dir) {
 }
 
 screen_filter <- function(rec, sampled, out, overlays) {
-  chains <- paste0("[in]", out$vfilter, "[b0]")
+  base <- if (identical(rec$format, "gif")) {
+    out$vfilter
+  } else {
+    sub("(^|,)format=yuv420p$", "", out$vfilter)
+  }
+  chains <- paste0("[in]", if (nzchar(base)) base else "null", "[b0]")
   for (i in seq_along(overlays)) {
     item <- overlays[[i]]
     fades <- character(0)

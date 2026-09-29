@@ -1,3 +1,50 @@
+test_that("burned overlays convert to yuv420p only after compositing", {
+  skip_if_not_installed("png")
+  file <- withr::local_tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(48, 64, 3)), file)
+  size <- png_read_size(file)
+  sampled <- list(files = file, index = 1L, vts = 0, n_ticks = 1L)
+  overlay <- list(file = "caption-1.png", start = 0, end = 0.1)
+  key <- list(file = "keys-1.png", start = 0, end = 0.1)
+  for (format in c("mp4", "webm")) {
+    rec <- new_recorder("unused", format, 10, NULL, c(0, 0), FALSE, NULL)
+    rec$camera_viewport_width <- 64
+    rec$files <- file
+    rec$scroll <- list(c(0, 0))
+    out <- record_output_spec(rec, size)
+    expect_equal(out$vfilter, "format=yuv420p")
+    for (camera in c(FALSE, TRUE)) {
+      base <- out
+      if (camera) {
+        rec$camera <- list(list(
+          start = 0,
+          end = 0,
+          box = c(12, 9, 36, 27),
+          zoom = 1,
+          reset = FALSE,
+          scroll = c(0, 0)
+        ))
+        base$vfilter <- camera_filter(rec, sampled, out, size)
+        expect_match(base$vfilter, ",format=yuv420p$", fixed = FALSE)
+      }
+      graph <- screen_filter(rec, sampled, base, list(overlay, key))
+      positions <- gregexpr("format=yuv420p", graph, fixed = TRUE)[[1]]
+      overlays <- gregexpr("overlay=0:0", graph, fixed = TRUE)[[1]]
+      expect_length(overlays, 2L)
+      expect_length(positions, 1L)
+      expect_gt(positions[[1]], tail(overlays, 1)[[1]])
+      expect_match(graph, ",format=yuv420p$", fixed = FALSE)
+    }
+  }
+  rec <- new_recorder("unused", "gif", 10, NULL, c(0, 0), FALSE, NULL)
+  out <- record_output_spec(rec, size)
+  expect_equal(out$vfilter, "null")
+  expect_match(
+    screen_filter(rec, sampled, out, list(overlay)),
+    ",format=rgb24$"
+  )
+})
+
 test_that("captions persist as page state and clearing is selective", {
   page <- local_record_page()
   expect_identical(pz_annotate_caption(page, "First"), page)
