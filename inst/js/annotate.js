@@ -149,8 +149,9 @@ function(root) {
       }
       entry.elements.forEach((el, i) => {
         const box = entry.nodes[i];
-        if (!el.isConnected || !el.getClientRects().length) {
-          if (entry.kind !== 'redact') box.style.display = 'none';
+        if (!el.isConnected || !el.getClientRects().length ||
+            (entry.kind === 'redact' && getComputedStyle(el).visibility !== 'visible')) {
+          box.style.display = 'none';
           return;
         }
         const r = el.getBoundingClientRect();
@@ -160,12 +161,43 @@ function(root) {
           return;
         }
         const p = entry.pad;
-        box.style.left = (r.left - p[3]) + 'px';
-        box.style.top = (r.top - p[0]) + 'px';
+        const left = r.left - p[3], top = r.top - p[0];
+        box.style.left = left + 'px';
+        box.style.top = top + 'px';
         const w = Math.max(0, r.width + p[1] + p[3]);
         box.style.width = w + 'px';
         const h = Math.max(0, r.height + p[0] + p[2]);
         box.style.height = h + 'px';
+        if (entry.kind === 'redact') {
+          const bounds = {left, top, right:left + w, bottom:top + h};
+          let ancestor = el.parentElement || el.getRootNode().host;
+          while (ancestor && ancestor !== document.documentElement) {
+            const style = getComputedStyle(ancestor);
+            const x = style.overflowX !== 'visible';
+            const y = style.overflowY !== 'visible';
+            if (x || y) {
+              const a = ancestor.getBoundingClientRect();
+              const scaleX = a.width / (ancestor.offsetWidth || 1);
+              const scaleY = a.height / (ancestor.offsetHeight || 1);
+              if (x) {
+                const left = a.left + ancestor.clientLeft * scaleX;
+                bounds.left = Math.max(bounds.left, left);
+                bounds.right = Math.min(bounds.right, left + ancestor.clientWidth * scaleX);
+              }
+              if (y) {
+                const top = a.top + ancestor.clientTop * scaleY;
+                bounds.top = Math.max(bounds.top, top);
+                bounds.bottom = Math.min(bounds.bottom, top + ancestor.clientHeight * scaleY);
+              }
+            }
+            ancestor = ancestor.parentElement || ancestor.getRootNode().host;
+          }
+          if (w <= 0 || h <= 0 || bounds.right <= bounds.left || bounds.bottom <= bounds.top) {
+            box.style.display = 'none';
+          } else {
+            box.style.clipPath = `inset(${bounds.top - top}px ${left + w - bounds.right}px ${top + h - bounds.bottom}px ${bounds.left - left}px)`;
+          }
+        }
         if (entry.kind === 'circle' || (entry.kind === 'box' && entry.reveal === 'draw')) {
           const svg = box.querySelector('svg');
           const path = svg.firstChild;

@@ -292,7 +292,7 @@ test_that("paused recording skips fade on draw and clear", {
   page |> pz_record_resume() |> pz_record_stop()
 })
 
-test_that("redaction fills every match immediately and remains after disconnection", {
+test_that("redaction fills every match immediately and hides after disconnection", {
   skip_if_not_installed("png")
   page <- annotation_page()
   pz_js(
@@ -326,12 +326,80 @@ test_that("redaction fills every match immediately and remains after disconnecti
     page,
     "(() => { const n = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')[1]; return [n.style.display, parseFloat(n.style.left), parseFloat(n.style.top)]; })()"
   )
-  expect_equal(unlist(after), c("", "198", "308"))
+  expect_identical(after[[1]], "none")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
-  expect_equal(at(220, 330), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(at(220, 330), rep(1, 3), tolerance = 0.03)
   page |> pz_annotate_clear("secret")
   expect_length(annotation_state(page), 0)
+})
+
+test_that("redaction paints only inside a scrolling ancestor as its target moves", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.insertAdjacentHTML('beforeend', ",
+      "'<div id=clip style=\"position:absolute;left:350px;top:100px;width:160px;height:100px;overflow:auto;background:white\">' +",
+      "'<div style=\"height:70px\"></div><div id=secret style=\"margin-left:20px;width:90px;height:80px;background:white\">SECRET</div>' +",
+      "'<div style=\"height:300px\"></div></div>')"
+    )
+  )
+  page |> pz_annotate_redact("#secret", pad = 4)
+  path <- withr::local_tempfile(fileext = ".png")
+  pixel <- function(x, y) {
+    page |> pz_screenshot(path)
+    img <- png::readPNG(path)
+    dpr <- page_dpr(page)
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  expect_equal(pixel(380, 190), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(380, 202), rep(1, 3), tolerance = 0.03)
+  pz_js(page, "document.getElementById('clip').scrollTop = 80")
+  pump_loop(page$child_loop, 0.05)
+  expect_equal(pixel(380, 110), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(380, 190), rep(1, 3), tolerance = 0.03)
+  pz_js(page, "document.getElementById('clip').scrollTop = 250")
+  pump_loop(page$child_loop, 0.05)
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
+    ),
+    "none"
+  )
+  expect_equal(pixel(380, 110), rep(1, 3), tolerance = 0.03)
+  pz_js(page, "document.getElementById('clip').scrollTop = 0")
+  pump_loop(page$child_loop, 0.05)
+  expect_equal(pixel(380, 190), rep(23 / 255, 3), tolerance = 0.03)
+})
+
+test_that("redaction intersects nested horizontal and vertical overflow clips", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.insertAdjacentHTML('beforeend', ",
+      "'<div style=\"position:absolute;left:330px;top:100px;width:100px;height:110px;overflow-x:hidden\">' +",
+      "'<div style=\"position:relative;left:-25px;top:30px;width:150px;height:55px;overflow-y:hidden\">' +",
+      "'<div id=secret style=\"position:absolute;left:0;top:-25px;width:140px;height:110px\">SECRET</div>' +",
+      "'</div></div>')"
+    )
+  )
+  page |> pz_annotate_redact("#secret")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  pixel <- function(x, y) {
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  expect_equal(pixel(340, 145), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(320, 145), rep(1, 3), tolerance = 0.03)
+  expect_equal(pixel(340, 115), rep(1, 3), tolerance = 0.03)
+  expect_equal(pixel(340, 190), rep(1, 3), tolerance = 0.03)
 })
 
 test_that("redaction follows scroll and scoped targets without restyling elements", {
@@ -462,7 +530,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
   pump_loop(page$child_loop, 0.05)
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
-  expect_equal(rgb(45, 35), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(rgb(45, 35), rep(1, 3), tolerance = 0.03)
   expect_error(
     pz_annotate_redact(page, "#fixed", id = "shared"),
     "rendered box"
@@ -551,7 +619,7 @@ test_that("below-fold redaction covers a target-framed still without scrolling",
   expect_equal(mean(img[,, 1:3]), 23 / 255, tolerance = 0.025)
 })
 
-test_that("blur changes text pixels and keeps its box when target stops rendering", {
+test_that("blur changes text pixels and hides when target stops rendering", {
   skip_if_not_installed("png")
   page <- annotation_page()
   pz_js(
@@ -582,6 +650,25 @@ test_that("blur changes text pixels and keeps its box when target stops renderin
     pz_js(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
+    ),
+    "none"
+  )
+  pz_js(
+    page,
+    "document.getElementById('secret').style.display = ''; document.getElementById('secret').style.visibility = 'hidden'"
+  )
+  expect_identical(
+    pz_js(
+      page,
+      "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); layer.pz.sync(); return layer.querySelector('.pz-redaction').style.display; })()"
+    ),
+    "none"
+  )
+  pz_js(page, "document.getElementById('secret').style.visibility = 'visible'")
+  expect_identical(
+    pz_js(
+      page,
+      "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); layer.pz.sync(); return layer.querySelector('.pz-redaction').style.display; })()"
     ),
     ""
   )
