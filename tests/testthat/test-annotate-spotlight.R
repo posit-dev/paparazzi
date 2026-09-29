@@ -416,3 +416,21 @@ test_that("RTL negative scroll dims the whole viewport but preserves the far-sid
     tolerance = 0.04
   )
 })
+
+test_that("callouts paint above the spotlight scrim", {
+  skip_if_not_installed("png")
+  page <- spotlight_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate_spotlight("#one", dim = 0.8, reveal = "none") |>
+    pz_annotate_callout(
+      "Look here",
+      target = "#two",
+      side = "bottom",
+      color = "rgb(255, 0, 255)",
+      reveal = "none"
+    )
+  img <- spotlight_image(page, path)
+  magenta <- img[,, 1] > 0.9 & img[,, 2] < 0.2 & img[,, 3] > 0.9
+  expect_true(any(magenta))
+})
