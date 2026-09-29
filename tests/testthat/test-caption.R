@@ -1,3 +1,36 @@
+test_that("frame extraction silences FFmpeg progress and keeps failures visible", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  image <- withr::local_tempfile(fileext = ".png")
+  video <- withr::local_tempfile(fileext = ".mp4")
+  png::writePNG(array(0.5, c(32, 32, 3)), image)
+  av::av_encode_video(image, video, framerate = 1, verbose = FALSE)
+
+  old_level <- av::av_log_level()
+  withr::defer(av::av_log_level(old_level))
+  av::av_log_level(24)
+
+  decoded <- tempfile("av-decoded-")
+  withr::defer(unlink(decoded, recursive = TRUE))
+  diagnostics <- utils::capture.output(
+    frames <- av_video_images_quiet(video, destdir = decoded, format = "png"),
+    type = "message"
+  )
+  expect_gt(length(frames), 0L)
+  expect_length(diagnostics, 0L)
+  expect_equal(av::av_log_level(), 24)
+
+  expect_error(
+    av_video_images_quiet(
+      video,
+      destdir = tempfile(),
+      format = "invalid-codec"
+    ),
+    "avcodec_find_encoder_by_name"
+  )
+  expect_equal(av::av_log_level(), 24)
+})
+
 test_that("burned overlays convert to yuv420p only after compositing", {
   skip_if_not_installed("png")
   file <- withr::local_tempfile(fileext = ".png")
@@ -89,7 +122,7 @@ test_that("caption burn overlays two windows after a camera move, with quoted pa
   expect_true(file.exists(out))
   decoded <- tempfile("caption-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
-  frames <- av::av_video_images(out, destdir = decoded, format = "png")
+  frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   expect_gt(length(frames), 5)
   first <- png::readPNG(frames[[3]])
   last <- png::readPNG(tail(frames, 1))
@@ -110,7 +143,7 @@ test_that("a caption left active stays visible on the last MP4 frame", {
   pz_record_stop(page)
   decoded <- tempfile("caption-persist-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
-  frames <- av::av_video_images(out, destdir = decoded, format = "png")
+  frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   expect_gt(length(frames), 5)
   dark_pill <- function(frame) {
     image <- png::readPNG(frame)
@@ -135,7 +168,7 @@ test_that("a caption left active stays visible on the last GIF frame", {
   pz_record_stop(page)
   decoded <- tempfile("caption-persist-gif-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
-  frames <- av::av_video_images(out, destdir = decoded, format = "png")
+  frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   expect_gt(length(frames), 5)
   first <- png::readPNG(frames[[1]])
   last <- png::readPNG(tail(frames, 1)[[1]])
@@ -187,7 +220,7 @@ test_that("captioned GIF uses the same relative movie source after scaling", {
   expect_equal(info$width %% 2, 0)
   decoded <- tempfile("caption-gif-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
-  frames <- av::av_video_images(out, destdir = decoded, format = "png")
+  frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   expect_true(length(frames) >= 2)
   first <- png::readPNG(frames[[1]])
   last <- png::readPNG(tail(frames, 1))
@@ -351,7 +384,7 @@ test_that("VTT-only output follows pause-aware ticks and does not burn", {
   )
   decoded <- tempfile("caption-vtt-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
-  frame <- av::av_video_images(out, destdir = decoded, format = "png")[[1]]
+  frame <- av_video_images_quiet(out, destdir = decoded, format = "png")[[1]]
   image <- png::readPNG(frame)
   height <- dim(image)[1]
   middle <- round(dim(image)[2] / 2)
@@ -469,7 +502,7 @@ test_that("recording caption pixels follow CSS size at DPR 2", {
     pz_record_stop(page)
     frames <- tempfile("caption-dpr-")
     withr::defer(unlink(frames, recursive = TRUE))
-    image <- av::av_video_images(out, destdir = frames, format = "png")
+    image <- av_video_images_quiet(out, destdir = frames, format = "png")
     pixels <- png::readPNG(image[[1]])
     center <- pixels[, round(dim(pixels)[2] / 2), 1]
     sum(center < 0.4 & seq_along(center) > length(center) * 0.65)
@@ -563,7 +596,7 @@ test_that("a caption lasting a tick or two is visible in the encoded frames", {
   pz_wait(page, 0.3)
   pz_record_stop(page)
   decoded <- withr::local_tempfile()
-  frames <- av::av_video_images(out, destdir = decoded, format = "png")
+  frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   dark <- vapply(
     frames,
     function(f) {
@@ -651,7 +684,7 @@ test_that("decoded keycaps stack above a burned bottom caption", {
   pz_record_stop(page)
   decoded <- tempfile("keys-stacked-")
   withr::defer(unlink(decoded, recursive = TRUE))
-  files <- av::av_video_images(path, destdir = decoded, format = "png")
+  files <- av_video_images_quiet(path, destdir = decoded, format = "png")
   expect_gt(length(files), 12)
   active <- png::readPNG(files[[5]])
   expired <- png::readPNG(files[[length(files) - 2L]])
@@ -752,7 +785,7 @@ test_that("keys burn into WebM VTT-only and uncaptioned GIF", {
   expect_true(file.exists(sub("\\.webm$", ".vtt", video)))
   dest <- tempfile("key-webm-")
   withr::defer(unlink(dest, recursive = TRUE))
-  frames <- av::av_video_images(video, destdir = dest, format = "png")
+  frames <- av_video_images_quiet(video, destdir = dest, format = "png")
   active <- png::readPNG(frames[[4]])
   expect_true(any(
     active[round(dim(active)[1] * 0.78):dim(active)[1], , 1] < 0.4
@@ -771,7 +804,7 @@ test_that("keys burn into WebM VTT-only and uncaptioned GIF", {
   expect_gt(recorded_video_info(gif)$duration, 1.2)
   dest <- tempfile("key-gif-")
   withr::defer(unlink(dest, recursive = TRUE))
-  frames <- av::av_video_images(gif, destdir = dest, format = "png")
+  frames <- av_video_images_quiet(gif, destdir = dest, format = "png")
   expect_gt(length(frames), 1L)
   dark <- vapply(
     frames,

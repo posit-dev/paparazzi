@@ -131,7 +131,7 @@ test_that("camera zoom and reset change MP4 and GIF content, not dimensions", {
     expect_gte(info$duration, 0.9)
     decoded <- tempfile("camera-decoded-")
     withr::defer(unlink(decoded, recursive = TRUE))
-    frames <- av::av_video_images(out, destdir = decoded, format = "png")
+    frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
     expect_gte(length(frames), 8)
     red_at_blue <- function(file) png::readPNG(file)[330, 550, 1]
     expect_lt(red_at_blue(frames[[1]]), 0.2)
@@ -157,7 +157,7 @@ test_that("camera shot tracks page target after a scrolled poll capture", {
   suppressWarnings(pz_record_stop(page))
   decoded <- tempfile("camera-scrolled-")
   withr::defer(unlink(decoded, recursive = TRUE))
-  frames <- av::av_video_images(out, destdir = decoded, format = "png")
+  frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   color <- png::readPNG(tail(frames, 1))[140, 300, 1:3]
   expect_gt(color[1], 0.8)
   expect_lt(color[2], 0.2)
@@ -195,7 +195,7 @@ test_that("framed camera uses final home, scale and each method's capture densit
     expect_equal(c(info$width, info$height), size)
     decoded <- tempfile("camera-framed-")
     withr::defer(unlink(decoded, recursive = TRUE))
-    frames <- av::av_video_images(out, destdir = decoded, format = "png")
+    frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
     red_at_blue <- function(file) {
       png::readPNG(file)[round(size[2] * 0.88), round(size[1] * 0.74), 1]
     }

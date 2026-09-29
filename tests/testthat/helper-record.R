@@ -24,6 +24,25 @@ skip_if_no_av <- function() {
   testthat::skip_if_not_installed("av")
 }
 
+# av_video_images() forces verbose logging in its encoder. Capture that native
+# stderr noise, but replay it on failure so FFmpeg diagnostics remain visible.
+av_video_images_quiet <- function(...) {
+  result <- NULL
+  diagnostics <- utils::capture.output(
+    result <- tryCatch(av::av_video_images(...), error = identity),
+    type = "message"
+  )
+
+  if (inherits(result, "error")) {
+    if (length(diagnostics)) {
+      cat(diagnostics, sep = "\n", file = stderr())
+    }
+    stop(result)
+  }
+
+  result
+}
+
 # Media info for assertions: duration (seconds), dimensions, codec,
 # and frame count from the first video stream.
 recorded_video_info <- function(path) {
