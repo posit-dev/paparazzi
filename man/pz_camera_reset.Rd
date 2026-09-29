@@ -13,7 +13,9 @@ pz_camera_reset(ctx, ..., wait = FALSE)
 
 \item{wait}{Whether to wait for the move to finish before the next step.
 \code{FALSE} (the default) lets the next step run while the camera moves,
-so a cursor glide can happen during a zoom. \code{\link[=pz_record_hold]{pz_record_hold()}},
+so a cursor glide can happen during a zoom. Either way, a camera call
+first lets an earlier camera move finish, so calling \code{pz_camera()} on
+the same target again settles the camera there. \code{\link[=pz_record_hold]{pz_record_hold()}},
 \code{\link[=pz_record_pause]{pz_record_pause()}} and \code{\link[=pz_record_stop]{pz_record_stop()}} always let a move finish
 first.}
 }

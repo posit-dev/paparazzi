@@ -12,13 +12,17 @@
 #' @param pad Padding in CSS pixels around the target; one number or
 #'   `c(top, right, bottom, left)`. Defaults to 24 pixels.
 #' @param duration Movement duration in seconds. `NULL` chooses a duration
-#'   based on the pan and zoom distance.
+#'   based on the pan and zoom distance. When the camera is already on the
+#'   shot, `NULL` does nothing and a number holds the camera still for that
+#'   long.
 #' @param target_box `"element"` measures just the shot target; `"annotated"`
 #'   also includes its attached annotations. Defaults to `"element"` even
 #'   when [pz_stage_frame()] stages an annotated frame for stills.
 #' @param wait Whether to wait for the move to finish before the next step.
 #'   `FALSE` (the default) lets the next step run while the camera moves,
-#'   so a cursor glide can happen during a zoom. [pz_record_hold()],
+#'   so a cursor glide can happen during a zoom. Either way, a camera call
+#'   first lets an earlier camera move finish, so calling `pz_camera()` on
+#'   the same target again settles the camera there. [pz_record_hold()],
 #'   [pz_record_pause()] and [pz_record_stop()] always let a move finish
 #'   first.
 #' @return `ctx`, invisibly.
@@ -104,6 +108,10 @@ camera_move <- function(
       reason = "to apply the recording camera to GIFs."
     )
   }
+  # Manual moves queue behind each other by settling first: a second
+  # pz_camera() starts where the first one lands. Follow moves never
+  # outlast their action, so they are already done here.
+  camera_settle(ctx$page, rec)
   now <- rec_vt(rec)
   home <- camera_home(rec, ctx)
   density <- camera_density(rec, ctx)
@@ -121,6 +129,14 @@ camera_move <- function(
     home + rep(scroll, 2)
   } else {
     camera_shot(box, home, zoom, density)
+  }
+  # A shot the camera is already on is not a move: without a duration
+  # nothing happens; with one, the camera holds still for that long.
+  stays <- all(
+    abs(camera_viewport(to, scroll, home) + rep(scroll, 2) - from) < 0.5
+  )
+  if (stays && is.null(duration)) {
+    return(invisible(rec))
   }
   if (is.null(duration)) {
     duration <- camera_duration(from, to, home)

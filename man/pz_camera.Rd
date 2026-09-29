@@ -31,7 +31,9 @@ the target with padding, capped at the capture's pixel density.}
 \code{c(top, right, bottom, left)}. Defaults to 24 pixels.}
 
 \item{duration}{Movement duration in seconds. \code{NULL} chooses a duration
-based on the pan and zoom distance.}
+based on the pan and zoom distance. When the camera is already on the
+shot, \code{NULL} does nothing and a number holds the camera still for that
+long.}
 
 \item{target_box}{\code{"element"} measures just the shot target; \code{"annotated"}
 also includes its attached annotations. Defaults to \code{"element"} even
@@ -39,7 +41,9 @@ when \code{\link[=pz_stage_frame]{pz_stage_frame()}} stages an annotated frame f
 
 \item{wait}{Whether to wait for the move to finish before the next step.
 \code{FALSE} (the default) lets the next step run while the camera moves,
-so a cursor glide can happen during a zoom. \code{\link[=pz_record_hold]{pz_record_hold()}},
+so a cursor glide can happen during a zoom. Either way, a camera call
+first lets an earlier camera move finish, so calling \code{pz_camera()} on
+the same target again settles the camera there. \code{\link[=pz_record_hold]{pz_record_hold()}},
 \code{\link[=pz_record_pause]{pz_record_pause()}} and \code{\link[=pz_record_stop]{pz_record_stop()}} always let a move finish
 first.}
 }
