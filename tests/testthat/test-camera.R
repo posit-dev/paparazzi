@@ -866,3 +866,23 @@ test_that("a clamped shot that looks the same but moves the anchor is a move", {
   expect_true(camera_same_shot(rec, home, home, TRUE, c(0, 0), home, 1))
   expect_false(camera_same_shot(rec, home, home, FALSE, c(0, 0), home, 1))
 })
+
+test_that("a repeated reset after a page scroll records no move", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0;height:2000px}#a{position:absolute;left:90px;top:90px;width:70px;height:50px}</style><button id="a">A</button>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  pz_stage(page, cursor = FALSE, camera_follow = FALSE)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_camera(page, "#a", zoom = 2, duration = 0)
+  pz_camera_reset(page)
+  n <- length(rec$camera)
+  pz_js(page, "window.scrollTo(0, 400)")
+  pz_camera_reset(page)
+  expect_length(rec$camera, n)
+  suppressWarnings(pz_record_stop(page))
+})
