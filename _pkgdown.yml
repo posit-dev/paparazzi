@@ -8,6 +8,7 @@ articles:
     navbar: ~
     contents:
       - articles/shiny
+      - articles/walkthrough
 
 reference:
   - title: Pages, apps and navigation
