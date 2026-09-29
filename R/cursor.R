@@ -139,6 +139,7 @@ pz_cursor_hide <- function(ctx, ...) {
   check_dots_empty()
   cur <- page_cursor(ctx$page)
   cur$visibility <- "hidden"
+  cur$resting <- FALSE
   if (!is.null(cur$x)) {
     cursor_draw(ctx, visible = FALSE)
     if (stage_recording(ctx$page) && is.null(cur$off_frame)) {
@@ -313,6 +314,7 @@ page_cursor <- function(page) {
     cur$x <- NULL
     cur$y <- NULL
     cur$off_frame <- NULL
+    cur$resting <- FALSE
     cur$init_id <- NULL
     cur$page_enabled <- FALSE
     page$.__enclos_env__$private$staging_$cursor <- cur
@@ -619,6 +621,7 @@ cursor_apply <- function(
   cur$x <- state$x
   cur$y <- state$y
   cur$off_frame <- NULL
+  cur$resting <- FALSE
   if (state$duration > 0) {
     pump_loop(page$child_loop, state$duration + 0.05)
   }
@@ -650,8 +653,32 @@ cursor_draw <- function(ctx, visible, pressed = FALSE) {
   ctx_return(ctx)
 }
 
+# Resting: hidden in place while recording, but not hidden the way
+# pz_cursor_hide() is. The cursor still takes part in staging, so the
+# next move glides from here, and the glide's opacity transition fades
+# it back in as it starts. Nothing else redraws it until then.
+cursor_rest <- function(ctx) {
+  page <- ctx$page
+  cur <- page_cursor_peek(page)
+  if (
+    !stage_recording(page) ||
+      !cursor_visible(page) ||
+      is.null(cur$x) ||
+      !is.null(cur$off_frame)
+  ) {
+    return(ctx_return(ctx))
+  }
+  cur$resting <- TRUE
+  cursor_draw(ctx, visible = FALSE)
+  ctx_return(ctx)
+}
+
+cursor_drawn <- function(page) {
+  cursor_visible(page) && !isTRUE(page_cursor_peek(page)$resting)
+}
+
 cursor_press <- function(ctx, pressed) {
-  if (!cursor_visible(ctx$page)) {
+  if (!cursor_drawn(ctx$page)) {
     return(ctx_return(ctx))
   }
   cursor_draw(ctx, visible = TRUE, pressed = pressed)
@@ -843,7 +870,7 @@ cursor_register_init <- function(ctx) {
   state <- list(
     x = cur$x %||% 0,
     y = cur$y %||% 0,
-    visible = cursor_visible(page) && !is.null(cur$x),
+    visible = cursor_drawn(page) && !is.null(cur$x),
     icon = cur$icon,
     pressed = FALSE,
     duration = 0,

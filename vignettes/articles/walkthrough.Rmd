@@ -26,24 +26,21 @@ card <- pz_frame("main", pad = 12, when = "start")
 
 ## Part 1: Add a task
 
-We want the viewer to see both the form and the result. `pz_record_start()` begins a recording, and the chain that follows it is what gets recorded. There's no need to stop it: when the chain ends, the recording stops and the video appears below the chunk. The camera can move *inside* that frame while recording, without scrolling or zooming the live page. Here it zooms in on the title field while the cursor glides over to click it.
+We want the viewer to see both the form and the result. `pz_record_start()` begins a recording, and the chain that follows it is what gets recorded. There's no need to stop it: when the chain ends, the recording stops and the video appears below the chunk. The camera can move *inside* that frame while recording, without scrolling or zooming the live page. Here it zooms in on the title field while the cursor glides over to click it, since `pz_type()` clicks its target before typing.
 
 ```{r part-add}
 page |>
   pz_record_start(frame = card, fps = 8, scale = 0.6) |>
   pz_annotate_caption("Add a task for the release") |>
   pz_camera("#task-title") |>
-  pz_click("#task-title") |>
-  pz_cursor_hide() |>
   pz_type("Prepare release notes", target = "#task-title") |>
-  pz_cursor_show() |>
   pz_click("#add-task") |>
   pz_expect_text("Prepare release notes", target = pz_loc(".task-title", which = "first")) |>
   pz_camera_reset() |>
   pz_record_hold(0.7)
 ```
 
-Camera moves don't hold up the next step, so the zoom and the cursor's glide happen together. Use `pz_camera(wait = TRUE)` when the camera should arrive first. The camera fits the title field with padding during typing, then follows the click toward Add. It returns to the card, where the new task appears at the top of the list. The expectation matters because the page briefly says “Saving…” before it inserts the task.
+Camera moves don't hold up the next step, so the zoom and the cursor's glide happen together. Use `pz_camera(wait = TRUE)` when the camera should arrive first. While the text is typed, the cursor fades out so it doesn't cover the field, and it fades back in as it glides to Add. The camera fits the title field with padding during typing, then follows the click toward Add. It returns to the card, where the new task appears at the top of the list. The expectation matters because the page briefly says “Saving…” before it inserts the task.
 
 The caption is a page setting, not a label attached to one file. Clear it between parts so the next video doesn't inherit it:
 

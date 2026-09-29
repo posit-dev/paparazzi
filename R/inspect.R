@@ -219,6 +219,8 @@ inspect_recording_state <- function(page) {
     "hidden"
   } else if (!is.null(cur$off_frame)) {
     "off-frame"
+  } else if (isTRUE(cur$resting)) {
+    "resting"
   } else {
     "visible"
   }
