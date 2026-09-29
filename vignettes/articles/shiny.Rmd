@@ -2,7 +2,7 @@
 title: "Shiny apps"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{shiny}
+  %\VignetteIndexEntry{Shiny apps}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

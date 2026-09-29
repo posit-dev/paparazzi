@@ -2,7 +2,7 @@
 title: "Make a three-part app walkthrough"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{walkthrough}
+  %\VignetteIndexEntry{Make a three-part app walkthrough}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

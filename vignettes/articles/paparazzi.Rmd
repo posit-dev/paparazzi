@@ -2,7 +2,7 @@
 title: "Get started with paparazzi"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{paparazzi}
+  %\VignetteIndexEntry{Get started with paparazzi}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
