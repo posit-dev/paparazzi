@@ -11,7 +11,8 @@ pz_camera(
   zoom = NULL,
   pad = NULL,
   duration = NULL,
-  target_box = c("element", "annotated")
+  target_box = c("element", "annotated"),
+  wait = FALSE
 )
 }
 \arguments{
@@ -35,6 +36,11 @@ based on the pan and zoom distance.}
 \item{target_box}{\code{"element"} measures just the shot target; \code{"annotated"}
 also includes its attached annotations. Defaults to \code{"element"} even
 when \code{\link[=pz_stage_frame]{pz_stage_frame()}} stages an annotated frame for stills.}
+
+\item{wait}{Whether to wait for the move to finish before the next step.
+\code{FALSE} (the default) lets the next step run while the camera moves,
+so a cursor glide can happen during a zoom. \code{\link[=pz_record_hold]{pz_record_hold()}} and
+\code{\link[=pz_record_stop]{pz_record_stop()}} always let a move finish first.}
 }
 \value{
 \code{ctx}, invisibly.

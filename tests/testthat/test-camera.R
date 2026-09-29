@@ -713,3 +713,68 @@ test_that("stop-time home resolves adjacent moves without a call-time crop", {
     final_density_crop + rep(scroll, 2)
   )
 })
+
+test_that("camera moves wait only when asked; holds and stops let them land", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}button{position:absolute;width:70px;height:50px}#near{left:90px;top:90px}</style><button id="near">near</button>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  pz_stage(page, cursor = FALSE)
+  expect_error(pz_camera(page, "#near", wait = "yes"), "wait")
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pumped <- numeric()
+  testthat::with_mocked_bindings(
+    {
+      pz_camera(page, "#near", zoom = 2, duration = 0.8)
+      no_wait <- pumped
+      pz_camera_reset(page, wait = TRUE)
+      waited <- pumped
+    },
+    pump_loop = function(loop, seconds) {
+      pumped <<- c(pumped, seconds)
+    }
+  )
+  expect_length(no_wait, 0)
+  expect_length(waited, 1)
+  expect_equal(waited, rec$camera[[2]]$end - rec$camera[[2]]$start)
+
+  pumped <- numeric()
+  testthat::with_mocked_bindings(
+    {
+      pz_camera(page, "#near", zoom = 2, duration = 5)
+      pz_record_hold(page, 1)
+    },
+    pump_loop = function(loop, seconds) {
+      pumped <<- c(pumped, seconds)
+    }
+  )
+  expect_length(pumped, 1)
+  expect_gt(pumped, 4)
+  expect_lte(pumped, 5)
+  suppressWarnings(pz_record_stop(page))
+})
+
+test_that("follow tests an in-flight move's destination, not its position", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}button{position:absolute;width:70px;height:50px}#near{left:90px;top:90px}#far{left:490px;top:290px}</style><button id="near">near</button><button id="far">far</button>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  pz_stage(page, cursor = FALSE, camera_follow = TRUE)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_camera(page, "#far", zoom = 2, duration = 2)
+  pz_hover(page, "#far")
+  expect_length(rec$camera, 2)
+  pz_hover(page, "#near")
+  expect_length(rec$camera, 3)
+  expect_true(rec$camera[[3]]$follow)
+  suppressWarnings(pz_record_stop(page))
+})

@@ -4,10 +4,17 @@
 \alias{pz_camera_reset}
 \title{Reset the recording camera}
 \usage{
-pz_camera_reset(ctx)
+pz_camera_reset(ctx, ..., wait = FALSE)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
+
+\item{...}{Checked empty; reserved for future use.}
+
+\item{wait}{Whether to wait for the move to finish before the next step.
+\code{FALSE} (the default) lets the next step run while the camera moves,
+so a cursor glide can happen during a zoom. \code{\link[=pz_record_hold]{pz_record_hold()}} and
+\code{\link[=pz_record_stop]{pz_record_stop()}} always let a move finish first.}
 }
 \value{
 \code{ctx}, invisibly.

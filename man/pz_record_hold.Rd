@@ -19,7 +19,8 @@ Lingers on the current frame for \code{seconds} in the output video.
 Unlike \code{\link[=pz_wait]{pz_wait()}}, no real time passes: the hold is inserted into
 the video timeline at encode time. When the page is not recording
 this is a no-op, so debugging a chain with the recording commented
-out doesn't pay for video-only pauses.
+out doesn't pay for video-only pauses. A camera move still in
+progress (see \code{\link[=pz_camera]{pz_camera()}}) finishes before the hold begins.
 }
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}

@@ -16,6 +16,10 @@
 #' @param target_box `"element"` measures just the shot target; `"annotated"`
 #'   also includes its attached annotations. Defaults to `"element"` even
 #'   when [pz_stage_frame()] stages an annotated frame for stills.
+#' @param wait Whether to wait for the move to finish before the next step.
+#'   `FALSE` (the default) lets the next step run while the camera moves,
+#'   so a cursor glide can happen during a zoom. [pz_record_hold()] and
+#'   [pz_record_stop()] always let a move finish first.
 #' @return `ctx`, invisibly.
 #' @export
 pz_camera <- function(
@@ -25,11 +29,13 @@ pz_camera <- function(
   zoom = NULL,
   pad = NULL,
   duration = NULL,
-  target_box = c("element", "annotated")
+  target_box = c("element", "annotated"),
+  wait = FALSE
 ) {
   check_context(ctx)
   check_dots_empty()
   target_box <- arg_match(target_box)
+  check_bool(wait)
   check_number_decimal(
     zoom,
     min = 0,
@@ -58,7 +64,7 @@ pz_camera <- function(
   frame_region(box)
   geometry <- page_geometry(ctx)
   box <- box + rep(c(geometry$scroll_x, geometry$scroll_y), 2)
-  camera_move(ctx, rec, box, zoom = zoom, duration = duration)
+  camera_move(ctx, rec, box, zoom = zoom, duration = duration, wait = wait)
   invisible(ctx)
 }
 
@@ -67,16 +73,18 @@ pz_camera <- function(
 #' Returns the camera to the recording frame (or the full viewport).
 #' Outside a recording it does nothing.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_camera
 #' @return `ctx`, invisibly.
 #' @export
-pz_camera_reset <- function(ctx) {
+pz_camera_reset <- function(ctx, ..., wait = FALSE) {
   check_context(ctx)
+  check_dots_empty()
+  check_bool(wait)
   rec <- page_recorder(ctx$page)
   if (is.null(rec) || !rec$active) {
     return(invisible(ctx))
   }
-  camera_move(ctx, rec, reset = TRUE)
+  camera_move(ctx, rec, reset = TRUE, wait = wait)
   invisible(ctx)
 }
 
@@ -86,7 +94,8 @@ camera_move <- function(
   box = NULL,
   zoom = NULL,
   duration = NULL,
-  reset = FALSE
+  reset = FALSE,
+  wait = FALSE
 ) {
   if (rec$format == "gif") {
     rlang::check_installed(
@@ -124,10 +133,24 @@ camera_move <- function(
     reset = reset,
     scroll = scroll
   )
-  if (duration > 0) {
+  if (wait && duration > 0) {
     pump_loop(ctx$page$child_loop, duration)
   }
   invisible(rec)
+}
+
+# Holds freeze video time, camera included, and a stop ends it, so both
+# let an in-flight move land first. Moves only ever interrupt earlier
+# ones, so the last move is the one still running.
+camera_settle <- function(page, rec) {
+  if (!rec$active || rec$paused || !length(rec$camera)) {
+    return(invisible())
+  }
+  remaining <- rec$camera[[length(rec$camera)]]$end - rec_vt(rec)
+  if (remaining > 0) {
+    pump_loop(page$child_loop, remaining)
+  }
+  invisible()
 }
 
 camera_follow_move <- function(ctx, rect, duration) {
@@ -141,7 +164,11 @@ camera_follow_move <- function(ctx, rect, duration) {
   geometry <- page_geometry(ctx)
   scroll <- c(geometry$scroll_x, geometry$scroll_y)
   density <- camera_density(rec, ctx)
-  at <- camera_at(rec$camera, now, home, density)
+  # Test against where an in-flight move lands, so an action timed to a
+  # non-waiting move doesn't pan away from it.
+  moves <- rec$camera
+  settle_at <- if (length(moves)) max(now, moves[[length(moves)]]$end) else now
+  at <- camera_at(moves, settle_at, home, density)
   current <- camera_viewport(
     as.numeric(at),
     scroll,
