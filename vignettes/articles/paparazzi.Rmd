@@ -225,7 +225,7 @@ page |> pz_annotate_clear()
 
 ## Work in one part of the page
 
-Our task list has seven tasks, and each one has its own Done button. To mark the fern done, the script needs *its* Done button. `pz_find()` narrows the chain to one element, called the **scope**. After that, targets are looked up inside the scope, so `".task-done"` means this task's Done button:
+Every task in our list has its own Done button. To mark the fern done, the script needs *its* Done button. `pz_find()` narrows the chain to one element, called the **scope**. After that, targets are looked up inside the scope, so `".task-done"` means this task's Done button:
 
 ```{r}
 page |>
