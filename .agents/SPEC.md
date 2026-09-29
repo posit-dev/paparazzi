@@ -456,7 +456,7 @@ Robustness:
 
 ### Camera, annotations, and captions
 
-Video-editor features for recordings and annotated stills. Design discussion, rationale and probe notes are on kata `1a3m`; the full idea backlog is on `54b1`. Signatures are provisional until the spikes (`k5zn` camera encode, `3hzw` wipe reveal, `9jec` caption compositing) report.
+Video-editor features for recordings and annotated stills. Design discussion, rationale and probe notes are on kata `1a3m`; the full idea backlog is on `54b1`. Implemented; per-feature mechanism notes are in `.agents/phases/` (`40bm`, `7sq5`, `gdjm`, `m6kv`, `mkns`, `b0y7`, `3t7j`, `0rdt`, `aq35`, `51my`).
 
 There are two families, split by where the effect shows up, each paired with `pz_stage()` settings (like `pz_cursor_*()` with `pz_stage(cursor_*)`):
 
@@ -476,7 +476,7 @@ There are three layers:
 #### Camera
 
 ```r
-pz_camera(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL)
+pz_camera(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL, target_box = c("element", "annotated"))
 pz_camera_reset(ctx)
 ```
 
@@ -803,11 +803,11 @@ Arguments: `cursor_speed`, `cursor_scale`, `typing_speed` and `pause` are confir
 
 ### Camera and annotations
 
-The family names are confirmed; the signatures are provisional until the spikes report (kata `1a3m`).
+Implemented (kata `1a3m`).
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_camera()` | `(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL)` | confirmed |
+| `pz_camera()` | `(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL, target_box = c("element", "annotated"))` | confirmed |
 | `pz_camera_reset()` | `(ctx)` | confirmed |
 | `pz_annotate()` | `(ctx, target = NULL, ..., type = c("box", "circle", "underline", "highlight"), label = NULL, pad = NULL, reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_annotate_callout()` | `(ctx, text, ..., target = NULL, side = NULL, arrow = TRUE, label = NULL, reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
@@ -816,7 +816,7 @@ The family names are confirmed; the signatures are provisional until the spikes 
 | `pz_annotate_caption()` | `(ctx, text, ..., side = "bottom", color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_annotate_clear()` | `(ctx, id = NULL, ...)` | confirmed |
 
-Discussed arguments on existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))`, `pz_press(show_keys = NULL)`.
+Arguments added to existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))` and `pz_stage_frame(target_box =)`, `pz_press(show_keys = NULL)`, and `pz_stage(camera_follow, show_keys, annotate_color, annotate_font_family, annotate_font_size)`.
 
 ### Escape hatches and debugging
 
