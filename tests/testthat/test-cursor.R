@@ -1068,6 +1068,8 @@ test_that("recorded typing rests the cursor until the next move", {
   pz_record_stop(page)
   expect_false(page_cursor(page)$resting)
   expect_equal(cursor_overlay_state(page)[[1]], 1)
+  page |> pz_nav_reload()
+  expect_equal(cursor_overlay_state(page)[[1]], 1)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
 
   # An explicit hide is not a rest, and typing doesn't bring it back.

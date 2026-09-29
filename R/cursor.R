@@ -670,6 +670,9 @@ cursor_rest <- function(ctx) {
   }
   cur$resting <- TRUE
   cursor_draw(ctx, visible = FALSE)
+  # Let the fade play before typing, as pz_cursor_hide() does, so short
+  # or instant typing followed by a move or stop still shows it.
+  pump_loop(page$child_loop, 0.25)
   ctx_return(ctx)
 }
 

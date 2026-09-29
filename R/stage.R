@@ -800,7 +800,8 @@ stage_record_stopped <- function(ctx) {
     cursor_draw(ctx, visible = FALSE)
   } else if (isTRUE(cur$resting)) {
     # A rest is a recording effect; a cursor that stays for stills is
-    # drawn again.
+    # drawn again (cleared first so the navigation script draws it too).
+    cur$resting <- FALSE
     cursor_draw(ctx, visible = cursor_visible(page))
   }
   if (!is.null(cur)) {
