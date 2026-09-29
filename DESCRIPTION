@@ -44,10 +44,10 @@ Config/Needs/website: av, gifski, png, shiny
 Config/roxygen2/version: 8.1.0
 Config/testthat/edition: 3
 Config/testthat/parallel: true
-Config/testthat/start-first: scope, actions, expect, get
+Config/testthat/start-first: record, stage, example, cursor
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-Collate: 
+Collate:
     'actions.R'
     'annotate-callout.R'
     'annotate-spotlight.R'
