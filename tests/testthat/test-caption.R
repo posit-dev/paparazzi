@@ -181,10 +181,11 @@ test_that("VTT-only output follows pause-aware ticks and does not burn", {
   withr::defer(unlink(decoded, recursive = TRUE))
   frame <- av::av_video_images(out, destdir = decoded, format = "png")[[1]]
   image <- png::readPNG(frame)
-  expect_gt(
-    image[round(dim(image)[1] * 0.95), round(dim(image)[2] / 2), 1],
-    0.8
-  )
+  height <- dim(image)[1]
+  middle <- round(dim(image)[2] / 2)
+  expect_true(all(
+    image[(height - 80):(height - 20), (middle - 70):(middle + 70), 1] > 0.8
+  ))
 })
 
 test_that("caption style is independent of badge style and survives navigation", {
@@ -238,6 +239,8 @@ test_that("both burns caption and writes matching sidecar", {
   skip_if_no_av()
   page <- local_record_page()
   out <- withr::local_tempfile(fileext = ".mp4")
+  vtt <- sub("\\.mp4$", ".vtt", out)
+  withr::defer(unlink(vtt))
   pz_annotate_caption(page, "Both")
   pz_record_start(page, out, captions = "both", fps = 8, hold = c(0.1, 0.1))
   defer_record_stop(page)
@@ -245,10 +248,7 @@ test_that("both burns caption and writes matching sidecar", {
   pz_record_stop(page)
   expect_true(file.exists(out))
   expect_equal(page_caption(page)$text, "Both")
-  expect_match(
-    paste(readLines(sub("\\.mp4$", ".vtt", out)), collapse = "\n"),
-    "Both"
-  )
+  expect_match(paste(readLines(vtt), collapse = "\n"), "Both")
 })
 
 test_that("still alpha blend changes only caption rows and channels", {
