@@ -9,6 +9,7 @@ articles:
     contents:
       - articles/shiny
       - articles/walkthrough
+      - articles/annotations
 
 reference:
   - title: Pages, apps and navigation
