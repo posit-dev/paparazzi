@@ -348,6 +348,7 @@ test_that("still blend works for single-pixel dimensions", {
 })
 
 test_that("clearing all logs the caption clear before mark fades pump", {
+  skip_if_no_av()
   page <- local_record_page()
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, out, hold = c(0, 0))
@@ -363,4 +364,32 @@ test_that("clearing all logs the caption clear before mark fades pump", {
   expect_null(last$caption)
   expect_lt(last$vt - before, 0.2)
   pz_record_stop(page)
+})
+
+test_that("a caption lasting a tick or two is visible in the encoded frames", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- local_record_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, fps = 10, hold = c(0, 0))
+  defer_record_stop(page)
+  pz_wait(page, 0.3)
+  pz_annotate_caption(page, "BLINK")
+  pz_wait(page, 0.12)
+  pz_annotate_clear(page, "caption")
+  pz_wait(page, 0.3)
+  pz_record_stop(page)
+  decoded <- withr::local_tempfile()
+  frames <- av::av_video_images(out, destdir = decoded, format = "png")
+  dark <- vapply(
+    frames,
+    function(f) {
+      img <- png::readPNG(f)
+      rows <- round(dim(img)[1] * 0.8):dim(img)[1]
+      any(img[rows, , 1] < 0.4)
+    },
+    logical(1)
+  )
+  expect_true(any(dark))
+  expect_false(dark[[1]])
 })
