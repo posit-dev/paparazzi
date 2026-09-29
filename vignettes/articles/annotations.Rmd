@@ -93,7 +93,7 @@ The frame's `target_box = "annotated"` keeps the crop wide enough to include the
 
 ```{r spotlight, fig.alt = "The task tracker dimmed to near-black, with bright cutouts around the title field and the Add button."}
 page |> pz_annotate_spotlight(list("#task-title", "#add-task"), pad = 8, dim = 0.75)
-page |> pz_screenshot(target = "#new-task", frame = pz_frame(pad = 60))
+page |> pz_screenshot(target = "main", frame = pz_frame(pad = 24))
 ```
 
 There is only one spotlight per page: drawing a new one replaces the old. Clear it by its reserved id or by clearing everything:
