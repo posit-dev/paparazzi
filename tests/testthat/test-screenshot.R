@@ -254,6 +254,7 @@ test_that("a Quarto screenshot figure resolves with its cross-reference", {
       "```{r}",
       "#| echo: false",
       sprintf("pkgload::load_all(%s, quiet = TRUE)", deparse(package_root)),
+      chrome_profile_code(file.path(dir, "chrome-profile")),
       sprintf("page <- pz_open(%s)", deparse(fixture)),
       "```",
       "",

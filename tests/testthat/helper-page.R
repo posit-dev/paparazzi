@@ -5,6 +5,17 @@ skip_if_no_chrome <- function() {
   )
 }
 
+# Chrome arguments that keep its profile in `dir`; see setup-chrome.R.
+chrome_profile_args <- function(dir) {
+  c(chromote::default_chrome_args(), paste0("--user-data-dir=", dir))
+}
+
+# The same, as code for R subprocesses that don't run testthat setup (the
+# knitr session of a Quarto render).
+chrome_profile_code <- function(dir) {
+  sprintf("chromote::set_chrome_args(%s)", deparse1(chrome_profile_args(dir)))
+}
+
 fixture_file <- function() {
   test_path("fixtures", "page.html")
 }
