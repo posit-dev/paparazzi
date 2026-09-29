@@ -123,7 +123,7 @@ pz_device <- function(
     )
   }
 
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # pz_open()'s dots are pz_device() settings, validated up front so a

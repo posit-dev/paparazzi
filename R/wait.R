@@ -24,7 +24,7 @@ pz_wait <- function(ctx, seconds) {
   check_context(ctx)
   check_number_decimal(seconds, min = 0)
   pump_loop(ctx$page$child_loop, seconds)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Wait until a Shiny page is idle
@@ -135,7 +135,7 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
       class = "paparazzi_error_timeout"
     )
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Wait until a JavaScript condition holds
@@ -184,7 +184,7 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
     loop = ctx$page$child_loop,
     what = paste0("JS condition ", expr)
   )
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Wait until an element stops changing
@@ -300,7 +300,7 @@ pz_wait_for_stable <- function(
     loop = ctx$page$child_loop,
     what = paste0("the page to be stable for ", for_ms, "ms")
   )
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Wait for a navigation to finish
@@ -601,6 +601,6 @@ wait_nav_reset <- function(ctx) {
   if (length(ctx$scope) == 0) {
     ctx
   } else {
-    PaparazziContext$new(ctx$page, scope = list())
+    ctx_derive(ctx, list())
   }
 }

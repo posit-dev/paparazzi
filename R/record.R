@@ -55,9 +55,16 @@
 #'
 #' @inheritParams pz_click
 #' @param path Output file path; the extension (`.mp4`, `.webm`, or
-#'   `.gif`) selects the format. An existing file is overwritten. When
-#'   knitting, an omitted path uses a numbered `.gif` in the chunk's
-#'   figure directory. Outside knitting a path is required.
+#'   `.gif`) selects the format. An existing file is overwritten. If
+#'   omitted while knitting, a numbered file in the chunk's figure
+#'   directory is used and the recording appears in the document. If
+#'   omitted in an interactive session, a temporary file is used and the
+#'   recording is shown in the viewer when it stops. Otherwise a path is
+#'   required.
+#' @param format The format when `path` is omitted: `"auto"` (the
+#'   default) records MP4, or GIF when knitting to a non-HTML format,
+#'   where video can only be linked. With a `path`, the extension decides
+#'   and `format` must be `"auto"`.
 #' @param method Capture method: `"poll"` (the default) for regular,
 #'   higher-resolution captures, or `"screencast"` for captures driven
 #'   by visual changes. See *Choosing a capture method* for tradeoffs.
@@ -82,7 +89,19 @@
 #'   `<name>_frames/` directory next to `path`. Otherwise frames are
 #'   written to a temporary directory and deleted after encoding.
 #'
-#' @return `ctx`, invisibly.
+#' @section Recording chains:
+#' `pz_record_start()` returns a context that belongs to the new
+#' recording. Chainable functions return it (and contexts derived from
+#' it with [pz_find()]) visibly while the recording runs, and printing it
+#' stops the recording. So a chain that starts with `pz_record_start()`
+#' needs no [pz_record_stop()] when it is printed: at the end of a
+#' knitted chunk expression the recording appears in the document, and
+#' in the console it is shown in the viewer. Assign the chain or call
+#' `pz_record_stop()` to record across several statements. Chains that
+#' don't come from `pz_record_start()`, such as `page |> pz_click()`,
+#' keep returning invisibly and never stop a recording.
+#'
+#' @return A context in the recording chain, invisibly.
 #'
 #' @seealso [pz_record()], [pz_record_hold()], [pz_frame()],
 #'   [pz_stage_frame()]
@@ -111,12 +130,20 @@ pz_record_start <- function(
   scale = NULL,
   hold = c(0.5, 1),
   keep_frames = FALSE,
-  captions = c("burn", "vtt", "both")
+  captions = c("burn", "vtt", "both"),
+  format = c("auto", "mp4", "webm", "gif")
 ) {
   check_context(ctx)
   check_dots_empty()
-  if (missing(path) && isTRUE(getOption("knitr.in.progress"))) {
-    path <- knit_capture_path("gif")
+  format <- arg_match(format)
+  implicit <- missing(path)
+  if (implicit) {
+    path <- record_implicit_path(format)
+  } else if (format != "auto") {
+    cli::cli_abort(
+      "Supply {.arg format} only when {.arg path} is omitted; the extension of {.arg path} sets the format.",
+      class = "paparazzi_error_input"
+    )
   }
   check_string(path)
   method <- arg_match(method)
@@ -164,6 +191,7 @@ pz_record_start <- function(
     frame = frame,
     method = method
   )
+  rec$implicit <- implicit
   rec$caption_mode <- captions
   rec$captions <- if (is.null(page_caption(page))) {
     list()
@@ -206,7 +234,7 @@ pz_record_start <- function(
       loop = page$child_loop
     )
   }
-  invisible(ctx)
+  invisible(PaparazziContext$new(page, scope = ctx$scope, recording = rec))
 }
 
 #' Stop a recording and write the video
@@ -216,9 +244,12 @@ pz_record_start <- function(
 #'
 #' @inheritParams pz_click
 #'
-#' @return `ctx`, invisibly outside knitting. While knitting, returns a
-#'   printable image for GIF, HTML video for MP4/WebM, or a video link in
-#'   non-HTML output, even when the path was supplied explicitly.
+#' @return `ctx`, invisibly, when the path was supplied outside knitting.
+#'   While knitting, returns a printable image for GIF, HTML video for
+#'   MP4/WebM, or a video link in non-HTML output, even when the path was
+#'   supplied explicitly. Without a path in an interactive session,
+#'   returns a preview that shows the recording in the viewer when
+#'   printed.
 #'
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
 #' page <- pz_open(pz_example("tasks"))
@@ -307,6 +338,9 @@ pz_record_stop <- function(ctx) {
   if (isTRUE(getOption("knitr.in.progress"))) {
     return(record_knit_media(rec$path))
   }
+  if (rec$implicit && rlang::is_interactive()) {
+    return(structure(rec$path, class = "paparazzi_preview"))
+  }
   invisible(ctx)
 }
 
@@ -342,11 +376,11 @@ pz_record_pause <- function(ctx) {
   check_context(ctx)
   rec <- check_recording(ctx)
   if (rec$paused) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   rec$vt_base <- rec_vt(rec)
   rec$paused <- TRUE
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' @rdname pz_record_pause
@@ -355,7 +389,7 @@ pz_record_resume <- function(ctx) {
   check_context(ctx)
   rec <- check_recording(ctx)
   if (!rec$paused) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   if (identical(rec$method, "screencast")) {
     record_wait_pending(rec, ctx$page, "the frame capture before resuming")
@@ -365,7 +399,7 @@ pz_record_resume <- function(ctx) {
   if (identical(rec$method, "screencast")) {
     record_screencast_snapshot(ctx$page, rec)
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Hold the current frame while recording
@@ -402,10 +436,10 @@ pz_record_hold <- function(ctx, seconds) {
   check_number_decimal(seconds, min = 0)
   rec <- page_recorder(ctx$page)
   if (is.null(rec) || !rec$active) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   rec$holds <- c(rec$holds, list(list(vt = rec_vt(rec), seconds = seconds)))
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Record a block of code
@@ -413,15 +447,17 @@ pz_record_hold <- function(ctx, seconds) {
 #' The block form of [pz_record_start()]: starts recording, evaluates
 #' the embraced expression `code`, and stops and encodes on exit --
 #' including on error, so a failed run still produces the video up to
-#' the failure. Outside knitting, returns `ctx` invisibly (not the block's
-#' value). In a knitted chunk the completed recording is terminal media;
-#' write `pz_record(code = { ... })` to omit the path.
+#' the failure. Returns what [pz_record_stop()] returns, never the block's
+#' value: `ctx` invisibly when a path was given outside knitting, media
+#' while knitting, or a viewer preview when the path is omitted in an
+#' interactive session. Write `pz_record(code = { ... })` to omit the
+#' path.
 #'
 #' @inheritParams pz_record_start
 #' @param code An expression to evaluate while recording.
 #' @param ... Passed to [pz_record_start()].
 #'
-#' @return `ctx`, invisibly outside knitting; printable media while knitting.
+#' @return `ctx`, invisibly, or printable media; see [pz_record_stop()].
 #'
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
 #' page <- pz_open(pz_example("tasks"))
@@ -463,8 +499,43 @@ pz_record <- function(ctx, path, code, ...) {
   if (inherits(stop_result, "error")) {
     stop(stop_result)
   }
-  if (isTRUE(getOption("knitr.in.progress"))) {
+  if (!inherits(stop_result, "PaparazziContext")) {
     return(stop_result)
+  }
+  invisible(ctx)
+}
+
+record_implicit_path <- function(format, call = caller_env()) {
+  knitting <- isTRUE(getOption("knitr.in.progress"))
+  if (format == "auto") {
+    html <- knitting &&
+      knitr::is_html_output(excludes = c("markdown", "gfm", "epub", "epub2"))
+    format <- if (knitting && !html) "gif" else "mp4"
+  }
+  if (knitting) {
+    return(knit_capture_path(format))
+  }
+  if (rlang::is_interactive()) {
+    return(tempfile("paparazzi-", fileext = paste0(".", format)))
+  }
+  cli::cli_abort(
+    "{.arg path} is required outside knitting and interactive sessions.",
+    class = "paparazzi_error_input",
+    call = call
+  )
+}
+
+# Printing a running recording chain ends it: the recording is the
+# chain's printed result, shown in the viewer when interactive.
+record_print_stop <- function(ctx) {
+  result <- pz_record_stop(ctx)
+  if (rlang::is_interactive()) {
+    rec_path <- if (inherits(result, "paparazzi_preview")) {
+      result
+    } else {
+      structure(ctx$recording$path, class = "paparazzi_preview")
+    }
+    print(rec_path)
   }
   invisible(ctx)
 }

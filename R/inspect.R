@@ -86,7 +86,7 @@ pz_inspect <- function(
     }
   }
 
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # Resolve the target once, without auto-waiting: one loc_resolve_once()

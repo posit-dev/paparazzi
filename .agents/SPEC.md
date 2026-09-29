@@ -31,7 +31,7 @@ Known bugs to fix while porting:
 
 ### Chaining
 
-- Actions take a **context** as their first argument and normally return it invisibly, so whole scripts can be one `|>` chain. Knitted media captures are terminal exceptions: pathless screenshots and completed recordings return printable results. Knitr includes a result when it is the visible last call of a top-level chunk expression. An interactive pathless screenshot also returns a printable preview. Explicit-path screenshots and recordings outside knitting still return the context invisibly.
+- Actions take a **context** as their first argument and normally return it invisibly, so whole scripts can be one `|>` chain. Knitted media captures are terminal exceptions: pathless screenshots and completed recordings return printable results. Knitr includes a result when it is the visible last call of a top-level chunk expression. An interactive pathless screenshot also returns a printable preview. Explicit-path screenshots and recordings outside knitting still return the context invisibly. Recording chains are the other exception (see Recording lifecycle): the context `pz_record_start()` returns, and contexts derived from it, come back visibly while that recording runs, and printing one stops the recording.
 - The exception is the `pz_find*()` family (`pz_find()`, `pz_find_first()`, `pz_find_last()`, `pz_find_nth()`, `pz_find_pop()`, `pz_find_reset()`), which returns its context visibly. Scope lives only in the returned context, so a scoped context that is neither assigned nor piped onward prints at the console instead of disappearing silently.
 - A context is either the page (root) or a scoped context created by `pz_find*()`.
 - Page-level functions (`pz_press()`, recording, cursor, navigation) work from any context. Recording start remains chainable; during knitting, recording stop and the completed block form return media rather than a context.
@@ -298,11 +298,12 @@ air and styler flatten pipe indentation, so scope depth can't be shown with inde
 Lifecycle:
 
 - Recorder state lives on the page, so recording happens inside a single chain.
-- `pz_record_start(ctx, path, ...)`: `path` is the main input. If omitted while knitting, a numbered `.gif` path in the chunk's figure directory is used. Outside knitting, `path` is required. Start always returns the context for chaining.
+- `pz_record_start(ctx, path, ..., format = c("auto", "mp4", "webm", "gif"))`: `path` is the main input. If omitted while knitting, a numbered path in the chunk's figure directory is used; if omitted interactively, a temp file, previewed in the viewer at stop. Otherwise `path` is required. `format` applies only without a path (an error alongside one): `"auto"` is MP4, or GIF when knitting to non-HTML output, where video can only be linked.
+- **Recording chains:** start returns, invisibly, a new context carrying its recorder; `ctx_derive()` keeps it through `pz_find*()` and navigation resets. Chainable functions return through `ctx_return()`, which is visible only while that context's recorder is the page's active one. Printing such a context (`print()` or `knit_print()`) calls `pz_record_stop()` and shows the media: knitr media while knitting, a viewer preview interactively (video previews get an HTML wrapper page in a temp dir). So `page |> pz_record_start() |> ... ` needs no stop at the end of an expression; assign it or call `pz_record_stop()` to span statements. Chains not from start (`page |> pz_click()`) never stop a recording. Considered and rejected: making every chain visible, which would print page summaries after every action in knitted docs and consoles and cost CDP round trips per print.
 - `pz_record_stop(ctx)`: encodes and writes the file. During knitting, the completed recording is returned as printable media, including when the path was explicit; outside knitting it returns the context.
 - `pz_record_pause()` / `pz_record_resume()`: cut stretches out of the recording. There's no cancel.
 - `pz_record_hold(ctx, seconds)`: hold the frame while recording; no-op otherwise. Unlike `pz_wait()`, which always waits, debugging runs without recording don't pay for video-only pauses.
-- Block form, with an embraced expression rather than a function. It stops and encodes on exit (including on error). Outside knitting it returns `ctx` invisibly, not the block's value; during knitting, it returns the completed media instead. With no path, supply the expression by name as `pz_record(code = { ... })` (the `(ctx, path, code, ...)` argument order is unchanged):
+- Block form, with an embraced expression rather than a function. It stops and encodes on exit (including on error). It returns what `pz_record_stop()` returns, never the block's value: `ctx` invisibly with a path outside knitting, media while knitting, a preview when pathless and interactive. With no path, supply the expression by name as `pz_record(code = { ... })` (the `(ctx, path, code, ...)` argument order is unchanged):
 
   ```r
   page |>
@@ -780,7 +781,7 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_record_start()` | `(ctx, path, ..., method = c("poll", "screencast"), frame = NULL, fps = 15, scale = NULL, hold = c(0.5, 1), keep_frames = FALSE)` | confirmed |
+| `pz_record_start()` | `(ctx, path, ..., method = c("poll", "screencast"), frame = NULL, fps = 15, scale = NULL, hold = c(0.5, 1), keep_frames = FALSE, captions = c("burn", "vtt", "both"), format = c("auto", "mp4", "webm", "gif"))` | confirmed |
 | `pz_record_stop()` | `(ctx)` | confirmed |
 | `pz_record_pause()` | `(ctx)` | confirmed |
 | `pz_record_resume()` | `(ctx)` | confirmed |

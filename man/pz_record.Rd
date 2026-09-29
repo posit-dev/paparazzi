@@ -10,24 +10,29 @@ pz_record(ctx, path, code, ...)
 \item{ctx}{A paparazzi context.}
 
 \item{path}{Output file path; the extension (\code{.mp4}, \code{.webm}, or
-\code{.gif}) selects the format. An existing file is overwritten. When
-knitting, an omitted path uses a numbered \code{.gif} in the chunk's
-figure directory. Outside knitting a path is required.}
+\code{.gif}) selects the format. An existing file is overwritten. If
+omitted while knitting, a numbered file in the chunk's figure
+directory is used and the recording appears in the document. If
+omitted in an interactive session, a temporary file is used and the
+recording is shown in the viewer when it stops. Otherwise a path is
+required.}
 
 \item{code}{An expression to evaluate while recording.}
 
 \item{...}{Passed to \code{\link[=pz_record_start]{pz_record_start()}}.}
 }
 \value{
-\code{ctx}, invisibly outside knitting; printable media while knitting.
+\code{ctx}, invisibly, or printable media; see \code{\link[=pz_record_stop]{pz_record_stop()}}.
 }
 \description{
 The block form of \code{\link[=pz_record_start]{pz_record_start()}}: starts recording, evaluates
 the embraced expression \code{code}, and stops and encodes on exit --
 including on error, so a failed run still produces the video up to
-the failure. Outside knitting, returns \code{ctx} invisibly (not the block's
-value). In a knitted chunk the completed recording is terminal media;
-write \code{pz_record(code = { ... })} to omit the path.
+the failure. Returns what \code{\link[=pz_record_stop]{pz_record_stop()}} returns, never the block's
+value: \code{ctx} invisibly when a path was given outside knitting, media
+while knitting, or a viewer preview when the path is omitted in an
+interactive session. Write \code{pz_record(code = { ... })} to omit the
+path.
 }
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}

@@ -105,7 +105,7 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL, icon = NULL) {
     }
   }
   cursor_show_at(ctx, point, from = from, icon = icon)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Hide the overlay cursor
@@ -145,7 +145,7 @@ pz_cursor_hide <- function(ctx, ...) {
       pump_loop(ctx$page$child_loop, 0.25)
     }
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Move the overlay cursor to an element
@@ -217,7 +217,7 @@ pz_cursor_move <- function(
     icon = icon,
     destination = destination
   )
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Move the overlay cursor out of the frame
@@ -280,7 +280,7 @@ pz_cursor_leave <- function(ctx, side = "right", icon = NULL) {
   # Set after cursor_apply(), which clears it: the cursor stays visible
   # but off-frame, and the next action glides back in from this side.
   cur$off_frame <- side
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # The sides-and-corners subset of the direction vocabulary, for
@@ -350,7 +350,7 @@ check_cursor_enabled <- function(ctx, call = caller_env()) {
       call = call
     )
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # Where the cursor should appear with no target: its last position, or
@@ -506,7 +506,7 @@ cursor_show_at <- function(
       follow = follow
     )
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 
@@ -626,7 +626,7 @@ cursor_apply <- function(
     pump_loop(page$child_loop, 0.3)
   }
   cursor_register_init(ctx)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # Redraw the cursor at its recorded position with a new visibility or
@@ -647,15 +647,15 @@ cursor_draw <- function(ctx, visible, pressed = FALSE) {
     )
   )
   cursor_register_init(ctx)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 cursor_press <- function(ctx, pressed) {
   if (!cursor_visible(ctx$page)) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   cursor_draw(ctx, visible = TRUE, pressed = pressed)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # One state application in the page. The JS is create-if-missing (boot
@@ -868,5 +868,5 @@ cursor_register_init <- function(ctx) {
     timeout_ = timeout
   )
   cur$init_id <- res$identifier
-  invisible(ctx)
+  ctx_return(ctx)
 }

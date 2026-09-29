@@ -14,16 +14,20 @@ pz_record_start(
   scale = NULL,
   hold = c(0.5, 1),
   keep_frames = FALSE,
-  captions = c("burn", "vtt", "both")
+  captions = c("burn", "vtt", "both"),
+  format = c("auto", "mp4", "webm", "gif")
 )
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
 \item{path}{Output file path; the extension (\code{.mp4}, \code{.webm}, or
-\code{.gif}) selects the format. An existing file is overwritten. When
-knitting, an omitted path uses a numbered \code{.gif} in the chunk's
-figure directory. Outside knitting a path is required.}
+\code{.gif}) selects the format. An existing file is overwritten. If
+omitted while knitting, a numbered file in the chunk's figure
+directory is used and the recording appears in the document. If
+omitted in an interactive session, a temporary file is used and the
+recording is shown in the viewer when it stops. Otherwise a path is
+required.}
 
 \item{...}{Checked empty; reserved for future use.}
 
@@ -56,9 +60,14 @@ written to a temporary directory and deleted after encoding.}
 \item{captions}{\code{"burn"} (the default) draws captions on the recording;
 \code{"vtt"} writes a WebVTT sidecar without drawing captions; \code{"both"}
 does both. WebVTT needs an MP4 or WebM recording, not a GIF.}
+
+\item{format}{The format when \code{path} is omitted: \code{"auto"} (the
+default) records MP4, or GIF when knitting to a non-HTML format,
+where video can only be linked. With a \code{path}, the extension decides
+and \code{format} must be \code{"auto"}.}
 }
 \value{
-\code{ctx}, invisibly.
+A context in the recording chain, invisibly.
 }
 \description{
 \code{pz_record_start()} begins recording the page to a video or GIF;
@@ -115,6 +124,20 @@ require \pkg{gifski}; framed GIFs also require \pkg{png}, and GIFs
 burning captions require \pkg{av}.
 Packages are checked at \code{pz_record_start()} or when a caption is
 added to an active GIF recording.
+}
+
+\section{Recording chains}{
+
+\code{pz_record_start()} returns a context that belongs to the new
+recording. Chainable functions return it (and contexts derived from
+it with \code{\link[=pz_find]{pz_find()}}) visibly while the recording runs, and printing it
+stops the recording. So a chain that starts with \code{pz_record_start()}
+needs no \code{\link[=pz_record_stop]{pz_record_stop()}} when it is printed: at the end of a
+knitted chunk expression the recording appears in the document, and
+in the console it is shown in the viewer. Assign the chain or call
+\code{pz_record_stop()} to record across several statements. Chains that
+don't come from \code{pz_record_start()}, such as \code{page |> pz_click()},
+keep returning invisibly and never stop a recording.
 }
 
 \examples{

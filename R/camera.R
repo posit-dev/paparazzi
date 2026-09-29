@@ -51,7 +51,7 @@ pz_camera <- function(
   }
   rec <- page_recorder(ctx$page)
   if (is.null(rec) || !rec$active) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   box <- frame_content_box(ctx, target, new_frame_spec(target_box = target_box))
   box <- box + c(-pad[4], -pad[1], pad[2], pad[3])
@@ -59,7 +59,7 @@ pz_camera <- function(
   geometry <- page_geometry(ctx)
   box <- box + rep(c(geometry$scroll_x, geometry$scroll_y), 2)
   camera_move(ctx, rec, box, zoom = zoom, duration = duration)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Reset the recording camera
@@ -74,10 +74,10 @@ pz_camera_reset <- function(ctx) {
   check_context(ctx)
   rec <- page_recorder(ctx$page)
   if (is.null(rec) || !rec$active) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   camera_move(ctx, rec, reset = TRUE)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 camera_move <- function(

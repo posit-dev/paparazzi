@@ -59,7 +59,7 @@ pz_annotate_caption <- function(
       font_size = font_size
     )
   )
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 page_caption <- function(page) {

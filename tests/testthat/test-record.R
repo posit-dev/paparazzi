@@ -53,7 +53,7 @@ test_that("pz_record_start/stop record an mp4 with first/last holds", {
   out <- withr::local_tempfile(fileext = ".mp4")
   start <- withVisible(pz_record_start(page, out, fps = 10, hold = c(0.5, 1)))
   expect_false(start$visible)
-  expect_identical(start$value, page)
+  expect_identical(start$value$page, page)
 
   pz_wait(page, 0.8)
   stop <- withVisible(pz_record_stop(page))
@@ -379,11 +379,11 @@ test_that("knitted recordings return media only at completion", {
   withr::local_dir(dir)
   text <- paste(
     '```{r demo, echo=FALSE, error=FALSE}',
-    'start <- withVisible(pz_record_start(page, fps=5, hold=c(0, 0)))',
-    'stopifnot(!start$visible, identical(start$value, page))',
+    'start <- withVisible(pz_record_start(page, fps=5, hold=c(0, 0), format="gif"))',
+    'stopifnot(!start$visible, identical(start$value$page, page))',
     'pz_wait(page, 0.2)',
     'pz_record_stop(page)',
-    'pz_record(page, code = { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
+    'pz_record(page, code = { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0), format="gif")',
     'pz_record(page, "named.gif", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
     'pz_record(page, "named.mp4", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
     'page |> pz_record_start("split.webm", fps=5, hold=c(0, 0))',
@@ -415,6 +415,112 @@ test_that("knitted recordings return media only at completion", {
   )
   expect_true(file.exists("split.webm"))
   expect_match(markdown, "split.webm", fixed = TRUE)
+})
+
+test_that("knitted recording chains stop at the end of their expression", {
+  skip_if_not_installed("knitr")
+  skip_if_not_installed("gifski")
+  skip_if_no_av()
+  prior_format <- knitr::opts_knit$get("rmarkdown.pandoc.to")
+  withr::defer(knitr::opts_knit$set(rmarkdown.pandoc.to = prior_format))
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  knitr::opts_knit$set(rmarkdown.pandoc.to = "html")
+  text <- paste(
+    '```{r chain, echo=FALSE, error=FALSE}',
+    'page |> pz_record_start(fps=5, hold=c(0, 0)) |> pz_wait(0.2)',
+    'rec <- page |> pz_record_start("split.gif", fps=5, hold=c(0, 0))',
+    'page |> pz_wait(0.1)',
+    'rec |> pz_find("body") |> pz_wait(0.1)',
+    'stopifnot(is.null(page_recorder(page)))',
+    '```',
+    sep = "\n"
+  )
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_false(grepl("Error", markdown, fixed = TRUE))
+  expect_match(markdown, "chain-1.mp4", fixed = TRUE)
+  expect_match(markdown, "<video controls", fixed = TRUE)
+  expect_match(markdown, "split.gif", fixed = TRUE)
+  expect_true(file.exists("split.gif"))
+  expect_false(grepl("paparazzi page", markdown, fixed = TRUE))
+
+  knitr::opts_knit$set(rmarkdown.pandoc.to = "latex")
+  text <- paste(
+    '```{r latex, echo=FALSE, error=FALSE}',
+    'page |> pz_record_start(fps=5, hold=c(0, 0)) |> pz_wait(0.2)',
+    '```',
+    sep = "\n"
+  )
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_match(markdown, "latex-1.gif", fixed = TRUE)
+})
+
+test_that("recording chains return visibly until their recording stops", {
+  page <- local_record_page()
+  skip_if_no_av()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  start <- withVisible(pz_record_start(page, out, fps = 5, hold = c(0, 0)))
+  defer_record_stop(page)
+  rec <- start$value
+  expect_false(start$visible)
+  expect_false(identical(rec, page))
+  expect_true(withVisible(pz_wait(rec, 0.1))$visible)
+  expect_false(withVisible(pz_wait(page, 0.1))$visible)
+  scoped <- pz_find(rec, "body")
+  expect_true(withVisible(pz_wait(scoped, 0.1))$visible)
+  expect_true(withVisible(pz_find_reset(scoped) |> pz_wait(0.1))$visible)
+  expect_false(withVisible(pz_find(page, "body") |> pz_wait(0.1))$visible)
+  expect_error(pz_record_start(rec, out), class = "paparazzi_error_record")
+
+  expect_silent(print(scoped))
+  expect_null(page_recorder(page))
+  expect_true(file.exists(out))
+  expect_gt(recorded_video_info(out)$duration, 0)
+  expect_false(withVisible(pz_wait(rec, 0))$visible)
+  expect_output(print(rec), "paparazzi page")
+
+  # A stale chain doesn't adopt a later recording.
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"))
+  expect_false(withVisible(pz_wait(rec, 0))$visible)
+  pz_record_stop(page)
+})
+
+test_that("interactive recordings without a path preview in the viewer", {
+  page <- local_record_page()
+  skip_if_no_av()
+  viewed <- character()
+  withr::local_options(
+    rlang_interactive = TRUE,
+    viewer = function(url) viewed <<- c(viewed, url)
+  )
+  pz_record_start(page, fps = 5, hold = c(0, 0))
+  defer_record_stop(page)
+  pz_wait(page, 0.1)
+  preview <- withVisible(pz_record_stop(page))
+  expect_true(preview$visible)
+  expect_s3_class(preview$value, "paparazzi_preview")
+  expect_equal(tools::file_ext(preview$value), "mp4")
+  expect_true(file.exists(preview$value))
+  expect_length(viewed, 0)
+  print(preview$value)
+  expect_length(viewed, 1)
+  expect_equal(basename(viewed), "index.html")
+  html <- paste(readLines(viewed), collapse = "\n")
+  expect_match(html, "<video", fixed = TRUE)
+  expect_true(file.exists(file.path(dirname(viewed), basename(preview$value))))
+
+  out <- withr::local_tempfile(fileext = ".gif")
+  skip_if_not_installed("gifski")
+  chain <- pz_record_start(page, out, fps = 5, hold = c(0, 0)) |>
+    pz_wait(0.1)
+  print(chain)
+  expect_true(file.exists(out))
+  expect_equal(viewed[[2]], out)
+
+  webm <- pz_record(page, format = "webm", code = pz_wait(page, 0.1))
+  expect_s3_class(webm, "paparazzi_preview")
+  expect_equal(tools::file_ext(webm), "webm")
 })
 
 test_that("pz_record encodes on error and returns ctx invisibly", {
@@ -1769,6 +1875,15 @@ test_that("recording input and lifecycle errors are classed", {
   skip_if_no_av()
 
   expect_error(pz_record_start(page), "path")
+  expect_error(pz_record_start(page, format = "gif"), "path")
+  expect_error(
+    pz_record_start(
+      page,
+      withr::local_tempfile(fileext = ".mp4"),
+      format = "gif"
+    ),
+    class = "paparazzi_error_input"
+  )
   expect_error(
     pz_record_start(page, withr::local_tempfile(fileext = ".mov")),
     class = "paparazzi_error_input"

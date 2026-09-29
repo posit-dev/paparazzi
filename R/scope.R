@@ -210,7 +210,7 @@ pz_find_pop <- function(ctx) {
   if (length(ctx$scope) == 0) {
     return(ctx)
   }
-  PaparazziContext$new(ctx$page, scope = utils::head(ctx$scope, -1))
+  ctx_derive(ctx, utils::head(ctx$scope, -1))
 }
 
 #' Clear all scope, back to the root
@@ -244,7 +244,7 @@ pz_find_reset <- function(ctx) {
   if (length(ctx$scope) == 0) {
     return(ctx)
   }
-  PaparazziContext$new(ctx$page, scope = list())
+  ctx_derive(ctx, list())
 }
 
 # The pinned set at the top of the scope stack, or NULL at the root:
@@ -291,7 +291,7 @@ scope_root <- function(ctx, call = caller_env()) {
 # and never released by consumers (cleanup is the finalizer plus group
 # release).
 push_scope <- function(ctx, pinned) {
-  PaparazziContext$new(ctx$page, scope = c(ctx$scope, list(pinned)))
+  ctx_derive(ctx, c(ctx$scope, list(pinned)))
 }
 
 # The pinned-set wrapper: a paparazzi_elements subclass, so
