@@ -11,6 +11,97 @@
 #   #fractional (620.4, 262.6) 200.2x88.8 rgb(60, 60, 60)
 # PNG pixel dimensions are round(css_size * dpr); dpr is read live.
 
+test_that("annotated framing includes only attached painted nodes", {
+  page <- local_frame_page()
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=outer style=\"position:absolute;left:220px;top:180px;width:80px;height:40px\"><div id=child style=\"width:30px;height:20px\"></div></div><div id=other style=\"position:absolute;left:600px;top:180px;width:40px;height:40px\"></div>')"
+  )
+  pz_annotate_callout(
+    page,
+    "Attached",
+    target = "#child",
+    side = "right",
+    reveal = "none"
+  )
+  pz_annotate_callout(
+    page,
+    "Unrelated",
+    target = "#other",
+    side = "right",
+    reveal = "none"
+  )
+  plain <- frame_content_box(page, NULL, pz_frame("#outer"))
+  decorated <- frame_content_box(
+    page,
+    NULL,
+    pz_frame("#outer", target_box = "annotated")
+  )
+  expect_equal(plain, c(220, 180, 300, 220))
+  expect_gt(decorated[3], plain[3])
+  expect_lt(decorated[3], 600)
+  plain_png <- withr::local_tempfile(fileext = ".png")
+  painted_png <- withr::local_tempfile(fileext = ".png")
+  pz_screenshot(page, plain_png, frame = pz_frame("#outer"))
+  pz_screenshot(
+    page,
+    painted_png,
+    frame = pz_frame("#outer", target_box = "annotated")
+  )
+  expect_gt(png_dimensions(painted_png)[1], png_dimensions(plain_png)[1])
+  pz_stage_frame(page, "#outer", target_box = "annotated")
+  pz_screenshot(page, painted_png)
+  expect_gt(png_dimensions(painted_png)[1], png_dimensions(plain_png)[1])
+  expect_identical(page_frame(page)$target_box, "annotated")
+  pz_js(page, "document.querySelector('#outer').style.left='250px'")
+  moved <- frame_content_box(
+    page,
+    NULL,
+    pz_frame("#outer", target_box = "annotated")
+  )
+  expect_gt(moved[3], decorated[3])
+
+  pz_annotate_clear(page)
+  pz_annotate_spotlight(page, "#child", pad = 15, reveal = "none")
+  hole <- frame_content_box(
+    page,
+    NULL,
+    pz_frame("#outer", target_box = "annotated")
+  )
+  expect_equal(hole, c(235, 165, 330, 220), tolerance = 1)
+  pz_annotate_clear(page)
+  pz_annotate_redact(page, "#child", pad = 30)
+  expect_equal(
+    frame_content_box(page, NULL, pz_frame("#outer", target_box = "annotated")),
+    c(250, 180, 330, 220)
+  )
+  expect_equal(frame_clip(page, NULL, page_frame(page))$width, 80)
+})
+
+test_that("marks add their badge but only for selected targets", {
+  page <- local_frame_page()
+  spec <- pz_frame("#card", target_box = "annotated")
+  expect_equal(frame_content_box(page, NULL, spec), c(100, 80, 220, 170))
+  pz_annotate(page, "#card", label = "A", reveal = "none")
+  pz_annotate(page, "#small", label = "B", reveal = "none")
+  box <- frame_content_box(page, NULL, spec)
+  expect_lt(box[2], 80)
+  expect_equal(box[3], 220)
+  both <- frame_content_box(
+    page,
+    NULL,
+    pz_frame(list("#card", "#small"), target_box = "annotated")
+  )
+  expect_gt(both[3], 400)
+  scoped <- pz_find(page, "#card")
+  expect_equal(
+    frame_content_box(scoped, NULL, pz_frame(target_box = "annotated")),
+    box
+  )
+  pz_annotate_clear(page)
+  expect_equal(frame_content_box(page, NULL, spec), c(100, 80, 220, 170))
+})
+
 test_that("pz_frame returns a normalized spec", {
   spec <- pz_frame()
   expect_s3_class(spec, "paparazzi_frame")
@@ -21,6 +112,8 @@ test_that("pz_frame returns a normalized spec", {
   expect_identical(spec$anchor, "center")
   expect_null(spec$bounds)
   expect_identical(spec$when, "stop")
+  expect_identical(spec$target_box, "element")
+  expect_identical(pz_frame(target_box = "annotated")$target_box, "annotated")
 
   expect_identical(pz_frame(pad = 32)$pad, rep(32, 4))
   expect_identical(pz_frame(pad = c(1, 2, 3, 4))$pad, c(1, 2, 3, 4))
@@ -52,6 +145,7 @@ test_that("pz_frame validates its inputs", {
   expect_error(pz_frame(offset = NA_real_), class = "paparazzi_error_input")
 
   expect_error(pz_frame(when = "middle"), "start")
+  expect_error(pz_frame(target_box = "page"), "annotated")
 
   expect_error(pz_frame(42), class = "rlang_error")
   expect_error(pz_frame(list()), class = "paparazzi_error_target")
@@ -62,6 +156,10 @@ test_that("print.paparazzi_frame shows the spec", {
   expect_output(
     print(pz_frame("#card", ratio = 16 / 9, pad = 32)),
     "paparazzi_frame"
+  )
+  expect_output(
+    print(pz_frame(target_box = "annotated")),
+    "target_box: annotated"
   )
 })
 

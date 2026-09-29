@@ -8,7 +8,8 @@
 #' `pz_record_start(frame =)`.
 #'
 #' The framed region is computed in this order:
-#' 1. Union the bounding boxes of the target's matched elements.
+#' 1. Union the bounding boxes of the target's matched elements. With
+#'    `target_box = "annotated"`, include their attached annotations.
 #' 2. Expand by `pad`, then shift by `offset`.
 #' 3. If `ratio` is set, grow the shorter side to reach it (never
 #'    shrink), placing the content by `anchor`.
@@ -38,6 +39,11 @@
 #' @param when When a recording measures the frame: `"stop"` (the
 #'   default) measures against the final layout; `"start"` clips at
 #'   capture start. Screenshots ignore this.
+#' @param target_box `"element"` (the default) measures only matched
+#'   elements. `"annotated"` also includes painted marks, callouts, and
+#'   spotlight cutouts attached to those elements or their descendants;
+#'   redactions and annotations on unrelated elements are excluded.
+#'   Applies to stills, not the recording's home frame.
 #'
 #' @return An S3 object of class `paparazzi_frame`.
 #'
@@ -67,7 +73,8 @@ pz_frame <- function(
   offset = c(0, 0),
   anchor = "center",
   bounds = NULL,
-  when = c("stop", "start")
+  when = c("stop", "start"),
+  target_box = c("element", "annotated")
 ) {
   check_dots_empty()
   new_frame_spec(
@@ -77,7 +84,8 @@ pz_frame <- function(
     offset = offset,
     anchor = anchor,
     bounds = bounds,
-    when = when
+    when = when,
+    target_box = target_box
   )
 }
 
@@ -93,7 +101,8 @@ print.paparazzi_frame <- function(x, ...) {
     paste0("offset: ", paste(x$offset, collapse = "/")),
     paste0("anchor: ", paste(x$anchor, collapse = " ")),
     paste0("bounds: ", describe(x$bounds)),
-    paste0("when: ", x$when)
+    paste0("when: ", x$when),
+    paste0("target_box: ", x$target_box)
   )
   cli::cat_line("<paparazzi_frame> ", paste(fields, collapse = ", "))
   invisible(x)
@@ -109,14 +118,17 @@ print.paparazzi_frame <- function(x, ...) {
 #' a single call.
 #'
 #' Unlike [pz_stage()]'s animation settings,
-#' framing applies to screenshots as well as recordings.
+#' framing applies to screenshots as well as recordings. An annotated
+#' staged frame measures attached annotations in stills; recordings use
+#' only its element boxes for the home frame, and camera shots use their
+#' own `target_box` setting.
 #'
 #' @inheritParams pz_click
 #' @param ... The default frame's target: a CSS selector string, a
 #'   [pz_loc()] spec, or a list of either. Several unnamed arguments are
 #'   unioned. With no target, the default frames each call's own target.
 #'   A single `NULL` clears the default.
-#' @param ratio,pad,offset,anchor,bounds Framing settings, as in
+#' @param ratio,pad,offset,anchor,bounds,target_box Framing settings, as in
 #'   [pz_frame()]; `NULL` means the [pz_frame()] default for that
 #'   setting.
 #'
@@ -148,7 +160,8 @@ pz_stage_frame <- function(
   pad = NULL,
   offset = NULL,
   anchor = NULL,
-  bounds = NULL
+  bounds = NULL,
+  target_box = NULL
 ) {
   check_context(ctx)
   dots <- list(...)
@@ -165,7 +178,8 @@ pz_stage_frame <- function(
         !is.null(pad) ||
         !is.null(offset) ||
         !is.null(anchor) ||
-        !is.null(bounds)
+        !is.null(bounds) ||
+        !is.null(target_box)
     ) {
       cli::cli_abort(
         "{.code NULL} clears the default framing and can't be combined with framing settings.",
@@ -189,7 +203,8 @@ pz_stage_frame <- function(
     offset = offset %||% c(0, 0),
     anchor = anchor %||% "center",
     bounds = bounds,
-    when = "stop"
+    when = "stop",
+    target_box = target_box %||% "element"
   )
   page_set_frame(ctx$page, spec)
   invisible(ctx)
@@ -259,6 +274,7 @@ new_frame_spec <- function(
   anchor = "center",
   bounds = NULL,
   when = "stop",
+  target_box = "element",
   call = caller_env()
 ) {
   if (!is.null(target)) {
@@ -281,6 +297,11 @@ new_frame_spec <- function(
   offset <- check_offset(offset, call = call)
   anchor <- parse_direction(anchor, arg = "anchor", call = call)
   when <- arg_match(when, values = c("stop", "start"), error_call = call)
+  target_box <- arg_match(
+    target_box,
+    values = c("element", "annotated"),
+    error_call = call
+  )
   structure(
     list(
       target = target,
@@ -289,7 +310,8 @@ new_frame_spec <- function(
       offset = offset,
       anchor = anchor,
       bounds = bounds,
-      when = when
+      when = when,
+      target_box = target_box
     ),
     class = "paparazzi_frame"
   )
@@ -488,13 +510,37 @@ frame_content_box <- function(ctx, target, spec, call = caller_env()) {
   if (!is.null(want)) {
     els <- loc_resolve(ctx, want, multiple = "all", call = call)
     withr::defer(release_elements(els))
-    return(box_union(el_rects(els, call = call), call = call))
+    return(frame_target_box(ctx, els, spec, call = call))
   }
   scoped <- scope_root(ctx, call = call)
   if (!is.null(scoped)) {
-    return(box_union(el_rects(scoped, call = call), call = call))
+    return(frame_target_box(ctx, scoped, spec, call = call))
   }
   NULL
+}
+
+frame_target_box <- function(ctx, els, spec, call = caller_env()) {
+  box <- box_union(el_rects(els, call = call), call = call)
+  if (spec$target_box != "annotated") {
+    return(box)
+  }
+  painted <- els_call(
+    els,
+    "function() {
+      const layer = document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations');
+      return layer?.pz?.paintedRects(this) ?? null;
+    }",
+    call = call
+  )
+  if (is.null(painted)) {
+    return(box)
+  }
+  c(
+    min(box[1], painted[1]),
+    min(box[2], painted[2]),
+    max(box[3], painted[3]),
+    max(box[4], painted[4])
+  )
 }
 
 # The union of element rects, as a viewport-relative box

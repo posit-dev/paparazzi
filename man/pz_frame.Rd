@@ -12,7 +12,8 @@ pz_frame(
   offset = c(0, 0),
   anchor = "center",
   bounds = NULL,
-  when = c("stop", "start")
+  when = c("stop", "start"),
+  target_box = c("element", "annotated")
 )
 }
 \arguments{
@@ -46,6 +47,12 @@ a list of either) whose union box the region is clamped within.}
 \item{when}{When a recording measures the frame: \code{"stop"} (the
 default) measures against the final layout; \code{"start"} clips at
 capture start. Screenshots ignore this.}
+
+\item{target_box}{\code{"element"} (the default) measures only matched
+elements. \code{"annotated"} also includes painted marks, callouts, and
+spotlight cutouts attached to those elements or their descendants;
+redactions and annotations on unrelated elements are excluded.
+Applies to stills, not the recording's home frame.}
 }
 \value{
 An S3 object of class \code{paparazzi_frame}.
@@ -59,7 +66,8 @@ ratio, and clamped. Screenshots take it through
 
 The framed region is computed in this order:
 \enumerate{
-\item Union the bounding boxes of the target's matched elements.
+\item Union the bounding boxes of the target's matched elements. With
+\code{target_box = "annotated"}, include their attached annotations.
 \item Expand by \code{pad}, then shift by \code{offset}.
 \item If \code{ratio} is set, grow the shorter side to reach it (never
 shrink), placing the content by \code{anchor}.

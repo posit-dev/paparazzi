@@ -505,6 +505,59 @@ annotate_boot_js <- r"(function() {
   };
   layer.pz = {
     sync,
+    paintedRects(elements) {
+      sync();
+      let union = null;
+      const include = (r, stroke = 0) => {
+        if (!Number.isFinite(r.left) || !Number.isFinite(r.top) ||
+            r.width < 0 || r.height < 0) return;
+        const box = [r.left - stroke, r.top - stroke,
+                     r.right + stroke, r.bottom + stroke];
+        union = union === null ? box : [
+          Math.min(union[0], box[0]), Math.min(union[1], box[1]),
+          Math.max(union[2], box[2]), Math.max(union[3], box[3])
+        ];
+      };
+      for (const entry of entries.values()) {
+        if (entry.redact) continue;
+        entry.elements.forEach((el, i) => {
+          if (!el.isConnected || !el.getClientRects().length ||
+              !elements.some(target => target === el || target.contains(el))) return;
+          if (entry.spotlight) {
+            const hole = entry.holes[i];
+            if (hole.style.display === 'none') return;
+            const svg = entry.nodes[0];
+            const origin = svg.getBoundingClientRect();
+            const scaleX = origin.width / Number(svg.getAttribute('width'));
+            const scaleY = origin.height / Number(svg.getAttribute('height'));
+            const x = origin.left + Number(hole.getAttribute('x')) * scaleX;
+            const y = origin.top + Number(hole.getAttribute('y')) * scaleY;
+            const w = Number(hole.getAttribute('width')) * scaleX;
+            const h = Number(hole.getAttribute('height')) * scaleY;
+            include({left:x, top:y, right:x + w, bottom:y + h,
+                     width:w, height:h});
+            return;
+          }
+          const node = entry.nodes[i];
+          if (node.style.display === 'none' || getComputedStyle(node).visibility !== 'visible') return;
+          if (entry.callout) {
+            include(node.querySelector('.pz-bubble').getBoundingClientRect());
+            const svg = node.querySelector('svg');
+            if (svg && svg.style.display !== 'none') {
+              const line = svg.firstChild;
+              include(line.getBoundingClientRect(), 1);
+              include(svg.lastChild.getBoundingClientRect());
+            }
+          } else {
+            const shape = node.querySelector('.pz-shape');
+            include(shape.getBoundingClientRect(), shape.tagName.toLowerCase() === 'svg' ? 1.5 : 0);
+          }
+          const badge = node.querySelector('span');
+          if (badge) include(badge.getBoundingClientRect());
+        });
+      }
+      return union;
+    },
     finishClear,
     spotlight: (elements, opts) => {
       remove('spotlight', false);

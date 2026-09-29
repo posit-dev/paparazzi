@@ -11,7 +11,8 @@ pz_stage_frame(
   pad = NULL,
   offset = NULL,
   anchor = NULL,
-  bounds = NULL
+  bounds = NULL,
+  target_box = NULL
 )
 }
 \arguments{
@@ -22,7 +23,7 @@ pz_stage_frame(
 unioned. With no target, the default frames each call's own target.
 A single \code{NULL} clears the default.}
 
-\item{ratio, pad, offset, anchor, bounds}{Framing settings, as in
+\item{ratio, pad, offset, anchor, bounds, target_box}{Framing settings, as in
 \code{\link[=pz_frame]{pz_frame()}}; \code{NULL} means the \code{\link[=pz_frame]{pz_frame()}} default for that
 setting.}
 }
@@ -37,7 +38,10 @@ settings are never merged -- and \code{frame = FALSE} disables framing for
 a single call.
 
 Unlike \code{\link[=pz_stage]{pz_stage()}}'s animation settings,
-framing applies to screenshots as well as recordings.
+framing applies to screenshots as well as recordings. An annotated
+staged frame measures attached annotations in stills; recordings use
+only its element boxes for the home frame, and camera shots use their
+own \code{target_box} setting.
 }
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
