@@ -39,17 +39,18 @@ run (pre-fix `screenshot`-only run: +1).
 
 ## Fix (test infrastructure only; package behavior unchanged)
 
-- `tests/testthat/setup-chrome.R`: `chromote::set_chrome_args()` with
-  `--user-data-dir` inside the worker's `tempdir()`, restored in teardown;
+- `tests/testthat/setup-chrome.R`: appends `--user-data-dir` inside the
+  worker's `tempdir()` to the Chrome args in effect, restored in teardown;
   teardown still closes the browser, then unlinks the profile. R removes the
   profile on any non-SIGKILL exit, including the idle-orphan deadlock.
-- `helper-page.R`: `chrome_profile_args()` and `chrome_profile_code()`; the
-  Quarto documents put their profile in the test's `local_tempdir()`.
+- `helper-page.R`: `chrome_profile_code()`; the Quarto documents put their
+  profile in the test's `local_tempdir()`.
 - `.agents/chrome-reap.sh`, run by `chrome-lock.sh` after acquiring the lock:
   SIGKILLs PPID-1 callr R processes whose cwd is under a `paparazzi*` path,
   with their trees, and removes their `Rtmp*` dir (from the processx
   supervisor's FIFO path) and any `Chrome-headless/scoped_dir*` they held;
-  also reaps PPID-1 chromote Chromes (`--crash-dumps-dir=…/Rtmp…/chrome-`).
+  also reaps PPID-1 chromote Chromes (`--crash-dumps-dir=…/Rtmp…/chrome-`)
+  and removes that dead session's `Rtmp*`.
 
 ## Verification (under the Chrome lock, `open|device|js|record|screenshot`)
 
@@ -60,6 +61,14 @@ run (pre-fix `screenshot`-only run: +1).
 | SIGKILL at 25 s, pre-fix | +7 (reap recovers 0) | — | 0 (2 reaped) |
 | SIGKILL at 25 s, fix | +0 | busy orphan's removed by reap | 0 (4 reaped) |
 | SIGTERM at 25 s, fix | +0 | — | 0 (3 reaped) |
+
+Full suite with the fix, 5 workers: exit 0, no failures/warnings/skips in
+the summary reporter, +0 profiles, 0 orphans, one empty `Rtmp*` (no
+profile). After the review fixes, `record|screenshot` rerun: +0/+0/0.
+`air`, `jarl`, and `shellcheck` pass. roborev 1366 (3 low findings, fixed
+in 96f705e) and 1367 (pass), both closed. Before starting, the reaper cleared
+9 real orphans (1 spinning at ~200% CPU for 80 min, 2 from an `R CMD check`
+a day old).
 
 ## Not done / follow-ups
 
