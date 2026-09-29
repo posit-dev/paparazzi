@@ -194,6 +194,9 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
       "document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations')?.pz?.finishClear()"
     )
   }
+  if (is.null(id) || identical(id, "caption")) {
+    caption_clear(ctx$page)
+  }
   invisible(ctx)
 }
 

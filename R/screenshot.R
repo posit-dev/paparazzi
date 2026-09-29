@@ -20,6 +20,9 @@
 #' dpr. A [pz_frame()] can frame the capture; the page's default framing
 #' is set with `pz_stage_frame()`.
 #'
+#' A screen-space caption set with [pz_annotate_caption()] is composited
+#' onto the captured PNG after framing; captioned stills require \pkg{png}.
+#'
 #' @inheritParams pz_click
 #' @param path File path the PNG is written to; an existing file is
 #'   overwritten. If omitted while knitting, a numbered file in the
@@ -101,6 +104,26 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   on.exit(overlay_restore(ctx, overlay_display), add = TRUE)
   res <- screenshot_capture(ctx, clip)
   writeBin(jsonlite::base64_dec(res$data), path)
+  caption <- page_caption(ctx$page)
+  if (!is.null(caption)) {
+    if (!rlang::is_installed("png")) {
+      cli::cli_abort(
+        "The {.pkg png} package is needed for captioned screenshots."
+      )
+    }
+    size <- png_read_size(path)
+    overlay <- tempfile("paparazzi-caption-", fileext = ".png")
+    on.exit(unlink(overlay), add = TRUE)
+    caption_render(
+      ctx$page,
+      caption,
+      size$width,
+      size$height,
+      size$width / clip$width,
+      overlay
+    )
+    caption_blend_still(path, overlay)
+  }
   if (implicit && knitting) {
     return(knitr::include_graphics(
       path,

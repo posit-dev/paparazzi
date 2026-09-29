@@ -50,6 +50,7 @@ Collate:
     'annotate.R'
     'app.R'
     'camera.R'
+    'caption.R'
     'context.R'
     'utils-purrr.R'
     'cursor.R'

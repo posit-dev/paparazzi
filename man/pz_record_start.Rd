@@ -13,7 +13,8 @@ pz_record_start(
   fps = 15,
   scale = NULL,
   hold = c(0.5, 1),
-  keep_frames = FALSE
+  keep_frames = FALSE,
+  captions = c("burn", "vtt", "both")
 )
 }
 \arguments{
@@ -49,6 +50,10 @@ output width in pixels (height scales proportionally).}
 \item{keep_frames}{Keep the captured PNG frames in a
 \verb{<name>_frames/} directory next to \code{path}. Otherwise frames are
 written to a temporary directory and deleted after encoding.}
+
+\item{captions}{\code{"burn"} (the default) draws captions on the recording;
+\code{"vtt"} writes a WebVTT sidecar without drawing captions; \code{"both"}
+does both. WebVTT needs an MP4 or WebM recording, not a GIF.}
 }
 \value{
 \code{ctx}, invisibly.
@@ -98,9 +103,16 @@ previous page falls back to the full viewport unless it was fixed at
 the start. MP4 dimensions are rounded down to multiples of 4 and
 WebM to even pixels; GIF keeps whole pixels.
 
+WebVTT captions (when requested) are written as a \code{.vtt} file next to
+the MP4 or WebM. Cue times include the first/last holds and explicit
+\code{\link[=pz_record_hold]{pz_record_hold()}} intervals but exclude pauses. Caption burn and VTT
+use the current caption set by \code{\link[=pz_annotate_caption]{pz_annotate_caption()}}.
+
 \code{.mp4} and \code{.webm} recordings require \pkg{av}. All \code{.gif} recordings
-require \pkg{gifski}; framed GIFs also require \pkg{png}.
-Packages are checked at \code{pz_record_start()}.
+require \pkg{gifski}; framed GIFs also require \pkg{png}, and GIFs
+burning captions require \pkg{av}.
+Packages are checked at \code{pz_record_start()} or when a caption is
+added to an active GIF recording.
 }
 
 \examples{

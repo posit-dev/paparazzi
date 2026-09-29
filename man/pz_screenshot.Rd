@@ -56,6 +56,9 @@ Screenshots are captured at the page's current device pixel ratio: the
 PNG's pixel dimensions are the captured CSS size multiplied by the
 dpr. A \code{\link[=pz_frame]{pz_frame()}} can frame the capture; the page's default framing
 is set with \code{pz_stage_frame()}.
+
+A screen-space caption set with \code{\link[=pz_annotate_caption]{pz_annotate_caption()}} is composited
+onto the captured PNG after framing; captioned stills require \pkg{png}.
 }
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}

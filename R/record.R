@@ -42,9 +42,16 @@
 #' the start. MP4 dimensions are rounded down to multiples of 4 and
 #' WebM to even pixels; GIF keeps whole pixels.
 #'
+#' WebVTT captions (when requested) are written as a `.vtt` file next to
+#' the MP4 or WebM. Cue times include the first/last holds and explicit
+#' [pz_record_hold()] intervals but exclude pauses. Caption burn and VTT
+#' use the current caption set by [pz_annotate_caption()].
+#'
 #' `.mp4` and `.webm` recordings require \pkg{av}. All `.gif` recordings
-#' require \pkg{gifski}; framed GIFs also require \pkg{png}.
-#' Packages are checked at `pz_record_start()`.
+#' require \pkg{gifski}; framed GIFs also require \pkg{png}, and GIFs
+#' burning captions require \pkg{av}.
+#' Packages are checked at `pz_record_start()` or when a caption is
+#' added to an active GIF recording.
 #'
 #' @inheritParams pz_click
 #' @param path Output file path; the extension (`.mp4`, `.webm`, or
@@ -66,6 +73,9 @@
 #'   output width in pixels (height scales proportionally).
 #' @param hold Seconds to hold the first and last frame,
 #'   `c(first, last)`.
+#' @param captions `"burn"` (the default) draws captions on the recording;
+#'   `"vtt"` writes a WebVTT sidecar without drawing captions; `"both"`
+#'   does both. WebVTT needs an MP4 or WebM recording, not a GIF.
 #' @param keep_frames Keep the captured PNG frames in a
 #'   `<name>_frames/` directory next to `path`. Otherwise frames are
 #'   written to a temporary directory and deleted after encoding.
@@ -98,7 +108,8 @@ pz_record_start <- function(
   fps = 15,
   scale = NULL,
   hold = c(0.5, 1),
-  keep_frames = FALSE
+  keep_frames = FALSE,
+  captions = c("burn", "vtt", "both")
 ) {
   check_context(ctx)
   check_dots_empty()
@@ -112,8 +123,16 @@ pz_record_start <- function(
   check_bool(keep_frames)
   hold <- check_record_hold(hold)
   format <- record_format(path)
+  captions <- arg_match(captions)
+  if (identical(format, "gif") && captions != "burn") {
+    cli::cli_abort("WebVTT sidecars need an MP4 or WebM recording.")
+  }
   frame <- frame_effective(ctx, frame)
-  record_check_packages(format, needs_crop = inherits(frame, "paparazzi_frame"))
+  record_check_packages(
+    format,
+    needs_crop = inherits(frame, "paparazzi_frame"),
+    needs_caption = !is.null(page_caption(ctx$page)) && captions == "burn"
+  )
 
   page <- ctx$page
   if (!is.null(page_recorder(page))) {
@@ -133,6 +152,12 @@ pz_record_start <- function(
     frame = frame,
     method = method
   )
+  rec$caption_mode <- captions
+  rec$captions <- if (is.null(page_caption(page))) {
+    list()
+  } else {
+    list(list(vt = 0, caption = page_caption(page)))
+  }
   # Retain the framing context the recording started in: a when =
   # "stop" frame is measured against the final layout, but resolved
   # from this ctx -- its scope -- not from wherever pz_record_stop()
@@ -263,7 +288,7 @@ pz_record_stop <- function(ctx) {
     # even when stop is called from a different one.
     rec$crop <- record_crop_box(rec$frame_ctx, rec$frame)
   }
-  record_encode(rec)
+  record_encode(rec, page)
   # The staging hook: an auto cursor under cursor = NULL belonged to the
   # recording, so it leaves the page now that stills would catch it.
   stage_record_stopped(ctx)
@@ -553,6 +578,8 @@ new_recorder <- function(
   rec$files <- character(0)
   rec$scroll <- list()
   rec$camera <- list()
+  rec$caption_mode <- "burn"
+  rec$captions <- list()
   rec$camera_viewport_width <- NULL
   rec$camera_warned <- FALSE
   rec$holds <- list()
@@ -628,7 +655,12 @@ record_format <- function(path, call = caller_env()) {
   ext
 }
 
-record_check_packages <- function(format, needs_crop, call = caller_env()) {
+record_check_packages <- function(
+  format,
+  needs_crop,
+  needs_caption = FALSE,
+  call = caller_env()
+) {
   if (format %in% c("mp4", "webm")) {
     rlang::check_installed(
       "av",
@@ -637,6 +669,12 @@ record_check_packages <- function(format, needs_crop, call = caller_env()) {
     return(invisible())
   }
   rlang::check_installed("gifski", reason = "to record .gif files.")
+  if (needs_caption) {
+    rlang::check_installed(
+      "av",
+      reason = "to burn captions onto .gif recordings."
+    )
+  }
   if (needs_crop) {
     rlang::check_installed("png", reason = "to crop framed .gif recordings.")
   }
@@ -1072,28 +1110,60 @@ record_resample <- function(rec) {
   )
 }
 
-record_encode <- function(rec, call = caller_env()) {
+record_encode <- function(rec, page = NULL, call = caller_env()) {
   resampled <- record_resample(rec)
   png_size <- png_read_size(rec$files[[1]], call = call)
   out <- record_output_spec(rec, png_size, call = call)
   if (length(rec$camera)) {
     out$vfilter <- camera_filter(rec, resampled, out, png_size, call = call)
   }
+  windows <- caption_windows(rec, resampled)
+  mode <- rec$caption_mode %||% "burn"
+  if (mode %in% c("vtt", "both")) {
+    caption_vtt(rec, windows)
+  }
+  burning <- length(windows) > 0L && mode != "vtt"
+  if (burning) {
+    caption_dir <- tempfile("paparazzi-caption-")
+    dir.create(caption_dir)
+    on.exit(unlink(caption_dir, recursive = TRUE), add = TRUE)
+    out$vfilter <- caption_filter(
+      rec,
+      page,
+      resampled,
+      out,
+      windows,
+      caption_dir
+    )
+  }
   if (identical(rec$format, "gif")) {
     files <- resampled$files
-    if (length(rec$camera)) {
+    if (length(rec$camera) || burning) {
       crop_dir <- tempfile("paparazzi-camera-")
       dir.create(crop_dir)
       on.exit(unlink(crop_dir, recursive = TRUE), add = TRUE)
       sequence <- file.path(crop_dir, "camera-%04d.png")
-      av::av_encode_video(
-        files,
-        output = sequence,
-        framerate = rec$fps,
-        vfilter = out$vfilter,
-        codec = "png",
-        verbose = FALSE
-      )
+      input_files <- if (burning) normalizePath(files) else files
+      output_file <- if (burning) {
+        normalizePath(sequence, mustWork = FALSE)
+      } else {
+        sequence
+      }
+      encode <- function() {
+        av::av_encode_video(
+          input_files,
+          output = output_file,
+          framerate = rec$fps,
+          vfilter = out$vfilter,
+          codec = "png",
+          verbose = FALSE
+        )
+      }
+      if (burning) {
+        withr::with_dir(caption_dir, encode())
+      } else {
+        encode()
+      }
       # av can emit one extra terminal frame; keep exactly the ticks.
       files <- sprintf(sequence, seq_len(resampled$n_ticks))
       if (!all(file.exists(files))) {
@@ -1135,14 +1205,27 @@ record_encode <- function(rec, call = caller_env()) {
       mp4 = "libx264",
       webm = "libvpx-vp9"
     )
-    av::av_encode_video(
-      resampled$files,
-      output = rec$path,
-      framerate = rec$fps,
-      vfilter = out$vfilter,
-      codec = codec,
-      verbose = FALSE
-    )
+    input_files <- if (burning) {
+      normalizePath(resampled$files)
+    } else {
+      resampled$files
+    }
+    output_file <- if (burning) {
+      normalizePath(rec$path, mustWork = FALSE)
+    } else {
+      rec$path
+    }
+    encode <- function() {
+      av::av_encode_video(
+        input_files,
+        output = output_file,
+        framerate = rec$fps,
+        vfilter = out$vfilter,
+        codec = codec,
+        verbose = FALSE
+      )
+    }
+    if (burning) withr::with_dir(caption_dir, encode()) else encode()
   }
   invisible(rec$path)
 }
