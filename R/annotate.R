@@ -323,7 +323,8 @@ annotate_boot_js <- r"(function() {
     return [];
   };
   const start = (node, reveal, entering, shape) => {
-    const target = reveal === 'draw' ? (shape.tagName === 'svg' ? shape.firstChild : shape) : node;
+    const target = reveal === 'draw' ? (shape.tagName === 'svg' ? shape.firstChild : shape) :
+      reveal === 'wipe' ? shape : node;
     const anim = target.animate(keys(reveal, target instanceof SVGGeometryElement), {
       duration:durations[reveal], fill:'forwards',
       direction:entering ? 'normal' : 'reverse', easing:'linear'
@@ -375,6 +376,8 @@ annotate_boot_js <- r"(function() {
           } else {
             path.setAttribute('x', 1.5);
             path.setAttribute('y', 1.5);
+            path.setAttribute('rx', 3.5);
+            path.setAttribute('ry', 3.5);
             path.setAttribute('width', Math.max(0, w - 3));
             path.setAttribute('height', Math.max(0, h - 3));
           }
@@ -399,7 +402,7 @@ annotate_boot_js <- r"(function() {
       node.getAnimations({subtree:true}).forEach(anim => anim.cancel());
       if (animate && durations[entry.reveal]) {
         node.classList.add('pz-exiting');
-        if (entry.reveal === 'draw') node.querySelector('span')?.remove();
+        if (entry.reveal === 'draw' || entry.reveal === 'wipe') node.querySelector('span')?.remove();
         start(node, entry.reveal, false, node.querySelector('.pz-shape'));
       } else node.remove();
     }
@@ -434,9 +437,11 @@ annotate_boot_js <- r"(function() {
             shape.classList.add('pz-shape');
             box.appendChild(shape);
           } else {
-            box.style.border = '3px solid';
-            box.style.borderColor = opts.color;
-            box.style.borderRadius = '5px';
+            shape = document.createElement('div');
+            shape.className = 'pz-shape';
+            shape.style.cssText = 'position:absolute;inset:0;box-sizing:border-box;border:3px solid;border-radius:5px;';
+            shape.style.borderColor = opts.color;
+            box.appendChild(shape);
           }
         } else if (opts.type === 'circle') {
           shape = stroke('ellipse');

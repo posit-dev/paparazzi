@@ -769,3 +769,47 @@ test_that("clear returns the longest active exit duration", {
   )
   expect_equal(unlist(durations), c(250, 400, 400, 0))
 })
+
+test_that("a labeled wipe reveals the badge before its shape finishes", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  page |>
+    pz_annotate("#box", id = "boot", reveal = "none") |>
+    pz_annotate_clear()
+  pz_js(
+    page,
+    "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.draw([document.querySelector('#box')], {id:'labeled',type:'box',pad:[0,0,0,0],label:'A',color:'#ff0000',fontFamily:'sans-serif',fontSize:14,reveal:'wipe',animate:true}); const a=l.querySelector('.pz-annotation').getAnimations({subtree:true})[0]; a.pause(); a.currentTime=200; })()"
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  pixel <- function(x, y) {
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  expect_lt(pixel(202, 300)[2], 0.2)
+  expect_lt(pixel(275, 311)[2], 0.2)
+  expect_gt(pixel(225, 311)[2], 0.9)
+  pz_js(
+    page,
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.clear({id:'labeled',animate:true})"
+  )
+  expect_true(pz_js(
+    page,
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-exiting span') === null"
+  ))
+  pz_js(
+    page,
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.finishClear()"
+  )
+})
+
+test_that("a drawn box has the same rounded outline as a still box", {
+  page <- annotation_page()
+  page |> pz_annotate("#box", type = "box", reveal = "draw")
+  radius <- pz_js(
+    page,
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation svg rect')?.getAttribute('rx')"
+  )
+  expect_equal(as.numeric(radius), 3.5)
+})
