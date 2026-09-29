@@ -1,3 +1,6 @@
+#' @include overlay.R
+NULL
+
 #' Inspect the current page state
 #'
 #' @description
@@ -453,22 +456,14 @@ overlay_draw <- function(ctx, scope_rects, target_rects) {
     },
     targets = targets
   ))
-  pz_js(ctx, sprintf(overlay_draw_js, data), await = FALSE)
+  pz_js(ctx, paste0("(", overlay_draw_js, ")(", data, ")"), await = FALSE)
   invisible(TRUE)
 }
 
-overlay_draw_js <- "(function() {
-  const data = %s;
-  let host = document.getElementById('paparazzi-overlay-root');
-  if (!host) {
-    host = document.createElement('div');
-    host.id = 'paparazzi-overlay-root';
-    host.style.cssText = 'position:absolute;top:0;left:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
-    document.documentElement.appendChild(host);
-  }
-  if (!host.shadowRoot) host.attachShadow({ mode: 'open' });
-  const root = host.shadowRoot;
-  root.querySelectorAll('.pz-inspect').forEach((n) => n.remove());
+overlay_draw_js <- paste0(
+  "function(data) {",
+  OVERLAY_HOST_JS,
+  "  root.querySelectorAll('.pz-inspect').forEach((n) => n.remove());
   const layer = document.createElement('div');
   layer.className = 'pz-inspect';
   const box = (r, style) => {
@@ -492,7 +487,8 @@ overlay_draw_js <- "(function() {
   });
   root.appendChild(layer);
   return true;
-})()"
+}"
+)
 
 overlay_clear <- function(ctx) {
   pz_js(

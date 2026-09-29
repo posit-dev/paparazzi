@@ -1,3 +1,6 @@
+#' @include overlay.R
+NULL
+
 #' Take a screenshot
 #'
 #' @description
@@ -235,7 +238,7 @@ clip_rects_union <- function(ctx, rects, call = caller_env()) {
 screenshot_capture <- function(ctx, clip, call = caller_env()) {
   pz_js(
     ctx,
-    "document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations')?.pz?.sync()"
+    paste0(ANNOTATION_LAYER_JS, "?.sync()")
   )
   timeout <- ctx$page$default_timeout
   cdp_call(

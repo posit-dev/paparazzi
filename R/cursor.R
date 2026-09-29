@@ -1,3 +1,4 @@
+#' @include overlay.R
 #' @include utils-purrr.R
 NULL
 
@@ -707,17 +708,10 @@ cursor_command <- function(ctx, state) {
 # a CSS zoom on <html> would otherwise scale the layer away from the
 # pointer coordinate space; getBoundingClientRect and CDP pointer
 # coordinates both live in the zoomed (visual) space.
-cursor_command_js <- r"(function(state) {
-  let host = document.getElementById('paparazzi-overlay-root');
-  if (!host) {
-    host = document.createElement('div');
-    host.id = 'paparazzi-overlay-root';
-    host.style.cssText = 'position:absolute;top:0;left:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
-    document.documentElement.appendChild(host);
-  }
-  if (!host.shadowRoot) host.attachShadow({ mode: 'open' });
-  const root = host.shadowRoot;
-  let layer = root.querySelector('.pz-cursor');
+cursor_command_js <- paste0(
+  "function(state) {",
+  OVERLAY_HOST_JS,
+  r"(  let layer = root.querySelector('.pz-cursor');
   if (!layer) {
     layer = document.createElement('div');
     layer.className = 'pz-cursor';
@@ -846,6 +840,7 @@ cursor_command_js <- r"(function(state) {
   inner.style.transform = 'scale(' + state.scale * (state.pressed ? 0.8 : 1) + ')';
   return icon;
 })"
+)
 # The new-document script: the same boot+apply with the last state baked
 # in, registered so a navigation re-injects the overlay at its last
 # position. Page.enable() is required for the script to run (probed on

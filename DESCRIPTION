@@ -51,6 +51,7 @@ Collate:
     'actions.R'
     'annotate-callout.R'
     'annotate-spotlight.R'
+    'overlay.R'
     'annotate.R'
     'app.R'
     'camera.R'

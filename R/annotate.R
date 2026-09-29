@@ -1,3 +1,6 @@
+#' @include overlay.R
+NULL
+
 #' Mark page elements
 #'
 #' Draws an annotation for each element matched by `target`. Annotations
@@ -151,8 +154,9 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
   duration <- pz_js(
     ctx,
     paste0(
-      "(() => { const h = document.getElementById('paparazzi-overlay-root'); ",
-      "return h?.shadowRoot?.querySelector('.pz-annotations')?.pz?.clear(",
+      "(() => { return ",
+      ANNOTATION_LAYER_JS,
+      "?.clear(",
       data,
       ") || false; })()"
     )
@@ -261,9 +265,20 @@ annotate_boot_js <- local({
   boot <- NULL
   function() {
     if (is.null(boot)) {
-      path <- system.file("js", "annotate.js", package = "paparazzi", mustWork = TRUE)
+      path <- system.file(
+        "js",
+        "annotate.js",
+        package = "paparazzi",
+        mustWork = TRUE
+      )
       source <- paste(readLines(path, warn = FALSE), collapse = "\n")
-      boot <<- paste0("function() {", paste0("  let host = document.getElementById('paparazzi-overlay-root');\n", "  if (!host) {\n", "    host = document.createElement('div');\n", "    host.id = 'paparazzi-overlay-root';\n", "    host.style.cssText = 'position:absolute;top:0;left:0;width:0;height:0;z-index:2147483647;pointer-events:none;';\n", "    document.documentElement.appendChild(host);\n", "  }\n", "  if (!host.shadowRoot) host.attachShadow({mode:'open'});\n", "  const root = host.shadowRoot;\n"), "return (", source, ")(root); }")
+      boot <<- paste0(
+        "function() {",
+        OVERLAY_HOST_JS,
+        "return (",
+        source,
+        ")(root); }"
+      )
     }
     boot
   }
