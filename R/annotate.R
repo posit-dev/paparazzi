@@ -413,6 +413,8 @@ annotate_boot_js <- r"(function() {
         svg.style.top = top + 'px';
         svg.setAttribute('width', width);
         svg.setAttribute('height', height);
+        mask.setAttribute('x', 0);
+        mask.setAttribute('y', 0);
         mask.setAttribute('width', width);
         mask.setAttribute('height', height);
         mask.firstChild.setAttribute('width', width);
