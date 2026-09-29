@@ -30,20 +30,15 @@ pz_annotate_caption <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  check_string(text)
-  if (!nzchar(text)) {
-    cli::cli_abort("{.arg text} must be nonempty.")
-  }
+  check_annotation_text(text)
   side <- arg_match(side, c("bottom", "top"))
-  color <- color %||% "white"
-  font_family <- font_family %||% page_stage(ctx$page)$annotate_font_family
-  font_size <- font_size %||% 20
-  check_string(color)
-  check_string(font_family)
-  check_number_decimal(font_size, min = 0, allow_infinite = FALSE)
-  if (!nzchar(color) || !nzchar(font_family) || font_size == 0) {
-    cli::cli_abort("Caption style values must be nonempty and positive.")
-  }
+  style <- annotate_style(
+    ctx,
+    color,
+    font_family,
+    font_size,
+    defaults = list(color = "white", font_size = 20)
+  )
   rec <- page_recorder(ctx$page)
   if (!is.null(rec) && rec$active && rec$format == "gif") {
     rlang::check_installed(
@@ -56,9 +51,9 @@ pz_annotate_caption <- function(
     list(
       text = text,
       side = side,
-      color = color,
-      font_family = font_family,
-      font_size = font_size
+      color = style$color,
+      font_family = style$font_family,
+      font_size = style$font_size
     )
   )
   ctx_return(ctx)

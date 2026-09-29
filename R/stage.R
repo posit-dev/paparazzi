@@ -202,7 +202,7 @@ pz_stage <- function(
     if (is.null(annotate_color)) {
       overrides[["annotate_color"]] <- NULL
     } else {
-      check_string(annotate_color)
+      check_string(annotate_color, allow_empty = FALSE)
       overrides$annotate_color <- annotate_color
     }
   }
@@ -210,7 +210,7 @@ pz_stage <- function(
     if (is.null(annotate_font_family)) {
       overrides[["annotate_font_family"]] <- NULL
     } else {
-      check_string(annotate_font_family)
+      check_string(annotate_font_family, allow_empty = FALSE)
       overrides$annotate_font_family <- annotate_font_family
     }
   }
@@ -218,10 +218,7 @@ pz_stage <- function(
     if (is.null(annotate_font_size)) {
       overrides[["annotate_font_size"]] <- NULL
     } else {
-      check_number_decimal(annotate_font_size, min = 0, allow_infinite = FALSE)
-      if (annotate_font_size == 0) {
-        cli::cli_abort("{.arg annotate_font_size} must be greater than 0.")
-      }
+      check_annotation_font_size(annotate_font_size)
       overrides$annotate_font_size <- annotate_font_size
     }
   }

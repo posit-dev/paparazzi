@@ -87,6 +87,19 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_error(pz_stage(page, bogus = 1), class = "rlang_error")
 })
 
+test_that("stage rejects empty annotation style strings at assignment", {
+  page <- local_cursor_page()
+  expect_error(
+    pz_stage(page, annotate_color = ""),
+    "annotate_color.*empty string"
+  )
+  expect_error(
+    pz_stage(page, annotate_font_family = ""),
+    "annotate_font_family.*empty string"
+  )
+  expect_identical(page_stage(page), STAGE_DEFAULTS)
+})
+
 test_that("the glide formula uses the new default and 0.5-2s limits", {
   point <- c(x = 0, y = 0)
   to <- function(x) c(x = x, y = 0)

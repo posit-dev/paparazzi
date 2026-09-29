@@ -43,48 +43,20 @@ pz_annotate_callout <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  check_string(text)
-  if (!nzchar(text)) {
-    cli::cli_abort("{.arg text} must be nonempty.")
-  }
+  check_annotation_text(text)
   if (!is.null(side)) {
     side <- parse_direction(side, valid = STAGE_DIRECTIONS, arg = "side")
   }
   check_bool(arrow)
-  if (!is.null(label)) {
-    if (!isTRUE(label)) {
-      if (
-        !(is.character(label) || is.numeric(label)) ||
-          length(label) != 1L ||
-          is.na(label)
-      ) {
-        cli::cli_abort("{.arg label} must be `TRUE`, one string or one number.")
-      }
-      label <- as.character(label)
-    }
-  }
+  label <- check_annotation_label(label)
   reveal <- reveal %||% "pop"
-  if (
-    !is.character(reveal) ||
-      length(reveal) != 1L ||
-      is.na(reveal) ||
-      !reveal %in% c("fade", "draw", "pop", "slide", "wipe", "none")
-  ) {
-    cli::cli_abort(
-      "{.arg reveal} must be {.val fade}, {.val draw}, {.val pop}, {.val slide}, {.val wipe}, or {.val none}."
-    )
-  }
+  check_string(reveal)
+  reveal <- rlang::arg_match0(
+    reveal,
+    c("fade", "draw", "pop", "slide", "wipe", "none")
+  )
   check_annotation_id(id)
-  stage <- page_stage(ctx$page)
-  color <- color %||% stage$annotate_color
-  font_family <- font_family %||% stage$annotate_font_family
-  font_size <- font_size %||% stage$annotate_font_size
-  check_string(color)
-  check_string(font_family)
-  check_number_decimal(font_size, min = 0, allow_infinite = FALSE)
-  if (font_size == 0) {
-    cli::cli_abort("{.arg font_size} must be greater than 0.")
-  }
+  style <- annotate_style(ctx, color, font_family, font_size)
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)
@@ -95,14 +67,11 @@ pz_annotate_callout <- function(
     arrow = arrow,
     label = label,
     reveal = reveal,
-    color = color,
-    fontFamily = font_family,
-    fontSize = font_size,
+    color = style$color,
+    fontFamily = style$font_family,
+    fontSize = style$font_size,
     animate = recording
   )
-  duration <- annotate_call(ctx, els, "callout", options, "drawing the callout")
-  if (recording && duration > 0) {
-    pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
-  }
+  annotate_call(ctx, els, "callout", options, "drawing the callout")
   ctx_return(ctx)
 }

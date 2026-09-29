@@ -46,52 +46,18 @@ pz_annotate <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  if (
-    !is.character(type) ||
-      length(type) != 1L ||
-      is.na(type) ||
-      !type %in% c("box", "circle", "underline", "highlight")
-  ) {
-    cli::cli_abort(
-      "{.arg type} must be {.val box}, {.val circle}, {.val underline}, or {.val highlight}."
-    )
-  }
+  check_string(type)
+  type <- rlang::arg_match0(type, c("box", "circle", "underline", "highlight"))
   reveal <- reveal %||% if (identical(type, "box")) "fade" else "draw"
-  if (
-    !is.character(reveal) ||
-      length(reveal) != 1L ||
-      is.na(reveal) ||
-      !reveal %in% c("fade", "draw", "pop", "slide", "wipe", "none")
-  ) {
-    cli::cli_abort(
-      "{.arg reveal} must be {.val fade}, {.val draw}, {.val pop}, {.val slide}, {.val wipe}, or {.val none}."
-    )
-  }
+  check_string(reveal)
+  reveal <- rlang::arg_match0(
+    reveal,
+    c("fade", "draw", "pop", "slide", "wipe", "none")
+  )
   check_annotation_id(id)
-  if (!is.null(label)) {
-    if (isTRUE(label)) {
-      label <- TRUE
-    } else if (
-      (is.character(label) || is.numeric(label)) &&
-        length(label) == 1L &&
-        !is.na(label)
-    ) {
-      label <- as.character(label)
-    } else {
-      cli::cli_abort("{.arg label} must be `TRUE`, one string or one number.")
-    }
-  }
+  label <- check_annotation_label(label)
   pad <- check_pad(pad %||% 0, arg = "pad")
-  stage <- page_stage(ctx$page)
-  color <- color %||% stage$annotate_color
-  font_family <- font_family %||% stage$annotate_font_family
-  font_size <- font_size %||% stage$annotate_font_size
-  check_string(color)
-  check_string(font_family)
-  check_number_decimal(font_size, min = 0, allow_infinite = FALSE)
-  if (font_size == 0) {
-    cli::cli_abort("{.arg font_size} must be greater than 0.")
-  }
+  style <- annotate_style(ctx, color, font_family, font_size)
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)
@@ -100,16 +66,13 @@ pz_annotate <- function(
     type = type,
     pad = unname(pad),
     label = label,
-    color = color,
-    fontFamily = font_family,
-    fontSize = font_size,
+    color = style$color,
+    fontFamily = style$font_family,
+    fontSize = style$font_size,
     reveal = reveal,
     animate = recording
   )
-  duration <- annotate_call(ctx, els, "draw", options, "drawing the annotation")
-  if (recording && duration > 0) {
-    pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
-  }
+  annotate_call(ctx, els, "draw", options, "drawing the annotation")
   ctx_return(ctx)
 }
 
@@ -178,12 +141,7 @@ pz_annotate_redact <- function(
 pz_annotate_clear <- function(ctx, id = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
-  if (!is.null(id)) {
-    check_string(id)
-    if (!nzchar(id)) {
-      cli::cli_abort("{.arg id} must be nonempty.")
-    }
-  }
+  check_annotation_id(id, allow_reserved = TRUE)
   recording <- annotate_recording(ctx$page)
   data <- jsonlite::toJSON(
     list(id = id, animate = recording),
@@ -203,9 +161,7 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
   if (is.null(id) || identical(id, "caption")) {
     caption_clear(ctx$page)
   }
-  if (recording && duration > 0) {
-    pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
-  }
+  annotate_pump(ctx, duration)
   ctx_return(ctx)
 }
 
@@ -217,20 +173,6 @@ annotate_elements <- function(ctx, target, frame = caller_env()) {
   els <- loc_resolve(ctx, target, multiple = "all", call = frame)
   withr::defer(release_elements(els), envir = frame)
   els
-}
-
-check_annotation_id <- function(id, call = caller_env()) {
-  if (is.null(id)) {
-    return(invisible(NULL))
-  }
-  check_string(id, call = call)
-  if (!nzchar(id) || id %in% c("spotlight", "caption")) {
-    cli::cli_abort(
-      "{.arg id} must be nonempty and cannot be {.val spotlight} or {.val caption}.",
-      call = call
-    )
-  }
-  invisible(NULL)
 }
 
 # Calls a layer entry point with the resolved elements as `this`, booting
@@ -257,7 +199,14 @@ annotate_call <- function(ctx, els, fn, options, what) {
     what
   )
   cdp_check_exception(res, what)
-  res$result$value
+  annotate_pump(ctx, res$result$value)
+}
+
+annotate_pump <- function(ctx, duration) {
+  if (annotate_recording(ctx$page) && is.numeric(duration) && duration > 0) {
+    pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
+  }
+  invisible(duration)
 }
 
 annotate_recording <- function(page) {

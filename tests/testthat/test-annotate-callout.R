@@ -174,6 +174,18 @@ test_that("multiple matches repeat text and number badges; ids share the registr
   expect_length(callout_state(page), 0)
 })
 
+test_that("callouts reject empty style strings", {
+  page <- callout_page()
+  expect_error(
+    pz_annotate_callout(page, "x", target = "#target", color = ""),
+    "color.*empty string"
+  )
+  expect_error(
+    pz_annotate_callout(page, "x", target = "#target", font_family = ""),
+    "font_family.*empty string"
+  )
+})
+
 test_that("callouts validate inputs and clamp long wrapped text", {
   page <- callout_page()
   expect_error(pz_annotate_callout(page, "", target = "#target"), "text")
@@ -191,6 +203,15 @@ test_that("callouts validate inputs and clamp long wrapped text", {
   )
   expect_error(
     pz_annotate_callout(page, "x", target = "#target", reveal = "bad"),
+    "reveal"
+  )
+  expect_error(
+    pz_annotate_callout(
+      page,
+      "x",
+      target = "#target",
+      reveal = c("fade", "draw", "pop", "slide", "wipe", "none")
+    ),
     "reveal"
   )
   expect_error(
