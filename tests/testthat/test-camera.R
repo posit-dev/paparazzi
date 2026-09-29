@@ -1,3 +1,33 @@
+test_that("camera shot includes a callout only with explicit annotated target box", {
+  skip_if_no_av()
+  page <- local_record_page()
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=shot style=\"position:absolute;left:220px;top:180px;width:80px;height:40px\"></div>')"
+  )
+  pz_stage(page, camera_follow = FALSE)
+  pz_stage_frame(page, "#shot", target_box = "annotated")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+  pz_annotate_callout(
+    page,
+    "Attached",
+    target = "#shot",
+    side = "right",
+    reveal = "none"
+  )
+  expect_error(pz_camera(page, "#shot", target_box = "all"), "annotated")
+  pz_camera(page, "#shot", pad = 0, duration = 0)
+  rec <- page_recorder(page)
+  expect_equal(rec$camera[[1]]$box, c(220, 180, 300, 220))
+  pz_camera(page, "#shot", pad = 0, duration = 0, target_box = "annotated")
+  expect_gt(rec$camera[[2]]$box[3], 300)
+  pz_camera(page, "#shot", pad = 0, duration = 0, target_box = "element")
+  expect_equal(rec$camera[[3]]$box, c(220, 180, 300, 220))
+  pz_record_stop(page)
+})
+
 test_that("live screencast scroll metadata matches captured content", {
   skip_if_no_av()
   testthat::skip_if_not_installed("png")

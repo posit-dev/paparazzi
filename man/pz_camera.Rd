@@ -4,7 +4,15 @@
 \alias{pz_camera}
 \title{Move the recording camera}
 \usage{
-pz_camera(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL)
+pz_camera(
+  ctx,
+  target = NULL,
+  ...,
+  zoom = NULL,
+  pad = NULL,
+  duration = NULL,
+  target_box = c("element", "annotated")
+)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -23,6 +31,10 @@ the target with padding, capped at the capture's pixel density.}
 
 \item{duration}{Movement duration in seconds. \code{NULL} chooses a duration
 based on the pan and zoom distance.}
+
+\item{target_box}{\code{"element"} measures just the shot target; \code{"annotated"}
+also includes its attached annotations. Defaults to \code{"element"} even
+when \code{\link[=pz_stage_frame]{pz_stage_frame()}} stages an annotated frame for stills.}
 }
 \value{
 \code{ctx}, invisibly.

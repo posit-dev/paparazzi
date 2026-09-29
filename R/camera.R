@@ -13,6 +13,9 @@
 #'   `c(top, right, bottom, left)`. Defaults to 24 pixels.
 #' @param duration Movement duration in seconds. `NULL` chooses a duration
 #'   based on the pan and zoom distance.
+#' @param target_box `"element"` measures just the shot target; `"annotated"`
+#'   also includes its attached annotations. Defaults to `"element"` even
+#'   when [pz_stage_frame()] stages an annotated frame for stills.
 #' @return `ctx`, invisibly.
 #' @export
 pz_camera <- function(
@@ -21,10 +24,12 @@ pz_camera <- function(
   ...,
   zoom = NULL,
   pad = NULL,
-  duration = NULL
+  duration = NULL,
+  target_box = c("element", "annotated")
 ) {
   check_context(ctx)
   check_dots_empty()
+  target_box <- arg_match(target_box)
   check_number_decimal(
     zoom,
     min = 0,
@@ -48,7 +53,7 @@ pz_camera <- function(
   if (is.null(rec) || !rec$active) {
     return(invisible(ctx))
   }
-  box <- frame_content_box(ctx, target, new_frame_spec())
+  box <- frame_content_box(ctx, target, new_frame_spec(target_box = target_box))
   box <- box + c(-pad[4], -pad[1], pad[2], pad[3])
   frame_region(box)
   geometry <- page_geometry(ctx)
