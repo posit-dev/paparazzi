@@ -5,7 +5,9 @@
 # ~10x faster, well within testthat's one-second parallel teardown grace.
 old_chrome_args <- chromote::get_chrome_args()
 chrome_profile <- file.path(tempdir(), "chrome-profile")
-chromote::set_chrome_args(chrome_profile_args(chrome_profile))
+chromote::set_chrome_args(
+  c(old_chrome_args, paste0("--user-data-dir=", chrome_profile))
+)
 
 withr::defer(
   {

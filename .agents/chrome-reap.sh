@@ -56,7 +56,7 @@ for worker in $workers; do
   echo "chrome-reap: orphaned test worker $worker ($cwd)"
   # R's tempdir(), from processx's supervisor FIFO: a SIGKILLed R can't
   # remove it, and the test Chrome profile lives there.
-  tmp=$(ps -o command= -p "$(pgrep -P "$worker" supervisor)" 2>/dev/null |
+  tmp=$(ps -o command= -p "$(pgrep -P "$worker" supervisor | head -n1)" 2>/dev/null |
     sed -n 's|.* -i \(.*/Rtmp[^/]*\)/supervisor_stdin.*|\1|p')
   # shellcheck disable=SC2046
   reap "$worker" $(descendants "$worker")
@@ -64,12 +64,15 @@ for worker in $workers; do
 done
 
 # A chromote Chrome whose R parent is gone; chromote puts its crash dumps in
-# the R session's tempdir().
+# that R session's tempdir(), which a SIGKILLed R can't remove.
 browsers=$(ps -axo pid=,ppid=,command= |
   awk '$2 == 1 && /--headless/ && /--remote-debugging-port=/ &&
     /--crash-dumps-dir=[^ ]*\/Rtmp[^ ]*\/chrome-/ { print $1 }')
 for browser in $browsers; do
   echo "chrome-reap: orphaned chromote Chrome $browser"
+  tmp=$(ps -o command= -p "$browser" 2>/dev/null |
+    sed -n 's|.*--crash-dumps-dir=\([^ ]*/Rtmp[^/]*\)/chrome-.*|\1|p')
   # shellcheck disable=SC2046
   reap "$browser" $(descendants "$browser")
+  [ -n "$tmp" ] && rm -rf "$tmp"
 done
