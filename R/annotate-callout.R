@@ -43,7 +43,7 @@ pz_annotate_callout <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  check_annotation_text(text)
+  check_string(text, allow_empty = FALSE)
   if (!is.null(side)) {
     side <- parse_direction(side, valid = STAGE_DIRECTIONS, arg = "side")
   }

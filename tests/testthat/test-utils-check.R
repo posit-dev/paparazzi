@@ -26,7 +26,7 @@ test_that("check_character aborts on NA", {
   expect_error(check_character(c("a", NA)), "can't be `NA`")
 })
 
-test_that("annotation label, text, id, and font size checkers retain contracts", {
+test_that("annotation label, id, and font size checkers retain contracts", {
   expect_null(check_annotation_label(NULL))
   expect_true(check_annotation_label(TRUE))
   expect_identical(check_annotation_label(7), "7")
@@ -34,14 +34,13 @@ test_that("annotation label, text, id, and font size checkers retain contracts",
   for (bad in list(FALSE, NA, NA_character_, c("a", "b"), list("a"))) {
     expect_error(check_annotation_label(bad), "label")
   }
-  expect_invisible(check_annotation_text(" "))
-  expect_error(check_annotation_text(""), "text.*empty string")
   expect_invisible(check_annotation_id(NULL))
   expect_error(check_annotation_id("spotlight"), "reserved|cannot be")
   expect_error(check_annotation_id("caption"), "cannot be")
   expect_invisible(check_annotation_id("caption", allow_reserved = TRUE))
   expect_invisible(check_annotation_id("spotlight", allow_reserved = TRUE))
-  expect_error(check_annotation_id("", allow_reserved = TRUE), "id.*nonempty")
+  expect_error(check_annotation_id("", allow_reserved = TRUE), "empty string")
+  expect_error(check_annotation_id(""), "empty string")
   expect_invisible(check_annotation_font_size(14))
   expect_error(
     check_annotation_font_size(0, arg = "font_size"),

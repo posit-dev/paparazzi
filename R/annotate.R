@@ -175,6 +175,26 @@ annotate_elements <- function(ctx, target, frame = caller_env()) {
   els
 }
 
+annotate_style <- function(
+  ctx,
+  color,
+  font_family,
+  font_size,
+  defaults = list(),
+  call = caller_env()
+) {
+  stage <- page_stage(ctx$page)
+  color <- color %||% defaults$color %||% stage$annotate_color
+  font_family <- font_family %||%
+    defaults$font_family %||%
+    stage$annotate_font_family
+  font_size <- font_size %||% defaults$font_size %||% stage$annotate_font_size
+  check_string(color, allow_empty = FALSE, call = call)
+  check_string(font_family, allow_empty = FALSE, call = call)
+  check_annotation_font_size(font_size, call = call)
+  list(color = color, font_family = font_family, font_size = font_size)
+}
+
 # Calls a layer entry point with the resolved elements as `this`, booting
 # the layer first if this document doesn't have one yet.
 annotate_call <- function(ctx, els, fn, options, what) {

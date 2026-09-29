@@ -30,7 +30,7 @@ pz_annotate_caption <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  check_annotation_text(text)
+  check_string(text, allow_empty = FALSE)
   side <- arg_match(side, c("bottom", "top"))
   style <- annotate_style(
     ctx,
