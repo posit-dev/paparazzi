@@ -39,8 +39,9 @@ when \code{\link[=pz_stage_frame]{pz_stage_frame()}} stages an annotated frame f
 
 \item{wait}{Whether to wait for the move to finish before the next step.
 \code{FALSE} (the default) lets the next step run while the camera moves,
-so a cursor glide can happen during a zoom. \code{\link[=pz_record_hold]{pz_record_hold()}} and
-\code{\link[=pz_record_stop]{pz_record_stop()}} always let a move finish first.}
+so a cursor glide can happen during a zoom. \code{\link[=pz_record_hold]{pz_record_hold()}},
+\code{\link[=pz_record_pause]{pz_record_pause()}} and \code{\link[=pz_record_stop]{pz_record_stop()}} always let a move finish
+first.}
 }
 \value{
 \code{ctx}, invisibly.

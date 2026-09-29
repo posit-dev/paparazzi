@@ -346,6 +346,7 @@ pz_record_pause <- function(ctx) {
   if (rec$paused) {
     return(invisible(ctx))
   }
+  camera_settle(ctx$page, rec)
   rec$vt_base <- rec_vt(rec)
   rec$paused <- TRUE
   invisible(ctx)

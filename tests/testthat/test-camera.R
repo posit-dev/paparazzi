@@ -755,10 +755,24 @@ test_that("camera moves wait only when asked; holds and stops let them land", {
   expect_length(pumped, 1)
   expect_gt(pumped, 4)
   expect_lte(pumped, 5)
+
+  pumped <- numeric()
+  testthat::with_mocked_bindings(
+    {
+      pz_camera(page, "#near", zoom = 2, duration = 5)
+      pz_record_pause(page)
+    },
+    pump_loop = function(loop, seconds) {
+      pumped <<- c(pumped, seconds)
+    }
+  )
+  expect_length(pumped, 1)
+  expect_gt(pumped, 4)
+  pz_record_resume(page)
   suppressWarnings(pz_record_stop(page))
 })
 
-test_that("follow tests an in-flight move's destination, not its position", {
+test_that("follow tests the shot when the action lands", {
   skip_if_no_av()
   html <- withr::local_tempfile(
     lines = '<!doctype html><style>body{margin:0}button{position:absolute;width:70px;height:50px}#near{left:90px;top:90px}#far{left:490px;top:290px}</style><button id="near">near</button><button id="far">far</button>',
@@ -770,11 +784,18 @@ test_that("follow tests an in-flight move's destination, not its position", {
   defer_record_stop(page)
   rec <- page_recorder(page)
   pz_camera(page, "#near", zoom = 2, duration = 0)
-  pz_camera(page, "#far", zoom = 2, duration = 2)
+  # Landing after the move ends: the move already frames the target.
+  pz_camera(page, "#far", zoom = 2, duration = 0.3)
   pz_hover(page, "#far")
   expect_length(rec$camera, 2)
+  # Landing early in a long move away from the target: follow.
+  pz_camera(page, "#near", zoom = 2, duration = 3)
+  pz_hover(page, "#far")
+  expect_length(rec$camera, 4)
+  expect_true(rec$camera[[4]]$follow)
+  # Landing early in a long move toward the target: leave it alone.
+  pz_camera(page, "#near", zoom = 2, duration = 3)
   pz_hover(page, "#near")
-  expect_length(rec$camera, 3)
-  expect_true(rec$camera[[3]]$follow)
+  expect_length(rec$camera, 5)
   suppressWarnings(pz_record_stop(page))
 })
