@@ -102,7 +102,7 @@ function(root) {
     const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
     layer.style.zoom = String(1 / zoom);
     for (const entry of entries.values()) {
-      if (entry.spotlight) {
+      if (entry.kind === 'spotlight') {
         const svg = entry.nodes[0];
         const mask = svg.querySelector('mask');
         const vw = window.innerWidth, vh = window.innerHeight;
@@ -150,27 +150,27 @@ function(root) {
       entry.elements.forEach((el, i) => {
         const box = entry.nodes[i];
         if (!el.isConnected || !el.getClientRects().length) {
-          if (!entry.redact) box.style.display = 'none';
+          if (entry.kind !== 'redact') box.style.display = 'none';
           return;
         }
         const r = el.getBoundingClientRect();
         box.style.display = '';
-        if (entry.callout) {
+        if (entry.kind === 'callout') {
           positionCallout(entry, i, r);
           return;
         }
         const p = entry.pad;
         box.style.left = (r.left - p[3]) + 'px';
         box.style.top = (r.top - p[0]) + 'px';
-        box.style.width = Math.max(0, r.width + p[1] + p[3]) + 'px';
         const w = Math.max(0, r.width + p[1] + p[3]);
+        box.style.width = w + 'px';
         const h = Math.max(0, r.height + p[0] + p[2]);
         box.style.height = h + 'px';
-        if (entry.type === 'circle' || (entry.type === 'box' && entry.reveal === 'draw')) {
+        if (entry.kind === 'circle' || (entry.kind === 'box' && entry.reveal === 'draw')) {
           const svg = box.querySelector('svg');
           const path = svg.firstChild;
           svg.setAttribute('viewBox', `0 0 ${Math.max(w, 1)} ${Math.max(h, 1)}`);
-          if (entry.type === 'circle') {
+          if (entry.kind === 'circle') {
             path.setAttribute('cx', w / 2);
             path.setAttribute('cy', h / 2);
             path.setAttribute('rx', Math.max(0, (w - 3) / 2));
@@ -206,6 +206,43 @@ function(root) {
     }
     return animate ? durations[entry.reveal] : 0;
   };
+  const register = (id, entry, nodes, opts) => {
+    if (id === null) {
+      do { id = '__pz_auto_' + (++next); } while (entries.has(id));
+    }
+    remove(id, false);
+    nodes.forEach(node => layer.appendChild(node));
+    entry.nodes = nodes;
+    if (entry.kind === 'callout') measureCallout(entry, opts);
+    entries.set(id, entry);
+    sync();
+    if (opts.animate && durations[entry.reveal]) {
+      nodes.forEach(node => start(node, entry.reveal, true,
+        node.querySelector('.pz-shape')));
+    }
+    if (frame === null) frame = requestAnimationFrame(tick);
+    return {id, duration:opts.animate ? durations[entry.reveal] : 0};
+  };
+  const measureCallout = (entry, opts) => {
+    // Width constraints are fixed at draw; resizing the viewport does not rewrap text.
+    entry.places = entry.nodes.map((node, i) => {
+      const bubble = node.querySelector('.pz-bubble');
+      const width = bubble.offsetWidth, height = bubble.offsetHeight;
+      node.style.width = width + 'px';
+      node.style.height = height + 'px';
+      let side = opts.side;
+      if (side === null) {
+        const r = entry.elements[i].getBoundingClientRect();
+        const room = [r.top, innerWidth - r.right, innerHeight - r.bottom, r.left];
+        const need = [height, width, height, width];
+        const fits = room.map((n, j) => n >= need[j] + 8);
+        const indices = fits.some(Boolean) ? [0, 1, 2, 3].filter(j => fits[j]) : [0, 1, 2, 3];
+        const best = indices.reduce((a, b) => room[b] > room[a] ? b : a);
+        side = [['top'], ['right'], ['bottom'], ['left']][best];
+      }
+      return {width, height, side};
+    });
+  };
   layer.pz = {
     sync,
     paintedRects(elements) {
@@ -222,11 +259,11 @@ function(root) {
         ];
       };
       for (const entry of entries.values()) {
-        if (entry.redact) continue;
+        if (entry.kind === 'redact') continue;
         entry.elements.forEach((el, i) => {
           if (!el.isConnected || !el.getClientRects().length ||
               !elements.some(target => target === el || target.contains(el))) return;
-          if (entry.spotlight) {
+          if (entry.kind === 'spotlight') {
             const hole = entry.holes[i];
             if (hole.style.display === 'none') return;
             const svg = entry.nodes[0];
@@ -243,7 +280,7 @@ function(root) {
           }
           const node = entry.nodes[i];
           if (node.style.display === 'none' || getComputedStyle(node).visibility !== 'visible') return;
-          if (entry.callout) {
+          if (entry.kind === 'callout') {
             include(node.querySelector('.pz-bubble').getBoundingClientRect());
             const svg = node.querySelector('svg');
             if (svg && svg.style.display !== 'none') {
@@ -263,7 +300,6 @@ function(root) {
       return union;
     },
     spotlight: (elements, opts) => {
-      remove('spotlight', false);
       const svg = document.createElementNS(svgNS, 'svg');
       svg.classList.add('pz-spotlight');
       svg.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;z-index:-1;overflow:visible;';
@@ -292,13 +328,8 @@ function(root) {
       cover.setAttribute('fill-opacity', opts.dim);
       cover.setAttribute('mask', `url(#${maskId})`);
       svg.appendChild(cover);
-      layer.appendChild(svg);
-      entries.set('spotlight', {elements:[...elements], nodes:[svg], holes,
-                               pad:opts.pad, reveal:opts.reveal, spotlight:true});
-      sync();
-      if (opts.animate && durations[opts.reveal]) start(svg, opts.reveal, true, null);
-      if (frame === null) frame = requestAnimationFrame(tick);
-      return opts.animate ? durations[opts.reveal] : 0;
+      return register('spotlight', {elements:[...elements], holes,
+        pad:opts.pad, reveal:opts.reveal, kind:'spotlight'}, [svg], opts).duration;
     },
     clear: ({id, animate}) => {
       let duration = 0;
@@ -308,11 +339,6 @@ function(root) {
       return duration;
     },
     draw: (elements, opts) => {
-      let id = opts.id;
-      if (id === null) {
-        do { id = '__pz_auto_' + (++next); } while (entries.has(id));
-      }
-      remove(id, false);
       const nodes = elements.map((el, i) => {
         const box = document.createElement('div');
         box.className = 'pz-annotation';
@@ -356,25 +382,12 @@ function(root) {
           badge.style.fontSize = opts.fontSize + 'px';
           box.appendChild(badge);
         }
-        layer.appendChild(box);
         return box;
       });
-      entries.set(id, {elements:[...elements], nodes, pad:opts.pad,
-                       reveal:opts.reveal, type:opts.type});
-      sync();
-      if (opts.animate && durations[opts.reveal]) {
-        nodes.forEach(node => start(node, opts.reveal, true,
-          node.querySelector('.pz-shape')));
-      }
-      if (frame === null) frame = requestAnimationFrame(tick);
-      return opts.animate ? durations[opts.reveal] : 0;
+      return register(opts.id, {elements:[...elements], pad:opts.pad,
+        reveal:opts.reveal, kind:opts.type}, nodes, opts).duration;
     },
     callout: (elements, opts) => {
-      let id = opts.id;
-      if (id === null) {
-        do { id = '__pz_auto_' + (++next); } while (entries.has(id));
-      }
-      remove(id, false);
       const nodes = elements.map((el, i) => {
         const box = document.createElement('div');
         box.className = 'pz-callout';
@@ -414,36 +427,10 @@ function(root) {
           badge.style.fontSize = opts.fontSize + 'px';
           box.appendChild(badge);
         }
-        layer.appendChild(box);
         return box;
       });
-      // Width constraints are fixed at draw; resizing the viewport does not rewrap text.
-      const places = nodes.map((node, i) => {
-        const bubble = node.querySelector('.pz-bubble');
-        const width = bubble.offsetWidth, height = bubble.offsetHeight;
-        node.style.width = width + 'px';
-        node.style.height = height + 'px';
-        let side = opts.side;
-        if (side === null) {
-          const r = elements[i].getBoundingClientRect();
-          const room = [r.top, innerWidth - r.right, innerHeight - r.bottom, r.left];
-          const need = [height, width, height, width];
-          const fits = room.map((n, j) => n >= need[j] + 8);
-          const indices = fits.some(Boolean) ? [0, 1, 2, 3].filter(j => fits[j]) : [0, 1, 2, 3];
-          const best = indices.reduce((a, b) => room[b] > room[a] ? b : a);
-          side = [['top'], ['right'], ['bottom'], ['left']][best];
-        }
-        return {width, height, side};
-      });
-      entries.set(id, {elements:[...elements], nodes, places, callout:true,
-                       arrow:opts.arrow, reveal:opts.reveal});
-      sync();
-      if (opts.animate && durations[opts.reveal]) {
-        nodes.forEach(node => start(node, opts.reveal, true,
-          node.querySelector('.pz-shape')));
-      }
-      if (frame === null) frame = requestAnimationFrame(tick);
-      return opts.animate ? durations[opts.reveal] : 0;
+      return register(opts.id, {elements:[...elements], kind:'callout',
+        arrow:opts.arrow, reveal:opts.reveal}, nodes, opts).duration;
     },
     redact: (elements, opts) => {
       for (const el of elements) {
@@ -459,11 +446,6 @@ function(root) {
           throw new Error('Redaction needs a box with nonzero width and height.');
         }
       }
-      let id = opts.id;
-      if (id === null) {
-        do { id = '__pz_auto_' + (++next); } while (entries.has(id));
-      }
-      remove(id, false);
       const nodes = elements.map(() => {
         const box = document.createElement('div');
         box.className = 'pz-redaction';
@@ -479,13 +461,10 @@ function(root) {
             box.appendChild(tint);
           }
         }
-        layer.appendChild(box);
         return box;
       });
-      entries.set(id, {elements:[...elements], nodes, pad:opts.pad, reveal:'none', redact:true});
-      sync();
-      if (frame === null) frame = requestAnimationFrame(tick);
-      return id;
+      return register(opts.id, {elements:[...elements], pad:opts.pad,
+        reveal:'none', kind:'redact'}, nodes, opts).id;
     }
   };
   return layer;
