@@ -52,6 +52,15 @@ Opens a URL, local file, Shiny app, or existing
 \link[chromote:ChromoteSession]{chromote::ChromoteSession} as a paparazzi page: the root context that
 starts every \verb{|>} chain.
 }
+\section{Browser}{
+
+\code{pz_open()} opens pages in chromote's default browser
+(\code{\link[chromote:default_chromote_object]{chromote::default_chromote_object()}}) and starts it if none is running.
+A browser paparazzi starts keeps its profile in \code{\link[=tempdir]{tempdir()}}, so the
+profile is removed when R exits. A default set with
+\code{\link[chromote:set_default_chromote_object]{chromote::set_default_chromote_object()}} is used as-is.
+}
+
 \examples{
 \dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
 # A local HTML file opens as a file:// URL

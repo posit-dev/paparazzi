@@ -30,6 +30,13 @@
 #'
 #' @return A `PaparazziPage` (the root context).
 #'
+#' @section Browser:
+#' `pz_open()` opens pages in chromote's default browser
+#' ([chromote::default_chromote_object()]) and starts it if none is running.
+#' A browser paparazzi starts keeps its profile in [tempdir()], so the
+#' profile is removed when R exits. A default set with
+#' [chromote::set_default_chromote_object()] is used as-is.
+#'
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
 #' # A local HTML file opens as a file:// URL
 #' page <- pz_open(pz_example("tasks"))
@@ -98,6 +105,7 @@ pz_open <- function(
     url <- open_target_url(x)
   }
   wait <- open_wait_mode(wait, is_app)
+  open_default_browser()
   session <- chromote::ChromoteSession$new()
   page <- PaparazziPage$new(
     session = session,
@@ -240,6 +248,30 @@ pz_local_page <- function(x, ..., .env = caller_env()) {
   page <- if (is_pz_page(x)) x else pz_open(x, ...)
   withr::defer(pz_close(page), envir = .env)
   page
+}
+
+# Chrome deletes its default headless profile (a scoped_dir* under the user's
+# Chrome-headless directory) only on a graceful Browser.close, so a browser
+# that exits any other way leaks it. A profile under tempdir() goes away with
+# the R session. Checked on every open because chromote's
+# default_chromote_object() would silently replace a dead default without
+# the profile. Remove once chromote passes its own --user-data-dir
+# (rstudio/chromote#239).
+open_default_browser <- function() {
+  if (chromote::has_default_chromote_object()) {
+    return(invisible())
+  }
+  # Explicit args, not set_chrome_args(): a global --user-data-dir would be
+  # reused by any later Chromote$new(), and Chrome allows one browser per
+  # profile.
+  args <- chromote::get_chrome_args()
+  if (!any(startsWith(args, "--user-data-dir"))) {
+    profile <- tempfile("chrome-profile-")
+    args <- c(args, paste0("--user-data-dir=", profile))
+  }
+  browser <- chromote::Chromote$new(browser = chromote::Chrome$new(args = args))
+  chromote::set_default_chromote_object(browser)
+  invisible()
 }
 
 open_wait_mode <- function(wait, is_shiny_app) {

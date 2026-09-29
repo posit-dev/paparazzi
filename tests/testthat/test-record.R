@@ -338,7 +338,6 @@ test_that("named video resolves from final Quarto HTML", {
       "```{r}",
       "#| echo: false",
       sprintf("pkgload::load_all(%s, quiet = TRUE)", deparse(package_root)),
-      chrome_profile_code(file.path(dir, "chrome-profile")),
       sprintf("page <- pz_open(%s)", deparse(fixture)),
       sprintf(
         'pz_record(page, %s, { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
