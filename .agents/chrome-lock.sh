@@ -18,4 +18,7 @@ until mkdir "$LOCK" 2>/dev/null; do
 done
 echo "$$ $PWD $*" > "$LOCK/owner"
 trap 'rm -rf "$LOCK"' EXIT
+# Holding the lock, no locked run is live: any paparazzi test worker or
+# chromote Chrome reparented to init belongs to a killed earlier run.
+"$(dirname "$0")/chrome-reap.sh"
 "$@"
