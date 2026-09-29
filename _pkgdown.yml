@@ -108,7 +108,7 @@ reference:
 
   - title: Annotations
     desc: >
-      Mark page elements in screenshots and recordings.
+      Mark page elements and add screen-space captions to screenshots and recordings.
     contents:
       - pz_annotate
       - pz_annotate_redact
