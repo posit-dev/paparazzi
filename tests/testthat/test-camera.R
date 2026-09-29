@@ -546,3 +546,89 @@ test_that("selection and focused typing follow without a pointer glide", {
   expect_true(rec$camera[[6]]$follow)
   suppressWarnings(pz_record_stop(page))
 })
+
+test_that("paused follow, manual camera, and reset moves are instant without pumping", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}button{position:absolute;width:70px;height:50px}#near{left:90px;top:90px}#far{left:490px;top:290px}</style><button id="near">near</button><button id="far">far</button>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  pz_stage(page, cursor = FALSE)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_record_pause(page)
+  frozen <- rec_vt(rec)
+  pumped <- numeric()
+  testthat::with_mocked_bindings(
+    {
+      pz_hover(page, "#far")
+      pz_camera(page, "#near", duration = 0.8)
+      pz_camera_reset(page)
+    },
+    pump_loop = function(loop, seconds) {
+      pumped <<- c(pumped, seconds)
+    }
+  )
+  expect_length(rec$camera, 4)
+  expect_true(rec$camera[[2]]$follow)
+  for (move in rec$camera[2:4]) {
+    expect_equal(move$start, frozen)
+    expect_equal(move$end, frozen)
+  }
+  expect_length(pumped, 0)
+  pz_record_resume(page)
+  expect_equal(rec$camera[[4]]$end, frozen)
+  suppressWarnings(pz_record_stop(page))
+})
+
+test_that("a move after scroll starts from the clamped crop", {
+  home <- c(0, 0, 800, 600)
+  scroll <- c(0, 500)
+  a <- list(
+    start = 0,
+    end = 0,
+    box = c(50, 40, 250, 190),
+    zoom = 2,
+    reset = FALSE,
+    scroll = c(0, 0)
+  )
+  actual <- camera_viewport(
+    as.numeric(camera_at(list(a), 1, home, 2)),
+    scroll,
+    home
+  ) +
+    rep(scroll, 2)
+  b <- list(
+    start = 2,
+    end = 4,
+    box = c(600, 1000, 650, 1050),
+    zoom = 2,
+    reset = FALSE,
+    scroll = scroll,
+    from = actual
+  )
+  at_start <- camera_at(list(a, b), 2, home, 2)
+  expect_equal(as.numeric(at_start), actual)
+  expect_equal(camera_viewport(at_start, scroll, home), actual - rep(scroll, 2))
+  without_from <- b
+  without_from$from <- NULL
+  expect_false(isTRUE(all.equal(
+    as.numeric(camera_at(list(a, without_from), 2, home, 2)),
+    actual
+  )))
+  at_first_motion <- camera_viewport(
+    camera_at(list(a, b), 2.5, home, 2),
+    scroll,
+    home
+  )
+  old_first_motion <- camera_viewport(
+    camera_at(list(a, without_from), 2.5, home, 2),
+    scroll,
+    home
+  )
+  expect_gt(at_first_motion[2], 0)
+  expect_equal(old_first_motion[2], 0)
+})

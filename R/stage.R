@@ -329,7 +329,9 @@ stage_follow_without_glide <- function(ctx, rect) {
   if (is.null(rect) || !camera_follow_move(ctx, rect, 0.5)) {
     return(invisible(ctx))
   }
-  pump_loop(ctx$page$child_loop, 0.5)
+  if (!page_recorder(ctx$page)$paused) {
+    pump_loop(ctx$page$child_loop, 0.5)
+  }
   invisible(ctx)
 }
 

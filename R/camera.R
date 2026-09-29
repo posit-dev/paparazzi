@@ -95,10 +95,13 @@ camera_move <- function(
   scroll <- page_geometry(ctx)
   scroll <- c(scroll$scroll_x, scroll$scroll_y)
   from <- camera_at(rec$camera, now, home, density)
-  if (isTRUE(attr(from, "reset"))) {
-    from <- home + rep(scroll, 2)
-  }
-  from <- as.numeric(from)
+  from <- camera_viewport(
+    as.numeric(from),
+    scroll,
+    home,
+    reset = isTRUE(attr(from, "reset"))
+  ) +
+    rep(scroll, 2)
   to <- if (reset) {
     home + rep(scroll, 2)
   } else {
@@ -107,13 +110,15 @@ camera_move <- function(
   if (is.null(duration)) {
     duration <- camera_duration(from, to, home)
   }
+  duration <- camera_effective_duration(rec, duration)
   rec$camera[[length(rec$camera) + 1L]] <- list(
     start = now,
     end = now + duration,
     box = box,
     zoom = zoom,
     reset = reset,
-    scroll = scroll
+    scroll = scroll,
+    from = from
   )
   if (duration > 0) {
     pump_loop(ctx$page$child_loop, duration)
@@ -155,14 +160,19 @@ camera_follow_move <- function(ctx, rect, duration) {
   # against the final home, like automatic durations in manual moves.
   rec$camera[[length(rec$camera) + 1L]] <- list(
     start = now,
-    end = now + duration,
+    end = now + camera_effective_duration(rec, duration),
     box = shot,
     zoom = (home[3] - home[1]) / (shot[3] - shot[1]),
     reset = FALSE,
     scroll = scroll,
+    from = current,
     follow = TRUE
   )
   TRUE
+}
+
+camera_effective_duration <- function(rec, duration) {
+  if (rec$paused) 0 else duration
 }
 
 camera_follow_shot <- function(current, target, home, scroll) {
@@ -291,6 +301,9 @@ camera_at <- function(moves, time, home, density) {
       }
     } else {
       current <- home + rep(move$scroll, 2)
+    }
+    if (!is.null(move$from)) {
+      current <- move$from
     }
     to <- if (move$reset) {
       home + rep(move$scroll, 2)
