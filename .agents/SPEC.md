@@ -440,6 +440,7 @@ Pointer actions while recording:
 1. Cursor visible: glide from its position to the target, pause briefly, act.
 2. Cursor never shown: fade in on the target with a slightly longer pause (default), or with `enter = <side>` start off-frame on that side and glide in.
 3. After `pz_cursor_leave()` the cursor is still visible but off-frame; the next action glides back in from there.
+4. After a recorded `pz_type()` with a target, the cursor **rests**: it fades out in place so it doesn't cover the typed text, but it isn't hidden the way `pz_cursor_hide()` hides it. The next move glides from the resting point and fades in as it starts. Only a move ends a rest; presses and staging redraws leave it undrawn, and a navigation re-injects it undrawn. `pz_inspect()` reports `cursor resting`.
 
 Movement and look:
 

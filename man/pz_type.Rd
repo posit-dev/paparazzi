@@ -34,8 +34,10 @@ typing into a page with no focused field.
 Insertion is instant (one \code{insertText}), except while recording
 with \code{typing = "natural"} (the default; see \code{\link[=pz_stage]{pz_stage()}}): one
 \code{insertText} per character with randomized delays around
-\code{typing_speed}, so the video shows the text appearing. For a
-value-setting primitive that works on selects, checkboxes, and range
+\code{typing_speed}, so the video shows the text appearing. While
+recording, the cursor that clicked the field fades out so it doesn't
+cover the text, and fades back in when the next action moves it. For
+a value-setting primitive that works on selects, checkboxes, and range
 inputs, see \code{\link[=pz_set_value]{pz_set_value()}}.
 }
 \examples{

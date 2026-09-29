@@ -120,8 +120,10 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #' Insertion is instant (one `insertText`), except while recording
 #' with `typing = "natural"` (the default; see [pz_stage()]): one
 #' `insertText` per character with randomized delays around
-#' `typing_speed`, so the video shows the text appearing. For a
-#' value-setting primitive that works on selects, checkboxes, and range
+#' `typing_speed`, so the video shows the text appearing. While
+#' recording, the cursor that clicked the field fades out so it doesn't
+#' cover the text, and fades back in when the next action moves it. For
+#' a value-setting primitive that works on selects, checkboxes, and range
 #' inputs, see [pz_set_value()].
 #'
 #' @inheritParams pz_click
@@ -197,6 +199,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
   # Focus comes from the real click pipeline (not JS .focus()) so
   # pointer state stays real.
   dispatch_click(ctx, "typing into", found$els$description, point)
+  cursor_rest(ctx)
   insert_text(ctx, found$els$description, text)
   stage_action_pause(ctx)
   ctx_return(ctx)

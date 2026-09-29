@@ -1021,3 +1021,60 @@ test_that("entry and landing can schedule three distinct icon layers", {
   expect_identical(page_cursor(page)$icon, "pointer")
   page |> pz_record_stop()
 })
+
+test_that("recorded typing rests the cursor until the next move", {
+  skip_if_not_installed("av")
+  page <- local_cursor_page()
+  pz_stage(page, typing = "instant", pause = 0)
+  line <- function(page) {
+    out <- capture.output(print(page))
+    grep("Recording", out, value = TRUE)
+  }
+
+  # Not recording: typing leaves a shown cursor alone.
+  page |> pz_cursor_show() |> pz_type("a", target = "#name")
+  expect_equal(cursor_overlay_state(page)[[1]], 1)
+  expect_false(page_cursor(page)$resting)
+
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  page |> pz_type("b", target = "#name")
+  st <- cursor_overlay_state(page)
+  expect_equal(st[[1]], 0)
+  expect_true(page_cursor(page)$resting)
+  expect_match(line(page), "on · cursor resting")
+
+  # The next pointer action glides from where it rested, fading in.
+  commands <- list()
+  testthat::with_mocked_bindings(
+    page |> pz_click("#btn"),
+    cursor_command = function(ctx, state) {
+      if (!isTRUE(state$resolveOnly)) {
+        commands[[length(commands) + 1L]] <<- state
+      }
+      "pointer"
+    }
+  )
+  glide <- commands[[1]]
+  expect_true(glide$visible)
+  expect_null(glide$from)
+  expect_false(glide$fade)
+  expect_gt(glide$duration, 0)
+  expect_false(page_cursor(page)$resting)
+
+  # A shown cursor resting at stop is drawn again for stills.
+  page |> pz_cursor_show() |> pz_type("d", target = "#name")
+  expect_true(page_cursor(page)$resting)
+  pz_record_stop(page)
+  expect_false(page_cursor(page)$resting)
+  expect_equal(cursor_overlay_state(page)[[1]], 1)
+  page |> pz_nav_reload()
+  expect_equal(cursor_overlay_state(page)[[1]], 1)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+
+  # An explicit hide is not a rest, and typing doesn't bring it back.
+  page |> pz_cursor_hide() |> pz_type("c", target = "#name")
+  expect_false(page_cursor(page)$resting)
+  expect_match(line(page), "on · cursor hidden")
+  pz_record_stop(page)
+})

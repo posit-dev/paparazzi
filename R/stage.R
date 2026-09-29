@@ -235,7 +235,7 @@ pz_stage <- function(
     if (!is.null(cur) && !is.null(cur$x)) {
       cursor_draw(ctx, visible = FALSE)
     }
-  } else if (isTRUE(stage$cursor) && cursor_visible(page)) {
+  } else if (isTRUE(stage$cursor) && cursor_drawn(page)) {
     point <- cursor_current_point(ctx)
     if (is.null(cur) || is.null(cur$x)) {
       cursor_apply(ctx, point)
@@ -246,7 +246,7 @@ pz_stage <- function(
     !missing(cursor_scale) &&
       !is.null(cur) &&
       !is.null(cur$x) &&
-      cursor_visible(page)
+      cursor_drawn(page)
   ) {
     cursor_draw(ctx, visible = TRUE)
   }
@@ -798,6 +798,14 @@ stage_record_stopped <- function(ctx) {
       !is.null(cur$x)
   ) {
     cursor_draw(ctx, visible = FALSE)
+  } else if (isTRUE(cur$resting)) {
+    # A rest is a recording effect; a cursor that stays for stills is
+    # drawn again (cleared first so the navigation script draws it too).
+    cur$resting <- FALSE
+    cursor_draw(ctx, visible = cursor_visible(page))
+  }
+  if (!is.null(cur)) {
+    cur$resting <- FALSE
   }
   ctx_return(ctx)
 }
