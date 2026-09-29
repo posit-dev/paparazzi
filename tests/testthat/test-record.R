@@ -1,3 +1,51 @@
+test_that("recording rejects explicit annotated home but uses staged element home", {
+  skip_if_no_av()
+  page <- local_record_page()
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=home style=\"position:absolute;left:200px;top:120px;width:100px;height:60px\"></div>')"
+  )
+  pz_annotate_callout(
+    page,
+    "Outside",
+    target = "#home",
+    side = "right",
+    reveal = "none"
+  )
+  out <- withr::local_tempfile(fileext = ".mp4")
+  for (when in c("start", "stop")) {
+    expect_error(
+      pz_record_start(
+        page,
+        out,
+        frame = pz_frame("#home", when = when, target_box = "annotated")
+      ),
+      "home|recording"
+    )
+    expect_null(page_recorder(page))
+  }
+  pz_stage_frame(page, "#home", target_box = "annotated")
+  expect_error(
+    pz_record_start(page, out, frame = page_frame(page)),
+    "home|recording"
+  )
+  expect_null(page_recorder(page))
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  expect_identical(rec$frame$target_box, "element")
+  expect_identical(page_frame(page)$target_box, "annotated")
+  expect_equal(
+    unlist(record_crop_box(page, rec$frame)[c("x", "y")]),
+    c(x = 200, y = 120)
+  )
+  pz_record_stop(page)
+  expect_equal(
+    unlist(rec$crop[c("x", "y", "width", "height")]),
+    c(x = 200, y = 120, width = 100, height = 60)
+  )
+})
+
 test_that("pz_record_start/stop record an mp4 with first/last holds", {
   page <- local_record_page()
   skip_if_no_av()

@@ -34,7 +34,9 @@ by visual changes. See \emph{Choosing a capture method} for tradeoffs.}
 \item{frame}{Area to show in the finished recording: \code{NULL} uses
 the page default set with \code{\link[=pz_stage_frame]{pz_stage_frame()}}, if any, or shows the
 full viewport; a \code{\link[=pz_frame]{pz_frame()}} spec replaces that default;
-\code{FALSE} ignores it.}
+\code{FALSE} ignores it. An explicit frame with
+\code{target_box = "annotated"} is invalid for the home frame. A staged
+annotated frame silently measures element boxes only for recording.}
 
 \item{fps}{Frames per second in the finished recording. Poll aims
 to capture at this rate; screencast capture depends on visual

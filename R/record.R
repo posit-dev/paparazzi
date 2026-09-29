@@ -64,7 +64,9 @@
 #' @param frame Area to show in the finished recording: `NULL` uses
 #'   the page default set with [pz_stage_frame()], if any, or shows the
 #'   full viewport; a [pz_frame()] spec replaces that default;
-#'   `FALSE` ignores it.
+#'   `FALSE` ignores it. An explicit frame with
+#'   `target_box = "annotated"` is invalid for the home frame. A staged
+#'   annotated frame silently measures element boxes only for recording.
 #' @param fps Frames per second in the finished recording. Poll aims
 #'   to capture at this rate; screencast capture depends on visual
 #'   changes.
@@ -127,7 +129,17 @@ pz_record_start <- function(
   if (identical(format, "gif") && captions != "burn") {
     cli::cli_abort("WebVTT sidecars need an MP4 or WebM recording.")
   }
+  staged_frame <- is.null(frame)
   frame <- frame_effective(ctx, frame)
+  if (inherits(frame, "paparazzi_frame") && frame$target_box == "annotated") {
+    if (staged_frame) {
+      frame$target_box <- "element"
+    } else {
+      cli::cli_abort(
+        "The recording's home {.arg frame} cannot use {.code target_box = 'annotated'}; use {.code target_box = 'element'} for the home frame."
+      )
+    }
+  }
   record_check_packages(
     format,
     needs_crop = inherits(frame, "paparazzi_frame"),
