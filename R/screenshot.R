@@ -154,7 +154,7 @@ print.paparazzi_preview <- function(x, ...) {
 preview_stage <- function(path) {
   video <- tolower(tools::file_ext(path)) %in% c("mp4", "webm")
   temp <- normalizePath(tempdir())
-  if (!video && startsWith(normalizePath(path), temp)) {
+  if (!video && startsWith(normalizePath(path), paste0(temp, "/"))) {
     return(path)
   }
   dir <- tempfile("paparazzi-preview-")

@@ -155,7 +155,8 @@ pz_open <- function(
 #' app running. Idempotent; closing an already-closed page is a no-op.
 #'
 #' @param page A `PaparazziPage` from [pz_open()], or any context on it
-#'   (such as the end of a chain).
+#'   (such as the end of a chain). A chain from [pz_record_start()] whose
+#'   recording is still running stops and writes it first.
 #'
 #' @return The page, invisibly.
 #'
@@ -169,6 +170,9 @@ pz_open <- function(
 #' @export
 pz_close <- function(page) {
   if (inherits(page, "PaparazziContext")) {
+    if (ctx_recording(page)) {
+      pz_record_stop(page)
+    }
     page <- page$page
   }
   check_page(page)

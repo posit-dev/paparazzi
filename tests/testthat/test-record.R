@@ -485,6 +485,9 @@ test_that("recording chains return visibly until their recording stops", {
   chain <- pz_record_start(page, nav, fps = 5, hold = c(0, 0)) |>
     pz_nav_reload()
   expect_true(withVisible(pz_nav_reload(chain, wait = "none"))$visible)
+  expect_true(
+    withVisible(pz_wait_for_navigation(chain, wait = "none"))$visible
+  )
   print(chain)
   expect_true(file.exists(nav))
   expect_null(page_recorder(page))
@@ -543,6 +546,11 @@ test_that("previews stage files the viewer can't serve", {
   staged <- preview_stage(outside)
   expect_true(startsWith(normalizePath(staged), normalizePath(tempdir())))
   expect_equal(basename(staged), "outside.gif")
+
+  sibling <- paste0(normalizePath(tempdir()), "-sibling.gif")
+  writeBin(charToRaw("gif"), sibling)
+  withr::defer(unlink(sibling))
+  expect_false(identical(preview_stage(sibling), sibling))
 
   video <- file.path(dir, "clip.mp4")
   writeBin(charToRaw("mp4"), video)

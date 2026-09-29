@@ -363,7 +363,7 @@ pz_wait_for_navigation <- function(
   timeout <- resolve_timeout(timeout, ctx$page)
 
   if (identical(wait, "none")) {
-    return(invisible(wait_nav_reset(ctx)))
+    return(ctx_return(wait_nav_reset(ctx)))
   }
   # The load and settle phases each get the full timeout, like
   # wait_for_stable's resolve and stability windows. The snapshot
