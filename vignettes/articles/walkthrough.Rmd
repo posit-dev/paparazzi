@@ -26,12 +26,18 @@ page |> pz_stage(enter = "top", pause = 0.2, camera_follow = TRUE)
 We want the viewer to see both the form and the result. `pz_record()` captures the actions between its braces and stops the recording at the end. `pz_frame()` chooses the area the finished video shows; the camera can move *inside* that area while recording, without scrolling or zooming the live page. Here we start with the task-tracker card and fit the title field in the shot before typing.
 
 ```{r part-add}
+out_file <- withr::local_tempfile(fileext = ".mp4")
+
 page |>
-  pz_record(file.path(tempdir(), "walkthrough-add.mp4"), {
+  pz_record(out_file, {
     page |>
       pz_annotate_caption("Add a task for the release") |>
+      pz_cursor_move("#task-title") |>
+      pz_click("#task-title") |>
       pz_camera("#task-title") |>
+      pz_cursor_hide() |>
       pz_type("Prepare release notes", target = "#task-title") |>
+      pz_cursor_show() |>
       pz_click("#add-task") |>
       pz_expect_text("Prepare release notes", target = pz_loc(".task-title", which = "first")) |>
       pz_camera_reset() |>
