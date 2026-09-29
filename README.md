@@ -7,19 +7,23 @@
 
 <!-- badges: end -->
 
-paparazzi drives a real Chrome browser from R, one pipe at a time. You
-open a page, find elements, click and type, check what the page shows,
-and take screenshots or screen recordings along the way. It’s built on
-[chromote](https://rstudio.github.io/chromote/) and works with any web
-page, including Shiny apps.
+**Polished demo videos and screenshots of anything that runs in a
+browser, written as R scripts.**
 
-Use paparazzi to:
+<img src="man/figures/README-hero-1.gif" alt="A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Check it off when you're done, the cursor clicks the task's Done button and the task is crossed out."  />
 
-- generate the screenshots and demo videos in your docs, slides, and
-  blog posts from a script, so they’re easy to redo when the page
-  changes;
-- write browser tests that use a page the way a person would;
-- see how a page looks on a phone, in dark mode, or zoomed in.
+That video came from the short R script shown below. paparazzi opened
+the page in a headless Chrome browser and did what the script said. The
+cursor glides to each control, text is typed one character at a time,
+and the camera zooms in on the form and pulls back to show the result.
+Captions and highlights appear on cue. There’s no screen recorder
+involved, and no timeline to edit afterward.
+
+Because the video is a script, you never have to record a second take.
+When the app changes, rerun the script and you get the same demo of the
+new version. paparazzi works with any page Chrome can open, including
+Shiny apps, Quarto documents and slides, pkgdown sites, and live
+websites.
 
 ## Installation
 
@@ -31,106 +35,200 @@ pak::pak("posit-dev/paparazzi")
 ```
 
 paparazzi controls Chrome (or another Chromium-based browser) through
-chromote, so you’ll need one installed. If chromote can’t find it, see
-`?chromote::find_chrome`. Recording MP4 or WebM videos needs the
+[chromote](https://rstudio.github.io/chromote/), so you’ll need one
+installed. If chromote can’t find it, see `?chromote::find_chrome`.
+Recording MP4 or WebM videos needs the
 [av](https://docs.ropensci.org/av/) package. GIFs need
 [gifski](https://r-rust.github.io/gifski/) instead, plus
 [png](https://cran.r-project.org/package=png) if you crop them to part
-of the page with a frame.
+of the page with a frame and av if they have captions.
 
-## Example
+## The script behind the video
 
-paparazzi ships a small task-tracker page for examples. This script adds
-a task to it, checks that the task was saved, and records the whole
-thing as a GIF:
+Here’s the whole script for the video at the top of this page, running
+on a small task-tracker page that ships with paparazzi:
 
 ``` r
 library(paparazzi)
 
 page <- pz_open(
   pz_example("tasks"),
-  width = 600,
-  height = 480,
+  width = 1000,
+  height = 720,
   color_scheme = "light"
 )
+page |> pz_stage(enter = "bottom", pause = 0.3)
 
-pz_record(page, scale = 0.6, code = {
-  page |>
-    pz_type("Buy milk", target = "#task-title") |>
-    pz_click("#add-task") |>
-    pz_expect_text("Buy milk", target = pz_loc(".task-title", which = "first"))
-})
+new_task <- pz_loc(".task", has_text = "Prepare release notes")
+
+pz_record(
+  page,
+  frame = pz_frame(list("h1", ".task-list"), pad = 24, ratio = 16 / 9),
+  format = "gif",
+  scale = 800,
+  code = {
+    page |>
+      pz_annotate_caption("Add a task") |>
+      pz_camera("#new-task", wait = TRUE) |>
+      pz_type("Prepare release notes", target = "#task-title") |>
+      pz_click("#add-task") |>
+      pz_camera_reset() |>
+      pz_expect_visible(new_task) |>
+      pz_annotate(new_task, type = "box", pad = 4, id = "new") |>
+      pz_annotate_caption("New tasks go to the top of the list") |>
+      pz_record_hold(1.2) |>
+      pz_annotate_clear(id = "new") |>
+      pz_annotate_caption("Check it off when you're done") |>
+      pz_find(new_task) |>
+      pz_click(".task-done") |>
+      pz_expect_class("done") |>
+      pz_cursor_leave() |>
+      pz_record_hold(1)
+  }
+)
 ```
 
-<img src="man/figures/README-record-1.gif" alt="A cursor moves to the task form, types Buy milk, and clicks Add. Buy milk appears at the top of the task list."  />
+The first few lines set the scene. `pz_open()` opens the page at the
+size you want to record. `pz_stage()` sets how the recording looks: the
+cursor enters from the bottom, and each step pauses for a moment so
+viewers can follow. `pz_loc()` describes the task we’re about to add, so
+we can point at it once it exists.
 
-When a recording finishes as the last call in a knitted chunk
-expression, knitr includes it in the document. Without a path, it writes
-a numbered GIF under the chunk’s figure directory. Name the `code`
-argument when leaving out the path.
+`pz_record()` records everything in its `code` block. The `frame` is the
+part of the page the video shows: the task card, from its heading to the
+bottom of the list, padded and widened to 16:9. `format` and `scale`
+make the result an 800-pixel-wide GIF, small enough for a README.
 
-paparazzi’s actions and expectations take the page as their first
-argument and return it, so a script reads as one chain of steps. The
-actions wait for their element to be ready before acting, and
-expectations like `pz_expect_text()` retry until they pass or time out.
-That matters here: the page takes a moment to save a new task, and the
-expectation waits for it instead of failing straight away.
+Inside the block, each line is one step, and the steps fall into two
+groups:
 
-While recording, paparazzi animates a cursor between elements and types
-one character at a time, so the video looks like a person using the
-page. Take away `pz_record()` and the same steps run at full speed,
-which is how you’d use them in a test.
+- **Using the page.** `pz_type()` clicks the title field and types into
+  it, and `pz_click()` presses a button. `pz_find()` narrows the next
+  steps to the new task, so `".task-done"` means that task’s Done
+  button.
+- **Directing the viewer.** `pz_camera()` zooms in and
+  `pz_camera_reset()` pulls back out. `pz_annotate()` outlines the new
+  task, `pz_annotate_caption()` changes the caption, and
+  `pz_record_hold()` gives viewers a moment to read. `pz_cursor_leave()`
+  moves the cursor out of the shot at the end.
 
-You can also narrow a chain to part of the page. `pz_find()` makes the
-matched element the chain’s **scope**, so later targets are looked up
-inside it. Here we mark one task as done and take a screenshot of it:
+`pz_expect_visible()` waits for the page to finish saving the task
+before the script outlines it, and `pz_expect_class()` waits for it to
+be marked done. Waits like this keep a scripted demo in step with a real
+page. The video keeps rolling while the script waits, so if a step takes
+longer than you’d like viewers to watch, `pz_record_pause()` and
+`pz_record_resume()` cut it out.
+
+When a recording is the last thing in a knitted R Markdown or Quarto
+chunk, it appears in the document, so rendering the document again
+records the demo again.
+
+## What you can make
+
+### Point the viewer at what matters
+
+Zoom and pan the camera to a form, a button, or a whole panel with
+`pz_camera()`. While it’s zoomed in, the camera pans to keep each click
+and keystroke in view, so nothing happens out of the shot. The camera
+only exists in the video: it never scrolls or zooms the page itself.
+Outline, circle, underline, or highlight elements with `pz_annotate()`,
+with numbered badges if you want them. Add callouts with arrows
+(`pz_annotate_callout()`), or dim everything except one element with a
+spotlight (`pz_annotate_spotlight()`). In a recording, annotations draw,
+pop, fade, slide, or wipe in. They follow their elements as the page
+scrolls or changes.
+
+### Make it look like a person is using the page
+
+The cursor glides between elements, changes shape over text fields and
+links, and presses down when it clicks. Typing arrives one character at
+a time at a natural pace. `pz_stage()` sets the cursor’s speed and size,
+the typing speed, and the pause after each step.
+
+### Tell the story
+
+Captions sit at the top or bottom of the video and change as you go. You
+can burn them into the video or, for MP4 and WebM, write them to a
+WebVTT subtitle file alongside it. Keyboard shortcuts pressed with
+`pz_press()` can appear on screen as keystrokes. `pz_record_hold()`
+gives viewers time to read, and `pz_record_pause()` cuts out anything
+they don’t need to see.
+
+### Frame it for wherever it’s going
+
+Crop a video or a screenshot to one element, or to several, with
+padding, using `pz_frame()`. Set an aspect ratio, like 16:9 for slides
+or 9:16 for a vertical video. Save MP4, WebM, or GIF files, and scale
+them down to a size that suits a README.
+
+### Make every version from one script
+
+Record or capture the same steps on a phone, in dark mode, zoomed in, or
+in another locale or time zone. `pz_device()` switches between them.
+Cover private data with `pz_annotate_redact()` before recording starts,
+so it stays hidden from the very first frame.
+
+Screenshots use the same annotations and framing. Here’s the task
+tracker on a phone in dark mode, with a callout:
 
 ``` r
-page |>
-  pz_find(pz_loc(".task", has_text = "dentist")) |>
-  pz_click(".task-done") |>
-  pz_screenshot(frame = pz_frame(pad = 8))
+phone <- pz_open(
+  pz_example("tasks"),
+  width = 390,
+  height = 700,
+  mobile = TRUE,
+  color_scheme = "dark"
+)
+
+phone |>
+  pz_annotate_callout(
+    "Tap Done to finish a task",
+    target = pz_loc(".task-done", which = "first"),
+    side = "bottom"
+  ) |>
+  pz_screenshot()
 ```
 
-<img src="man/figures/README-screenshot-1.png" alt="The Book dentist appointment task, crossed out." width="532" />
+<img src="man/figures/README-phone-1.png" alt="The task tracker on a narrow phone screen in dark mode. A red-bordered callout under the first task's Done button reads Tap Done to finish a task." width="300px" />
 
-With `target` left out, `pz_screenshot()` captures the scope element,
-and `pz_frame(pad = 8)` adds a margin around it. A pathless screenshot
-is the final step of this chain: knitr includes its result as a figure.
-If you need to keep piping actions afterward, give the screenshot an
-explicit file path.
-
-The scope doesn’t stick to `page`. Actions like `pz_click()` change the
-browser tab, and every chain on `page` sees those changes. A scope isn’t
-part of the browser, so `pz_find()` leaves `page` alone and returns a
-new, scoped context instead. The next chain that starts from `page`
-starts at the whole page again. To keep working in a scope, assign the
-scoped context to its own variable.
+Like the recording, a screenshot at the end of a knitted chunk becomes a
+figure in the document.
 
 ## Shiny apps
 
-Give `pz_open()` the path to a Shiny app and paparazzi runs the app in a
-background R process, opens it, and waits until Shiny has connected and
-finished its first round of updates. Closing the page stops the app.
-`pz_set_shiny_input()` sets an input through its Shiny input binding, so
-the control updates on the page and the server sees the change, even for
-widgets like selectize inputs and sliders.
+Give `pz_open()` the path to a Shiny app, and paparazzi runs the app in
+a background R process, opens it, and waits until it’s ready. Closing
+the page stops the app. `pz_set_shiny_input()` sets an input the way
+Shiny sees it, so even selectize inputs and sliders update on the page
+and the server responds:
 
 ``` r
-page <- pz_open(pz_example("tasks-app"))
+app <- pz_open(pz_example("tasks-app"))
 
-page |>
+app |>
   pz_set_shiny_input("priority", "high") |>
   pz_set_value("Buy milk", target = "#title") |>
   pz_click("#add") |>
   pz_expect_text("3 tasks", target = "#summary")
 
-pz_close(page)
+pz_close(app)
 ```
 
-When you run expectations inside a testthat test, they count as test
-expectations and their failures as test failures. `pz_local_page()`
-closes the page, and stops its app, when the test finishes:
+Recording works the same way on an app as on any other page.
+
+## Bonus round: your demo is also a test
+
+The cursor animation and typing only happen while recording. Take away
+`pz_record()` and the same steps run at full speed: the cursor stays
+hidden, text goes in without the typing animation, and camera moves and
+holds do nothing. That makes a demo script a browser test too.
+
+The steps behave well in a test. Actions like `pz_click()` wait for
+their element to be ready before acting. Expectations like
+`pz_expect_text()` retry until the page shows what they expect, or time
+out with an error that says what they last saw. Inside a testthat test,
+expectations count as test expectations. `pz_local_page()` closes the
+page, and stops its app, when the test ends:
 
 ``` r
 test_that("adding a task updates the summary", {
@@ -143,23 +241,29 @@ test_that("adding a task updates the summary", {
 })
 ```
 
-## How paparazzi relates to shinytest2
-
-[shinytest2](https://rstudio.github.io/shinytest2/) is built for
-regression testing Shiny apps: it works with an app’s inputs and outputs
-and compares them against saved snapshots. paparazzi works at the level
-of the page instead. It finds elements with CSS selectors, acts on them
-the way a person would, and works on any page, Shiny or not. It also
-adds cursor animation and recording, for making docs and demos. If you
-want to snapshot a Shiny app’s reactive values, use shinytest2. If you
-want to script what someone does on a page, or capture it on video, use
-paparazzi.
+If you mainly want regression tests for a Shiny app’s inputs and outputs
+compared against saved snapshots,
+[shinytest2](https://rstudio.github.io/shinytest2/) is built for that.
+paparazzi tests what a person does on the page, on any page, Shiny or
+not.
 
 ## Learn more
 
-[Get started with
-paparazzi](https://posit-dev.github.io/paparazzi/articles/paparazzi.html)
-walks through a full session, from opening a page to recording a demo.
-The [function
-reference](https://posit-dev.github.io/paparazzi/reference/) lists every
-function by task.
+- [Get
+  started](https://posit-dev.github.io/paparazzi/articles/paparazzi.html)
+  builds a demo video one step at a time, from opening a page to framing
+  the finished recording.
+- [Make a three-part app
+  walkthrough](https://posit-dev.github.io/paparazzi/articles/walkthrough.html)
+  records a series of short videos with camera moves, callouts,
+  captions, and redactions.
+- [Annotate
+  pages](https://posit-dev.github.io/paparazzi/articles/annotations.html)
+  tours every kind of mark, callout, spotlight, redaction, and caption.
+- [Shiny
+  apps](https://posit-dev.github.io/paparazzi/articles/shiny.html)
+  covers starting apps, waiting for the server, setting inputs, and
+  testing.
+- The [function
+  reference](https://posit-dev.github.io/paparazzi/reference/) lists
+  every function by task.
