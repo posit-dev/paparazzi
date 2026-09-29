@@ -1022,6 +1022,45 @@ test_that("entry and landing can schedule three distinct icon layers", {
   page |> pz_record_stop()
 })
 
+test_that("an explicitly hidden cursor stays hidden during recorded typing", {
+  skip_if_no_av()
+  page <- local_page(pz_example("tasks"))
+  page |> pz_stage(pause = 0)
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 8,
+      hold = c(0, 0)
+    )
+  defer_record_stop(page)
+
+  page |> pz_click("#task-title")
+  pz_js(
+    page,
+    paste0(
+      "window.__cursorInputOpacity = [];",
+      "document.querySelector('#task-title').addEventListener('input', () => {",
+      "const inner = document.querySelector('#paparazzi-overlay-root')",
+      ".shadowRoot.querySelector('.pz-inner');",
+      "window.__cursorInputOpacity.push(getComputedStyle(inner).opacity);",
+      "});"
+    )
+  )
+  page |>
+    pz_cursor_hide() |>
+    pz_type("abc", target = "#task-title")
+
+  opacities <- unlist(pz_js(page, "window.__cursorInputOpacity"))
+  expect_length(opacities, 3)
+  expect_true(all(opacities == "0"))
+  expect_identical(page_cursor(page)$visibility, "hidden")
+
+  page |> pz_cursor_show()
+  expect_identical(page_cursor(page)$visibility, "shown")
+  expect_equal(cursor_overlay_state(page)[[1]], 1)
+  page |> pz_record_stop()
+})
+
 test_that("recorded typing rests the cursor until the next move", {
   skip_if_not_installed("av")
   page <- local_cursor_page()
