@@ -100,7 +100,7 @@ page |>
 
 The solid cover remains over the note for the whole clip, including its first frame. Once we've finished the tour, remove the overlays and close the browser:
 
-```{r, include = FALSE}
+```{r}
 page |> pz_annotate_clear()
 pz_close(page)
 ```
