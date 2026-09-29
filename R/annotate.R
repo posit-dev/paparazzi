@@ -400,12 +400,17 @@ annotate_boot_js <- r"(function() {
       if (entry.spotlight) {
         const svg = entry.nodes[0];
         const mask = svg.querySelector('mask');
-        const width = Math.max(window.innerWidth, document.documentElement.scrollWidth,
-                               document.body.scrollWidth);
-        const height = Math.max(window.innerHeight, document.documentElement.scrollHeight,
-                                document.body.scrollHeight);
-        svg.style.left = -window.scrollX + 'px';
-        svg.style.top = -window.scrollY + 'px';
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const docW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+        const docH = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+        const docLeft = getComputedStyle(document.documentElement).direction === 'rtl' &&
+          docW > vw ? -(docW - vw) : 0;
+        const left = Math.min(0, docLeft - window.scrollX);
+        const top = Math.min(0, -window.scrollY);
+        const width = Math.max(vw, docLeft - window.scrollX + docW) - left;
+        const height = Math.max(vh, -window.scrollY + docH) - top;
+        svg.style.left = left + 'px';
+        svg.style.top = top + 'px';
         svg.setAttribute('width', width);
         svg.setAttribute('height', height);
         mask.setAttribute('width', width);
@@ -428,8 +433,8 @@ annotate_boot_js <- r"(function() {
             return;
           }
           hole.style.display = '';
-          hole.setAttribute('x', r.left + window.scrollX - p[3]);
-          hole.setAttribute('y', r.top + window.scrollY - p[0]);
+          hole.setAttribute('x', r.left - left - p[3]);
+          hole.setAttribute('y', r.top - top - p[0]);
           hole.setAttribute('width', w);
           hole.setAttribute('height', h);
         });

@@ -377,3 +377,42 @@ test_that("hidden and zero-size targets cannot leave spotlight holes", {
     tolerance = 0.04
   )
 })
+
+test_that("RTL negative scroll dims the whole viewport but preserves the far-side hole", {
+  skip_if_not_installed("png")
+  page <- local_rtl_frame_page()
+  pz_js(
+    page,
+    "document.body.style.background = 'white'; window.scrollTo(-1300, 0)"
+  )
+  skip_if(
+    pz_js(page, "window.scrollX") >= 0,
+    "browser won't scroll negative in RTL"
+  )
+  target_x <- pz_js(
+    page,
+    "document.getElementById('mark').getBoundingClientRect().left + 50"
+  )
+  expect_gt(target_x, 0)
+  expect_lt(target_x, pz_js(page, "window.innerWidth"))
+  page |> pz_annotate_spotlight("#mark", reveal = "none")
+  path <- withr::local_tempfile(fileext = ".png")
+  # Root stills clamp a negative clip x to zero; capture the painted viewport.
+  shot <- page$session$Page$captureScreenshot(
+    format = "png",
+    fromSurface = TRUE
+  )
+  writeBin(jsonlite::base64_dec(shot$data), path)
+  img <- png::readPNG(path)
+  expect_equal(spotlight_rgb(img, page, 20, 200), rep(0.4, 3), tolerance = 0.04)
+  expect_equal(
+    spotlight_rgb(img, page, 950, 200),
+    rep(0.4, 3),
+    tolerance = 0.04
+  )
+  expect_equal(
+    spotlight_rgb(img, page, target_x, 80),
+    c(10, 20, 30) / 255,
+    tolerance = 0.04
+  )
+})
