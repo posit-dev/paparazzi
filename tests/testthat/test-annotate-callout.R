@@ -1,0 +1,427 @@
+callout_page <- function(.env = parent.frame()) {
+  page <- local_page(.env = .env)
+  pz_js(
+    page,
+    "document.body.innerHTML = '<div id=target style=\"position:absolute;left:220px;top:180px;width:80px;height:40px;background:#eee\"></div>';"
+  )
+  page
+}
+
+callout_state <- function(page) {
+  pz_js(
+    page,
+    "(() => { const l=document.querySelector('#paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations'); return [...(l?.querySelectorAll('.pz-callout') || [])].map(n => ({text:n.querySelector('.pz-bubble')?.textContent, rect:(() => { const r=n.getBoundingClientRect(); return [r.left,r.top,r.width,r.height]; })()})); })()"
+  )
+}
+
+test_that("callout draws literal text into the shared layer", {
+  page <- callout_page()
+  expect_identical(
+    pz_annotate_callout(page, "<b>Literal</b>", target = "#target", id = "tip"),
+    page
+  )
+  expect_length(callout_state(page), 1)
+  expect_identical(callout_state(page)[[1]]$text, "<b>Literal</b>")
+  page |> pz_annotate_clear("tip")
+  expect_length(callout_state(page), 0)
+})
+
+callout_details <- function(page) {
+  pz_js(
+    page,
+    paste0(
+      "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+      "const t=document.querySelector('#target').getBoundingClientRect();",
+      "const rect=r=>[r.left,r.top,r.right,r.bottom,r.width,r.height];",
+      "return {target:rect(t), nodes:[...l.querySelectorAll('.pz-callout')].map(n=>{",
+      "const b=n.querySelector('.pz-bubble'),s=n.querySelector('svg'),line=s?.firstChild;",
+      "const r=n.getBoundingClientRect(); return {rect:rect(r),bubble:rect(b.getBoundingClientRect()),",
+      "label:n.querySelector('span')?.textContent ?? null, text:b.textContent,",
+      "color:b.style.borderColor,font:b.style.fontFamily,fontSize:b.style.fontSize,",
+      "arrow:!!s, end:line?[r.left+Number(line.getAttribute('x2')),r.top+Number(line.getAttribute('y2'))]:null,",
+      "head:s?.lastChild.getAttribute('points') ?? null,visible:n.style.display!=='none'}; })}; })()"
+    )
+  )
+}
+
+test_that("cardinal and diagonal callouts sit on their requested sides", {
+  page <- callout_page()
+  pz_js(
+    page,
+    "document.querySelector('#target').style.cssText='position:fixed;left:360px;top:300px;width:80px;height:40px;background:#eee'"
+  )
+  for (side in c(
+    "top",
+    "bottom",
+    "left",
+    "right",
+    "top left",
+    "top right",
+    "bottom left",
+    "bottom right"
+  )) {
+    page |>
+      pz_annotate_callout("Tip", target = "#target", side = side, id = "tip")
+    state <- callout_details(page)
+    target <- unlist(state$target)
+    rect <- unlist(state$nodes[[1]]$rect)
+    if (grepl("top", side)) {
+      expect_lte(rect[4], target[2] - 7)
+    }
+    if (grepl("bottom", side)) {
+      expect_gte(rect[2], target[4] + 7)
+    }
+    if (grepl("left", side)) {
+      expect_lte(rect[3], target[1] - 7)
+    }
+    if (grepl("right", side)) {
+      expect_gte(rect[1], target[3] + 7)
+    }
+    endpoint <- unlist(state$nodes[[1]]$end)
+    expect_true(endpoint[1] >= target[1] - 1 && endpoint[1] <= target[3] + 1)
+    expect_true(endpoint[2] >= target[2] - 1 && endpoint[2] <= target[4] + 1)
+    expect_true(
+      any(abs(endpoint[1] - target[c(1, 3)]) < 1) ||
+        any(abs(endpoint[2] - target[c(2, 4)]) < 1)
+    )
+    expect_true(nzchar(state$nodes[[1]]$head))
+  }
+  page |>
+    pz_annotate_callout(
+      "Tooltip",
+      target = "#target",
+      arrow = FALSE,
+      side = "right",
+      id = "tip"
+    )
+  expect_false(callout_details(page)$nodes[[1]]$arrow)
+})
+
+test_that("auto chooses roomiest cardinal once and sync follows movement", {
+  page <- callout_page()
+  pz_js(
+    page,
+    "document.querySelector('#target').style.left='20px';document.querySelector('#target').style.top=innerHeight/2+'px'"
+  )
+  page |>
+    pz_annotate_callout("Follow", target = "#target", id = "tip", arrow = FALSE)
+  first <- callout_details(page)
+  expect_gt(first$nodes[[1]]$rect[[1]], first$target[[3]])
+  pz_js(
+    page,
+    "document.querySelector('#target').style.left='740px';document.querySelector('#target').style.top='400px'"
+  )
+  pz_js(
+    page,
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
+  )
+  moved <- callout_details(page)
+  expect_gt(moved$nodes[[1]]$rect[[1]], first$nodes[[1]]$rect[[1]])
+  expect_gt(abs(moved$nodes[[1]]$rect[[2]] - first$nodes[[1]]$rect[[2]]), 50)
+  pz_js(
+    page,
+    "document.querySelector('#target').style.left='80px';document.querySelector('#target').style.top='1200px';window.scrollTo(0,1000)"
+  )
+  pz_js(
+    page,
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
+  )
+  scrolled <- callout_details(page)
+  expect_gt(scrolled$nodes[[1]]$rect[[1]], scrolled$target[[3]])
+  expect_true(scrolled$nodes[[1]]$visible)
+  pz_js(page, "document.querySelector('#target').remove()")
+  pz_js(
+    page,
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
+  )
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout').style.display"
+    ),
+    "none"
+  )
+})
+
+test_that("multiple matches repeat text and number badges; ids share the registry", {
+  page <- callout_page()
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend','<div class=mark style=\"position:absolute;left:120px;top:300px;width:70px;height:40px\"></div><div class=mark style=\"position:absolute;left:300px;top:300px;width:70px;height:40px\"></div>')"
+  )
+  page |>
+    pz_stage(
+      annotate_color = "rgb(255, 0, 0)",
+      annotate_font_family = "monospace",
+      annotate_font_size = 19
+    )
+  page |>
+    pz_annotate_callout("Repeat", target = ".mark", label = TRUE, id = "shared")
+  state <- callout_details(page)$nodes
+  expect_length(state, 2)
+  expect_equal(vapply(state, `[[`, "", "label"), c("1", "2"))
+  expect_equal(vapply(state, `[[`, "", "text"), c("Repeat", "Repeat"))
+  expect_identical(state[[1]]$color, "rgb(255, 0, 0)")
+  expect_identical(state[[1]]$fontSize, "19px")
+  page |>
+    pz_annotate_callout("Other", target = "#target", label = "A", id = "shared")
+  expect_length(callout_state(page), 1)
+  expect_identical(callout_details(page)$nodes[[1]]$label, "A")
+  page |> pz_annotate("#target", id = "shared", reveal = "none")
+  expect_length(callout_state(page), 0)
+  page |> pz_annotate_callout("New", target = "#target", id = "shared")
+  page |> pz_annotate_clear("shared")
+  expect_length(callout_state(page), 0)
+})
+
+test_that("callouts validate inputs and clamp long wrapped text", {
+  page <- callout_page()
+  expect_error(pz_annotate_callout(page, "", target = "#target"), "text")
+  expect_error(
+    pz_annotate_callout(page, "x", target = "#target", side = "center"),
+    "side"
+  )
+  expect_error(
+    pz_annotate_callout(page, "x", target = "#target", arrow = NA),
+    "arrow"
+  )
+  expect_error(
+    pz_annotate_callout(page, "x", target = "#target", label = FALSE),
+    "label"
+  )
+  expect_error(
+    pz_annotate_callout(page, "x", target = "#target", reveal = "bad"),
+    "reveal"
+  )
+  expect_error(
+    pz_annotate_callout(page, "x", target = "#target", id = "spotlight"),
+    "id"
+  )
+  page |>
+    pz_annotate_callout(
+      paste(rep("longword", 80), collapse = " "),
+      target = "#target",
+      side = "left"
+    )
+  state <- callout_details(page)$nodes[[1]]
+  expect_lte(state$rect[[1]], 8.1)
+  expect_gte(state$rect[[1]], 7.9)
+  expect_lte(state$rect[[5]], 320)
+  expect_gt(state$rect[[6]], 30)
+  page |> pz_annotate_clear()
+  page |>
+    pz_annotate_callout(
+      paste(rep("longword", 1200), collapse = " "),
+      target = "#target",
+      side = "right"
+    )
+  expect_true(pz_js(
+    page,
+    "(() => { const b=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-bubble'); return b.scrollHeight > b.clientHeight && b.offsetHeight <= innerHeight - 16; })()"
+  ))
+})
+
+test_that("callout bubble paints in still and leaves after clearing", {
+  skip_if_not_installed("png")
+  page <- callout_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate_callout(
+      "Pixels",
+      target = "#target",
+      side = "right",
+      id = "tip",
+      reveal = "none"
+    )
+  state <- callout_details(page)$nodes[[1]]
+  x <- round(state$rect[[1]] + 6)
+  y <- round(state$rect[[2]] + 6)
+  page |> pz_screenshot(path)
+  dpr <- page_dpr(page)
+  sample <- function() {
+    as.numeric(png::readPNG(path)[y * dpr + 1, x * dpr + 1, 1:3])
+  }
+  expect_lt(max(sample()), 0.5)
+  page |> pz_annotate_clear("tip") |> pz_screenshot(path)
+  expect_equal(sample(), c(1, 1, 1), tolerance = 0.05)
+})
+
+test_that("callout pop pumps intermediate poll frames and reverse clear", {
+  skip_if_not_installed("av")
+  skip_if_not_installed("png")
+  page <- callout_page()
+  path <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(path, fps = 20, hold = c(0, 0), keep_frames = TRUE)
+  defer_record_stop(page)
+  page |>
+    pz_annotate_callout(
+      "Recorded",
+      target = "#target",
+      side = "right",
+      id = "tip"
+    )
+  pump_loop(page$child_loop, 0.3)
+  state <- callout_details(page)$nodes[[1]]
+  x <- round(state$rect[[1]] + 6) * page_dpr(page) + 1
+  y <- round(state$rect[[2]] + 6) * page_dpr(page) + 1
+  files <- page_recorder(page)$files
+  red <- function(file) png::readPNG(file)[y, x, 1]
+  entering <- vapply(files, red, 0.0)
+  expect_gt(length(files), 2)
+  expect_true(any(entering > 0.2 & entering < 0.9))
+  expect_lt(tail(entering, 1), 0.4)
+  page |> pz_annotate_clear("tip")
+  leaving <- vapply(page_recorder(page)$files[-seq_along(files)], red, 0.0)
+  expect_true(any(leaving > 0.2 & leaving < 0.9))
+  expect_length(callout_state(page), 0)
+  page |> pz_record_stop()
+  expect_true(file.exists(path))
+})
+
+test_that("automatic placement chooses each roomiest cardinal side", {
+  page <- callout_page()
+  for (side in c("top", "right", "bottom", "left")) {
+    pz_js(
+      page,
+      paste0(
+        "(() => { const t=document.querySelector('#target');",
+        "t.style.left=",
+        switch(
+          side,
+          top = "innerWidth/2",
+          bottom = "innerWidth/2",
+          right = "20",
+          left = "innerWidth-100"
+        ),
+        "+'px';",
+        "t.style.top=",
+        switch(
+          side,
+          top = "innerHeight-60",
+          bottom = "20",
+          right = "innerHeight/2",
+          left = "innerHeight/2"
+        ),
+        "+'px'; })()"
+      )
+    )
+    page |>
+      pz_annotate_callout("Auto", target = "#target", arrow = FALSE, id = "tip")
+    state <- callout_details(page)
+    target <- unlist(state$target)
+    rect <- unlist(state$nodes[[1]]$rect)
+    if (side == "top") {
+      expect_lt(rect[4], target[2])
+    }
+    if (side == "right") {
+      expect_gt(rect[1], target[3])
+    }
+    if (side == "bottom") {
+      expect_gt(rect[2], target[4])
+    }
+    if (side == "left") expect_lt(rect[3], target[1])
+  }
+})
+
+test_that("callout follows a target inside a scrolling container", {
+  page <- callout_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.innerHTML='<div id=scroller style=\"position:fixed;left:150px;top:120px;width:200px;height:120px;overflow:auto\">'",
+      "+'<div style=\"height:170px\"></div><div id=target style=\"width:80px;height:30px\"></div>'"
+    )
+  )
+  page |>
+    pz_annotate_callout("Inner", target = "#target", side = "right", id = "tip")
+  first <- callout_details(page)$nodes[[1]]$rect[[2]]
+  pz_js(
+    page,
+    "document.querySelector('#scroller').scrollTop=80;document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
+  )
+  expect_equal(
+    callout_details(page)$nodes[[1]]$rect[[2]],
+    first - 80,
+    tolerance = 1
+  )
+})
+
+test_that("arrow paints between bubble and target in a still", {
+  skip_if_not_installed("png")
+  page <- callout_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate_callout(
+      "Arrow",
+      target = "#target",
+      side = "right",
+      color = "#ff0000"
+    )
+  state <- callout_details(page)
+  target <- unlist(state$target)
+  endpoint <- unlist(state$nodes[[1]]$end)
+  expect_equal(endpoint[1], target[3], tolerance = 1)
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  x <- round((target[3] + state$nodes[[1]]$rect[[1]]) / 2 * dpr) + 1
+  y <- round(endpoint[2] * dpr) + 1
+  expect_gt(img[y, x, 1] - img[y, x, 2], 0.3)
+})
+
+test_that("idle and paused callouts do not run reveal animations", {
+  skip_if_not_installed("av")
+  page <- callout_page()
+  page |> pz_annotate_callout("No animation", target = "#target", id = "tip")
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout').getAnimations({subtree:true}).length"
+    ),
+    0L
+  )
+  page |> pz_annotate_clear("tip")
+  path <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(path, fps = 15, hold = c(0, 0))
+  defer_record_stop(page)
+  page |> pz_record_pause()
+  page |> pz_annotate_callout("Paused", target = "#target", id = "tip")
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout').getAnimations({subtree:true}).length"
+    ),
+    0L
+  )
+  page |> pz_annotate_clear("tip")
+  expect_length(callout_state(page), 0)
+  page |> pz_record_stop()
+})
+
+test_that("callouts use the current scope or root body without a target", {
+  page <- callout_page()
+  scoped <- pz_find(page, "#target")
+  scoped |> pz_annotate_callout("Scope", id = "scope")
+  expect_length(callout_state(page), 1)
+  page |> pz_annotate_clear("scope")
+  page |> pz_annotate_callout("Body", id = "body", arrow = FALSE)
+  expect_length(callout_state(page), 1)
+  page |> pz_annotate_clear()
+  expect_length(callout_state(page), 0)
+})
+
+test_that("replacing a redaction with a callout uses the same id", {
+  page <- callout_page()
+  page |> pz_annotate_redact("#target", id = "shared")
+  page |> pz_annotate_callout("Replacement", target = "#target", id = "shared")
+  expect_length(callout_state(page), 1)
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+    ),
+    0L
+  )
+  page |> pz_annotate_clear("shared")
+  expect_length(callout_state(page), 0)
+})
