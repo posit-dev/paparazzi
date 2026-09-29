@@ -92,8 +92,7 @@ pz_annotate <- function(
   if (font_size == 0) {
     cli::cli_abort("{.arg font_size} must be greater than 0.")
   }
-  els <- loc_resolve(ctx, target, multiple = "all")
-  withr::defer(release_elements(els))
+  els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)
   options <- list(
@@ -159,8 +158,7 @@ pz_annotate_redact <- function(
     }
   }
   pad <- check_pad(pad %||% 0, arg = "pad")
-  els <- loc_resolve(ctx, target, multiple = "all")
-  withr::defer(release_elements(els))
+  els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   options <- list(id = id, method = method, pad = unname(pad), color = color)
   annotate_call(ctx, els, "redact", options, "redacting the elements")
@@ -213,6 +211,16 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
     )
   }
   ctx_return(ctx)
+}
+
+annotate_elements <- function(ctx, target, frame = caller_env()) {
+  scoped <- if (is.null(target)) scope_root(ctx, call = frame)
+  if (!is.null(scoped)) {
+    return(scoped)
+  }
+  els <- loc_resolve(ctx, target, multiple = "all", call = frame)
+  withr::defer(release_elements(els), envir = frame)
+  els
 }
 
 check_annotation_id <- function(id, call = caller_env()) {

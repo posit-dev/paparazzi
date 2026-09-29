@@ -338,6 +338,17 @@ test_that("spotlight accepts root and scoped NULL targets", {
   )
   scoped <- pz_find(page, "#one")
   scoped |> pz_annotate_spotlight(reveal = "none")
+  expect_equal(
+    as.numeric(unlist(spotlight_layer(
+      page,
+      "(() => { const svg = layer.querySelector('.pz-spotlight'); const h = svg.querySelector('mask rect:nth-child(2)'); return [+h.getAttribute('x') + parseFloat(svg.style.left), +h.getAttribute('y') + parseFloat(svg.style.top), +h.getAttribute('width'), +h.getAttribute('height')]; })()"
+    ))),
+    as.numeric(unlist(pz_js(
+      page,
+      "(() => { const r = document.querySelector('#one').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()"
+    ))),
+    tolerance = 1
+  )
   img <- spotlight_image(page, path)
   expect_equal(spotlight_rgb(img, page, 30, 30), rep(0.4, 3), tolerance = 0.04)
   expect_equal(

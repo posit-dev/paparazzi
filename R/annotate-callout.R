@@ -85,8 +85,7 @@ pz_annotate_callout <- function(
   if (font_size == 0) {
     cli::cli_abort("{.arg font_size} must be greater than 0.")
   }
-  els <- loc_resolve(ctx, target, multiple = "all")
-  withr::defer(release_elements(els))
+  els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)
   options <- list(
