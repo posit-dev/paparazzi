@@ -361,21 +361,24 @@ annotate_boot_js <- r"(function() {
     box.style.top = top + 'px';
     if (!entry.arrow) return;
     const svg = box.querySelector('svg');
-    const tx = side.includes('right') ? r.right : side.includes('left') ? r.left :
-      clamp(left + w / 2, r.left, r.right);
-    const ty = side.includes('top') ? r.top : side.includes('bottom') ? r.bottom :
-      clamp(top + h / 2, r.top, r.bottom);
-    let bx = clamp(tx, left, left + w);
-    let by = clamp(ty, top, top + h);
-    if (bx > left && bx < left + w && by > top && by < top + h) {
-      if (side.includes('top')) by = top + h;
-      else if (side.includes('bottom')) by = top;
-      else if (side.includes('left')) bx = left + w;
-      else bx = left;
+    if (left < r.right && left + w > r.left && top < r.bottom && top + h > r.top) {
+      svg.style.display = 'none';
+      return;
     }
+    svg.style.display = '';
+    const nearest = (a, b, c, d) => {
+      if (b < c) return [b, c];
+      if (d < a) return [a, d];
+      const middle = (Math.max(a, c) + Math.min(b, d)) / 2;
+      return [middle, middle];
+    };
+    const [bx, tx] = nearest(left, left + w, r.left, r.right);
+    const [by, ty] = nearest(top, top + h, r.top, r.bottom);
     const dx = tx - bx, dy = ty - by;
     const length = Math.hypot(dx, dy) || 1;
     const ux = dx / length, uy = dy / length;
+    const headLength = Math.min(9, length * 0.7);
+    const headWidth = Math.min(4, length * 0.3);
     const line = svg.firstChild;
     line.setAttribute('x1', bx - left);
     line.setAttribute('y1', by - top);
@@ -383,8 +386,10 @@ annotate_boot_js <- r"(function() {
     line.setAttribute('y2', ty - top);
     svg.lastChild.setAttribute('points', [
       [tx - left, ty - top],
-      [tx - left - ux * 9 - uy * 4, ty - top - uy * 9 + ux * 4],
-      [tx - left - ux * 9 + uy * 4, ty - top - uy * 9 - ux * 4]
+      [tx - left - ux * headLength - uy * headWidth,
+       ty - top - uy * headLength + ux * headWidth],
+      [tx - left - ux * headLength + uy * headWidth,
+       ty - top - uy * headLength - ux * headWidth]
     ].map(p => p.join(',')).join(' '));
   };
   const sync = () => {
@@ -566,7 +571,7 @@ annotate_boot_js <- r"(function() {
         if (opts.label !== null) {
           const badge = document.createElement('span');
           badge.textContent = opts.label === true ? String(i + 1) : String(opts.label);
-          badge.style.cssText = 'position:absolute;top:5px;left:6px;padding:1px 5px;background:#171717;color:white;border:1px solid;border-radius:4px;line-height:1.2;';
+          badge.style.cssText = 'position:absolute;top:5px;left:6px;box-sizing:border-box;max-width:calc(100% - 8px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 5px;background:#171717;color:white;border:1px solid;border-radius:4px;line-height:1.2;';
           badge.style.borderColor = opts.color;
           badge.style.fontFamily = opts.fontFamily;
           badge.style.fontSize = opts.fontSize + 'px';

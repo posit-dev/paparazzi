@@ -425,3 +425,77 @@ test_that("replacing a redaction with a callout uses the same id", {
   page |> pz_annotate_clear("shared")
   expect_length(callout_state(page), 0)
 })
+
+test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping ones", {
+  page <- callout_page()
+  pz_js(page, "document.querySelector('#target').style.left='0px'")
+  page |>
+    pz_annotate_callout(
+      "Overlapping bubble",
+      target = "#target",
+      side = "left",
+      id = "edge"
+    )
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout svg').style.display"
+    ),
+    "none"
+  )
+  pz_js(
+    page,
+    "document.querySelector('#target').style.left='calc(100vw - 2px)'"
+  )
+  page |>
+    pz_annotate_callout(
+      "At edge",
+      target = "#target",
+      side = "right",
+      id = "edge"
+    )
+  state <- callout_details(page)
+  bubble <- unlist(state$nodes[[1]]$rect)
+  target <- unlist(state$target)
+  expect_lt(bubble[3], target[1])
+  expect_false(identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout svg').style.display"
+    ),
+    "none"
+  ))
+  endpoints <- pz_js(
+    page,
+    "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); const l=n.querySelector('line'); return [n.getBoundingClientRect().left+Number(l.getAttribute('x1')), n.getBoundingClientRect().left+Number(l.getAttribute('x2'))]; })()"
+  )
+  expect_equal(unlist(endpoints), c(bubble[3], target[1]), tolerance = 1)
+  head <- pz_js(
+    page,
+    "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); return n.querySelector('polygon').getAttribute('points').split(' ').map(p=>n.getBoundingClientRect().left+Number(p.split(',')[0])); })()"
+  )
+  expect_true(all(unlist(head) >= bubble[3]))
+})
+
+test_that("long badges stay within the measured bubble and viewport", {
+  page <- callout_page()
+  pz_js(
+    page,
+    "document.querySelector('#target').style.left='calc(100vw - 80px)'"
+  )
+  page |>
+    pz_annotate_callout(
+      "Tip",
+      target = "#target",
+      side = "right",
+      label = paste(rep("LONG", 90), collapse = "")
+    )
+  geometry <- pz_js(
+    page,
+    "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); const b=n.querySelector('.pz-bubble').getBoundingClientRect(); const a=n.querySelector('span').getBoundingClientRect(); return {bubble:[b.left,b.right],badge:[a.left,a.right],viewport:innerWidth,overflow:getComputedStyle(n.querySelector('span')).textOverflow}; })()"
+  )
+  expect_gte(geometry$badge[[1]], geometry$bubble[[1]])
+  expect_lte(geometry$badge[[2]], geometry$bubble[[2]])
+  expect_lte(geometry$badge[[2]], geometry$viewport - 8)
+  expect_identical(geometry$overflow, "ellipsis")
+})
