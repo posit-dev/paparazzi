@@ -135,6 +135,14 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
   page |> pz_annotate_clear()
   pz_annotate(scoped, id = "container", reveal = "none")
   expect_length(annotation_state(page), 1)
+  expect_equal(
+    as.numeric(unlist(annotation_state(page)[[1]]$rect)),
+    as.numeric(unlist(pz_js(
+      page,
+      "(() => { const r = document.querySelector('#outer').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()"
+    ))),
+    tolerance = 1
+  )
   page |> pz_annotate_clear()
   page |>
     pz_stage(
@@ -325,6 +333,17 @@ test_that("redaction uses the current scope and anonymous ids", {
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
     1
+  )
+  expect_equal(
+    as.numeric(unlist(pz_js(
+      page,
+      "(() => { const n = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction'); return [parseFloat(n.style.left), parseFloat(n.style.top), parseFloat(n.style.width), parseFloat(n.style.height)]; })()"
+    ))),
+    as.numeric(unlist(pz_js(
+      page,
+      "(() => { const r = document.querySelector('#outer').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()"
+    ))),
+    tolerance = 1
   )
   page |> pz_annotate_redact()
   expect_equal(

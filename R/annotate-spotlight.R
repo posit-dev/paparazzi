@@ -44,13 +44,7 @@ pz_annotate_spotlight <- function(
       "{.arg reveal} must be {.val fade} or {.val none} for a spotlight."
     )
   }
-  scoped <- if (is.null(target)) scope_root(ctx) else NULL
-  if (is.null(scoped)) {
-    els <- loc_resolve(ctx, target, multiple = "all")
-    withr::defer(release_elements(els))
-  } else {
-    els <- scoped
-  }
+  els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)
   options <- list(
