@@ -1,3 +1,6 @@
+#' @include overlay.R
+NULL
+
 #' Frame a capture region
 #'
 #' @description
@@ -526,10 +529,11 @@ frame_target_box <- function(ctx, els, spec, call = caller_env()) {
   }
   painted <- els_call(
     els,
-    "function() {
-      const layer = document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations');
-      return layer?.pz?.paintedRects(this) ?? null;
-    }",
+    paste0(
+      "function() { return ",
+      ANNOTATION_LAYER_JS,
+      "?.paintedRects(this) ?? null; }"
+    ),
     call = call
   )
   if (is.null(painted)) {
