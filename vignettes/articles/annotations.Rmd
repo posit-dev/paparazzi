@@ -198,19 +198,17 @@ So far every mark has appeared fully drawn, because reveal animations only play 
 
 ```{r reveals}
 page |>
-  pz_record(code = {
-    page |>
-      pz_annotate("#task-title", type = "box") |>
-      pz_record_hold(0.4) |>
-      pz_annotate("#task-priority", type = "circle") |>
-      pz_record_hold(0.4) |>
-      pz_annotate_callout("Then press Add", target = "#add-task", side = "bottom") |>
-      pz_record_hold(1) |>
-      pz_annotate_clear()
-  }, frame = pz_frame("#new-task", pad = 40, when = "start"), scale = 0.6, hold = c(0.3, 0.5))
+  pz_record_start(frame = pz_frame("#new-task", pad = 40, when = "start"), scale = 0.6, hold = c(0.3, 0.5)) |>
+  pz_annotate("#task-title", type = "box") |>
+  pz_record_hold(0.4) |>
+  pz_annotate("#task-priority", type = "circle") |>
+  pz_record_hold(0.4) |>
+  pz_annotate_callout("Then press Add", target = "#add-task", side = "bottom") |>
+  pz_record_hold(1) |>
+  pz_annotate_clear()
 ```
 
-With no path, `pz_record()` writes a GIF into the article; give it a `.mp4` or `.webm` path for a video file instead.
+The recording stops when the chain ends, and with no path it's written into the article as an MP4. Pass a path to choose the file, or `format = "gif"` for a GIF.
 
 ## Keystroke callouts
 
@@ -218,13 +216,11 @@ One more callout exists only in recordings: [`pz_press(show_keys = ...)`](../ref
 
 ```{r show-keys}
 page |>
-  pz_record(code = {
-    page |>
-      pz_click("#task-title") |>
-      pz_type("Water the dog", target = "#task-title") |>
-      pz_press("Enter", show_keys = "mac") |>
-      pz_expect_text("Water the dog", target = pz_loc(".task-title", which = "first"))
-  }, frame = pz_frame("#new-task", pad = 24, when = "start"), scale = 0.6)
+  pz_record_start(frame = pz_frame("#new-task", pad = 24, when = "start"), scale = 0.6) |>
+  pz_click("#task-title") |>
+  pz_type("Water the dog", target = "#task-title") |>
+  pz_press("Enter", show_keys = "mac") |>
+  pz_expect_text("Water the dog", target = pz_loc(".task-title", which = "first"))
 ```
 
 Keystroke callouts appear only in recordings, never in stills, and each `pz_press()` call replaces the previous callout.
