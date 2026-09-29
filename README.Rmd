@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 
 **Polished demo videos and screenshots of anything that runs in a browser, written as R scripts.**
 
-```{r hero, echo = FALSE, fig.alt = "A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Check it off when you're done, the cursor clicks the task's Done button and the task is crossed out."}
+```{r hero, include = FALSE}
 library(paparazzi)
 
 page <- pz_open(
@@ -61,7 +61,13 @@ pz_record(
 
 ```{r, include = FALSE}
 pz_close(page)
+
+# The hero GIF lives in assets/, which is excluded from the package build,
+# and the README links to it on GitHub so it stays out of the CRAN tarball.
+file.rename("man/figures/README-hero-1.gif", "assets/readme-hero.gif")
 ```
+
+<img src="https://raw.githubusercontent.com/posit-dev/paparazzi/main/assets/readme-hero.gif" alt="A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Check it off when you&#39;re done, the cursor clicks the task&#39;s Done button and the task is crossed out." />
 
 That video came from the short R script shown below. paparazzi opened the page in a headless Chrome browser and did what the script said. The cursor glides to each control, text is typed one character at a time, and the camera zooms in on the form and pulls back to show the result. Captions and highlights appear on cue. There's no screen recorder involved, and no timeline to edit afterward.
 
