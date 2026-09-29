@@ -1,9 +1,11 @@
 #' Spotlight page elements
 #'
 #' Dims the page except for a rounded cutout around each matched element.
-#' The spotlight follows its elements through scrolling and layout changes;
-#' hidden or disconnected elements lose their cutouts. It appears in
-#' screenshots and recordings until cleared, and is lost on navigation.
+#' The scrim covers the document, including below-fold areas captured in
+#' screenshots. The spotlight follows its elements through scrolling and
+#' layout changes; hidden, disconnected, or zero-size elements lose their
+#' cutouts. It appears in screenshots and recordings until cleared, and is
+#' lost on navigation.
 #' Only one spotlight exists per page: a new call replaces the previous one,
 #' and [pz_annotate_clear()] removes it by the reserved id `"spotlight"` or
 #' with a clear-all call. The cutout covers each target's padded border box;

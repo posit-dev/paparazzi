@@ -54,6 +54,7 @@ test_that("spotlight leaves its cutout unchanged and dims the outside in stills"
 })
 
 test_that("spotlight cuts out every match, including overlaps and padded corners", {
+  skip_if_not_installed("png")
   page <- spotlight_page()
   path <- withr::local_tempfile(fileext = ".png")
   page |>
@@ -90,6 +91,7 @@ test_that("spotlight cuts out every match, including overlaps and padded corners
 })
 
 test_that("spotlight replaces its single slot and clears by reserved id or all", {
+  skip_if_not_installed("png")
   page <- spotlight_page()
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_annotate_spotlight("#one", reveal = "none")
@@ -122,6 +124,7 @@ test_that("spotlight replaces its single slot and clears by reserved id or all",
 })
 
 test_that("spotlight follows page and inner scroll, then hides disconnected holes", {
+  skip_if_not_installed("png")
   page <- spotlight_page()
   pz_js(
     page,
@@ -141,11 +144,18 @@ test_that("spotlight follows page and inner scroll, then hides disconnected hole
   )
   pump_loop(page$child_loop, 0.07)
   after <- holes()
-  expect_equal(after[[1]]$x, before[[1]]$x + 20, tolerance = 2)
-  expect_equal(after[[1]]$y, before[[1]]$y - 50, tolerance = 2)
-  expect_equal(after[[2]]$y, before[[2]]$y - 60, tolerance = 2)
-  pz_js(page, "document.getElementById('inner').style.display = 'none'")
+  expect_equal(after[[1]]$x, before[[1]]$x + 20, tolerance = 0.5)
+  expect_equal(after[[1]]$y, before[[1]]$y, tolerance = 0.5)
+  expect_equal(after[[2]]$y, before[[2]]$y - 60 + 50, tolerance = 0.5)
   path <- withr::local_tempfile(fileext = ".png")
+  img <- spotlight_image(page, path)
+  expect_equal(
+    spotlight_rgb(img, page, 150, 90),
+    c(0, 200 / 255, 80 / 255),
+    tolerance = 0.04
+  )
+  expect_equal(spotlight_rgb(img, page, 50, 390), c(1, 0, 0), tolerance = 0.04)
+  pz_js(page, "document.getElementById('inner').style.display = 'none'")
   img <- spotlight_image(page, path)
   expect_false(holes()[[2]]$visible)
   expect_equal(spotlight_rgb(img, page, 50, 385), rep(0.4, 3), tolerance = 0.04)
@@ -159,6 +169,7 @@ test_that("spotlight follows page and inner scroll, then hides disconnected hole
 })
 
 test_that("spotlight stays under marks and opaque redactions in either draw order", {
+  skip_if_not_installed("png")
   page <- spotlight_page()
   pz_js(
     page,
@@ -188,6 +199,7 @@ test_that("spotlight stays under marks and opaque redactions in either draw orde
 })
 
 test_that("spotlight validates its options and dim endpoints", {
+  skip_if_not_installed("png")
   page <- spotlight_page()
   for (bad in list(-0.1, 1.1, Inf, NA_real_, "0.6", c(0.1, 0.2))) {
     expect_error(pz_annotate_spotlight(page, "#one", dim = bad))
@@ -221,6 +233,7 @@ test_that("spotlight validates its options and dim endpoints", {
 })
 
 test_that("spotlight fade pumps during recording and reverses on clear", {
+  skip_if_not_installed("png")
   skip_if_not_installed("av")
   page <- spotlight_page()
   path <- withr::local_tempfile(fileext = ".mp4")
@@ -276,6 +289,7 @@ test_that("paused spotlight and its clear are instant", {
 })
 
 test_that("spotlight accepts root and scoped NULL targets", {
+  skip_if_not_installed("png")
   page <- spotlight_page()
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_annotate_spotlight(reveal = "none")
@@ -313,5 +327,53 @@ test_that("spotlight belongs to the current document", {
   expect_equal(
     spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
     0
+  )
+})
+
+test_that("spotlight dims a below-fold target-framed still without scrolling", {
+  skip_if_not_installed("png")
+  page <- spotlight_page()
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=far style=\"position:absolute;left:120px;top:1500px;width:180px;height:90px;background:white\"></div>')"
+  )
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+  page |> pz_annotate_spotlight("#one", reveal = "none")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path, target = "#far")
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+  img <- png::readPNG(path)
+  expect_equal(mean(img[,, 1:3]), 0.4, tolerance = 0.04)
+})
+
+test_that("hidden and zero-size targets cannot leave spotlight holes", {
+  skip_if_not_installed("png")
+  page <- spotlight_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  pz_js(page, "document.getElementById('two').style.visibility = 'hidden'")
+  page |> pz_annotate_spotlight("#two", reveal = "none")
+  img <- spotlight_image(page, path)
+  expect_equal(
+    spotlight_rgb(img, page, 350, 140),
+    rep(0.4, 3),
+    tolerance = 0.04
+  )
+  pz_js(page, "document.getElementById('two').style.visibility = 'visible'")
+  img <- spotlight_image(page, path)
+  expect_equal(
+    spotlight_rgb(img, page, 350, 140),
+    c(0, 100 / 255, 1),
+    tolerance = 0.04
+  )
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=zero style=\"position:absolute;left:500px;top:200px;width:0;height:40px\"></div>')"
+  )
+  page |> pz_annotate_spotlight("#zero", pad = 20, reveal = "none")
+  img <- spotlight_image(page, path)
+  expect_equal(
+    spotlight_rgb(img, page, 500, 220),
+    rep(0.4, 3),
+    tolerance = 0.04
   )
 })

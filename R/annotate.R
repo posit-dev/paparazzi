@@ -400,7 +400,12 @@ annotate_boot_js <- r"(function() {
       if (entry.spotlight) {
         const svg = entry.nodes[0];
         const mask = svg.querySelector('mask');
-        const width = window.innerWidth, height = window.innerHeight;
+        const width = Math.max(window.innerWidth, document.documentElement.scrollWidth,
+                               document.body.scrollWidth);
+        const height = Math.max(window.innerHeight, document.documentElement.scrollHeight,
+                                document.body.scrollHeight);
+        svg.style.left = -window.scrollX + 'px';
+        svg.style.top = -window.scrollY + 'px';
         svg.setAttribute('width', width);
         svg.setAttribute('height', height);
         mask.setAttribute('width', width);
@@ -417,13 +422,14 @@ annotate_boot_js <- r"(function() {
           }
           const r = el.getBoundingClientRect(), p = entry.pad;
           const w = r.width + p[1] + p[3], h = r.height + p[0] + p[2];
-          if (w <= 0 || h <= 0) {
+          if (getComputedStyle(el).visibility !== 'visible' || r.width <= 0 ||
+              r.height <= 0 || w <= 0 || h <= 0) {
             hole.style.display = 'none';
             return;
           }
           hole.style.display = '';
-          hole.setAttribute('x', r.left - p[3]);
-          hole.setAttribute('y', r.top - p[0]);
+          hole.setAttribute('x', r.left + window.scrollX - p[3]);
+          hole.setAttribute('y', r.top + window.scrollY - p[0]);
           hole.setAttribute('width', w);
           hole.setAttribute('height', h);
         });
