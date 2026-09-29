@@ -306,7 +306,13 @@ test_that("target outline numbering keeps hidden matches in the count", {
   page <- local_inspect_page()
   # #insp-ghost is hidden (zero-area) and matches first; the drawn badge
   # must still carry the number the console summary gives #insp-real.
-  pz_inspect(page, ".insp-pair", show = "browser")
+  got <- inspect_capture(function() {
+    pz_inspect(page, ".insp-pair", show = "browser")
+  })
+  expect_identical(got$value, page)
+  expect_false(got$visible)
+  expect_length(got$msgs, 0L)
+  expect_identical(got$out[[4]], "Target     `.insp-pair` → 2 matches")
   texts <- unlist(pz_js(
     page,
     paste0(

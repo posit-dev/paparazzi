@@ -46,8 +46,38 @@ for (rd_name in names(rd_db)[has_examples]) {
     skip_if_no_chrome()
     withr::local_options(rlang_interactive = TRUE)
     withr::local_dir(withr::local_tempdir())
-    expect_no_error(utils::capture.output(
-      source(script, local = new.env(parent = globalenv()))
-    ))
+    # Examples may intentionally print caught expectation errors, and
+    # pz_inspect() reports where it wrote an annotated screenshot. Capture
+    # that message stream and assert the documented output instead of letting
+    # it leak into the test reporter.
+    messages <- capture.output(
+      expect_no_error(utils::capture.output(
+        source(script, local = new.env(parent = globalenv()))
+      )),
+      type = "message"
+    )
+    expected <- switch(
+      rd_name,
+      "pz_expect_exists.Rd" = c(
+        "Error : Expected an element to match",
+        "Target: `.error-message`",
+        "Last seen: 0 matches",
+        "Waited 0.5s."
+      ),
+      "pz_expect_text.Rd" = c(
+        "Error : Expected text to contain \"otters\"",
+        "Target: `h1`",
+        "Last seen: \"Tasks\"",
+        "Waited 0.5s."
+      ),
+      "pz_inspect.Rd" = "Annotated screenshot: <path>",
+      character()
+    )
+    if (identical(rd_name, "pz_inspect.Rd")) {
+      expect_length(messages, 1L)
+      expect_match(messages[[1]], "^Annotated screenshot: '.+\\.png'$")
+      messages <- "Annotated screenshot: <path>"
+    }
+    expect_identical(messages, expected)
   })
 }
