@@ -205,10 +205,6 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
   }
   if (recording && duration > 0) {
     pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
-    pz_js(
-      ctx,
-      "document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations')?.pz?.finishClear()"
-    )
   }
   ctx_return(ctx)
 }
@@ -495,9 +491,6 @@ annotate_boot_js <- r"(function() {
     sync();
     if (entries.size) frame = requestAnimationFrame(tick);
   };
-  const finishClear = () => {
-    layer.querySelectorAll('.pz-exiting').forEach(node => node.remove());
-  };
   const remove = (id, animate) => {
     const entry = entries.get(id);
     if (!entry) return false;
@@ -506,7 +499,6 @@ annotate_boot_js <- r"(function() {
     for (const node of entry.nodes) {
       node.getAnimations({subtree:true}).forEach(anim => anim.cancel());
       if (animate && durations[entry.reveal]) {
-        node.classList.add('pz-exiting');
         if (entry.reveal === 'draw' || entry.reveal === 'wipe') node.querySelector('span')?.remove();
         start(node, entry.reveal, false, node.querySelector('.pz-shape'));
       } else node.remove();
@@ -569,7 +561,6 @@ annotate_boot_js <- r"(function() {
       }
       return union;
     },
-    finishClear,
     spotlight: (elements, opts) => {
       remove('spotlight', false);
       const svg = document.createElementNS(svgNS, 'svg');

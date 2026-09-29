@@ -31,9 +31,10 @@ the target with padding, capped at the capture's pixel density.}
 \code{c(top, right, bottom, left)}. Defaults to 24 pixels.}
 
 \item{duration}{Movement duration in seconds. \code{NULL} chooses a duration
-based on the pan and zoom distance. When the camera is already on the
-shot, \code{NULL} does nothing and a number holds the camera still for that
-long.}
+based on the pan and zoom distance. When the move wouldn't change the
+view, \code{NULL} takes the new shot instantly, adding no video time, so the
+camera follows the new target if the page scrolls later. A number holds
+the camera still for that long.}
 
 \item{target_box}{\code{"element"} measures just the shot target; \code{"annotated"}
 also includes its attached annotations. Defaults to \code{"element"} even
