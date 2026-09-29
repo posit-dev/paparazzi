@@ -206,5 +206,6 @@ pz_close(page)
 You've now driven a page from R: finding elements with selectors and specs, acting on them, checking the results with expectations, and capturing screenshots and a video. From here:
 
 - The [three-part app walkthrough](walkthrough.html) builds a set of short MP4 recordings from the task tracker, with camera moves, a callout, captions, and a redacted note.
+- The [annotations article](annotations.html) shows every kind of annotation — marks, callouts, spotlights, redactions, and captions — and how to style, frame, and clear them.
 - The [Shiny apps article](shiny.html) shows how paparazzi starts Shiny apps, waits for them, and sets their inputs, and how to use paparazzi in tests.
 - The [function reference](../reference/index.html) lists every function by task, with an example for each.
