@@ -233,6 +233,27 @@ test_that("fade produces recorded intermediate frames and clears in reverse", {
   expect_true(file.exists(path))
 })
 
+test_that("recorded clear removes all nodes after mixed exit animations", {
+  skip_if_not_installed("av")
+  page <- annotation_page()
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  pz_annotate(page, "#box", id = "shared", reveal = "fade")
+  pz_annotate(page, "#box", id = "shared", reveal = "wipe")
+  pz_annotate_callout(page, "Tip", target = "#box", id = "callout")
+  pz_annotate_spotlight(page, "#box")
+  pz_annotate_redact(page, "#box", id = "redaction")
+  pz_annotate_clear(page)
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
+    ),
+    0
+  )
+  pz_record_stop(page)
+})
+
 test_that("paused recording skips fade on draw and clear", {
   skip_if_not_installed("av")
   page <- annotation_page()
@@ -683,13 +704,13 @@ test_that("all reveals show sampled entry and reverse exit frames", {
     }
     pz_js(
       page,
-      "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.clear({id:'test',animate:true}); l.querySelector('.pz-exiting').getAnimations({subtree:true})[0].pause(); })()"
+      "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); window.__exitNode=l.querySelector('.pz-annotation'); l.pz.clear({id:'test',animate:true}); window.__exitNode.getAnimations({subtree:true})[0].pause(); })()"
     )
     leaving <- lapply(c(0, 0.25, 0.5, 0.75, 1), function(fraction) {
       pz_js(
         page,
         paste0(
-          "(() => { const a=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-exiting').getAnimations({subtree:true})[0]; a.currentTime=",
+          "(() => { const a=window.__exitNode.getAnimations({subtree:true})[0]; a.currentTime=",
           fraction,
           "*a.effect.getTiming().duration; })()"
         )
@@ -704,7 +725,7 @@ test_that("all reveals show sampled entry and reverse exit frames", {
     }
     pz_js(
       page,
-      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.finishClear()"
+      "window.__exitNode.remove()"
     )
     expect_length(annotation_state(page), 0)
   }
@@ -750,18 +771,18 @@ test_that("draw leaves badge visible and removes it at start of reverse", {
   expect_equal(annotation_state(page)[[1]]$label, "A")
   pz_js(
     page,
-    "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.clear({id:'badge',animate:true}); l.querySelector('.pz-exiting').getAnimations({subtree:true})[0].pause(); })()"
+    "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); window.__exitNode=l.querySelector('.pz-annotation'); l.pz.clear({id:'badge',animate:true}); window.__exitNode.getAnimations({subtree:true})[0].pause(); })()"
   )
   expect_equal(
     pz_js(
       page,
-      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-exiting span') === null"
+      "window.__exitNode.querySelector('span') === null"
     ),
     TRUE
   )
   pz_js(
     page,
-    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.finishClear()"
+    "window.__exitNode.remove()"
   )
 })
 
@@ -797,7 +818,7 @@ test_that("clear returns the longest active exit duration", {
     pz_annotate_clear()
   durations <- pz_js(
     page,
-    "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); const el=document.querySelector('#box'); const o={type:'box',pad:[0,0,0,0],label:null,color:'red',fontFamily:'sans-serif',fontSize:14,animate:true}; const short=l.pz.draw([el], {...o,id:'short',reveal:'fade'}); const long=l.pz.draw([el], {...o,id:'long',reveal:'wipe'}); const clear=l.pz.clear({id:null,animate:true}); l.pz.finishClear(); return [short,long,clear,l.pz.clear({id:null,animate:true})]; })()"
+    "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); const el=document.querySelector('#box'); const o={type:'box',pad:[0,0,0,0],label:null,color:'red',fontFamily:'sans-serif',fontSize:14,animate:true}; const short=l.pz.draw([el], {...o,id:'short',reveal:'fade'}); const long=l.pz.draw([el], {...o,id:'long',reveal:'wipe'}); const clear=l.pz.clear({id:null,animate:true}); [...l.children].forEach(n=>n.remove()); return [short,long,clear,l.pz.clear({id:null,animate:true})]; })()"
   )
   expect_equal(unlist(durations), c(250, 400, 400, 0))
 })
@@ -824,15 +845,15 @@ test_that("a labeled wipe reveals the badge before its shape finishes", {
   expect_gt(pixel(225, 311)[2], 0.9)
   pz_js(
     page,
-    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.clear({id:'labeled',animate:true})"
+    "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); window.__exitNode=l.querySelector('.pz-annotation'); return l.pz.clear({id:'labeled',animate:true}); })()"
   )
   expect_true(pz_js(
     page,
-    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-exiting span') === null"
+    "window.__exitNode.querySelector('span') === null"
   ))
   pz_js(
     page,
-    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.finishClear()"
+    "window.__exitNode.remove()"
   )
 })
 
