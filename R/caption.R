@@ -230,6 +230,7 @@ caption_vtt <- function(rec, windows) {
     text <- gsub("<", "&lt;", text, fixed = TRUE)
     text <- gsub(">", "&gt;", text, fixed = TRUE)
     text <- gsub("\n(?:[ \t]*\n)+", "\n", text, perl = TRUE)
+    text <- gsub("^(?:[ \t]*\n)+|(?:\n[ \t]*)+$", "", text, perl = TRUE)
     c(paste0(time(window$start), " --> ", time(window$end)), text, "")
   }))
   writeLines(c("WEBVTT", "", cues), path, useBytes = TRUE)
@@ -240,7 +241,7 @@ caption_filter <- function(rec, page, sampled, out, windows, dir) {
   base <- out$vfilter
   chains <- paste0("[in]", base, "[b0]")
   home_width <- if (is.null(rec$crop)) {
-    pz_js(page, "window.innerWidth")
+    rec$camera_viewport_width
   } else {
     rec$crop$width
   }

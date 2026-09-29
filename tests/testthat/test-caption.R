@@ -304,7 +304,7 @@ test_that("VTT keeps text after empty lines within one cue", {
     list(list(
       start = 0,
       end = 1,
-      caption = list(text = "a\n\nb")
+      caption = list(text = "\na\n\nb\n\n")
     ))
   )
   lines <- readLines(path)
