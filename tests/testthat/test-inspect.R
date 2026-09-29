@@ -304,6 +304,13 @@ test_that("a control inside a disabled fieldset reports disabled", {
 
 test_that("target outline numbering keeps hidden matches in the count", {
   page <- local_inspect_page()
+  # show = "browser" leaves outlines drawn but its chromote view() opens a
+  # DevTools tab that dies at teardown; stub browseURL (what chromote's
+  # view() ends in) so the branch is still exercised without opening one.
+  local_mocked_bindings(
+    browseURL = function(url, ...) NULL,
+    .package = "utils"
+  )
   # #insp-ghost is hidden (zero-area) and matches first; the drawn badge
   # must still carry the number the console summary gives #insp-real.
   got <- inspect_capture(function() {
