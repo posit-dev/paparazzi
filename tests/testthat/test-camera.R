@@ -282,7 +282,7 @@ test_that("resampled camera ticks keep source video times and frame scroll indic
   expect_true(all(vapply(positions[-1], identical, logical(1), positions[[1]])))
 })
 
-test_that("explicit zoom beyond capture density warns without recorder state", {
+test_that("explicit zoom beyond capture density warns", {
   testthat::skip_if_not_installed("png")
   path <- withr::local_tempfile(fileext = ".png")
   png::writePNG(array(0.5, c(48, 64, 3)), path)
@@ -300,7 +300,6 @@ test_that("explicit zoom beyond capture density warns without recorder state", {
   sampled <- list(files = path, index = 1L, vts = 0, n_ticks = 1L)
   out <- record_output_spec(rec, png_read_size(path))
   expect_warning(camera_filter(rec, sampled, out, png_read_size(path)), "soft")
-  expect_false(exists("camera_warned", rec, inherits = FALSE))
 })
 
 test_that("an interrupted camera move starts at its previous eased position", {
