@@ -42,7 +42,10 @@ backdrop blur in screenshots and recordings. Fill is the safe choice for
 secrets: blur can leave text partly legible. Redactions follow elements
 as they move; if an element disconnects or stops rendering, its last box
 remains until cleared. They belong to the current document and are lost
-on navigation.
+on navigation. Redaction covers each element's border box plus \code{pad}, not
+overflowing descendants; target the overflowing element or add padding. Later
+top-layer UI (modal dialogs and popovers) paints above redactions, so
+targets inside an open modal or popover are rejected.
 }
 \seealso{
 \code{\link[=pz_annotate]{pz_annotate()}}, \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}

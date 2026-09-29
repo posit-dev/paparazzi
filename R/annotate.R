@@ -108,7 +108,10 @@ pz_annotate <- function(
 #' secrets: blur can leave text partly legible. Redactions follow elements
 #' as they move; if an element disconnects or stops rendering, its last box
 #' remains until cleared. They belong to the current document and are lost
-#' on navigation.
+#' on navigation. Redaction covers each element's border box plus `pad`, not
+#' overflowing descendants; target the overflowing element or add padding. Later
+#' top-layer UI (modal dialogs and popovers) paints above redactions, so
+#' targets inside an open modal or popover are rejected.
 #'
 #' @inheritParams pz_annotate
 #' @param method `"fill"` (default) or `"blur"` (32 CSS px backdrop blur).
@@ -370,8 +373,18 @@ annotate_boot_js <- r"(function() {
       return id;
     },
     redact: (elements, opts) => {
-      if (elements.some(el => !el.isConnected || !el.getClientRects().length)) {
-        throw new Error('Cannot redact an element without a rendered box.');
+      for (const el of elements) {
+        if (el.closest(':modal, :popover-open')) {
+          throw new Error('Cannot redact content in a modal dialog or popover.');
+        }
+        if (!el.isConnected || !el.getClientRects().length) {
+          throw new Error('Cannot redact an element without a rendered box.');
+        }
+        const r = el.getBoundingClientRect();
+        if (r.width + opts.pad[1] + opts.pad[3] <= 0 ||
+            r.height + opts.pad[0] + opts.pad[2] <= 0) {
+          throw new Error('Redaction needs a box with nonzero width and height.');
+        }
       }
       let id = opts.id;
       if (id === null) {

@@ -420,6 +420,59 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
   )
 })
 
+test_that("modal content cannot replace an existing redaction", {
+  page <- annotation_page()
+  page |> pz_annotate_redact("#box", id = "secret")
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<dialog id=modal><div id=modal-secret>SECRET</div></dialog>'); document.getElementById('modal').showModal()"
+  )
+  expect_error(
+    pz_annotate_redact(page, "#modal-secret", id = "secret"),
+    "modal dialog or popover"
+  )
+  survivor <- pz_js(
+    page,
+    "(() => { const n = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction'); return [n.style.left, n.style.top, n.style.width, n.style.height]; })()"
+  )
+  expect_equal(unlist(survivor), c("200px", "310px", "100px", "50px"))
+})
+
+test_that("zero-height overflowing content cannot replace an existing redaction", {
+  page <- annotation_page()
+  page |> pz_annotate_redact("#box", id = "secret")
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=zero style=\"position:absolute;left:120px;top:160px;width:100px;height:0;overflow:visible\">SECRET</div>')"
+  )
+  expect_error(
+    pz_annotate_redact(page, "#zero", id = "secret"),
+    "nonzero width and height"
+  )
+  survivor <- pz_js(
+    page,
+    "(() => { const n = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction'); return [n.style.left, n.style.top, n.style.width, n.style.height]; })()"
+  )
+  expect_equal(unlist(survivor), c("200px", "310px", "100px", "50px"))
+})
+
+test_that("below-fold redaction covers a target-framed still without scrolling", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div id=far style=\"position:absolute;left:120px;top:1500px;width:180px;height:90px;background:white;color:black\">SECRET</div>')"
+  )
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+  page |> pz_annotate_redact("#far")
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path, target = "#far")
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+  img <- png::readPNG(path)
+  expect_equal(mean(img[,, 1:3]), 23 / 255, tolerance = 0.025)
+})
+
 test_that("blur changes text pixels and keeps its box when target stops rendering", {
   skip_if_not_installed("png")
   page <- annotation_page()
