@@ -1307,3 +1307,40 @@ test_that("pz_drag errors when the destination hides after the source's scroll",
   # Nothing was dispatched: the error fires before any press.
   expect_false("mousedown" %in% adv_log_types(adv_log(page)))
 })
+
+test_that("press records original and resolved keys only while unpaused", {
+  skip_if_no_av()
+  page <- local_record_page()
+  pz_stage(page, show_keys = "both")
+  pz_press(page, "Mod+k")
+  expect_null(page_recorder(page))
+  pz_record_start(page, tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0.1))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_press(page, c("Mod+k", "Enter"))
+  expect_length(rec$keypresses, 1L)
+  event <- rec$keypresses[[1]]
+  expect_identical(event$style, "both")
+  expect_identical(
+    vapply(event$keys, `[[`, character(1), "spec"),
+    c("Mod+k", "Enter")
+  )
+  mac <- pz_js(
+    page,
+    "/^mac/i.test(navigator.userAgentData?.platform || navigator.platform || '')"
+  )
+  expect_identical(
+    event$keys[[1]]$resolved$modifier_keys,
+    if (isTRUE(mac)) "Meta" else "Control"
+  )
+  expect_gte(event$last, event$vt)
+  pz_record_pause(page)
+  pz_press(page, "Shift+Tab")
+  expect_length(rec$keypresses, 1L)
+  pz_record_resume(page)
+  pz_press(page, "Tab", show_keys = "none")
+  expect_length(rec$keypresses, 1L)
+  pz_press(page, "Tab", show_keys = "mac")
+  expect_length(rec$keypresses, 2L)
+  expect_identical(rec$keypresses[[2]]$style, "mac")
+})

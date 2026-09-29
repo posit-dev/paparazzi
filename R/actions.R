@@ -222,6 +222,11 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #'
 #' @inheritParams pz_click
 #' @param key A character vector of key specs.
+#' @param show_keys `NULL` uses the page's [pz_stage()] setting (initially
+#'   `"none"`). `"words"` shows named modifier keycaps, `"mac"` uses
+#'   Mac symbols, and `"both"` shows `Mod` as `Ctrl / ⌘`.
+#'   Keystroke callouts appear only in recordings; subsequent calls replace
+#'   earlier ones. A vector is displayed as a single sequence.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -245,11 +250,13 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #' pz_close(page)
 #'
 #' @export
-pz_press <- function(ctx, key, ...) {
+pz_press <- function(ctx, key, ..., show_keys = NULL) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
   check_character(key)
+  show_keys <- show_keys %||% page_stage(ctx$page)$show_keys
+  show_keys <- arg_match(show_keys, c("none", "words", "mac", "both"))
 
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
@@ -261,8 +268,19 @@ pz_press <- function(ctx, key, ...) {
     )
     mod <- if (isTRUE(mac)) "Meta" else "Control"
   }
-  for (spec in key) {
-    events <- key_events(key_parse(spec, mod = mod))
+  rec <- page_recorder(ctx$page)
+  showing <- !is.null(rec) &&
+    isTRUE(rec$active) &&
+    !isTRUE(rec$paused) &&
+    show_keys != "none"
+  if (showing) {
+    started <- rec_vt(rec)
+    pressed <- vector("list", length(key))
+  }
+  for (i in seq_along(key)) {
+    spec <- key[[i]]
+    parsed <- key_parse(spec, mod = mod)
+    events <- key_events(parsed)
     for (event in events) {
       action_cdp(
         ctx,
@@ -273,6 +291,20 @@ pz_press <- function(ctx, key, ...) {
         )
       )
     }
+    if (showing) {
+      pressed[[i]] <- list(spec = spec, resolved = parsed)
+    }
+  }
+  if (showing) {
+    rec$keypresses <- c(
+      rec$keypresses,
+      list(list(
+        vt = started,
+        last = rec_vt(rec),
+        style = show_keys,
+        keys = pressed
+      ))
+    )
   }
   stage_action_pause(ctx)
   invisible(ctx)

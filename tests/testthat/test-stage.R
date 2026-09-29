@@ -632,3 +632,15 @@ test_that("without a recording the same chain runs straight to the final state",
   expect_equal(pz_js(page, "window.__log.wheels"), 0)
   expect_null(cursor_overlay_state(page))
 })
+
+test_that("show_keys defaults to none and restores its staged default", {
+  page <- local_record_page()
+  expect_identical(page_stage(page)$show_keys, "none")
+  for (style in c("words", "mac", "both")) {
+    pz_stage(page, show_keys = style)
+    expect_identical(page_stage(page)$show_keys, style)
+  }
+  expect_error(pz_stage(page, show_keys = "nope"), "nope")
+  pz_stage(page, show_keys = NULL)
+  expect_identical(page_stage(page)$show_keys, "none")
+})

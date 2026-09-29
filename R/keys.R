@@ -348,3 +348,40 @@ key_events <- function(parsed) {
 
   events
 }
+
+key_callout_labels <- function(spec, parsed, style) {
+  tokens <- if (nchar(spec) == 1L) {
+    spec
+  } else {
+    strsplit(spec, "+", fixed = TRUE)[[1]]
+  }
+  modifiers <- tokens[-length(tokens)]
+  resolved <- parsed$modifier_keys
+  names_words <- c(
+    Alt = "Alt",
+    Control = "Ctrl",
+    Meta = "Meta",
+    Shift = "Shift"
+  )
+  names_mac <- c(Alt = "⌥", Control = "⌃", Meta = "⌘", Shift = "⇧")
+  labels <- if (style == "mac") names_mac else names_words
+  prefix <- vapply(
+    seq_along(modifiers),
+    function(i) {
+      if (style == "both" && tolower(modifiers[[i]]) == "mod") {
+        "Ctrl / ⌘"
+      } else {
+        unname(labels[[resolved[[i]]]])
+      }
+    },
+    character(1)
+  )
+  main <- parsed$key$key
+  if (identical(main, " ")) {
+    main <- "Space"
+  }
+  if (main %in% names(labels)) {
+    main <- unname(labels[[main]])
+  }
+  c(prefix, main)
+}

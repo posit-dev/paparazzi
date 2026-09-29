@@ -15,6 +15,7 @@ pz_stage(
   typing_speed,
   pause,
   camera_follow,
+  show_keys,
   annotate_color,
   annotate_font_family,
   annotate_font_size
@@ -64,6 +65,10 @@ Supply \code{NULL} to restore the default.}
 \item{camera_follow}{Whether pointer and typing actions automatically pan
 a zoomed recording camera to keep their target in view. Defaults to
 \code{TRUE}; \code{FALSE} disables it and \code{NULL} restores the default.}
+
+\item{show_keys}{Keystroke callouts for \code{\link[=pz_press]{pz_press()}}: \code{"none"} (default),
+\code{"words"}, \code{"mac"}, or \code{"both"}. Supply \code{NULL} to restore the default.
+Callouts appear only in recordings.}
 
 \item{annotate_color}{CSS color for new annotations. Supply \code{NULL} to
 restore the default.}

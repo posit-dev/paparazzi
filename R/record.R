@@ -580,6 +580,7 @@ new_recorder <- function(
   rec$camera <- list()
   rec$caption_mode <- "burn"
   rec$captions <- list()
+  rec$keypresses <- list()
   rec$camera_viewport_width <- NULL
   rec$camera_warned <- FALSE
   rec$holds <- list()

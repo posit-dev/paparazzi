@@ -55,6 +55,9 @@
 #' @param camera_follow Whether pointer and typing actions automatically pan
 #'   a zoomed recording camera to keep their target in view. Defaults to
 #'   `TRUE`; `FALSE` disables it and `NULL` restores the default.
+#' @param show_keys Keystroke callouts for [pz_press()]: `"none"` (default),
+#'   `"words"`, `"mac"`, or `"both"`. Supply `NULL` to restore the default.
+#'   Callouts appear only in recordings.
 #' @param annotate_color CSS color for new annotations. Supply `NULL` to
 #'   restore the default.
 #' @param annotate_font_family CSS font family for new annotation badges.
@@ -102,6 +105,7 @@ pz_stage <- function(
   typing_speed,
   pause,
   camera_follow,
+  show_keys,
   annotate_color,
   annotate_font_family,
   annotate_font_size
@@ -187,6 +191,13 @@ pz_stage <- function(
       overrides$camera_follow <- camera_follow
     }
   }
+  if (!missing(show_keys)) {
+    overrides$show_keys <- if (is.null(show_keys)) {
+      NULL
+    } else {
+      arg_match(show_keys, c("none", "words", "mac", "both"))
+    }
+  }
   if (!missing(annotate_color)) {
     if (is.null(annotate_color)) {
       overrides[["annotate_color"]] <- NULL
@@ -254,6 +265,7 @@ STAGE_DEFAULTS <- list(
   typing_speed = 16,
   pause = 0,
   camera_follow = TRUE,
+  show_keys = "none",
   annotate_color = "#e11d48",
   annotate_font_family = "sans-serif",
   annotate_font_size = 14

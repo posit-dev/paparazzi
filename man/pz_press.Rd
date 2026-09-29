@@ -4,7 +4,7 @@
 \alias{pz_press}
 \title{Press key combinations}
 \usage{
-pz_press(ctx, key, ...)
+pz_press(ctx, key, ..., show_keys = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -12,6 +12,12 @@ pz_press(ctx, key, ...)
 \item{key}{A character vector of key specs.}
 
 \item{...}{Checked empty; reserved for future use.}
+
+\item{show_keys}{\code{NULL} uses the page's \code{\link[=pz_stage]{pz_stage()}} setting (initially
+\code{"none"}). \code{"words"} shows named modifier keycaps, \code{"mac"} uses
+Mac symbols, and \code{"both"} shows \code{Mod} as \verb{Ctrl / ⌘}.
+Keystroke callouts appear only in recordings; subsequent calls replace
+earlier ones. A vector is displayed as a single sequence.}
 }
 \value{
 \code{ctx}, invisibly.

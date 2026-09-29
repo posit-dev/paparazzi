@@ -462,3 +462,53 @@ test_that("a bare modifier dispatches rawKeyDown/keyUp as the main key", {
   expect_null(events[[1]]$text)
   expect_identical(events[[2]]$type, "keyUp")
 })
+
+test_that("key callout labels preserve Mod while following the selected style", {
+  mac <- key_parse("sHiFt+MoD+k", mod = "Meta")
+  other <- key_parse("sHiFt+MoD+k", mod = "Control")
+  expect_identical(
+    key_callout_labels("sHiFt+MoD+k", mac, "words"),
+    c("Shift", "Meta", "K")
+  )
+  expect_identical(
+    key_callout_labels("sHiFt+MoD+k", other, "words"),
+    c("Shift", "Ctrl", "K")
+  )
+  expect_identical(
+    key_callout_labels("sHiFt+MoD+k", mac, "mac"),
+    c("⇧", "⌘", "K")
+  )
+  expect_identical(
+    key_callout_labels("sHiFt+MoD+k", other, "mac"),
+    c("⇧", "⌃", "K")
+  )
+  expect_identical(
+    key_callout_labels("sHiFt+MoD+k", other, "both"),
+    c("Shift", "Ctrl / ⌘", "K")
+  )
+  expect_identical(
+    key_callout_labels("sHiFt+MoD+k", mac, "both"),
+    c("Shift", "Ctrl / ⌘", "K")
+  )
+  expect_identical(
+    key_callout_labels(
+      "Control+Alt+Meta+Enter",
+      key_parse("Control+Alt+Meta+Enter"),
+      "mac"
+    ),
+    c("⌃", "⌥", "⌘", "Enter")
+  )
+  expect_identical(
+    key_callout_labels(
+      "Control+Shift+Alt+Meta+Enter",
+      key_parse("Control+Shift+Alt+Meta+Enter"),
+      "words"
+    ),
+    c("Ctrl", "Shift", "Alt", "Meta", "Enter")
+  )
+  expect_identical(key_callout_labels("A", key_parse("A"), "words"), "A")
+  expect_identical(
+    key_callout_labels("Control", key_parse("Control"), "mac"),
+    "⌃"
+  )
+})
