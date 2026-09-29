@@ -307,8 +307,12 @@ test_that("target outline numbering keeps hidden matches in the count", {
   # show = "browser" leaves outlines drawn but its chromote view() opens a
   # DevTools tab that dies at teardown; stub browseURL (what chromote's
   # view() ends in) so the branch is still exercised without opening one.
+  viewed <- character()
   local_mocked_bindings(
-    browseURL = function(url, ...) NULL,
+    browseURL = function(url, ...) {
+      viewed <<- c(viewed, url)
+      NULL
+    },
     .package = "utils"
   )
   # #insp-ghost is hidden (zero-area) and matches first; the drawn badge
@@ -319,6 +323,9 @@ test_that("target outline numbering keeps hidden matches in the count", {
   expect_identical(got$value, page)
   expect_false(got$visible)
   expect_length(got$msgs, 0L)
+  # Guard against chromote routing view() somewhere the stub misses.
+  expect_length(viewed, 1L)
+  expect_match(viewed[[1]], "devtools", fixed = TRUE)
   expect_identical(got$out[[4]], "Target     `.insp-pair` → 2 matches")
   texts <- unlist(pz_js(
     page,
