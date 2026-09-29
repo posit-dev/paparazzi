@@ -3,3 +3,4 @@
 paparazzi.Rcheck/
 paparazzi_*.tar.gz
 docs
+inst/doc
