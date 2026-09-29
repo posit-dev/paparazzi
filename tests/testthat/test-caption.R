@@ -23,7 +23,7 @@ test_that("frame extraction silences FFmpeg progress and keeps failures visible"
   expect_error(
     av_video_images_quiet(
       video,
-      destdir = tempfile(),
+      destdir = withr::local_tempfile(),
       format = "invalid-codec"
     ),
     "avcodec_find_encoder_by_name"

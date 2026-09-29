@@ -62,17 +62,21 @@ for (rd_name in names(rd_db)[has_examples]) {
         "Error : Expected an element to match",
         "Target: `.error-message`",
         "Last seen: 0 matches",
-        "Waited 0.5s."
+        "Waited <elapsed>s."
       ),
       "pz_expect_text.Rd" = c(
         "Error : Expected text to contain \"otters\"",
         "Target: `h1`",
         "Last seen: \"Tasks\"",
-        "Waited 0.5s."
+        "Waited <elapsed>s."
       ),
       "pz_inspect.Rd" = "Annotated screenshot: <path>",
       character()
     )
+    if (rd_name %in% c("pz_expect_exists.Rd", "pz_expect_text.Rd")) {
+      expect_match(tail(messages, 1), "^Waited [0-9]+(\\.[0-9]+)?s\\.$")
+      messages[[length(messages)]] <- "Waited <elapsed>s."
+    }
     if (identical(rd_name, "pz_inspect.Rd")) {
       expect_length(messages, 1L)
       expect_match(messages[[1]], "^Annotated screenshot: '.+\\.png'$")
