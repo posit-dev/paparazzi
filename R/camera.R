@@ -91,7 +91,7 @@ camera_move <- function(
   }
   now <- rec_vt(rec)
   home <- camera_home(rec, ctx)
-  density <- pz_js(ctx, "window.devicePixelRatio")
+  density <- camera_density(rec, ctx)
   scroll <- page_geometry(ctx)
   scroll <- c(scroll$scroll_x, scroll$scroll_y)
   from <- camera_at(rec$camera, now, home, density)
@@ -131,13 +131,7 @@ camera_follow_move <- function(ctx, rect, duration) {
   home <- camera_home(rec, ctx)
   geometry <- page_geometry(ctx)
   scroll <- c(geometry$scroll_x, geometry$scroll_y)
-  density <- if (length(rec$files) && !is.null(rec$camera_viewport_width)) {
-    png_read_size(rec$files[[1]])$width / rec$camera_viewport_width
-  } else if (identical(rec$method, "screencast")) {
-    1
-  } else {
-    pz_js(ctx, "window.devicePixelRatio")
-  }
+  density <- camera_density(rec, ctx)
   at <- camera_at(rec$camera, now, home, density)
   current <- camera_viewport(
     as.numeric(at),
@@ -198,6 +192,19 @@ camera_follow_shot <- function(current, target, home, scroll) {
   proposed <- c(origin, origin + size)
   shot <- camera_viewport(proposed, scroll, home) + rep(scroll, 2)
   if (all(abs(shot - current) < 1e-7)) NULL else shot
+}
+
+# Capture pixels per CSS px, from the first frame once one exists. Before
+# that, screencast frames arrive at CSS resolution and poll frames at the
+# page's DPR.
+camera_density <- function(rec, ctx) {
+  if (length(rec$files) && !is.null(rec$camera_viewport_width)) {
+    png_read_size(rec$files[[1]])$width / rec$camera_viewport_width
+  } else if (identical(rec$method, "screencast")) {
+    1
+  } else {
+    pz_js(ctx, "window.devicePixelRatio")
+  }
 }
 
 camera_home <- function(rec, ctx) {
