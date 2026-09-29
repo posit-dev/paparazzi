@@ -248,6 +248,10 @@ test_that("spotlight validates its options and dim endpoints", {
       "fade.*none"
     )
   }
+  expect_error(
+    pz_annotate_spotlight(page, "#one", reveal = c("fade", "none")),
+    "reveal"
+  )
   expect_error(pz_annotate_spotlight(page, "#one", pad = c(1, 2)))
   expect_error(pz_annotate_spotlight(page, "#one", extra = TRUE))
   path <- withr::local_tempfile(fileext = ".png")

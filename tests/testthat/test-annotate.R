@@ -120,8 +120,33 @@ test_that("fade outside recording is instant, and invalid types fail", {
   page |> pz_annotate_clear("x")
   expect_length(annotation_state(page), 0)
   expect_error(pz_annotate(page, "#box", type = "unknown"))
+  expect_error(
+    pz_annotate(
+      page,
+      "#box",
+      type = c("box", "circle", "underline", "highlight")
+    ),
+    "type"
+  )
   expect_error(pz_annotate(page, "#box", reveal = "unknown"))
+  expect_error(
+    pz_annotate(
+      page,
+      "#box",
+      reveal = c("fade", "draw", "pop", "slide", "wipe", "none")
+    ),
+    "reveal"
+  )
   expect_error(pz_annotate(page, "#box", id = "caption"))
+})
+
+test_that("marks reject empty style strings", {
+  page <- annotation_page()
+  expect_error(pz_annotate(page, "#box", color = ""), "color.*empty string")
+  expect_error(
+    pz_annotate(page, "#box", font_family = ""),
+    "font_family.*empty string"
+  )
 })
 
 test_that("scoped targets, stage defaults and empty screenshot sync behave", {

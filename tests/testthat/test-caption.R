@@ -382,8 +382,19 @@ test_that("caption style is independent of badge style and survives navigation",
   expect_true(any(
     image[1:round(dim(image)[1] * 0.15), round(dim(image)[2] / 2), 1] < 0.4
   ))
-  expect_error(pz_annotate_caption(page, ""), "nonempty")
-  expect_error(pz_annotate_caption(page, "x", font_size = 0), "positive")
+  expect_error(pz_annotate_caption(page, ""), "text.*empty string")
+  expect_error(
+    pz_annotate_caption(page, "x", color = ""),
+    "color.*empty string"
+  )
+  expect_error(
+    pz_annotate_caption(page, "x", font_family = ""),
+    "font_family.*empty string"
+  )
+  expect_error(
+    pz_annotate_caption(page, "x", font_size = 0),
+    "font_size.*greater than 0"
+  )
   pz_annotate_clear(page)
   expect_null(page_caption(page))
 })

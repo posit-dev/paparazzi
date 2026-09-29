@@ -34,16 +34,8 @@ pz_annotate_spotlight <- function(
   dim <- dim %||% 0.6
   check_number_decimal(dim, min = 0, max = 1, allow_infinite = FALSE)
   reveal <- reveal %||% "fade"
-  if (
-    !is.character(reveal) ||
-      length(reveal) != 1L ||
-      is.na(reveal) ||
-      !reveal %in% c("fade", "none")
-  ) {
-    cli::cli_abort(
-      "{.arg reveal} must be {.val fade} or {.val none} for a spotlight."
-    )
-  }
+  check_string(reveal)
+  reveal <- rlang::arg_match0(reveal, c("fade", "none"))
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)
@@ -53,15 +45,6 @@ pz_annotate_spotlight <- function(
     reveal = reveal,
     animate = recording
   )
-  duration <- annotate_call(
-    ctx,
-    els,
-    "spotlight",
-    options,
-    "drawing the spotlight"
-  )
-  if (recording && duration > 0) {
-    pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
-  }
+  annotate_call(ctx, els, "spotlight", options, "drawing the spotlight")
   ctx_return(ctx)
 }
