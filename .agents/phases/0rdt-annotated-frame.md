@@ -20,3 +20,9 @@ Requirements: kata 0rdt; `.agents/SPEC.md` § Framing and § Camera, annotations
 
 - Stop for init/restore or device-emulation edits; timers, queues, extra ordering flags, stored image/display state, or guards for guards. No new capture synchronization: the layer's synchronous `sync()` is the only ordering requirement.
 - Orchestrator sign-off: camera defaults to element and never inherits staged framing; only explicit annotated home framing errors, while staged annotated home framing silently uses element geometry.
+
+## Handoff (2026-09-29)
+
+- Landed `805c93f` (page-layer painted geometry and framed stills), `841c1a7` (explicit camera shot control), and `1e763e2` (explicit-home error, staged-home element-only copy). No timers, new ordering state, emulation changes, or deviation from sign-off.
+- Red-first `.agents/chrome-lock.sh btw pkg test -f 'frame|camera|record' --reporter minimal`: FAIL 3 / WARN 0 / SKIP 0 / PASS 1004 (unknown `target_box` on frame/stage). After implementation, the same focused filter passed FAIL 0 / WARN 0 / SKIP 0 / PASS 1011. Cross-module `frame|camera|record|annotate|screenshot|stage` passed FAIL 0 / WARN 0 / SKIP 0 / PASS 1594; after the final camera validation assertion, focused `camera` passed FAIL 0 / WARN 0 / SKIP 0 / PASS 133. `btw pkg document`, `air format --check .`, `jarl check .`, and `git diff --check` passed.
+- Next: coordinator reviews the coherent unit and merges if acceptable. The cross-module gate preceded the final assertions for still framing, explicit staged-spec home rejection, and invalid camera value; the subsequent focused frame/camera/record gate covered the first two, and the camera-only gate covered the last. No known outstanding behavior issue.
