@@ -55,14 +55,7 @@ pz_annotate <- function(
   ) {
     cli::cli_abort("{.arg reveal} must be {.val fade} or {.val none}.")
   }
-  if (!is.null(id)) {
-    check_string(id)
-    if (!nzchar(id) || id %in% c("spotlight", "caption")) {
-      cli::cli_abort(
-        "{.arg id} must be nonempty and cannot be {.val spotlight} or {.val caption}."
-      )
-    }
-  }
+  check_annotation_id(id)
   if (!is.null(label)) {
     if (isTRUE(label)) {
       label <- TRUE
@@ -101,25 +94,7 @@ pz_annotate <- function(
     reveal = reveal,
     animate = recording
   )
-  json <- jsonlite::toJSON(options, auto_unbox = TRUE, null = "null")
-  timeout <- ctx$page$default_timeout
-  res <- cdp_call(
-    ctx$page$session$Runtime$callFunctionOn(
-      paste0(
-        "function() { return (",
-        annotate_boot_js,
-        ")().pz.draw(this, ",
-        json,
-        "); }"
-      ),
-      objectId = els$object_id,
-      returnByValue = TRUE,
-      timeout_ = timeout
-    ),
-    timeout,
-    "drawing the annotation"
-  )
-  cdp_check_exception(res, "drawing the annotation")
+  annotate_call(ctx, els, "draw", options, "drawing the annotation")
   if (recording && identical(reveal, "fade")) {
     pump_loop(ctx$page$child_loop, 0.3)
   }
@@ -158,14 +133,7 @@ pz_annotate_redact <- function(
   check_context(ctx)
   check_dots_empty()
   method <- rlang::arg_match(method)
-  if (!is.null(id)) {
-    check_string(id)
-    if (!nzchar(id) || id %in% c("spotlight", "caption")) {
-      cli::cli_abort(
-        "{.arg id} must be nonempty and cannot be {.val spotlight} or {.val caption}."
-      )
-    }
-  }
+  check_annotation_id(id)
   if (!is.null(color)) {
     check_string(color)
     if (method == "blur") {
@@ -179,25 +147,7 @@ pz_annotate_redact <- function(
   withr::defer(release_elements(els))
   annotate_register_init(ctx)
   options <- list(id = id, method = method, pad = unname(pad), color = color)
-  json <- jsonlite::toJSON(options, auto_unbox = TRUE, null = "null")
-  timeout <- ctx$page$default_timeout
-  res <- cdp_call(
-    ctx$page$session$Runtime$callFunctionOn(
-      paste0(
-        "function() { return (",
-        annotate_boot_js,
-        ")().pz.redact(this, ",
-        json,
-        "); }"
-      ),
-      objectId = els$object_id,
-      returnByValue = TRUE,
-      timeout_ = timeout
-    ),
-    timeout,
-    "redacting the elements"
-  )
-  cdp_check_exception(res, "redacting the elements")
+  annotate_call(ctx, els, "redact", options, "redacting the elements")
   invisible(ctx)
 }
 
@@ -242,6 +192,47 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
     )
   }
   invisible(ctx)
+}
+
+check_annotation_id <- function(id, call = caller_env()) {
+  if (is.null(id)) {
+    return(invisible(NULL))
+  }
+  check_string(id, call = call)
+  if (!nzchar(id) || id %in% c("spotlight", "caption")) {
+    cli::cli_abort(
+      "{.arg id} must be nonempty and cannot be {.val spotlight} or {.val caption}.",
+      call = call
+    )
+  }
+  invisible(NULL)
+}
+
+# Calls a layer entry point with the resolved elements as `this`, booting
+# the layer first if this document doesn't have one yet.
+annotate_call <- function(ctx, els, fn, options, what) {
+  json <- jsonlite::toJSON(options, auto_unbox = TRUE, null = "null")
+  timeout <- ctx$page$default_timeout
+  res <- cdp_call(
+    ctx$page$session$Runtime$callFunctionOn(
+      paste0(
+        "function() { return (",
+        annotate_boot_js,
+        ")().pz.",
+        fn,
+        "(this, ",
+        json,
+        "); }"
+      ),
+      objectId = els$object_id,
+      returnByValue = TRUE,
+      timeout_ = timeout
+    ),
+    timeout,
+    what
+  )
+  cdp_check_exception(res, what)
+  invisible(res)
 }
 
 annotate_recording <- function(page) {
