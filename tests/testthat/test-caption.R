@@ -51,6 +51,53 @@ test_that("caption burn overlays two windows after a camera move, with quoted pa
   expect_true(all(last[last_rows, round(dim(last)[2] * 0.85), 1] > 0.8))
 })
 
+test_that("a caption left active stays visible on the last MP4 frame", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- local_record_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_annotate_caption(page, "PERSIST")
+  pz_record_start(page, out, fps = 10, hold = c(0, 0.2))
+  defer_record_stop(page)
+  pz_wait(page, 0.5)
+  pz_record_stop(page)
+  decoded <- tempfile("caption-persist-decoded-")
+  withr::defer(unlink(decoded, recursive = TRUE))
+  frames <- av::av_video_images(out, destdir = decoded, format = "png")
+  expect_gt(length(frames), 5)
+  dark_pill <- function(frame) {
+    image <- png::readPNG(frame)
+    x <- round(dim(image)[2] / 2)
+    y <- round(dim(image)[1] * 0.8):dim(image)[1]
+    any(image[y, x, 1] < 0.4)
+  }
+  expect_true(dark_pill(frames[[1]]))
+  expect_true(dark_pill(tail(frames, 1)[[1]]))
+})
+
+test_that("a caption left active stays visible on the last GIF frame", {
+  skip_if_no_av()
+  skip_if_not_installed("gifski")
+  skip_if_not_installed("png")
+  page <- local_page(record_fixture_file(), width = 320, height = 240)
+  out <- withr::local_tempfile(fileext = ".gif")
+  pz_annotate_caption(page, "PERSIST")
+  pz_record_start(page, out, fps = 10, hold = c(0, 0.2))
+  defer_record_stop(page)
+  pz_wait(page, 0.5)
+  pz_record_stop(page)
+  decoded <- tempfile("caption-persist-gif-decoded-")
+  withr::defer(unlink(decoded, recursive = TRUE))
+  frames <- av::av_video_images(out, destdir = decoded, format = "png")
+  expect_gt(length(frames), 5)
+  first <- png::readPNG(frames[[1]])
+  last <- png::readPNG(tail(frames, 1)[[1]])
+  x <- round(dim(last)[2] / 2)
+  y <- round(dim(last)[1] * 0.8):dim(last)[1]
+  expect_true(any(first[y, x, 1] < 0.4))
+  expect_true(any(last[y, x, 1] < 0.4))
+})
+
 test_that("captioned still is transparent outside the pill and opaque inside", {
   skip_if_not_installed("png")
   page <- local_record_page()
@@ -148,6 +195,81 @@ test_that("caption windows use output ticks through holds and same-time replacem
   rec$captions <- list(list(vt = 0, caption = list(text = "One tick")))
   one <- caption_windows(rec, list(vts = 0))
   expect_equal(one[[1]]$end, 0.1)
+})
+
+test_that("caption windows distinguish open stop from clear at the stop boundary", {
+  rec <- list(fps = 10, path = withr::local_tempfile(fileext = ".mp4"))
+  withr::defer(unlink(sub("\\.mp4$", ".vtt", rec$path)))
+  caption <- list(
+    text = "Stay",
+    side = "bottom",
+    color = "white",
+    font_family = "sans-serif",
+    font_size = 20
+  )
+  sampled <- list(vts = seq(0, 0.9, by = 0.1), n_ticks = 10)
+  rec$captions <- list(list(vt = 0, caption = caption))
+  open <- caption_windows(rec, sampled)
+  expect_true(open[[1]]$open)
+  expect_equal(open[[1]]$end, 1)
+  expect_match(
+    paste(readLines(caption_vtt(rec, open)), collapse = "\n"),
+    "00:00:00.000 --> 00:00:01.000",
+    fixed = TRUE
+  )
+
+  rec$captions <- c(rec$captions, list(list(vt = 1, caption = NULL)))
+  cleared <- caption_windows(rec, sampled)
+  expect_equal(cleared[[1]]$end, open[[1]]$end)
+  expect_false(cleared[[1]]$open)
+
+  rec$captions[[2]] <- list(
+    vt = 1,
+    caption = modifyList(caption, list(text = "Next"))
+  )
+  expect_false(caption_windows(rec, sampled)[[1]]$open)
+
+  rec$captions[[2]] <- list(vt = 0.4, caption = caption)
+  expect_length(caption_windows(rec, sampled), 1)
+  expect_true(caption_windows(rec, sampled)[[1]]$open)
+})
+
+test_that("caption overlays fade only when a later caption event closes the window", {
+  page <- local_page(record_fixture_file(), width = 320, height = 240)
+  rec <- list(
+    fps = 10,
+    format = "mp4",
+    crop = NULL,
+    camera_viewport_width = 320
+  )
+  out <- list(width = 320, height = 240, vfilter = "null,")
+  caption <- list(
+    text = "Stay",
+    side = "bottom",
+    color = "white",
+    font_family = "sans-serif",
+    font_size = 20
+  )
+  sampled <- list(vts = seq(0, 0.9, by = 0.1), n_ticks = 10)
+  rec$captions <- list(list(vt = 0, caption = caption))
+  dir <- withr::local_tempdir()
+  open <- caption_overlays(rec, page, out, caption_windows(rec, sampled), dir)
+  expect_null(open[[1]]$fade_start)
+  expect_null(open[[1]]$fade_in)
+  expect_false(grepl(
+    "fade=t=out",
+    screen_filter(rec, sampled, out, open),
+    fixed = TRUE
+  ))
+
+  rec$captions <- c(rec$captions, list(list(vt = 1, caption = NULL)))
+  closed <- caption_overlays(rec, page, out, caption_windows(rec, sampled), dir)
+  expect_equal(closed[[1]]$fade_start, 0.75)
+  expect_match(
+    screen_filter(rec, sampled, out, closed),
+    "fade=t=out",
+    fixed = TRUE
+  )
 })
 
 test_that("VTT-only output follows pause-aware ticks and does not burn", {

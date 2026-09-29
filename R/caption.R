@@ -2,7 +2,9 @@
 #'
 #' A caption stays on the page until replaced or cleared with
 #' [pz_annotate_clear(id = "caption")][pz_annotate_clear()]. It persists
-#' through navigation and across recordings, and appears on stills.
+#' through navigation and across recordings, and appears on stills. In a
+#' recording, a caption fades out when it is cleared or replaced; one that
+#' is still showing at [pz_record_stop()] stays on through the last frame.
 #'
 #' @inheritParams pz_click
 #' @param text Nonempty caption text. Newlines are preserved.
@@ -253,7 +255,8 @@ caption_windows <- function(rec, sampled) {
     list(
       start = (starts[[i]] - 1) / rec$fps,
       end = (starts[[i]] + runs$lengths[[i]] - 1) / rec$fps,
-      caption = events[[index]]$caption
+      caption = events[[index]]$caption,
+      open = i == length(runs$values) && index == length(events)
     )
   }) |>
     Filter(f = function(window) !is.null(window$caption))
@@ -266,6 +269,7 @@ caption_windows <- function(rec, sampled) {
         merged[[last]]$end == window$start
     ) {
       merged[[last]]$end <- window$end
+      merged[[last]]$open <- window$open
     } else {
       merged <- c(merged, list(window))
     }
@@ -368,7 +372,11 @@ caption_overlays <- function(rec, page, out, windows, dir) {
       start = window$start,
       end = window$end,
       fade_in = if (window$start > 0 && fades) window$start else NULL,
-      fade_start = if (fades) window$end - min(0.25, span / 2) else NULL,
+      fade_start = if (fades && !window$open) {
+        window$end - min(0.25, span / 2)
+      } else {
+        NULL
+      },
       height = height,
       side = window$caption$side
     )
