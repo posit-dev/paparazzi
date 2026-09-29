@@ -615,3 +615,16 @@ test_that("a caption narrower than 80% of the output stays on one line", {
   line <- 20 * 1.2 * 1.35 + 2 * 9 * 1.2
   expect_lt(height, line * 1.5)
 })
+
+test_that("a keycap row narrower than 80% of the output stays on one line", {
+  page <- local_record_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  groups <- list(
+    c("Ctrl", "Shift", "K"),
+    c("Ctrl", "Shift", "P"),
+    c("Enter")
+  )
+  wide <- key_callout_render(page, groups, 720, 480, 1, 24, path)
+  single <- key_callout_render(page, list("K"), 720, 480, 1, 24, path)
+  expect_lt(wide, single * 1.5)
+})
