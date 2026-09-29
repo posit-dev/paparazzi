@@ -117,8 +117,7 @@ camera_move <- function(
     box = box,
     zoom = zoom,
     reset = reset,
-    scroll = scroll,
-    from = from
+    scroll = scroll
   )
   if (duration > 0) {
     pump_loop(ctx$page$child_loop, duration)
@@ -165,7 +164,6 @@ camera_follow_move <- function(ctx, rect, duration) {
     zoom = (home[3] - home[1]) / (shot[3] - shot[1]),
     reset = FALSE,
     scroll = scroll,
-    from = current,
     follow = TRUE
   )
   TRUE
@@ -296,15 +294,17 @@ camera_at <- function(moves, time, home, density) {
         (move$start - prior$start) / (prior$end - prior$start)
       }
       current <- camera_interpolate(current, prior$to, progress)
-      if (prior$reset && progress >= 1) {
-        current <- home + rep(move$scroll, 2)
-      }
+      at_home <- prior$reset && progress >= 1
     } else {
-      current <- home + rep(move$scroll, 2)
+      at_home <- TRUE
     }
-    if (!is.null(move$from)) {
-      current <- move$from
-    }
+    current <- camera_viewport(
+      current,
+      move$scroll,
+      home,
+      reset = at_home
+    ) +
+      rep(move$scroll, 2)
     to <- if (move$reset) {
       home + rep(move$scroll, 2)
     } else {

@@ -607,28 +607,79 @@ test_that("a move after scroll starts from the clamped crop", {
     box = c(600, 1000, 650, 1050),
     zoom = 2,
     reset = FALSE,
-    scroll = scroll,
-    from = actual
+    scroll = scroll
   )
   at_start <- camera_at(list(a, b), 2, home, 2)
   expect_equal(as.numeric(at_start), actual)
   expect_equal(camera_viewport(at_start, scroll, home), actual - rep(scroll, 2))
-  without_from <- b
-  without_from$from <- NULL
-  expect_false(isTRUE(all.equal(
-    as.numeric(camera_at(list(a, without_from), 2, home, 2)),
-    actual
-  )))
+  unclamped <- as.numeric(camera_at(list(a), 2, home, 2))
+  expect_false(isTRUE(all.equal(unclamped, actual)))
   at_first_motion <- camera_viewport(
     camera_at(list(a, b), 2.5, home, 2),
     scroll,
     home
   )
   old_first_motion <- camera_viewport(
-    camera_at(list(a, without_from), 2.5, home, 2),
+    camera_interpolate(unclamped, camera_shot(b$box, home, b$zoom, 2), 0.25),
     scroll,
     home
   )
   expect_gt(at_first_motion[2], 0)
   expect_equal(old_first_motion[2], 0)
+})
+
+test_that("stop-time home resolves adjacent moves without a call-time crop", {
+  call_home <- c(0, 0, 800, 600)
+  final_home <- c(0, 0, 1000, 750)
+  scroll <- c(0, 500)
+  a <- list(
+    start = 0,
+    end = 0,
+    box = c(50, 40, 250, 190),
+    zoom = 2,
+    reset = FALSE,
+    scroll = c(0, 0)
+  )
+  b <- list(
+    start = 2,
+    end = 4,
+    box = c(600, 1000, 650, 1050),
+    zoom = 2,
+    reset = FALSE,
+    scroll = scroll
+  )
+  call_crop <- camera_viewport(
+    camera_at(list(a), 2, call_home, 2),
+    scroll,
+    call_home
+  )
+  final_crop <- camera_viewport(
+    camera_at(list(a), 2, final_home, 2),
+    scroll,
+    final_home
+  )
+  expect_false(isTRUE(all.equal(call_crop, final_crop)))
+  start <- camera_at(list(a, b), 2, final_home, 2)
+  expect_equal(as.numeric(start), final_crop + rep(scroll, 2))
+  expect_equal(camera_viewport(start, scroll, final_home), final_crop)
+
+  fit <- a
+  fit$zoom <- NULL
+  fit$box <- c(50, 40, 90, 70)
+  call_density_crop <- camera_viewport(
+    camera_at(list(fit), 2, final_home, 1),
+    scroll,
+    final_home
+  )
+  final_density_crop <- camera_viewport(
+    camera_at(list(fit), 2, final_home, 2),
+    scroll,
+    final_home
+  )
+  expect_false(isTRUE(all.equal(call_density_crop, final_density_crop)))
+  at_final_density <- camera_at(list(fit, b), 2, final_home, 2)
+  expect_equal(
+    as.numeric(at_final_density),
+    final_density_crop + rep(scroll, 2)
+  )
 })
