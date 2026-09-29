@@ -154,9 +154,11 @@ pz_open <- function(
 #' stops that app. A page opened from a shared [pz_app()] handle leaves the
 #' app running. Idempotent; closing an already-closed page is a no-op.
 #'
-#' @param page A `PaparazziPage` from [pz_open()].
+#' @param page A `PaparazziPage` from [pz_open()], or any context on it
+#'   (such as the end of a chain). A chain from [pz_record_start()] whose
+#'   recording is still running stops and writes it first.
 #'
-#' @return `page`, invisibly.
+#' @return The page, invisibly.
 #'
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
 #' page <- pz_open(pz_example("tasks"))
@@ -167,6 +169,15 @@ pz_open <- function(
 #'
 #' @export
 pz_close <- function(page) {
+  if (inherits(page, "PaparazziContext")) {
+    recording <- ctx_recording(page)
+    ctx <- page
+    page <- page$page
+    if (recording) {
+      on.exit(page$close(), add = TRUE)
+      pz_record_stop(ctx)
+    }
+  }
   check_page(page)
   page$close()
   invisible(page)

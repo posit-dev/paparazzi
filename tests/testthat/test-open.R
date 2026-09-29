@@ -368,6 +368,31 @@ test_that("pz_close is idempotent and functions reject closed pages", {
   expect_error(pz_wait(page, 0), class = "paparazzi_error_closed")
 })
 
+test_that("pz_close closes the page behind a context", {
+  skip_if_no_chrome()
+  page <- pz_open(fixture_file())
+  closed <- pz_find(page, "body") |> pz_close()
+  expect_identical(closed, page)
+  expect_true(page$is_closed())
+
+  skip_if_not_installed("av")
+  page <- pz_open(fixture_file())
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, fps = 5, hold = c(0, 0)) |>
+    pz_wait(0.1) |>
+    pz_close()
+  expect_true(file.exists(out))
+  expect_true(page$is_closed())
+
+  page <- pz_open(fixture_file())
+  chain <- pz_record_start(page, withr::local_tempfile(fileext = ".mp4"))
+  testthat::local_mocked_bindings(
+    record_encode = function(...) stop("encode failed")
+  )
+  expect_error(pz_close(chain), "encode failed")
+  expect_true(page$is_closed())
+})
+
 test_that("a failed device setting after page creation closes the new session", {
   skip_if_no_chrome()
   browser <- chromote::default_chromote_object()

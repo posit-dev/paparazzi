@@ -941,10 +941,10 @@ expect_report <- function(
   msg <- cli::format_message(msg_template)
   if (isTRUE(result$pass)) {
     expect_bridge(TRUE, msg)
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   if (expect_bridge(FALSE, msg)) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   cli::cli_abort(
     msg_template,

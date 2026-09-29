@@ -7,10 +7,12 @@
 pz_close(page)
 }
 \arguments{
-\item{page}{A \code{PaparazziPage} from \code{\link[=pz_open]{pz_open()}}.}
+\item{page}{A \code{PaparazziPage} from \code{\link[=pz_open]{pz_open()}}, or any context on it
+(such as the end of a chain). A chain from \code{\link[=pz_record_start]{pz_record_start()}} whose
+recording is still running stops and writes it first.}
 }
 \value{
-\code{page}, invisibly.
+The page, invisibly.
 }
 \description{
 Closes the page's browser session and, if the page started a Shiny app,

@@ -69,5 +69,5 @@ pz_annotate_spotlight <- function(
   if (recording && duration > 0) {
     pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }

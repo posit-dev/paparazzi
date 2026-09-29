@@ -187,7 +187,7 @@ pz_stage_frame <- function(
       )
     }
     page_set_frame(ctx$page, NULL)
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   target <- if (length(dots) == 0L) {
     NULL
@@ -207,7 +207,7 @@ pz_stage_frame <- function(
     target_box = target_box %||% "element"
   )
   page_set_frame(ctx$page, spec)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # The direction vocabulary (SPEC "Directions") as sorted token sets:

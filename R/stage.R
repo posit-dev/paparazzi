@@ -250,7 +250,7 @@ pz_stage <- function(
   ) {
     cursor_draw(ctx, visible = TRUE)
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # The settings list with defaults filled. The page stores only the
@@ -306,11 +306,11 @@ stage_move_cursor <- function(ctx, point) {
     if (follow) {
       stage_follow_without_glide(ctx, attr(point, "rect"))
     }
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   if (!stage_recording(page)) {
     cursor_apply(ctx, point)
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   if (is.null(attr(point, "rect"))) {
     # The action seam supplies an actionable viewport point, not its
@@ -334,17 +334,17 @@ stage_move_cursor <- function(ctx, point) {
     }
   }
   cursor_show_at(ctx, point, follow = follow)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 stage_follow_without_glide <- function(ctx, rect) {
   if (is.null(rect) || !camera_follow_move(ctx, rect, 0.5)) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   if (!page_recorder(ctx$page)$paused) {
     pump_loop(ctx$page$child_loop, 0.5)
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # The scroll half of the el_pointer_point() seam. Recording: animated
@@ -542,20 +542,20 @@ scroll_staged <- function(
         )
       )
     }
-    invisible(ctx)
+    ctx_return(ctx)
   }
   probe <- wheel_container()
   target <- scroll_wheel_target(probe, by, to)
   delta <- c(target$left - probe$left, target$top - probe$top)
   if (all(delta == 0)) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   # A wheel at the container's center only reaches the container when
   # the point is over it; no such point means the instant application
   # runs before any wheel fires.
   if (!isTRUE(wheel_container(c(target$left, target$top))$hit > 0)) {
     apply_instant(probe)
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   point <- c(x = probe$x, y = probe$y)
   stage_move_cursor(ctx, point)
@@ -569,7 +569,7 @@ scroll_staged <- function(
   if (abs(actual$top - target$top) > 2 || abs(actual$left - target$left) > 2) {
     apply_instant(actual)
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # The target scroll position for a by/to scroll, from the container
@@ -773,13 +773,13 @@ wheel_probe_js <- paste0(
 stage_action_pause <- function(ctx) {
   page <- ctx$page
   if (!stage_recording(page)) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   pause <- page_stage(page)$pause
   if (pause > 0) {
     pump_loop(page$child_loop, pause)
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # The record-stop hook (called from pz_record_stop()): an auto cursor
@@ -788,7 +788,7 @@ stage_action_pause <- function(ctx) {
 stage_record_stopped <- function(ctx) {
   page <- ctx$page
   if (page$is_closed()) {
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   cur <- page_cursor_peek(page)
   if (
@@ -799,5 +799,5 @@ stage_record_stopped <- function(ctx) {
   ) {
     cursor_draw(ctx, visible = FALSE)
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }

@@ -133,19 +133,53 @@ pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
   if (implicit) {
     return(structure(path, class = "paparazzi_preview"))
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' @export
 #' @noRd
 print.paparazzi_preview <- function(x, ...) {
+  path <- preview_stage(unclass(x))
   viewer <- getOption("viewer")
   if (is.function(viewer)) {
-    viewer(unclass(x))
+    viewer(path)
   } else {
-    utils::browseURL(unclass(x))
+    utils::browseURL(path)
   }
   invisible(x)
+}
+
+# The RStudio viewer only serves files under the session temp directory,
+# and viewers show images directly but need a page for video.
+preview_stage <- function(path) {
+  video <- tolower(tools::file_ext(path)) %in% c("mp4", "webm")
+  temp <- paste0(normalizePath(tempdir(), winslash = "/"), "/")
+  if (!video && startsWith(normalizePath(path, winslash = "/"), temp)) {
+    return(path)
+  }
+  dir <- tempfile("paparazzi-preview-")
+  dir.create(dir)
+  file.copy(path, file.path(dir, basename(path)))
+  if (!video) {
+    return(file.path(dir, basename(path)))
+  }
+  page <- file.path(dir, "index.html")
+  writeLines(
+    c(
+      "<!doctype html>",
+      '<meta charset="utf-8">',
+      '<body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#222">',
+      paste0(
+        '<video controls autoplay muted loop playsinline ',
+        'style="max-width:100%;max-height:100vh" src="',
+        utils::URLencode(basename(path), reserved = TRUE),
+        '"></video>'
+      ),
+      "</body>"
+    ),
+    page
+  )
+  page
 }
 
 knit_capture_path <- function(ext) {

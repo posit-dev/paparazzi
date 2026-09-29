@@ -52,7 +52,7 @@ pz_click <- function(ctx, target = NULL, ...) {
   point <- el_pointer_point(ctx, found$els)
   dispatch_click(ctx, "clicking", found$els$description, point)
   stage_action_pause(ctx)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Hover the pointer over an element
@@ -101,7 +101,7 @@ pz_hover <- function(ctx, target = NULL, ...) {
     clickCount = 0
   )
   stage_action_pause(ctx)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Type text into an element
@@ -174,7 +174,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
       }
     }
     insert_text(ctx, "the focused element", text)
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
 
   found <- action_elements(ctx, target)
@@ -191,7 +191,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
     stage_follow_without_glide(ctx, action_target_rect(found$els))
     insert_text(ctx, found$els$description, text)
     stage_action_pause(ctx)
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   point <- el_pointer_point(ctx, found$els)
   # Focus comes from the real click pipeline (not JS .focus()) so
@@ -199,7 +199,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
   dispatch_click(ctx, "typing into", found$els$description, point)
   insert_text(ctx, found$els$description, text)
   stage_action_pause(ctx)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Press key combinations
@@ -311,7 +311,7 @@ pz_press <- function(ctx, key, ..., show_keys = NULL) {
     )
   }
   stage_action_pause(ctx)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Focus an element
@@ -348,7 +348,7 @@ pz_focus <- function(ctx, target = NULL, ...) {
     found$els,
     "function() { if (this.length) this[0].focus(); }"
   )
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Blur the focused element
@@ -397,7 +397,7 @@ pz_blur <- function(ctx, ...) {
       )
     )
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Set the value of a form control
@@ -461,7 +461,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
   if (identical(res$status, "contenteditable")) {
     els_call(found$els, select_all_js)
     insert_text(ctx, found$els$description, arg$text)
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   if (!identical(res$status, "ok")) {
     cli::cli_abort(
@@ -469,7 +469,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
       class = "paparazzi_error_value"
     )
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Attach files to a file input
@@ -540,7 +540,7 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
       timeout_ = ctx$page$default_timeout
     )
   )
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Select text inside an element
@@ -614,7 +614,7 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
   }
   stage_follow_without_glide(ctx, action_target_rect(found$els))
   stage_action_pause(ctx)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Scroll the page or an element into view
@@ -706,7 +706,7 @@ pz_scroll <- function(
     }
     stage_scroll_into_view(ctx, found$els, duration = duration)
     stage_action_pause(ctx)
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
 
   by <- if (!is.null(by)) check_offset(by, arg = "by") else NULL
@@ -722,7 +722,7 @@ pz_scroll <- function(
   if (stage_recording(ctx$page) && !isTRUE(duration == 0)) {
     scroll_staged(ctx, scoped, by, to, duration = duration)
     stage_action_pause(ctx)
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   if (!is.null(scoped)) {
     # Offsets serialize as JSON numbers: a scalar integer offset
@@ -757,7 +757,7 @@ pz_scroll <- function(
     cdp_check_exception(res, "scrolling")
   }
   stage_action_pause(ctx)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Drag an element to another element or by an offset
@@ -907,7 +907,7 @@ pz_drag <- function(ctx, target, to, ..., by = NULL) {
     )
   }
   stage_action_pause(ctx)
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 # Record before resolution or dispatch: either can trigger navigation.
@@ -1188,7 +1188,7 @@ insert_text <- function(ctx, target, text, call = caller_env()) {
       delay <- stats::runif(1L, 0.5, 1.5) / stage$typing_speed
       pump_loop(page$child_loop, delay, interval = min(delay, 0.03))
     }
-    return(invisible(ctx))
+    return(ctx_return(ctx))
   }
   insert_text_once(ctx, target, text, call = call)
 }

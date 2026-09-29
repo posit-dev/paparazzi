@@ -105,7 +105,7 @@ pz_set_shiny_input <- function(ctx, id, value, ..., wait = TRUE) {
   if (wait) {
     pz_wait_for_shiny_idle(ctx)
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 shiny_input_set_js <- "function(id, value) {

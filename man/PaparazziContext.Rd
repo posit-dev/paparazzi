@@ -7,7 +7,10 @@
 \description{
 A \strong{context} is the first argument of \verb{pz_*()} functions, enabling \verb{|>}
 chains. \verb{pz_find*()} return contexts visibly; chainable actions return
-them invisibly. A context is either the root (a
+them invisibly, except in a recording chain: the context returned by
+\code{\link[=pz_record_start]{pz_record_start()}} (and contexts derived from it) is returned visibly
+while its recording runs, and printing it stops the recording. A
+context is either the root (a
 \code{PaparazziPage}) or a scoped context created by \verb{pz_find*()}: a context
 holding an immutable stack of pinned element sets. The stack is never
 mutated in place -- \verb{pz_find*()} derive a new context sharing the
@@ -22,6 +25,9 @@ timeout, staging settings, recorder state -- lives on the page.
     \item{\code{page}}{The root \code{PaparazziPage} this context belongs to.}
 
     \item{\code{scope}}{Stack of pinned element sets; empty for the root context.}
+
+    \item{\code{recording}}{The recorder a recording chain belongs to, or
+\code{NULL} (internal).}
   }
   \if{html}{\out{</div>}}
 }
@@ -40,7 +46,7 @@ timeout, staging settings, recorder state -- lives on the page.
   Create a context attached to a page.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{PaparazziContext$new(page, scope = list())}
+    \preformatted{PaparazziContext$new(page, scope = list(), recording = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -49,6 +55,7 @@ timeout, staging settings, recorder state -- lives on the page.
       \item{\code{page}}{A \code{PaparazziPage}.}
       \item{\code{scope}}{Stack of pinned element sets; defaults to empty (the
 root context).}
+      \item{\code{recording}}{The recorder of the recording chain, if any.}
     }
     \if{html}{\out{</div>}}
   }
@@ -60,7 +67,8 @@ root context).}
 \subsection{\code{PaparazziContext$print()}}{
   Print the page summary (URL, device, scope stack,
 recording state) without the target section or visuals; see
-\code{\link[=pz_inspect]{pz_inspect()}}.
+\code{\link[=pz_inspect]{pz_inspect()}}. A recording chain whose recording is still
+running stops it instead and, interactively, shows the video.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{PaparazziContext$print(...)}

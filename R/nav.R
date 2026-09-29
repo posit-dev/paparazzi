@@ -88,7 +88,7 @@ pz_nav_goto <- function(
     device_css_reapply(page)
     nav_settle_shiny(page, wait, page$default_timeout)
   }
-  invisible(root)
+  ctx_return(root)
 }
 
 # CDP reports navigation failures as `errorText`, not as errors.
@@ -129,7 +129,7 @@ pz_nav_reload <- function(ctx, ..., wait = c("auto", "load", "shiny", "none")) {
   } else {
     page$session$Page$reload(timeout_ = page$default_timeout)
   }
-  invisible(root)
+  ctx_return(root)
 }
 
 #' @rdname pz_nav_goto
@@ -146,7 +146,7 @@ pz_nav_back <- function(ctx, ...) {
   # Runs at the history boundary too: the cache was cleared in
   # wait_nav_reset(), and re-setting the same zoom is harmless.
   device_css_reapply(ctx$page)
-  invisible(root)
+  ctx_return(root)
 }
 
 #' @rdname pz_nav_goto
@@ -161,7 +161,7 @@ pz_nav_forward <- function(ctx, ...) {
     wait_for_load(ctx$page, timeout = ctx$page$default_timeout)
   }
   device_css_reapply(ctx$page)
-  invisible(root)
+  ctx_return(root)
 }
 
 # Called after the navigation's existing load settle, on the landed document.

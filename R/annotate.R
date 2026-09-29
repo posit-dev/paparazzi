@@ -111,7 +111,7 @@ pz_annotate <- function(
   if (recording && duration > 0) {
     pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Redact page elements
@@ -164,7 +164,7 @@ pz_annotate_redact <- function(
   annotate_register_init(ctx)
   options <- list(id = id, method = method, pad = unname(pad), color = color)
   annotate_call(ctx, els, "redact", options, "redacting the elements")
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 #' Clear page annotations
@@ -212,7 +212,7 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
       "document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations')?.pz?.finishClear()"
     )
   }
-  invisible(ctx)
+  ctx_return(ctx)
 }
 
 check_annotation_id <- function(id, call = caller_env()) {

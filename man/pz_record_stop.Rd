@@ -10,9 +10,12 @@ pz_record_stop(ctx)
 \item{ctx}{A paparazzi context.}
 }
 \value{
-\code{ctx}, invisibly outside knitting. While knitting, returns a
-printable image for GIF, HTML video for MP4/WebM, or a video link in
-non-HTML output, even when the path was supplied explicitly.
+\code{ctx}, invisibly, when the path was supplied outside knitting.
+While knitting, returns a printable image for GIF, HTML video for
+MP4/WebM, or a video link in non-HTML output, even when the path was
+supplied explicitly. Without a path in an interactive session,
+returns a preview that shows the recording in the viewer when
+printed.
 }
 \description{
 Ends the recording started with \code{\link[=pz_record_start]{pz_record_start()}}, encodes the
