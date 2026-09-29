@@ -38,7 +38,9 @@ of the annotation badge size. Captions scale with the output.}
 \description{
 A caption stays on the page until replaced or cleared with
 \link[=pz_annotate_clear]{pz_annotate_clear(id = "caption")}. It persists
-through navigation and across recordings, and appears on stills.
+through navigation and across recordings, and appears on stills. In a
+recording, a caption fades out when it is cleared or replaced; one that
+is still showing at \code{\link[=pz_record_stop]{pz_record_stop()}} stays on through the last frame.
 }
 \seealso{
 \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}, \code{\link[=pz_record_start]{pz_record_start()}}, \code{\link[=pz_screenshot]{pz_screenshot()}}
