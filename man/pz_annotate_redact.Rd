@@ -40,7 +40,7 @@ when a custom color is translucent or invalid. Cannot be set for blur.}
 Covers every element matched by \code{target} with an instant opaque fill or
 backdrop blur in screenshots and recordings. Fill is the safe choice for
 secrets: blur can leave text partly legible. Redactions follow elements
-as they move and are clipped by rectangular overflow ancestors. If a target
+as they move and are clipped by axis-aligned rectangular overflow ancestors. If a target
 disconnects, stops rendering, or is entirely clipped, its redaction hides
 until it becomes visible again. They belong to the current document and are
 lost on navigation. Redaction covers each element's border box plus \code{pad},

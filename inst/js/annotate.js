@@ -149,8 +149,13 @@ function(root) {
       }
       entry.elements.forEach((el, i) => {
         const box = entry.nodes[i];
-        if (!el.isConnected || !el.getClientRects().length ||
-            (entry.kind === 'redact' && getComputedStyle(el).visibility !== 'visible')) {
+        if (!el.isConnected || !el.getClientRects().length) {
+          box.style.display = 'none';
+          return;
+        }
+        if (entry.kind === 'redact' && getComputedStyle(el).visibility !== 'visible' &&
+            ![...el.querySelectorAll('*')].some(child =>
+              child.getClientRects().length && getComputedStyle(child).visibility === 'visible')) {
           box.style.display = 'none';
           return;
         }
@@ -170,26 +175,37 @@ function(root) {
         box.style.height = h + 'px';
         if (entry.kind === 'redact') {
           const bounds = {left, top, right:left + w, bottom:top + h};
+          let node = el;
           let ancestor = el.parentElement || el.getRootNode().host;
+          let position = getComputedStyle(el).position;
+          let escaping = false, containingBlock = null;
           while (ancestor && ancestor !== document.documentElement) {
+            if (position === 'absolute' || position === 'fixed') {
+              containingBlock = node.offsetParent;
+              escaping = true;
+            }
+            if (ancestor === containingBlock) escaping = false;
             const style = getComputedStyle(ancestor);
             const x = style.overflowX !== 'visible';
             const y = style.overflowY !== 'visible';
-            if (x || y) {
+            if (!escaping && ancestor !== document.body &&
+                style.display !== 'inline' && style.display !== 'contents' && (x || y)) {
               const a = ancestor.getBoundingClientRect();
               const scaleX = a.width / (ancestor.offsetWidth || 1);
               const scaleY = a.height / (ancestor.offsetHeight || 1);
               if (x) {
-                const left = a.left + ancestor.clientLeft * scaleX;
-                bounds.left = Math.max(bounds.left, left);
-                bounds.right = Math.min(bounds.right, left + ancestor.clientWidth * scaleX);
+                const edge = a.left + ancestor.clientLeft * scaleX;
+                bounds.left = Math.max(bounds.left, edge);
+                bounds.right = Math.min(bounds.right, edge + ancestor.clientWidth * scaleX);
               }
               if (y) {
-                const top = a.top + ancestor.clientTop * scaleY;
-                bounds.top = Math.max(bounds.top, top);
-                bounds.bottom = Math.min(bounds.bottom, top + ancestor.clientHeight * scaleY);
+                const edge = a.top + ancestor.clientTop * scaleY;
+                bounds.top = Math.max(bounds.top, edge);
+                bounds.bottom = Math.min(bounds.bottom, edge + ancestor.clientHeight * scaleY);
               }
             }
+            node = ancestor;
+            position = style.position;
             ancestor = ancestor.parentElement || ancestor.getRootNode().host;
           }
           if (w <= 0 || h <= 0 || bounds.right <= bounds.left || bounds.bottom <= bounds.top) {

@@ -324,9 +324,9 @@ test_that("redaction fills every match immediately and hides after disconnection
   pump_loop(page$child_loop, 0.05)
   after <- pz_js(
     page,
-    "(() => { const n = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')[1]; return [n.style.display, parseFloat(n.style.left), parseFloat(n.style.top)]; })()"
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')[1].style.display"
   )
-  expect_identical(after[[1]], "none")
+  expect_identical(after, "none")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
   expect_equal(at(220, 330), rep(1, 3), tolerance = 0.03)
@@ -373,6 +373,7 @@ test_that("redaction paints only inside a scrolling ancestor as its target moves
   pz_js(page, "document.getElementById('clip').scrollTop = 0")
   pump_loop(page$child_loop, 0.05)
   expect_equal(pixel(380, 190), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(380, 175), rep(23 / 255, 3), tolerance = 0.03)
 })
 
 test_that("redaction intersects nested horizontal and vertical overflow clips", {
@@ -400,6 +401,117 @@ test_that("redaction intersects nested horizontal and vertical overflow clips", 
   expect_equal(pixel(320, 145), rep(1, 3), tolerance = 0.03)
   expect_equal(pixel(340, 115), rep(1, 3), tolerance = 0.03)
   expect_equal(pixel(340, 190), rep(1, 3), tolerance = 0.03)
+})
+
+test_that("positioned targets escape only overflow ancestors outside their containing block", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.insertAdjacentHTML('beforeend', ",
+      "'<div style=\"position:absolute;left:330px;top:100px\">' +",
+      "'<div style=\"width:80px;height:50px;overflow:hidden\">' +",
+      "'<div id=escaped style=\"position:absolute;left:105px;top:15px;width:50px;height:30px\">SECRET</div>' +",
+      "'<div id=escaped-fixed style=\"position:fixed;left:460px;top:130px;width:50px;height:30px\">SECRET</div>' +",
+      "'</div></div>' +",
+      "'<div style=\"position:absolute;left:330px;top:270px;width:100px;height:50px;overflow:hidden\">' +",
+      "'<div id=clipped style=\"position:absolute;left:80px;top:30px;width:50px;height:40px\">SECRET</div></div>' +",
+      "'<div style=\"position:absolute;left:330px;top:360px;width:100px;height:50px;overflow:hidden;transform:translateZ(0)\">' +",
+      "'<div id=fixed-clipped style=\"position:fixed;left:80px;top:30px;width:50px;height:40px\">SECRET</div></div>')"
+    )
+  )
+  page |>
+    pz_annotate_redact("#escaped, #escaped-fixed, #clipped, #fixed-clipped")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  pixel <- function(x, y) {
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  expect_equal(pixel(445, 125), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(475, 145), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(420, 310), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(440, 310), rep(1, 3), tolerance = 0.03)
+  expect_equal(pixel(420, 400), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(440, 400), rep(1, 3), tolerance = 0.03)
+})
+
+test_that("redaction covers visible content in the scrollport padding", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.insertAdjacentHTML('beforeend', ",
+      "'<div style=\"position:absolute;left:350px;top:100px;width:80px;height:60px;padding:20px;overflow:hidden\">' +",
+      "'<div id=padded-secret style=\"position:relative;left:-12px;top:-10px;width:60px;height:30px\">SECRET</div></div>')"
+    )
+  )
+  page |> pz_annotate_redact("#padded-secret")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  pixel <- function(x, y) {
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  expect_equal(pixel(362, 115), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(348, 115), rep(1, 3), tolerance = 0.03)
+})
+
+test_that("redaction clips scaled overflow ancestors in viewport coordinates", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.insertAdjacentHTML('beforeend', ",
+      "'<div style=\"position:absolute;left:330px;top:80px;width:80px;height:60px;overflow:hidden;transform:scale(2);transform-origin:top left\">' +",
+      "'<div id=scaled-secret style=\"position:absolute;left:50px;top:40px;width:50px;height:50px\">SECRET</div></div>')"
+    )
+  )
+  page |> pz_annotate_redact("#scaled-secret")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  pixel <- function(x, y) {
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  expect_equal(pixel(450, 180), rep(23 / 255, 3), tolerance = 0.03)
+  expect_equal(pixel(500, 180), rep(1, 3), tolerance = 0.03)
+  expect_equal(pixel(450, 210), rep(1, 3), tolerance = 0.03)
+})
+
+test_that("non-clipping inline and root body overflow do not hide redactions", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.style.overflow = 'hidden'; document.body.style.height = '60px';",
+      "document.getElementById('fixed').innerHTML = '<span style=\"overflow:hidden\"><span id=inline-secret style=\"display:inline-block;width:50px;height:30px\">SECRET</span></span>';",
+      "document.body.insertAdjacentHTML('beforeend', ",
+      "'<div id=body-secret style=\"position:absolute;left:500px;top:310px;width:50px;height:30px\">SECRET</div>')"
+    )
+  )
+  page |> pz_annotate_redact("#inline-secret, #body-secret")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  expect_equal(
+    as.numeric(img[round(30 * dpr) + 1, round(40 * dpr) + 1, 1:3]),
+    rep(23 / 255, 3),
+    tolerance = 0.03
+  )
+  expect_equal(
+    as.numeric(img[round(320 * dpr) + 1, round(510 * dpr) + 1, 1:3]),
+    rep(23 / 255, 3),
+    tolerance = 0.03
+  )
 })
 
 test_that("redaction follows scroll and scoped targets without restyling elements", {
@@ -657,18 +769,32 @@ test_that("blur changes text pixels and hides when target stops rendering", {
     page,
     "document.getElementById('secret').style.display = ''; document.getElementById('secret').style.visibility = 'hidden'"
   )
+  pump_loop(page$child_loop, 0.05)
   expect_identical(
     pz_js(
       page,
-      "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); layer.pz.sync(); return layer.querySelector('.pz-redaction').style.display; })()"
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
     ),
     "none"
   )
   pz_js(page, "document.getElementById('secret').style.visibility = 'visible'")
+  pump_loop(page$child_loop, 0.05)
   expect_identical(
     pz_js(
       page,
-      "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); layer.pz.sync(); return layer.querySelector('.pz-redaction').style.display; })()"
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
+    ),
+    ""
+  )
+  pz_js(
+    page,
+    "document.getElementById('secret').innerHTML = '<span style=\"visibility:visible\">SECRET</span>'; document.getElementById('secret').style.visibility = 'hidden'"
+  )
+  pump_loop(page$child_loop, 0.05)
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
     ),
     ""
   )
