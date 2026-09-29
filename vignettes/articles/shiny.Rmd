@@ -126,7 +126,7 @@ page |>
       pz_click("#add") |>
       pz_expect_text("5 tasks", target = "#summary") |>
       pz_cursor_leave()
-  }, scale = 0.6)
+  }, format = "gif", scale = 0.6)
 ```
 
 ```{r, include = FALSE}

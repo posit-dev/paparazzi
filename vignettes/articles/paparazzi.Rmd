@@ -160,7 +160,7 @@ page |> pz_device(width = 720, height = 800, mobile = FALSE, color_scheme = "lig
 
 ## Record a video
 
-To record a video, wrap the steps in `pz_record()`. It starts recording, runs the code in braces, then stops and writes the file, even if the code throws an error. In a knitted document, leaving out the path produces a GIF in the chunk's figure directory; with a path, the extension picks `.mp4`, `.webm`, or `.gif`. Use `code =` when you leave out the path. A completed recording at the end of a chunk expression appears in the document.
+To record a video, wrap the steps in `pz_record()`. It starts recording, runs the code in braces, then stops and writes the file, even if the code throws an error. In a knitted document, leaving out the path writes the recording to the chunk's figure directory: an MP4 by default, or the `format` you ask for. With a path, the extension picks `.mp4`, `.webm`, or `.gif`. Use `code =` when you leave out the path. We'll ask for a GIF, which plays by itself in the page. A completed recording at the end of a chunk expression appears in the document.
 
 While recording, paparazzi **stages** the steps so they look like a person using the page. A cursor glides to each element before clicking, and text is typed one character at a time. `pz_stage()` controls the staging; here the cursor enters from the top and each action is followed by a short pause.
 
@@ -176,7 +176,7 @@ page |>
       pz_click("#add-task") |>
       pz_expect_text("Repot the fern", target = pz_loc(".task-title", which = "first")) |>
       pz_cursor_leave()
-  }, scale = 0.6)
+  }, format = "gif", scale = 0.6)
 ```
 
 The GIF above shows the full interaction. `pz_cursor_leave()` moves the cursor out of the frame at the end, so it doesn't cover the new task. To record only part of the page, pass a `frame`, such as `frame = pz_frame(".task-list", pad = 16)`.
