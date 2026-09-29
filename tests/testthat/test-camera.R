@@ -788,14 +788,16 @@ test_that("follow tests the shot when the action lands", {
   pz_camera(page, "#far", zoom = 2, duration = 0.3)
   pz_hover(page, "#far")
   expect_length(rec$camera, 2)
-  # Landing early in a long move away from the target: follow.
+  # Landing early in a long move that won't frame the target: follow.
+  pz_camera(page, "#near", zoom = 2, duration = 0)
   pz_camera(page, "#near", zoom = 2, duration = 3)
   pz_hover(page, "#far")
-  expect_length(rec$camera, 4)
-  expect_true(rec$camera[[4]]$follow)
-  # Landing early in a long move toward the target: leave it alone.
-  pz_camera(page, "#near", zoom = 2, duration = 3)
-  pz_hover(page, "#near")
   expect_length(rec$camera, 5)
+  expect_true(rec$camera[[5]]$follow)
+  # Landing early in a long move toward the target: leave it alone.
+  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_camera(page, "#far", zoom = 2, duration = 3)
+  pz_hover(page, "#far")
+  expect_length(rec$camera, 7)
   suppressWarnings(pz_record_stop(page))
 })
