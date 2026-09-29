@@ -1,0 +1,108 @@
+---
+title: "Make a three-part app walkthrough"
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+Suppose you want to show someone how to add a task, finish it, and find the task tracker's help. One long recording makes each step hard to find later. We'll make three short videos instead, using the task tracker bundled with paparazzi. Play them in order: each part starts where the previous part left the app, but each video can be replayed on its own.
+
+You'll need a Chromium-based browser and the av package to encode MP4 files. The [Get started article](paparazzi.html) covers selectors and browser actions; here we'll use those actions to make a watchable tour.
+
+```{r setup}
+library(paparazzi)
+page <- pz_open(pz_example("tasks"), width = 800, height = 900, color_scheme = "light")
+page |> pz_stage(enter = "top", pause = 0.2, camera_follow = TRUE)
+```
+
+## Part 1: Add a task
+
+We want the viewer to see both the form and the result. `pz_record()` captures the actions between its braces and stops the recording at the end. `pz_frame()` chooses the area the finished video shows; the camera can move *inside* that area while recording, without scrolling or zooming the live page. Here we start with the task-tracker card and move closer to the form before typing.
+
+```{r part-add}
+page |>
+  pz_record(file.path(tempdir(), "walkthrough-add.mp4"), {
+    page |>
+      pz_annotate_caption("Add a task for the release") |>
+      pz_camera("#new-task", zoom = 1.7) |>
+      pz_type("Prepare release notes", target = "#task-title") |>
+      pz_click("#add-task") |>
+      pz_expect_text("Prepare release notes", target = pz_loc(".task-title", which = "first")) |>
+      pz_camera_reset() |>
+      pz_record_hold(0.7)
+  }, frame = pz_frame("main", pad = 12, when = "start"), fps = 8, scale = 0.6,
+  hold = c(0.3, 0.5))
+```
+
+The form fills the frame during typing; the camera then returns to the card, where the new task appears at the top of the list. The expectation matters because the page briefly says “Saving…” before it inserts the task. `pz_stage()` makes the cursor glide and types a character at a time **during recording**. Outside a recording, the same actions run without that animation.
+
+The caption is a page setting, not a label attached to one file. Clear it between parts so the next video doesn't inherit it:
+
+```{r}
+page |> pz_annotate_clear(id = "caption")
+```
+
+## Part 2: Finish the task
+
+The second recording uses the same browser page, so “Prepare release notes” is still there. This time we'll mark that row while we talk about it, then click its Done button and switch to the Done filter. The callout remains until we clear it; `pz_record_hold()` gives the viewer time to read it without slowing down a run outside recording.
+
+```{r part-finish}
+page |>
+  pz_record(file.path(tempdir(), "walkthrough-finish.mp4"), {
+    page |>
+      pz_annotate_caption("Finish the task, then check the Done list") |>
+      pz_camera(".task-list", zoom = 1.6) |>
+      pz_annotate_callout("The new task", target = pz_loc(".task", has_text = "Prepare release notes"), side = "right", id = "new-task") |>
+      pz_record_hold(0.9) |>
+      pz_annotate_clear(id = "new-task") |>
+      pz_find(pz_loc(".task", has_text = "Prepare release notes")) |>
+      pz_click(".task-done")
+    page |>
+      pz_click(".filters a[href='#done']") |>
+      pz_expect_visible(target = pz_loc(".task", has_text = "Prepare release notes")) |>
+      pz_camera_reset() |>
+      pz_record_hold(0.6)
+  }, frame = pz_frame("main", pad = 12, when = "start"), fps = 8, scale = 0.6,
+  hold = c(0.3, 0.5))
+```
+
+The callout draws attention to one row, then leaves before the click. While the camera is zoomed in, `camera_follow = TRUE` lets an action pan the shot when its target falls outside the view. The switch to the Done filter is still a real click; camera movement doesn't change the page or its scroll position.
+
+```{r}
+page |> pz_annotate_clear(id = "caption")
+```
+
+## Part 3: Hide a note before showing help
+
+The note in this example contains ordinary sample text. We'll treat it as private to show where a redaction belongs in a recording script. Make the note visible and cover it **before** starting the recorder: if you add a redaction after recording starts, earlier frames can already contain the text. Use the opaque fill, not blur, when the content must be unreadable.
+
+```{r}
+page |>
+  pz_click(".filters a[href='#all']") |>
+  pz_scroll("#toggle-help") |>
+  pz_annotate_redact("#notes", method = "fill", id = "private-note")
+```
+
+Now record the help panel opening. The redaction stays over the note even if the page moves; the caption stays at the bottom of the video rather than moving with the camera.
+
+```{r part-help}
+page |>
+  pz_record(file.path(tempdir(), "walkthrough-help.mp4"), {
+    page |>
+      pz_annotate_caption("Open help without showing the note") |>
+      pz_click("#toggle-help") |>
+      pz_expect_visible(target = "#help") |>
+      pz_record_hold(1)
+  }, frame = pz_frame("main", pad = 12, when = "start"), fps = 8, scale = 0.6,
+  hold = c(0.3, 0.5))
+```
+
+The solid cover should remain over the note for the whole clip, including its first frame. Once we've finished the tour, remove the overlays and close the browser:
+
+```{r, include = FALSE}
+page |> pz_annotate_clear()
+pz_close(page)
+```
+
+Each part has its own MP4, but shares the task tracker's state with the next part. Camera shots reset at the start of each recording; annotations and captions do not, so clear or replace them deliberately. For other ways to direct attention, see [`pz_annotate()`](../reference/pz_annotate.html) for marks and reveals and [`pz_annotate_spotlight()`](../reference/pz_annotate_spotlight.html) for a dimmed page. [`pz_press(show_keys = ...)`](../reference/pz_press.html) can display a shortcut during a recording; [`pz_record_start(captions = "both")`](../reference/pz_record_start.html) can write a WebVTT file alongside an MP4. For a tour of the bundled Shiny app, start with the [Shiny apps article](shiny.html).
