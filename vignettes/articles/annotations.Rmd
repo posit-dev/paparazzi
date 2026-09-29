@@ -17,7 +17,12 @@ This article tours every kind of annotation on the task tracker bundled with pap
 
 ```{r setup}
 library(paparazzi)
-page <- pz_open(pz_example("tasks"), width = 720, height = 800, color_scheme = "light")
+page <- pz_open(
+  pz_example("tasks"),
+  width = 720,
+  height = 800,
+  color_scheme = "light"
+)
 ```
 
 ## Marks
@@ -33,8 +38,16 @@ page <- pz_open(pz_example("tasks"), width = 720, height = 800, color_scheme = "
 page |>
   pz_annotate("#task-title", type = "box", label = "box") |>
   pz_annotate("#add-task", type = "circle", label = "circle") |>
-  pz_annotate(pz_loc(".task-title", which = "first"), type = "underline", label = "underline") |>
-  pz_annotate(pz_loc(".task", which = 2), type = "highlight", label = "highlight")
+  pz_annotate(
+    pz_loc(".task-title", which = "first"),
+    type = "underline",
+    label = "underline"
+  ) |>
+  pz_annotate(
+    pz_loc(".task", which = 2),
+    type = "highlight",
+    label = "highlight"
+  )
 page |> pz_screenshot(target = "main", frame = pz_frame(pad = 16))
 ```
 
@@ -50,7 +63,11 @@ page |> pz_annotate_clear()
 
 ```{r labels, fig.alt = "The three filter links, All, Open, and Done, boxed and numbered 1, 2, and 3."}
 page |> pz_annotate(".filters a", label = TRUE)
-page |> pz_screenshot(target = ".filters", frame = pz_frame(pad = 16, target_box = "annotated"))
+page |>
+  pz_screenshot(
+    target = ".filters",
+    frame = pz_frame(pad = 16, target_box = "annotated")
+  )
 ```
 
 A single string or number repeats on every match instead, so `label = "A"` or `label = 1` puts the same badge everywhere the target matches.
@@ -66,7 +83,14 @@ page |> pz_annotate_clear()
 ```{r pad-color, fig.alt = "The new-task form with a loose amber highlight around the title field and a blue box with a monospace A badge around the priority dropdown."}
 page |>
   pz_annotate("#task-title", type = "highlight", pad = 6, color = "#f59e0b") |>
-  pz_annotate("#task-priority", label = "A", pad = c(2, 6, 2, 6), color = "#2563eb", font_family = "monospace", font_size = 16)
+  pz_annotate(
+    "#task-priority",
+    label = "A",
+    pad = c(2, 6, 2, 6),
+    color = "#2563eb",
+    font_family = "monospace",
+    font_size = 16
+  )
 page |> pz_screenshot(target = "#new-task", frame = pz_frame(pad = 24))
 page |> pz_annotate_clear()
 ```
@@ -79,9 +103,23 @@ page |> pz_annotate_clear()
 
 ```{r callouts, fig.alt = "The new-task form with a numbered callout above the title field pointing down at it, and a tooltip-style callout without an arrow below the priority dropdown."}
 page |>
-  pz_annotate_callout("Name the task", target = "#task-title", side = "top", label = 1) |>
-  pz_annotate_callout("Priority is optional", target = "#task-priority", side = "bottom", arrow = FALSE)
-page |> pz_screenshot(target = "#new-task", frame = pz_frame(pad = 12, target_box = "annotated"))
+  pz_annotate_callout(
+    "Name the task",
+    target = "#task-title",
+    side = "top",
+    label = 1
+  ) |>
+  pz_annotate_callout(
+    "Priority is optional",
+    target = "#task-priority",
+    side = "bottom",
+    arrow = FALSE
+  )
+page |>
+  pz_screenshot(
+    target = "#new-task",
+    frame = pz_frame(pad = 12, target_box = "annotated")
+  )
 page |> pz_annotate_clear()
 ```
 
@@ -92,7 +130,12 @@ The frame's `target_box = "annotated"` keeps the crop wide enough to include the
 [`pz_annotate_spotlight()`](../reference/pz_annotate_spotlight.html) dims the whole page except for a rounded cutout around each target, so the reader's eye goes straight to what matters. `dim` sets the opacity of the black scrim from 0 (transparent) to 1 (black), defaulting to 0.6, and `pad` grows the cutouts. A list of targets gets one cutout each.
 
 ```{r spotlight, fig.alt = "The task tracker dimmed to near-black, with bright cutouts around the title field and the Add button."}
-page |> pz_annotate_spotlight(list("#task-title", "#add-task"), pad = 8, dim = 0.75)
+page |>
+  pz_annotate_spotlight(
+    list("#task-title", "#add-task"),
+    pad = 8,
+    dim = 0.75
+  )
 page |> pz_screenshot(target = "main", frame = pz_frame(pad = 24))
 ```
 
@@ -108,7 +151,11 @@ page |> pz_annotate_clear(id = "spotlight")
 
 ```{r redact-fill, fig.alt = "The notes area covered by a solid near-black bar."}
 page |> pz_annotate_redact("#notes", method = "fill")
-page |> pz_screenshot(target = "#notes", frame = pz_frame(pad = 24, target_box = "annotated"))
+page |>
+  pz_screenshot(
+    target = "#notes",
+    frame = pz_frame(pad = 24, target_box = "annotated")
+  )
 page |> pz_annotate_clear()
 ```
 
@@ -116,7 +163,11 @@ page |> pz_annotate_clear()
 
 ```{r redact-blur, fig.alt = "The notes area blurred so the text is unreadable but its shape is visible."}
 page |> pz_annotate_redact("#notes", method = "blur")
-page |> pz_screenshot(target = "#notes", frame = pz_frame(pad = 24, target_box = "annotated"))
+page |>
+  pz_screenshot(
+    target = "#notes",
+    frame = pz_frame(pad = 24, target_box = "annotated")
+  )
 page |> pz_annotate_clear()
 ```
 
@@ -158,14 +209,27 @@ Every annotation defaults to the page's staged color, font family, and badge siz
 
 ```{r stage-style, fig.alt = "The Add button boxed in blue with a large monospace A badge."}
 page |>
-  pz_stage(annotate_color = "#2563eb", annotate_font_family = "monospace", annotate_font_size = 18) |>
+  pz_stage(
+    annotate_color = "#2563eb",
+    annotate_font_family = "monospace",
+    annotate_font_size = 18
+  ) |>
   pz_annotate("#add-task", label = "A")
-page |> pz_screenshot(target = "#new-task", frame = pz_frame(pad = 8, target_box = "annotated"))
+page |>
+  pz_screenshot(
+    target = "#new-task",
+    frame = pz_frame(pad = 8, target_box = "annotated")
+  )
 ```
 
 ```{r}
 page |> pz_annotate_clear()
-page |> pz_stage(annotate_color = NULL, annotate_font_family = NULL, annotate_font_size = NULL)
+page |>
+  pz_stage(
+    annotate_color = NULL,
+    annotate_font_family = NULL,
+    annotate_font_size = NULL
+  )
 ```
 
 Per-call `color`, `font_family`, and `font_size` override the staged values for that call.
@@ -183,7 +247,11 @@ page |> pz_screenshot(target = "h1", frame = pz_frame(pad = 16))
 ```
 
 ```{r frame-annotated, fig.alt = "A crop of the Tasks heading that includes the full callout bubble to its right."}
-page |> pz_screenshot(target = "h1", frame = pz_frame(pad = 16, target_box = "annotated"))
+page |>
+  pz_screenshot(
+    target = "h1",
+    frame = pz_frame(pad = 16, target_box = "annotated")
+  )
 ```
 
 ```{r}
@@ -198,12 +266,20 @@ So far every mark has appeared fully drawn, because reveal animations only play 
 
 ```{r reveals}
 page |>
-  pz_record_start(frame = pz_frame("#new-task", pad = 40, when = "start"), scale = 0.6, hold = c(0.3, 0.5)) |>
+  pz_record_start(
+    frame = pz_frame("#new-task", pad = 40, when = "start"),
+    scale = 0.6,
+    hold = c(0.3, 0.5)
+  ) |>
   pz_annotate("#task-title", type = "box") |>
   pz_record_hold(0.4) |>
   pz_annotate("#task-priority", type = "circle") |>
   pz_record_hold(0.4) |>
-  pz_annotate_callout("Then press Add", target = "#add-task", side = "bottom") |>
+  pz_annotate_callout(
+    "Then press Add",
+    target = "#add-task",
+    side = "bottom"
+  ) |>
   pz_record_hold(1) |>
   pz_annotate_clear()
 ```
@@ -216,11 +292,17 @@ One more callout exists only in recordings: [`pz_press(show_keys = ...)`](../ref
 
 ```{r show-keys}
 page |>
-  pz_record_start(frame = pz_frame("#new-task", pad = 24, when = "start"), scale = 0.6) |>
+  pz_record_start(
+    frame = pz_frame("#new-task", pad = 24, when = "start"),
+    scale = 0.6
+  ) |>
   pz_click("#task-title") |>
   pz_type("Water the dog", target = "#task-title") |>
   pz_press("Enter", show_keys = "mac") |>
-  pz_expect_text("Water the dog", target = pz_loc(".task-title", which = "first"))
+  pz_expect_text(
+    "Water the dog",
+    target = pz_loc(".task-title", which = "first")
+  )
 ```
 
 Keystroke callouts appear only in recordings, never in stills, and each `pz_press()` call replaces the previous callout.

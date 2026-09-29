@@ -17,7 +17,12 @@ You'll need a Chromium-based browser and the av package to encode MP4 files. The
 
 ```{r setup}
 library(paparazzi)
-page <- pz_open(pz_example("tasks"), width = 800, height = 900, color_scheme = "light")
+page <- pz_open(
+  pz_example("tasks"),
+  width = 800,
+  height = 900,
+  color_scheme = "light"
+)
 page |> pz_stage(enter = "top", pause = 0.2, camera_follow = TRUE)
 card <- pz_frame("main", pad = 12, when = "start")
 ```
@@ -35,7 +40,10 @@ page |>
   pz_camera("#task-title") |>
   pz_type("Prepare release notes", target = "#task-title") |>
   pz_click("#add-task") |>
-  pz_expect_text("Prepare release notes", target = pz_loc(".task-title", which = "first")) |>
+  pz_expect_text(
+    "Prepare release notes",
+    target = pz_loc(".task-title", which = "first")
+  ) |>
   pz_camera_reset() |>
   pz_record_hold(0.7)
 ```
@@ -101,7 +109,10 @@ Now record the help panel opening. The redactions follow the two task titles whi
 ```{r part-help}
 page |>
   pz_record_start(frame = card, fps = 8, scale = 0.6) |>
-  pz_annotate_caption("Open help without showing high-priority tasks", side = "top") |>
+  pz_annotate_caption(
+    "Open help without showing high-priority tasks",
+    side = "top"
+  ) |>
   pz_click("#toggle-help") |>
   pz_expect_visible(target = "#help") |>
   pz_record_hold(1)

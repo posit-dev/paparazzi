@@ -120,13 +120,17 @@ Recording works the same way for apps as for any other page. Stage the page, wra
 ```{r, fig.alt = "A cursor glides to the title input, types Water the plants, and clicks Add. The task count changes from 4 to 5 and the new task appears at the end of the list."}
 page |>
   pz_stage(enter = "left", pause = 0.4) |>
-  pz_record(code = {
-    page |>
-      pz_type("Water the plants", target = "#title") |>
-      pz_click("#add") |>
-      pz_expect_text("5 tasks", target = "#summary") |>
-      pz_cursor_leave()
-  }, format = "gif", scale = 0.6)
+  pz_record(
+    code = {
+      page |>
+        pz_type("Water the plants", target = "#title") |>
+        pz_click("#add") |>
+        pz_expect_text("5 tasks", target = "#summary") |>
+        pz_cursor_leave()
+    },
+    format = "gif",
+    scale = 0.6
+  )
 ```
 
 ```{r, include = FALSE}

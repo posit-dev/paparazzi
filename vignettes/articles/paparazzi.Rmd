@@ -26,7 +26,12 @@ library(paparazzi)
 `pz_open()` starts a headless browser and loads a page. It takes a URL, a local HTML file, or a Shiny app. `pz_example()` returns the path to the examples that come with paparazzi, so we'll open the task tracker:
 
 ```{r}
-page <- pz_open(pz_example("tasks"), width = 720, height = 800, color_scheme = "light")
+page <- pz_open(
+  pz_example("tasks"),
+  width = 720,
+  height = 800,
+  color_scheme = "light"
+)
 page
 ```
 
@@ -82,7 +87,10 @@ Expectation functions start with `pz_expect_`. Each one checks the page and, if 
 
 ```{r}
 page |>
-  pz_expect_text("Repot the fern", target = pz_loc(".task-title", which = "first"))
+  pz_expect_text(
+    "Repot the fern",
+    target = pz_loc(".task-title", which = "first")
+  )
 ```
 
 This time the expectation waited for the page to finish saving. When you need a value from the page after an action, check the result with an expectation first, then read the value.
@@ -91,14 +99,22 @@ When an expectation times out, its error tells you what it was looking for and w
 
 ```{r, error = TRUE}
 page |>
-  pz_expect_text("Walk the dog", target = pz_loc(".task-title", which = "first"), timeout = 1)
+  pz_expect_text(
+    "Walk the dog",
+    target = pz_loc(".task-title", which = "first"),
+    timeout = 1
+  )
 ```
 
 Every expectation can also be flipped with `not = TRUE`. For example, the new task isn't done yet:
 
 ```{r}
 page |>
-  pz_expect_class("done", target = pz_loc(".task", has_text = "fern"), not = TRUE)
+  pz_expect_class(
+    "done",
+    target = pz_loc(".task", has_text = "fern"),
+    not = TRUE
+  )
 ```
 
 Inside a testthat test, expectations report their result to testthat, so a paparazzi script can double as a test. The [Shiny apps article](shiny.html) shows what that looks like.
@@ -155,7 +171,13 @@ page |>
 Device settings stay in place until you change them, so let's switch back before we record:
 
 ```{r}
-page |> pz_device(width = 720, height = 800, mobile = FALSE, color_scheme = "light")
+page |>
+  pz_device(
+    width = 720,
+    height = 800,
+    mobile = FALSE,
+    color_scheme = "light"
+  )
 ```
 
 ## Record a video
@@ -170,13 +192,20 @@ We'll start again from a fresh page. The default cursor is 1.75 times the origin
 page |>
   pz_nav_reload() |>
   pz_stage(enter = "top", pause = 0.4) |>
-  pz_record(code = {
-    page |>
-      pz_type("Repot the fern", target = "#task-title") |>
-      pz_click("#add-task") |>
-      pz_expect_text("Repot the fern", target = pz_loc(".task-title", which = "first")) |>
-      pz_cursor_leave()
-  }, format = "gif", scale = 0.6)
+  pz_record(
+    code = {
+      page |>
+        pz_type("Repot the fern", target = "#task-title") |>
+        pz_click("#add-task") |>
+        pz_expect_text(
+          "Repot the fern",
+          target = pz_loc(".task-title", which = "first")
+        ) |>
+        pz_cursor_leave()
+    },
+    format = "gif",
+    scale = 0.6
+  )
 ```
 
 The GIF above shows the full interaction. `pz_cursor_leave()` moves the cursor out of the frame at the end, so it doesn't cover the new task. To record only part of the page, pass a `frame`, such as `frame = pz_frame(".task-list", pad = 16)`.
@@ -205,7 +234,7 @@ pz_close(page)
 
 You've now driven a page from R: finding elements with selectors and specs, acting on them, checking the results with expectations, and capturing screenshots and a video. From here:
 
-- The [three-part app walkthrough](walkthrough.html) builds a set of short MP4 recordings from the task tracker, with camera moves, a callout, captions, and a redacted note.
+- The [three-part app walkthrough](walkthrough.html) builds a set of short MP4 recordings from the task tracker, with camera moves, a callout, captions, and redacted high-priority task titles.
 - The [annotations article](annotations.html) shows every kind of annotation — marks, callouts, spotlights, redactions, and captions — and how to style, frame, and clear them.
 - The [Shiny apps article](shiny.html) shows how paparazzi starts Shiny apps, waits for them, and sets their inputs, and how to use paparazzi in tests.
 - The [function reference](../reference/index.html) lists every function by task, with an example for each.
