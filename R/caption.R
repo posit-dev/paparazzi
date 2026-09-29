@@ -226,7 +226,8 @@ caption_vtt <- function(rec, windows) {
     )
   }
   cues <- unlist(lapply(windows, function(window) {
-    text <- gsub("&", "&amp;", window$caption$text, fixed = TRUE)
+    text <- gsub("\r\n?", "\n", window$caption$text)
+    text <- gsub("&", "&amp;", text, fixed = TRUE)
     text <- gsub("<", "&lt;", text, fixed = TRUE)
     text <- gsub(">", "&gt;", text, fixed = TRUE)
     text <- gsub("\n(?:[ \t]*\n)+", "\n", text, perl = TRUE)
@@ -250,7 +251,10 @@ caption_filter <- function(rec, page, sampled, out, windows, dir) {
     window <- windows[[i]]
     file <- file.path(dir, paste0("caption-", i, ".png"))
     caption_render(page, window$caption, out$width, out$height, scale, file)
-    fade <- min(0.25, (window$end - window$start) / 2)
+    span <- window$end - window$start
+    fade <- min(0.25, span / 2)
+    # A window of only a few ticks would spend its frames mostly transparent.
+    fades <- span >= 3 / rec$fps
     # Movie sources are bare filenames; with_dir() owns their lookup directory.
     # A caption at tick zero is already visible, not fading in.
     movie <- paste0(
@@ -263,7 +267,7 @@ caption_filter <- function(rec, page, sampled, out, windows, dir) {
       "setpts=N/(",
       rec$fps,
       "*TB)",
-      if (window$start == 0) {
+      if (window$start == 0 || !fades) {
         ""
       } else {
         paste0(
@@ -274,11 +278,16 @@ caption_filter <- function(rec, page, sampled, out, windows, dir) {
           ":alpha=1"
         )
       },
-      ",fade=t=out:st=",
-      sprintf("%.6f", window$end - fade),
-      ":d=",
-      sprintf("%.6f", fade),
-      ":alpha=1[c",
+      if (fades) {
+        paste0(
+          ",fade=t=out:st=",
+          sprintf("%.6f", window$end - fade),
+          ":d=",
+          sprintf("%.6f", fade),
+          ":alpha=1"
+        )
+      },
+      "[c",
       i,
       "]"
     )

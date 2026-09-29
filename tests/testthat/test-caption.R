@@ -304,7 +304,7 @@ test_that("VTT keeps text after empty lines within one cue", {
     list(list(
       start = 0,
       end = 1,
-      caption = list(text = "\na\n\nb\n\n")
+      caption = list(text = "\na\r\n\r\nb\n\n")
     ))
   )
   lines <- readLines(path)
@@ -345,4 +345,22 @@ test_that("still blend works for single-pixel dimensions", {
     result <- png::readPNG(base)
     expect_equal(result[1, 1, ], c(1, 0, 0, 1), tolerance = 1 / 255)
   }
+})
+
+test_that("clearing all logs the caption clear before mark fades pump", {
+  page <- local_record_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+  page |>
+    pz_annotate("#box", reveal = "fade") |>
+    pz_annotate_caption("Hello")
+  rec <- page_recorder(page)
+  before <- rec_vt(rec)
+  pz_annotate_clear(page)
+  events <- rec$captions
+  last <- events[[length(events)]]
+  expect_null(last$caption)
+  expect_lt(last$vt - before, 0.2)
+  pz_record_stop(page)
 })

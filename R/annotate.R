@@ -187,15 +187,16 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
       ") || false; })()"
     )
   )
+  # Log the caption clear at the call's video time, not after mark fades.
+  if (is.null(id) || identical(id, "caption")) {
+    caption_clear(ctx$page)
+  }
   if (recording && isTRUE(fades)) {
     pump_loop(ctx$page$child_loop, 0.3)
     pz_js(
       ctx,
       "document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations')?.pz?.finishClear()"
     )
-  }
-  if (is.null(id) || identical(id, "caption")) {
-    caption_clear(ctx$page)
   }
   invisible(ctx)
 }
