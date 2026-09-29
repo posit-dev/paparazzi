@@ -12,9 +12,10 @@
 #' @param pad Padding in CSS pixels around the target; one number or
 #'   `c(top, right, bottom, left)`. Defaults to 24 pixels.
 #' @param duration Movement duration in seconds. `NULL` chooses a duration
-#'   based on the pan and zoom distance. When the camera is already on the
-#'   shot, `NULL` does nothing and a number holds the camera still for that
-#'   long.
+#'   based on the pan and zoom distance. When the move wouldn't change the
+#'   view, `NULL` takes the new shot instantly, adding no video time, so the
+#'   camera follows the new target if the page scrolls later. A number holds
+#'   the camera still for that long.
 #' @param target_box `"element"` measures just the shot target; `"annotated"`
 #'   also includes its attached annotations. Defaults to `"element"` even
 #'   when [pz_stage_frame()] stages an annotated frame for stills.
