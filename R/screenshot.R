@@ -153,8 +153,8 @@ print.paparazzi_preview <- function(x, ...) {
 # and viewers show images directly but need a page for video.
 preview_stage <- function(path) {
   video <- tolower(tools::file_ext(path)) %in% c("mp4", "webm")
-  temp <- normalizePath(tempdir())
-  if (!video && startsWith(normalizePath(path), paste0(temp, "/"))) {
+  temp <- paste0(normalizePath(tempdir(), winslash = "/"), "/")
+  if (!video && startsWith(normalizePath(path, winslash = "/"), temp)) {
     return(path)
   }
   dir <- tempfile("paparazzi-preview-")

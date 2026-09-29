@@ -383,6 +383,14 @@ test_that("pz_close closes the page behind a context", {
     pz_close()
   expect_true(file.exists(out))
   expect_true(page$is_closed())
+
+  page <- pz_open(fixture_file())
+  chain <- pz_record_start(page, withr::local_tempfile(fileext = ".mp4"))
+  testthat::local_mocked_bindings(
+    record_encode = function(...) stop("encode failed")
+  )
+  expect_error(pz_close(chain), "encode failed")
+  expect_true(page$is_closed())
 })
 
 test_that("a failed device setting after page creation closes the new session", {

@@ -170,10 +170,13 @@ pz_open <- function(
 #' @export
 pz_close <- function(page) {
   if (inherits(page, "PaparazziContext")) {
-    if (ctx_recording(page)) {
-      pz_record_stop(page)
-    }
+    recording <- ctx_recording(page)
+    ctx <- page
     page <- page$page
+    if (recording) {
+      on.exit(page$close(), add = TRUE)
+      pz_record_stop(ctx)
+    }
   }
   check_page(page)
   page$close()
