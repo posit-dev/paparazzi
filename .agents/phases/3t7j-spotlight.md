@@ -1,4 +1,4 @@
-# Spotlight annotation (3t7j) — awaiting orchestrator sign-off
+# Spotlight annotation (3t7j) (signed off by orchestrator)
 
 Requirements: kata 3t7j; `.agents/SPEC.md` § Camera, annotations, and captions (Annotations), § Cursor and staging, § Recording, § Framing; rationale in kata 1a3m. Reuse merged annotation core, redaction and reveal decisions in `.agents/phases/{gdjm-annotation-core,m6kv-redact,mkns-marks}.md`. This phase does not implement `target_box = "annotated"` (kata 0rdt).
 
@@ -18,4 +18,4 @@ Requirements: kata 3t7j; `.agents/SPEC.md` § Camera, annotations, and captions 
 ## Escalation / open questions
 
 - Stop before modifying init/restore/device metrics, adding timers/queues/secondary ordering flags or display-shaped storage, or building guards for guards. If SVG mask rendering or z-order against the concurrently added callout needs broader JS restructuring, ask the orchestrator instead of changing their code.
-- Please confirm fade/none-only reveal policy (rather than supporting pop/slide/wipe) and cutout disconnection behavior (hide its hole, so the page behind it becomes dim). Please confirm the spotlight sits below **both** marks/callouts and redactions, with redaction opacity preserved.
+- Orchestrator signed off: only fade/none are supported, with a clear error for all other reveals; a disconnected or hidden target loses its hole; spotlight paints above the page and below marks, callouts, and redactions, which stay opaque. Callout has not landed; its cross-branch z-order check belongs to the orchestrator at merge.
