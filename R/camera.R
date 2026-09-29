@@ -12,10 +12,19 @@
 #' @param pad Padding in CSS pixels around the target; one number or
 #'   `c(top, right, bottom, left)`. Defaults to 24 pixels.
 #' @param duration Movement duration in seconds. `NULL` chooses a duration
-#'   based on the pan and zoom distance.
+#'   based on the pan and zoom distance. When the camera is already on the
+#'   shot, `NULL` does nothing and a number holds the camera still for that
+#'   long.
 #' @param target_box `"element"` measures just the shot target; `"annotated"`
 #'   also includes its attached annotations. Defaults to `"element"` even
 #'   when [pz_stage_frame()] stages an annotated frame for stills.
+#' @param wait Whether to wait for the move to finish before the next step.
+#'   `FALSE` (the default) lets the next step run while the camera moves,
+#'   so a cursor glide can happen during a zoom. Either way, a camera call
+#'   first lets an earlier camera move finish, so calling `pz_camera()` on
+#'   the same target again settles the camera there. [pz_record_hold()],
+#'   [pz_record_pause()] and [pz_record_stop()] always let a move finish
+#'   first.
 #' @return `ctx`, invisibly.
 #' @export
 pz_camera <- function(
@@ -25,11 +34,13 @@ pz_camera <- function(
   zoom = NULL,
   pad = NULL,
   duration = NULL,
-  target_box = c("element", "annotated")
+  target_box = c("element", "annotated"),
+  wait = FALSE
 ) {
   check_context(ctx)
   check_dots_empty()
   target_box <- arg_match(target_box)
+  check_bool(wait)
   check_number_decimal(
     zoom,
     min = 0,
@@ -58,7 +69,7 @@ pz_camera <- function(
   frame_region(box)
   geometry <- page_geometry(ctx)
   box <- box + rep(c(geometry$scroll_x, geometry$scroll_y), 2)
-  camera_move(ctx, rec, box, zoom = zoom, duration = duration)
+  camera_move(ctx, rec, box, zoom = zoom, duration = duration, wait = wait)
   invisible(ctx)
 }
 
@@ -67,16 +78,18 @@ pz_camera <- function(
 #' Returns the camera to the recording frame (or the full viewport).
 #' Outside a recording it does nothing.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_camera
 #' @return `ctx`, invisibly.
 #' @export
-pz_camera_reset <- function(ctx) {
+pz_camera_reset <- function(ctx, ..., wait = FALSE) {
   check_context(ctx)
+  check_dots_empty()
+  check_bool(wait)
   rec <- page_recorder(ctx$page)
   if (is.null(rec) || !rec$active) {
     return(invisible(ctx))
   }
-  camera_move(ctx, rec, reset = TRUE)
+  camera_move(ctx, rec, reset = TRUE, wait = wait)
   invisible(ctx)
 }
 
@@ -86,7 +99,8 @@ camera_move <- function(
   box = NULL,
   zoom = NULL,
   duration = NULL,
-  reset = FALSE
+  reset = FALSE,
+  wait = FALSE
 ) {
   if (rec$format == "gif") {
     rlang::check_installed(
@@ -94,6 +108,10 @@ camera_move <- function(
       reason = "to apply the recording camera to GIFs."
     )
   }
+  # Manual moves queue behind each other by settling first: a second
+  # pz_camera() starts where the first one lands. Follow moves never
+  # outlast their action, so they are already done here.
+  camera_settle(ctx$page, rec)
   now <- rec_vt(rec)
   home <- camera_home(rec, ctx)
   density <- camera_density(rec, ctx)
@@ -112,6 +130,16 @@ camera_move <- function(
   } else {
     camera_shot(box, home, zoom, density)
   }
+  # A shot the camera is already on, anchored to the same page position,
+  # is not a move: without a duration nothing happens; with one, the
+  # camera holds still for that long. Clamping can make different
+  # targets look the same now, so the anchor is compared unclamped.
+  if (
+    is.null(duration) &&
+      camera_same_shot(rec, from, to, reset, scroll, home, density)
+  ) {
+    return(invisible(rec))
+  }
   if (is.null(duration)) {
     duration <- camera_duration(from, to, home)
   }
@@ -124,10 +152,41 @@ camera_move <- function(
     reset = reset,
     scroll = scroll
   )
-  if (duration > 0) {
+  if (wait && duration > 0) {
     pump_loop(ctx$page$child_loop, duration)
   }
   invisible(rec)
+}
+
+# Holds and pauses freeze video time, camera included, and a stop ends
+# it, so each lets an in-flight move land first. Moves only ever interrupt earlier
+# ones, so the last move is the one still running.
+camera_settle <- function(page, rec) {
+  if (!rec$active || rec$paused || !length(rec$camera)) {
+    return(invisible())
+  }
+  remaining <- rec$camera[[length(rec$camera)]]$end - rec_vt(rec)
+  if (remaining > 0) {
+    pump_loop(page$child_loop, remaining)
+  }
+  invisible()
+}
+
+camera_same_shot <- function(rec, from, to, reset, scroll, home, density) {
+  close <- function(a, b) all(abs(a - b) < 0.5)
+  if (!close(camera_viewport(to, scroll, home) + rep(scroll, 2), from)) {
+    return(FALSE)
+  }
+  if (!length(rec$camera)) {
+    return(reset)
+  }
+  last <- rec$camera[[length(rec$camera)]]
+  # Home is anchored to the viewport, so any two resets are the same shot.
+  if (last$reset || reset) {
+    return(last$reset && reset)
+  }
+  close(camera_shot(last$box, home, last$zoom, density), to) &&
+    close(last$scroll, scroll)
 }
 
 camera_follow_move <- function(ctx, rect, duration) {
@@ -141,14 +200,16 @@ camera_follow_move <- function(ctx, rect, duration) {
   geometry <- page_geometry(ctx)
   scroll <- c(geometry$scroll_x, geometry$scroll_y)
   density <- camera_density(rec, ctx)
-  at <- camera_at(rec$camera, now, home, density)
-  current <- camera_viewport(
-    as.numeric(at),
-    scroll,
-    home,
-    reset = isTRUE(attr(at, "reset"))
-  ) +
-    rep(scroll, 2)
+  shot_at <- function(time) {
+    at <- camera_at(rec$camera, time, home, density)
+    camera_viewport(
+      as.numeric(at),
+      scroll,
+      home,
+      reset = isTRUE(attr(at, "reset"))
+    ) +
+      rep(scroll, 2)
+  }
   target <- c(
     rect[["x"]],
     rect[["y"]],
@@ -156,7 +217,19 @@ camera_follow_move <- function(ctx, rect, duration) {
     rect[["y"]] + rect[["height"]]
   ) +
     rep(scroll, 2)
-  shot <- camera_follow_shot(current, target, home, scroll)
+  arrival <- now + camera_effective_duration(rec, duration)
+  # An in-flight move already heading to a shot that frames the target
+  # (a zoom toward it, or a reset) is left alone; otherwise the target
+  # must be in the shot when the action lands.
+  last_end <- if (length(rec$camera)) rec$camera[[length(rec$camera)]]$end
+  if (
+    !is.null(last_end) &&
+      last_end > arrival &&
+      is.null(camera_follow_shot(shot_at(last_end), target, home, scroll))
+  ) {
+    return(FALSE)
+  }
+  shot <- camera_follow_shot(shot_at(arrival), target, home, scroll)
   if (is.null(shot)) {
     return(FALSE)
   }
@@ -164,7 +237,7 @@ camera_follow_move <- function(ctx, rect, duration) {
   # against the final home, like automatic durations in manual moves.
   rec$camera[[length(rec$camera) + 1L]] <- list(
     start = now,
-    end = now + camera_effective_duration(rec, duration),
+    end = arrival,
     box = shot,
     zoom = (home[3] - home[1]) / (shot[3] - shot[1]),
     reset = FALSE,

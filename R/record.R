@@ -242,6 +242,8 @@ pz_record_stop <- function(ctx) {
     }
   })
 
+  camera_settle(page, rec)
+
   # Deactivate first so ticks scheduled by the recording stop re-arming
   # and can't issue captures while the stop settles its own.
   rec$active <- FALSE
@@ -344,6 +346,7 @@ pz_record_pause <- function(ctx) {
   if (rec$paused) {
     return(invisible(ctx))
   }
+  camera_settle(ctx$page, rec)
   rec$vt_base <- rec_vt(rec)
   rec$paused <- TRUE
   invisible(ctx)
@@ -374,7 +377,8 @@ pz_record_resume <- function(ctx) {
 #' Unlike [pz_wait()], no real time passes: the hold is inserted into
 #' the video timeline at encode time. When the page is not recording
 #' this is a no-op, so debugging a chain with the recording commented
-#' out doesn't pay for video-only pauses.
+#' out doesn't pay for video-only pauses. A camera move still in
+#' progress (see [pz_camera()]) finishes before the hold begins.
 #'
 #' @inheritParams pz_click
 #' @param seconds Seconds to hold the frame in the output.
@@ -404,6 +408,7 @@ pz_record_hold <- function(ctx, seconds) {
   if (is.null(rec) || !rec$active) {
     return(invisible(ctx))
   }
+  camera_settle(ctx$page, rec)
   rec$holds <- c(rec$holds, list(list(vt = rec_vt(rec), seconds = seconds)))
   invisible(ctx)
 }

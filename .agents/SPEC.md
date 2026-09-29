@@ -476,15 +476,16 @@ There are three layers:
 #### Camera
 
 ```r
-pz_camera(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL, target_box = c("element", "annotated"))
-pz_camera_reset(ctx)
+pz_camera(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL, target_box = c("element", "annotated"), wait = FALSE)
+pz_camera_reset(ctx, ..., wait = FALSE)
 ```
 
 - The camera is an **encode-time crop**. Capture stays full-viewport. Each camera call records a keyframe (video time, shot rect in page CSS px, easing), and at stop every output frame gets an interpolated crop, scaled back to the output size. It works for both capture methods, and camera motion runs at the output fps. Sharpness is capped by the capture DPR (2 by default). The per-frame scroll position is logged so page-coordinate shots map into viewport frames.
 - **Home shot:** the recording's frame (`pz_record_start(frame =)` or `pz_stage_frame()`), falling back to the full viewport. It defines the output size. Every shot grows to home's aspect ratio (centered) and is clamped inside home, so the camera never shows anything outside the recording's frame. `pz_camera_reset()` returns home, from any context.
 - **Shot:** `target` takes element targets only (selector, `pz_loc()`, or a list whose union is the shot); coordinates may come later. Multiple matches are unioned. At the root, `target = NULL` is an error, as for `pz_click()`. `pad` uses `pz_frame()` semantics, but `NULL` means 24 CSS px. `zoom = NULL` fits `target` + `pad`, capped at the capture DPR (so a scale-1 page never zooms on a fit); a number is magnification relative to home. Beyond the DPR, a softness warning is given once per recording. A shot is measured when its call runs.
 - **Duration:** `duration = NULL` is distance-based, `clamp(0.66 + 2 * d, 0.66, 2)` seconds, with `d = |Δcenter| / home_diagonal + 0.5 * |log2(zoom_to / zoom_from)|` (constants to be tuned against a prototype). Easing is the cursor's cubic ease-in-out. While recording, the call pumps for the move's duration so the move plays out in the video.
-- **Follow the action:** `pz_stage(camera_follow = TRUE)` is the default. While zoomed in, a pointer or typing action whose resolved target falls outside the shot plus a margin triggers a minimal pan at the current zoom, zooming out only as far as needed to fit the target. The move is keyframed to the cursor glide, so it lands when the cursor does; with the cursor off, it gets its own short staged pause. Expectations, getters and waits never move the camera, and it never triggers at home.
+- **Concurrency:** `wait = FALSE` (the default) records the keyframe and returns at once, so the next step (typically a cursor glide) runs during the move; `wait = TRUE` pumps the loop for the move's duration. Manual camera calls settle first: a second `pz_camera()` waits for the previous move to land, then starts from there, so `pz_camera(x) |> ...steps... |> pz_camera(x)` moves toward `x` during the steps and then settles on it. A call whose shot is where the camera already is does nothing without a `duration`; with one, it's a still keyframe (with `wait = TRUE`, the same as `pz_wait(duration)`). Follow moves win: they may interrupt an in-flight manual move, and since they end when their action lands, a later camera call never waits on one. `pz_record_hold()`, `pz_record_pause()` and `pz_record_stop()` let an in-flight move land first, because holds and pauses freeze video time (camera included) and stop ends it. A numeric lead delay is deferred: `pz_camera() |> pz_wait(n)` covers it.
+- **Follow the action:** `pz_stage(camera_follow = TRUE)` is the default. While zoomed in, a pointer or typing action whose resolved target falls outside the shot plus a margin triggers a minimal pan at the current zoom, zooming out only as far as needed to fit the target. The move is keyframed to the cursor glide, so it lands when the cursor does; with the cursor off, it gets its own short staged pause. Expectations, getters and waits never move the camera, and it never triggers at home. With a non-waiting move in flight, follow leaves it alone when its destination frames the target (a zoom toward it, or a reset); otherwise containment is tested at the moment the action lands. Accepted tradeoff: an action that lands before such a move arrives can briefly land off-shot; `wait = TRUE` is the remedy, rather than coordinating action timing with the camera.
 - **Without a recording**, camera calls are no-ops, and stills ignore the camera; to reuse a shot for a still, pass the same target to `pz_screenshot(frame =)`. The camera resets to home at every `pz_record_start()`.
 - The cursor and page annotations zoom with the page. A fixed-size cursor under zoom is deferred; it would need page-side counter-scaling synced to the encode-time camera, a second clock. Revisit this after a prototype.
 
@@ -807,8 +808,8 @@ Implemented (kata `1a3m`).
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_camera()` | `(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL, target_box = c("element", "annotated"))` | confirmed |
-| `pz_camera_reset()` | `(ctx)` | confirmed |
+| `pz_camera()` | `(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL, target_box = c("element", "annotated"), wait = FALSE)` | confirmed |
+| `pz_camera_reset()` | `(ctx, ..., wait = FALSE)` | confirmed |
 | `pz_annotate()` | `(ctx, target = NULL, ..., type = c("box", "circle", "underline", "highlight"), label = NULL, pad = NULL, reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_annotate_callout()` | `(ctx, text, ..., target = NULL, side = NULL, arrow = TRUE, label = NULL, reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_annotate_spotlight()` | `(ctx, target = NULL, ..., pad = NULL, dim = NULL, reveal = NULL)` | confirmed |
