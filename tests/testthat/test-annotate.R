@@ -494,14 +494,24 @@ test_that("non-clipping inline and root body overflow do not hide redactions", {
       "document.body.style.overflow = 'hidden'; document.body.style.height = '60px';",
       "document.getElementById('fixed').innerHTML = '<span style=\"overflow:hidden\"><span id=inline-secret style=\"display:inline-block;width:50px;height:30px\">SECRET</span></span>';",
       "document.body.insertAdjacentHTML('beforeend', ",
-      "'<div id=body-secret style=\"position:absolute;left:500px;top:310px;width:50px;height:30px\">SECRET</div>')"
+      "'<div id=body-secret style=\"position:absolute;left:500px;top:310px;width:50px;height:30px;background:#ff0000\">SECRET</div>')"
     )
   )
-  page |> pz_annotate_redact("#inline-secret, #body-secret")
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
-  img <- png::readPNG(path)
   dpr <- page_dpr(page)
+  expect_equal(
+    as.numeric(png::readPNG(path)[
+      round(335 * dpr) + 1,
+      round(540 * dpr) + 1,
+      1:3
+    ]),
+    c(1, 0, 0),
+    tolerance = 0.03
+  )
+  page |> pz_annotate_redact("#inline-secret, #body-secret")
+  page |> pz_screenshot(path)
+  img <- png::readPNG(path)
   expect_equal(
     as.numeric(img[round(30 * dpr) + 1, round(40 * dpr) + 1, 1:3]),
     rep(23 / 255, 3),
