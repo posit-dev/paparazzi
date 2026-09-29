@@ -86,17 +86,6 @@ caption_clear <- function(page) {
 }
 
 caption_render <- function(page, caption, width, height, font_scale, path) {
-  session <- page$session$new_session()
-  on.exit(session$close(), add = TRUE)
-  session$Emulation$setDeviceMetricsOverride(
-    width = as.integer(width),
-    height = as.integer(height),
-    deviceScaleFactor = 1,
-    mobile = FALSE
-  )
-  session$Emulation$setDefaultBackgroundColorOverride(
-    color = list(r = 0, g = 0, b = 0, a = 0)
-  )
   data <- jsonlite::toJSON(
     list(
       text = caption$text,
@@ -125,7 +114,25 @@ caption_render <- function(page, caption, width, height, font_scale, path) {
     "fontFamily:c.family,fontSize:c.size+'px',lineHeight:'1.35'});",
     "document.body.appendChild(el); return el.getBoundingClientRect().height; })()"
   )
-  session$Runtime$evaluate(expression = script, returnByValue = TRUE)
+  screen_render(page, width, height, path, script)
+}
+
+screen_render <- function(page, width, height, path, script) {
+  session <- page$session$new_session()
+  on.exit(session$close(), add = TRUE)
+  session$Emulation$setDeviceMetricsOverride(
+    width = as.integer(width),
+    height = as.integer(height),
+    deviceScaleFactor = 1,
+    mobile = FALSE
+  )
+  session$Emulation$setDefaultBackgroundColorOverride(
+    color = list(r = 0, g = 0, b = 0, a = 0)
+  )
+  geometry <- session$Runtime$evaluate(
+    expression = script,
+    returnByValue = TRUE
+  )
   result <- session$Page$captureScreenshot(
     format = "png",
     fromSurface = TRUE,
@@ -133,7 +140,57 @@ caption_render <- function(page, caption, width, height, font_scale, path) {
     clip = list(x = 0, y = 0, width = width, height = height, scale = 1)
   )
   writeBin(jsonlite::base64_dec(result$data), path)
-  invisible(path)
+  invisible(geometry$result$value)
+}
+
+key_callout_render <- function(
+  page,
+  groups,
+  width,
+  height,
+  scale,
+  bottom_offset,
+  path
+) {
+  data <- jsonlite::toJSON(
+    list(
+      groups = lapply(groups, as.list),
+      scale = scale,
+      bottom = bottom_offset
+    ),
+    auto_unbox = TRUE
+  )
+  script <- paste0(
+    "(() => { const c=",
+    data,
+    ";",
+    "document.documentElement.style.cssText='background:transparent;margin:0';",
+    "document.body.style.cssText='background:transparent;margin:0';",
+    "const row=document.createElement('div');",
+    "Object.assign(row.style,{position:'fixed',left:'50%',bottom:c.bottom+'px',",
+    "transform:'translateX(-50%)',display:'flex',flexWrap:'wrap',",
+    "alignItems:'center',justifyContent:'center',maxWidth:'80vw',",
+    "gap:(6*c.scale)+'px',fontFamily:'sans-serif',",
+    "fontSize:(18*c.scale)+'px',color:'white'});",
+    "c.groups.forEach((group,i)=>{",
+    "if(i){const arrow=document.createElement('span');arrow.textContent='→';",
+    "row.appendChild(arrow)}",
+    "const chord=document.createElement('span');",
+    "Object.assign(chord.style,{display:'inline-flex',flexWrap:'wrap',",
+    "alignItems:'center',gap:(4*c.scale)+'px'});",
+    "group.forEach((label,j)=>{",
+    "if(j){const plus=document.createElement('span');plus.textContent='+';",
+    "chord.appendChild(plus)}",
+    "const cap=document.createElement('span');cap.textContent=label;",
+    "Object.assign(cap.style,{display:'inline-block',",
+    "padding:(5*c.scale)+'px '+(9*c.scale)+'px',",
+    "borderRadius:(7*c.scale)+'px',background:'rgba(0,0,0,0.78)',",
+    "border:'1px solid rgba(255,255,255,0.65)',",
+    "boxSizing:'border-box'});chord.appendChild(cap)});",
+    "row.appendChild(chord)});document.body.appendChild(row);",
+    "return row.getBoundingClientRect().height})()"
+  )
+  screen_render(page, width, height, path, script)
 }
 
 caption_blend_still <- function(path, overlay) {
@@ -238,69 +295,182 @@ caption_vtt <- function(rec, windows) {
   invisible(path)
 }
 
-caption_filter <- function(rec, page, sampled, out, windows, dir) {
-  base <- out$vfilter
-  chains <- paste0("[in]", base, "[b0]")
+
+key_callout_windows <- function(rec, sampled) {
+  events <- rec$keypresses
+  if (!length(events)) {
+    return(list())
+  }
+  vts <- sampled$vts
+  first_tick <- function(vt) {
+    match <- which(vts >= vt - 1e-9)
+    if (length(match)) match[[1]] else length(vts) + 1L
+  }
+  starts <- vapply(events, function(event) first_tick(event$vt), integer(1))
+  windows <- list()
+  for (i in seq_along(events)) {
+    start <- starts[[i]]
+    last <- first_tick(events[[i]]$last)
+    replacement <- if (i < length(events)) {
+      starts[[i + 1L]]
+    } else {
+      sampled$n_ticks + 1L
+    }
+    end <- min(
+      last + ceiling(1.25 * rec$fps),
+      replacement,
+      sampled$n_ticks + 1L
+    )
+    if (start >= end) {
+      next
+    }
+    fade <- last + ceiling(rec$fps)
+    windows[[length(windows) + 1L]] <- list(
+      start = (start - 1L) / rec$fps,
+      end = (end - 1L) / rec$fps,
+      fade_start = (fade - 1L) / rec$fps,
+      style = events[[i]]$style,
+      keys = events[[i]]$keys
+    )
+  }
+  windows
+}
+
+screen_scale <- function(rec, out) {
   home_width <- if (is.null(rec$crop)) {
     rec$camera_viewport_width
   } else {
     rec$crop$width
   }
-  scale <- out$width / home_width
-  for (i in seq_along(windows)) {
+  out$width / home_width
+}
+
+caption_overlays <- function(rec, page, out, windows, dir) {
+  scale <- screen_scale(rec, out)
+  lapply(seq_along(windows), function(i) {
     window <- windows[[i]]
-    file <- file.path(dir, paste0("caption-", i, ".png"))
-    caption_render(page, window$caption, out$width, out$height, scale, file)
+    name <- paste0("caption-", i, ".png")
+    height <- caption_render(
+      page,
+      window$caption,
+      out$width,
+      out$height,
+      scale,
+      file.path(dir, name)
+    )
     span <- window$end - window$start
-    fade <- min(0.25, span / 2)
-    # A window of only a few ticks would spend its frames mostly transparent.
     fades <- span >= 3 / rec$fps
-    # Movie sources are bare filenames; with_dir() owns their lookup directory.
-    # A caption at tick zero is already visible, not fading in.
+    list(
+      file = name,
+      start = window$start,
+      end = window$end,
+      fade_in = if (window$start > 0 && fades) window$start else NULL,
+      fade_start = if (fades) window$end - min(0.25, span / 2) else NULL,
+      height = height,
+      side = window$caption$side
+    )
+  })
+}
+
+key_callout_overlays <- function(rec, page, out, windows, captions, dir) {
+  scale <- screen_scale(rec, out)
+  lapply(seq_along(windows), function(i) {
+    window <- windows[[i]]
+    bottom <- 24 * scale
+    overlapping <- Filter(
+      function(caption) {
+        identical(caption$side, "bottom") &&
+          caption$start < window$end &&
+          window$start < caption$end
+      },
+      captions
+    )
+    if (length(overlapping)) {
+      bottom <- bottom +
+        max(vapply(overlapping, `[[`, numeric(1), "height")) +
+        12 * scale
+    }
+    name <- paste0("key-", i, ".png")
+    groups <- lapply(window$keys, function(key) {
+      key_callout_labels(key$spec, key$resolved, window$style)
+    })
+    key_callout_render(
+      page,
+      groups,
+      out$width,
+      out$height,
+      scale,
+      bottom,
+      file.path(dir, name)
+    )
+    list(
+      file = name,
+      start = window$start,
+      end = window$end,
+      fade_in = NULL,
+      fade_start = if (window$fade_start < window$end) {
+        window$fade_start
+      } else {
+        NULL
+      }
+    )
+  })
+}
+
+screen_filter <- function(rec, sampled, out, overlays) {
+  chains <- paste0("[in]", out$vfilter, "[b0]")
+  for (i in seq_along(overlays)) {
+    item <- overlays[[i]]
+    fades <- character(0)
+    if (!is.null(item$fade_in)) {
+      fades <- c(
+        fades,
+        paste0(
+          "fade=t=in:st=",
+          sprintf("%.6f", item$fade_in),
+          ":d=",
+          sprintf("%.6f", min(0.25, (item$end - item$start) / 2)),
+          ":alpha=1"
+        )
+      )
+    }
+    if (!is.null(item$fade_start)) {
+      fades <- c(
+        fades,
+        paste0(
+          "fade=t=out:st=",
+          sprintf("%.6f", item$fade_start),
+          ":d=",
+          sprintf("%.6f", item$end - item$fade_start),
+          ":alpha=1"
+        )
+      )
+    }
     movie <- paste0(
-      "movie=caption-",
-      i,
-      ".png:loop=1,format=rgba,",
+      "movie=",
+      item$file,
+      ":loop=1,format=rgba,",
       "loop=",
       sampled$n_ticks,
       ":size=1:start=0,",
       "setpts=N/(",
       rec$fps,
       "*TB)",
-      if (window$start == 0 || !fades) {
-        ""
-      } else {
-        paste0(
-          ",fade=t=in:st=",
-          sprintf("%.6f", window$start),
-          ":d=",
-          sprintf("%.6f", fade),
-          ":alpha=1"
-        )
-      },
-      if (fades) {
-        paste0(
-          ",fade=t=out:st=",
-          sprintf("%.6f", window$end - fade),
-          ":d=",
-          sprintf("%.6f", fade),
-          ":alpha=1"
-        )
-      },
+      if (length(fades)) paste0(",", paste(fades, collapse = ",")) else "",
       "[c",
       i,
       "]"
     )
-    output <- if (i == length(windows)) "" else paste0("[b", i, "]")
+    output <- if (i == length(overlays)) "" else paste0("[b", i, "]")
     overlay <- paste0(
       "[b",
       i - 1L,
       "][c",
       i,
       "]overlay=0:0:enable='between(t,",
-      sprintf("%.6f", window$start),
+      sprintf("%.6f", item$start),
       ",",
-      sprintf("%.6f", window$end - 0.000001),
+      sprintf("%.6f", item$end - 0.000001),
       ")'",
       output
     )

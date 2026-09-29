@@ -393,3 +393,190 @@ test_that("a caption lasting a tick or two is visible in the encoded frames", {
   expect_true(any(dark))
   expect_false(dark[[1]])
 })
+
+test_that("key callout windows replace and expire on output ticks", {
+  rec <- new_recorder(
+    tempfile(fileext = ".mp4"),
+    "mp4",
+    10,
+    NULL,
+    c(0, 0),
+    FALSE,
+    NULL
+  )
+  rec$keypresses <- list(
+    list(vt = 0.1, last = 0.1, style = "words", keys = list("first")),
+    list(vt = 0.6, last = 0.6, style = "mac", keys = list("second"))
+  )
+  sampled <- list(vts = seq(0, 2, by = 0.1), n_ticks = 21L)
+  windows <- key_callout_windows(rec, sampled)
+  expect_equal(vapply(windows, `[[`, numeric(1), "start"), c(0.1, 0.6))
+  expect_equal(vapply(windows, `[[`, numeric(1), "end"), c(0.6, 1.9))
+  expect_equal(windows[[2]]$fade_start, 1.6)
+  expect_identical(windows[[2]]$keys, list("second"))
+
+  rec$keypresses <- list(list(
+    vt = 0,
+    last = 0,
+    style = "words",
+    keys = list("held")
+  ))
+  sampled <- list(
+    vts = c(0, 0, 0, 0.1, 0.2, seq(0.3, 2, by = 0.1)),
+    n_ticks = 23L
+  )
+  windows <- key_callout_windows(rec, sampled)
+  expect_equal(windows[[1]]$start, 0)
+  expect_equal(windows[[1]]$fade_start, 1)
+  expect_equal(windows[[1]]$end, 1.3)
+})
+
+test_that("decoded keycaps stack above a burned bottom caption", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- local_page(
+    record_fixture_file(),
+    width = 320,
+    height = 240,
+    scale = 2
+  )
+  path <- withr::local_tempfile(fileext = ".mp4")
+  pz_annotate_caption(page, "CAPTION")
+  pz_record_start(page, path, fps = 10, scale = 0.5, hold = c(0.1, 1.8))
+  defer_record_stop(page)
+  pz_press(page, "Mod+k", show_keys = "both")
+  pz_record_stop(page)
+  decoded <- tempfile("keys-stacked-")
+  withr::defer(unlink(decoded, recursive = TRUE))
+  files <- av::av_video_images(path, destdir = decoded, format = "png")
+  expect_gt(length(files), 12)
+  active <- png::readPNG(files[[5]])
+  expired <- png::readPNG(files[[length(files) - 2L]])
+  center <- round(dim(active)[2] / 2)
+  caption_rows <- which(
+    expired[, center, 1] < 0.5 &
+      seq_len(dim(expired)[1]) > dim(expired)[1] * 0.65
+  )
+  expect_gt(length(caption_rows), 5)
+  key_rows <- which(active[, center, 1] < expired[, center, 1] - 0.15)
+  expect_gt(length(key_rows), 5)
+  expect_lt(max(key_rows), min(caption_rows))
+  expect_equal(
+    active[1:round(dim(active)[1] / 2), , ],
+    expired[1:round(dim(expired)[1] / 2), , ],
+    tolerance = 0.2
+  )
+})
+
+test_that("keycap ticks clip fades without resurrecting replaced callouts", {
+  rec <- new_recorder(
+    tempfile(fileext = ".mp4"),
+    "mp4",
+    10,
+    NULL,
+    c(0, 0),
+    FALSE,
+    NULL
+  )
+  rec$keypresses <- list(
+    list(vt = 0.01, last = 0.04, style = "words", keys = list("old")),
+    list(vt = 0.08, last = 0.08, style = "both", keys = list("new")),
+    list(vt = 0.08, last = 0.08, style = "mac", keys = list("newest"))
+  )
+  sampled <- list(vts = seq(0, 0.4, by = 0.1), n_ticks = 5L)
+  windows <- key_callout_windows(rec, sampled)
+  expect_length(windows, 1L)
+  expect_identical(windows[[1]]$keys, list("newest"))
+  expect_equal(windows[[1]]$start, 0.1)
+  expect_equal(windows[[1]]$end, 0.5)
+  expect_gt(windows[[1]]$fade_start, windows[[1]]$end)
+  rec$keypresses <- list(list(
+    vt = 0.5,
+    last = 0.5,
+    style = "words",
+    keys = list("late")
+  ))
+  expect_length(key_callout_windows(rec, sampled), 0L)
+
+  graph <- screen_filter(
+    rec,
+    sampled,
+    list(vfilter = "scale=320:240"),
+    list(
+      list(
+        file = "caption-1.png",
+        start = 0,
+        end = 0.5,
+        fade_in = NULL,
+        fade_start = NULL
+      ),
+      list(
+        file = "key-1.png",
+        start = 0.1,
+        end = 0.5,
+        fade_in = NULL,
+        fade_start = NULL
+      )
+    )
+  )
+  expect_match(graph, "[in]scale=320:240[b0]", fixed = TRUE)
+  expect_match(graph, "movie=caption-1.png:loop=1", fixed = TRUE)
+  expect_match(graph, "movie=key-1.png:loop=1", fixed = TRUE)
+  expect_lt(
+    regexpr("movie=caption", graph)[[1]],
+    regexpr("movie=key", graph)[[1]]
+  )
+  expect_false(grepl("movie=/", graph, fixed = TRUE))
+})
+
+test_that("keys burn into WebM VTT-only and uncaptioned GIF", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  skip_if_not_installed("gifski")
+  page <- local_page(
+    record_fixture_file(),
+    width = 320,
+    height = 240,
+    scale = 2
+  )
+  video <- withr::local_tempfile(fileext = ".webm")
+  pz_annotate_caption(page, "SUBTITLE")
+  pz_record_start(page, video, captions = "vtt", fps = 8, hold = c(0.1, 1.5))
+  defer_record_stop(page)
+  pz_press(page, "Enter", show_keys = "words")
+  pz_record_stop(page)
+  withr::defer(unlink(sub("\\.webm$", ".vtt", video)))
+  expect_true(file.exists(sub("\\.webm$", ".vtt", video)))
+  dest <- tempfile("key-webm-")
+  withr::defer(unlink(dest, recursive = TRUE))
+  frames <- av::av_video_images(video, destdir = dest, format = "png")
+  active <- png::readPNG(frames[[4]])
+  expect_true(any(
+    active[round(dim(active)[1] * 0.78):dim(active)[1], , 1] < 0.4
+  ))
+  expired <- png::readPNG(tail(frames, 1))
+  expect_true(all(
+    expired[round(dim(expired)[1] * 0.78):dim(expired)[1], , 1] > 0.8
+  ))
+  pz_annotate_clear(page, "caption")
+
+  gif <- withr::local_tempfile(fileext = ".gif")
+  pz_record_start(page, gif, fps = 8, scale = 0.5, hold = c(0.1, 1.5))
+  defer_record_stop(page)
+  pz_press(page, "Tab", show_keys = "mac")
+  pz_record_stop(page)
+  expect_gt(recorded_video_info(gif)$duration, 1.2)
+  dest <- tempfile("key-gif-")
+  withr::defer(unlink(dest, recursive = TRUE))
+  frames <- av::av_video_images(gif, destdir = dest, format = "png")
+  expect_gt(length(frames), 1L)
+  dark <- vapply(
+    frames,
+    function(file) {
+      image <- png::readPNG(file)
+      any(image[round(dim(image)[1] * 0.75):dim(image)[1], , 1] < 0.4)
+    },
+    logical(1)
+  )
+  expect_true(any(dark))
+})

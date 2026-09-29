@@ -1119,23 +1119,31 @@ record_encode <- function(rec, page = NULL, call = caller_env()) {
     out$vfilter <- camera_filter(rec, resampled, out, png_size, call = call)
   }
   windows <- caption_windows(rec, resampled)
+  key_windows <- key_callout_windows(rec, resampled)
   mode <- rec$caption_mode %||% "burn"
   if (mode %in% c("vtt", "both")) {
     caption_vtt(rec, windows)
   }
-  burning <- length(windows) > 0L && mode != "vtt"
+  burning <- (length(windows) > 0L && mode != "vtt") ||
+    length(key_windows) > 0L
   if (burning) {
     caption_dir <- tempfile("paparazzi-caption-")
     dir.create(caption_dir)
     on.exit(unlink(caption_dir, recursive = TRUE), add = TRUE)
-    out$vfilter <- caption_filter(
+    captions <- if (mode == "vtt") {
+      list()
+    } else {
+      caption_overlays(rec, page, out, windows, caption_dir)
+    }
+    keys <- key_callout_overlays(
       rec,
       page,
-      resampled,
       out,
-      windows,
+      key_windows,
+      captions,
       caption_dir
     )
+    out$vfilter <- screen_filter(rec, resampled, out, c(captions, keys))
   }
   if (identical(rec$format, "gif")) {
     files <- resampled$files
