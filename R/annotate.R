@@ -84,11 +84,12 @@ pz_annotate <- function(
 #' Covers every element matched by `target` with an instant opaque fill or
 #' backdrop blur in screenshots and recordings. Fill is the safe choice for
 #' secrets: blur can leave text partly legible. Redactions follow elements
-#' as they move and are clipped by axis-aligned rectangular overflow ancestors. If a target
-#' disconnects, stops rendering, or is entirely clipped, its redaction hides
-#' until it becomes visible again. They belong to the current document and are
-#' lost on navigation. Redaction covers each element's border box plus `pad`,
-#' not overflowing descendants; target the overflowing element or add padding.
+#' as they move and respect axis-aligned overflow clipping, except custom
+#' `overflow-clip-margin`. If a target disconnects, stops rendering, or is
+#' entirely clipped, its redaction hides until it becomes visible again. They
+#' belong to the current document and are lost on navigation. Redaction covers
+#' each element's border box plus `pad`, not overflowing descendants; target
+#' the overflowing element or add padding.
 #' Later top-layer UI (modal dialogs and popovers) paints above redactions, so
 #' targets inside an open modal or popover are rejected.
 #'
