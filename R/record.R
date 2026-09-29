@@ -548,10 +548,18 @@ record_knit_media <- function(path) {
   # the rendered document; an external named path is not.
   figure_dir <- dirname(knitr::fig_path(record_format(path)))
   dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
-  media_path <- file.path(
-    figure_dir,
-    paste0(unname(tools::md5sum(path)), "-", basename(path))
+  in_figures <- identical(
+    normalizePath(dirname(path)),
+    normalizePath(figure_dir)
   )
+  media_path <- if (in_figures) {
+    path
+  } else {
+    file.path(
+      figure_dir,
+      paste0(unname(tools::md5sum(path)), "-", basename(path))
+    )
+  }
   if (
     !identical(normalizePath(path), normalizePath(media_path, mustWork = FALSE))
   ) {

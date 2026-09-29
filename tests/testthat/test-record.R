@@ -440,6 +440,7 @@ test_that("knitted recording chains stop at the end of their expression", {
   markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
   expect_false(grepl("Error", markdown, fixed = TRUE))
   expect_match(markdown, "chain-1.mp4", fixed = TRUE)
+  expect_length(list.files("figure", pattern = "[.]mp4$"), 1L)
   expect_match(markdown, "<video controls", fixed = TRUE)
   expect_match(markdown, "split.gif", fixed = TRUE)
   expect_true(file.exists("split.gif"))
