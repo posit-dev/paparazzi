@@ -236,6 +236,7 @@ caption_windows <- function(rec, sampled) {
     return(list())
   }
   vts <- sampled$vts
+  final <- events[[length(events)]]$caption
   active <- vapply(
     vts,
     function(vt) {
@@ -256,7 +257,8 @@ caption_windows <- function(rec, sampled) {
       start = (starts[[i]] - 1) / rec$fps,
       end = (starts[[i]] + runs$lengths[[i]] - 1) / rec$fps,
       caption = events[[index]]$caption,
-      open = i == length(runs$values) && index == length(events)
+      open = i == length(runs$values) &&
+        identical(events[[index]]$caption, final)
     )
   }) |>
     Filter(f = function(window) !is.null(window$caption))

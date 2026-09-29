@@ -232,6 +232,9 @@ test_that("caption windows distinguish open stop from clear at the stop boundary
   rec$captions[[2]] <- list(vt = 0.4, caption = caption)
   expect_length(caption_windows(rec, sampled), 1)
   expect_true(caption_windows(rec, sampled)[[1]]$open)
+
+  rec$captions[[2]] <- list(vt = 1, caption = caption)
+  expect_true(caption_windows(rec, sampled)[[1]]$open)
 })
 
 test_that("caption overlays fade only when a later caption event closes the window", {
