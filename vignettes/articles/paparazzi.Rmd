@@ -11,11 +11,48 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-Suppose you've written a guide to a web app, and it has a dozen screenshots. Every time the app changes, someone has to open it, click through to the right state, and take each screenshot again. paparazzi lets you write those steps down in R instead: open the page, click and type your way to the state you want, check that the page shows what you expect, and save a screenshot or a video. Rerunning the script updates every image.
+Suppose you've written a guide to a web app, and you want a short video that shows how to add a task. Doing it by hand means clicking through the app with a screen recorder running, trimming the result, and doing it all again whenever the app changes. With paparazzi, you write the steps down in R instead. paparazzi runs them in a real browser and records the video: the cursor glides to each control, text is typed one character at a time, and the camera zooms in on what matters.
 
-This article walks through that workflow on a small task-tracker page that ships with paparazzi. By the end you'll have driven the page with actions, checked it with expectations, captured screenshots, and recorded a GIF of the task being added.
+In this article, we'll build this video one step at a time:
 
-You'll need Chrome or another Chromium-based browser, which paparazzi controls through the [chromote](https://rstudio.github.io/chromote/) package. The GIF recording in this article needs gifski; MP4 and WebM recordings need av.
+```{r destination, echo = FALSE, fig.alt = "A demo of a task tracker. The view zooms in on the new-task form while a cursor types Repot the fern and clicks Add. The view pulls back as the new task appears at the top of the list, outlined in red, under the caption New tasks go to the top of the list."}
+library(paparazzi)
+
+demo <- pz_open(
+  pz_example("tasks"),
+  width = 1000,
+  height = 720,
+  color_scheme = "light"
+)
+demo |> pz_stage(enter = "bottom", pause = 0.3)
+fern <- pz_loc(".task", has_text = "Repot the fern")
+
+demo |>
+  pz_record(
+    frame = pz_frame(list("h1", ".task-list"), pad = 24, ratio = 16 / 9),
+    format = "gif",
+    scale = 800,
+    code = {
+      demo |>
+        pz_annotate_caption("Add a task") |>
+        pz_camera("#new-task", wait = TRUE) |>
+        pz_type("Repot the fern", target = "#task-title") |>
+        pz_click("#add-task") |>
+        pz_camera_reset() |>
+        pz_expect_visible(fern) |>
+        pz_annotate(fern, type = "box", pad = 4) |>
+        pz_annotate_caption("New tasks go to the top of the list") |>
+        pz_cursor_leave() |>
+        pz_record_hold(1.5)
+    }
+  )
+
+pz_close(demo)
+```
+
+We'll use a small task-tracker page that ships with paparazzi. First we'll open it and take a screenshot. Then we'll script the steps, record them, and add the camera moves, highlight, and captions. At the end, we'll see how the same script works as a test.
+
+You'll need Chrome or another Chromium-based browser, which paparazzi controls through the [chromote](https://rstudio.github.io/chromote/) package. The GIFs in this article need the gifski and png packages, and av for the captions.
 
 ```{r setup}
 library(paparazzi)
@@ -28,62 +65,46 @@ library(paparazzi)
 ```{r}
 page <- pz_open(
   pz_example("tasks"),
-  width = 720,
-  height = 800,
+  width = 1000,
+  height = 720,
   color_scheme = "light"
 )
 page
 ```
 
-Printing the page shows where the browser is and how it's set up: a 720 by 800 pixel viewport at twice the usual pixel density, like a laptop's high-resolution screen, with the page's light color scheme. `width`, `height`, and `color_scheme` are device settings, which you can change later with `pz_device()`.
+Printing the page shows where the browser is and how it's set up: a 1000 by 720 pixel viewport at twice the usual pixel density, like a laptop's high-resolution screen, with the page's light color scheme. These are **device settings**. They decide what the page looks like, so they also decide what your screenshots and videos look like. You can change them later with `pz_device()`.
 
-Here's what the page looks like:
+`pz_screenshot()` shows us the page:
 
-```{r, fig.alt = "The task tracker: a form for new tasks, filter links, a list of seven tasks, a notes area, and a file input."}
+```{r, fig.alt = "The task tracker, a white card on a gray background, with a form for new tasks, filter links, and a list of tasks."}
 page |> pz_screenshot()
 ```
 
-## Find elements
+A screenshot without a file path at the end of a knitted chunk becomes a figure in the document, as above. At the console, it opens in the viewer. Give it a `path` to save a file instead.
 
-paparazzi finds elements with CSS selectors. Getter functions, which all start with `pz_get_`, read things from the page, so they're a good way to check that a selector matches what you think it does. There's one `.task-title` for each task:
+## Script the steps
 
-```{r}
-pz_get_text(page, target = ".task-title")
-```
+To add a task, a person would type a title into the form and click Add. The script does the same, but it has to say which elements to use. paparazzi finds elements with CSS selectors: the title field is `#task-title` and the Add button is `#add-task`.
 
-A selector often matches more elements than you want. `pz_loc()` builds a more specific description, called a **spec**: a selector plus the text the element must contain (`has_text`), which match to pick (`which`), and an element it must be inside (`within`).
-
-```{r}
-dentist <- pz_loc(".task", has_text = "dentist")
-pz_get_attr(page, "data-priority", target = dentist)
-```
-
-A spec doesn't find anything when you create it. paparazzi looks up the elements each time you use the spec, so one spec keeps working as the page changes. That makes specs good to define once and reuse.
-
-## Act on the page
-
-Actions like `pz_click()` and `pz_type()` interact with the page the way a person would, with real mouse and keyboard events. Each action takes the page first and returns it, so you can chain them with `|>`:
+**Actions** like `pz_type()` and `pz_click()` use the page the way a person would, with real mouse and keyboard events. Each action takes the page first and returns it, so a script reads as one chain of steps joined by `|>`:
 
 ```{r}
 page |>
   pz_type("Repot the fern", target = "#task-title") |>
-  pz_set_value("high", target = "#task-priority") |>
   pz_click("#add-task")
 ```
 
-Before acting, each action waits for its element to be ready: in the page and visible. Then it scrolls the element into view. `pz_click()` presses the mouse at the element's center; `pz_set_value()` sets the value directly, the way a form-filling tool would. Typing fires the same input events a person's typing would, so the page enabled the Add button as soon as the title had text.
+Before acting, each action waits for its element to be ready: on the page, visible, and not covered by anything else. Then it scrolls the element into view and acts.
 
-Now let's look at the new task:
+Let's check that the new task arrived. `pz_loc()` describes an element more precisely than a selector alone. Here, it's the first `.task-title` on the page, which is where new tasks go. `pz_get_text()` reads that element's text:
 
 ```{r}
 pz_get_text(page, target = pz_loc(".task-title", which = "first"))
 ```
 
-That's not what we added. The page shows "Saving..." for a moment before a new task appears, and `pz_get_text()` read the list before the new task arrived. Actions wait for the element they act on, but nothing waits for the result of the click. For that, we need an expectation.
+That's not what we added. The page shows "Saving…" for a moment before a new task appears, and `pz_get_text()` read the list before the new task arrived. Actions wait for the element they act on, but nothing waited for the result of the click.
 
-## Check the page with expectations
-
-Expectation functions start with `pz_expect_`. Each one checks the page and, if the check fails, tries again until it passes or times out after 10 seconds:
+For that, we need an **expectation**. Expectation functions start with `pz_expect_`. Each one checks the page and, if the check fails, tries again until it passes or times out:
 
 ```{r}
 page |>
@@ -93,9 +114,7 @@ page |>
   )
 ```
 
-This time the expectation waited for the page to finish saving. When you need a value from the page after an action, check the result with an expectation first, then read the value.
-
-When an expectation times out, its error tells you what it was looking for and what it last saw. Here we use a shorter `timeout` so the failure comes quickly:
+This time the expectation waited for the page to finish saving. In a demo, expectations do two jobs. They keep the script in step with the page, so the next step doesn't start before the page is ready. And they stop the script if the page doesn't show what you expected, so you never publish a video of the wrong thing. When an expectation times out, its error says what it was looking for and what it last saw:
 
 ```{r, error = TRUE}
 page |>
@@ -106,111 +125,143 @@ page |>
   )
 ```
 
-Every expectation can also be flipped with `not = TRUE`. For example, the new task isn't done yet:
+A `pz_loc()` description is called a **spec**. A spec doesn't find anything when you create it: paparazzi looks up the elements each time you use it, so one spec keeps working as the page changes. That makes specs good to define once and reuse. We'll describe the new task with one and use it in the video:
 
 ```{r}
+fern <- pz_loc(".task", has_text = "Repot the fern")
+```
+
+`has_text` picks `.task` elements whose text includes "Repot the fern". `pz_loc()` can also pick a match by position with `which`, or look inside another element with `within`.
+
+## Record it
+
+To record a video, wrap the steps in `pz_record()`. It starts recording, runs the code in braces, then stops and writes the file, even if the code throws an error. Leave out the path, as here, and a knitted document includes the recording as a figure, while an interactive session shows it in the viewer. Name the `code` argument when you leave out the path.
+
+We'll reload the page to start fresh, and ask for a GIF, which plays by itself on a web page. `scale = 800` makes it 800 pixels wide:
+
+```{r, fig.alt = "A cursor fades in on the task form, types Repot the fern, and clicks Add. The new task appears at the top of the list."}
+page |> pz_nav_reload()
+
 page |>
-  pz_expect_class(
-    "done",
-    target = pz_loc(".task", has_text = "fern"),
-    not = TRUE
+  pz_record(
+    format = "gif",
+    scale = 800,
+    code = {
+      page |>
+        pz_type("Repot the fern", target = "#task-title") |>
+        pz_click("#add-task") |>
+        pz_expect_visible(fern)
+    }
   )
 ```
 
-Inside a testthat test, expectations report their result to testthat, so a paparazzi script can double as a test. The [Shiny apps article](shiny.html) shows what that looks like.
+The steps are the same ones we ran before, but the recording looks as though a person is using the page. The cursor fades in over the title field and fades out while it types, so it doesn't cover the text. Then it glides to the Add button and presses it. We call this **staging**. It only happens during a recording: outside one, the same steps run at full speed.
 
-## Narrow the scope
+`pz_stage()` changes how steps are staged. It can set where the cursor enters, how fast it moves, how big it is, how fast text is typed, and how long to pause after each step. The settings last until you change them. For the final video, the cursor will glide in from the bottom of the frame, and each step will pause for 0.3 seconds so viewers can keep up:
 
-A task has several parts: a title, a priority label, and a Done button. To work with one task, you can make it the chain's **scope** with `pz_find()`. After that, targets are looked up inside the scope, so `".task-done"` means *this* task's Done button:
+```{r}
+page |> pz_stage(enter = "bottom", pause = 0.3)
+```
+
+## Frame the shot
+
+The recording above shows the whole viewport, with empty space around the card. A **frame** crops a screenshot or recording to part of the page. `pz_frame()` describes one: the elements to fit, the padding around them, and optionally an aspect ratio. We'll fit the card's heading and task list, pad them by 24 pixels, and widen the result to 16:9, the shape of most video players and slides:
+
+```{r}
+shot <- pz_frame(list("h1", ".task-list"), pad = 24, ratio = 16 / 9)
+```
+
+Like a spec, a frame is only a description. paparazzi measures the page when it uses the frame. A screenshot is a quick way to check one before recording:
+
+```{r, fig.alt = "The task tracker cropped to a 16 by 9 view of the card, from its heading down to the task list."}
+page |> pz_screenshot(frame = shot)
+```
+
+A frame can also leave out padding or set it separately for each side. See `pz_frame()` for how to anchor the content while it's widened, or keep the frame within another element.
+
+## Direct the viewer's attention
+
+A viewer watching our first recording has to find the form, and then the new task, on their own. The final video shows them both. The **camera** zooms and pans inside the frame, the new task gets an outline, and a **caption** at the bottom of the video says what's happening.
+
+The camera is part of the video, not the page. `pz_camera()` doesn't scroll or zoom the browser, so the steps act on the page exactly as they did before. Outside a recording, it does nothing. Here's the whole script:
+
+```{r, fig.alt = "The view zooms in on the new-task form while a cursor types Repot the fern and clicks Add. The view pulls back as the new task appears at the top of the list, outlined in red, under the caption New tasks go to the top of the list."}
+page |> pz_nav_reload()
+
+page |>
+  pz_record(
+    frame = shot,
+    format = "gif",
+    scale = 800,
+    code = {
+      page |>
+        pz_annotate_caption("Add a task") |>
+        pz_camera("#new-task", wait = TRUE) |>
+        pz_type("Repot the fern", target = "#task-title") |>
+        pz_click("#add-task") |>
+        pz_camera_reset() |>
+        pz_expect_visible(fern) |>
+        pz_annotate(fern, type = "box", pad = 4) |>
+        pz_annotate_caption("New tasks go to the top of the list") |>
+        pz_cursor_leave() |>
+        pz_record_hold(1.5)
+    }
+  )
+```
+
+The new lines fall into three groups:
+
+- **Camera.** `pz_camera("#new-task")` zooms in on the form. By default, camera moves run alongside the next step, so the camera and the cursor would move at the same time; `wait = TRUE` lets the camera arrive first. `pz_camera_reset()` pulls back out to the whole frame. While it's zoomed in, the camera also pans to keep each click and keystroke in view.
+- **Annotations.** `pz_annotate_caption()` sets the caption, and calling it again replaces the caption. `pz_annotate()` draws a box around the new task, after `pz_expect_visible()` has waited for the task to exist. Annotations follow their elements as the page moves.
+- **Pacing.** `pz_cursor_leave()` moves the cursor out of the shot, so it doesn't cover the result. `pz_record_hold()` holds the last frame for 1.5 seconds, so viewers have time to read the caption. The hold is added to the video, not to the script: outside a recording, it doesn't slow anything down.
+
+Annotations stay on the page until you clear them, and they appear in screenshots too. Clear them before moving on:
+
+```{r}
+page |> pz_annotate_clear()
+```
+
+`pz_annotate()` can also draw circles, underlines, and highlights, with numbered badges. `pz_annotate_callout()` adds text with an arrow, `pz_annotate_spotlight()` dims everything but one element, and `pz_annotate_redact()` covers private information. The [annotations article](annotations.html) shows them all.
+
+## Work in one part of the page
+
+Our task list has seven tasks, and each one has its own Done button. To mark the fern done, the script needs *its* Done button. `pz_find()` narrows the chain to one element, called the **scope**. After that, targets are looked up inside the scope, so `".task-done"` means this task's Done button:
 
 ```{r}
 page |>
-  pz_find(pz_loc(".task", has_text = "fern")) |>
+  pz_find(fern) |>
   pz_click(".task-done") |>
   pz_expect_class("done")
 ```
 
-With no `target`, `pz_expect_class()` checks the scope element itself, the task. Inside a chain, `pz_find_pop()` goes back up one level and `pz_find_reset()` goes back to the whole page.
+With no `target`, `pz_expect_class()` checks the scope element itself: the task.
 
-The scope belongs to the chain, not to `page`. `pz_click()` changed the browser tab, and every chain on `page` will see that task marked done. `pz_find()` changed nothing in the browser. It returned a new, scoped context, which went down the chain, and `page` still refers to the whole page.
-
-If you'll work with the same part of a page for a while, assign the scoped context to a variable. Printing it shows the scope stack under a `paparazzi scope` header:
+The scope belongs to the chain, not to `page`. `pz_click()` changed the browser tab, and every chain on `page` will see the fern marked done. `pz_find()` changed nothing in the browser. It returned a new, scoped context, which went down the chain, while `page` still refers to the whole page. The next chain that starts from `page` starts at the whole page again. To keep working in a scope, assign it to a variable:
 
 ```{r}
 task_list <- pz_find(page, ".task-list")
 task_list
 ```
 
-The Scope line reads from the whole page (`root`) down to the task list, and `(1)` says the scope holds one element. Now you can start new chains from `task_list`:
+Printing a scoped context shows the scope under a `paparazzi scope` header. The Scope line reads from the whole page (`root`) down to the task list, and `(1)` says the scope holds one element. New chains from `task_list` start inside it:
 
 ```{r}
 pz_get_count(task_list, target = ".task.done")
 ```
 
-If you call `pz_find()` at the console without assigning its result, it prints the scoped context. That's a reminder that the scope went into the return value, not into `page`.
+Two tasks are done: the fern, and "Return library books", which starts out done.
 
-## Take screenshots
+## Make other versions
 
-`pz_screenshot()` saves a PNG. At the root it captures the viewport. Give it a `target` and it captures just that element; in a scope it captures the scope element. Adding a frame with `pz_frame()` pads the capture or changes its shape. Padding is one number for every side, or four for the top, right, bottom, and left; here the bottom gets less, to stop short of the status line below the form:
+Each version of a demo, like a dark-mode version or a phone version, only needs different device settings. `pz_device()` changes them on an open page. The task tracker follows the browser's color scheme, so here it is on a phone in dark mode:
 
-```{r, fig.alt = "The new-task form with Call the plumber typed into the title."}
-page |>
-  pz_find("#new-task") |>
-  pz_type("Call the plumber", target = "#task-title") |>
-  pz_screenshot(frame = pz_frame(pad = c(16, 16, 6, 16)))
-```
-
-The page also has a dark theme that follows the browser's color scheme. `pz_device()` can switch it, or emulate a phone:
-
-```{r, fig.alt = "The task tracker on a narrow phone screen, in dark mode."}
+```{r, fig.alt = "The task tracker on a narrow phone screen, in dark mode.", out.width = "300px"}
 page |>
   pz_device(width = 390, height = 700, mobile = TRUE, color_scheme = "dark") |>
   pz_screenshot()
 ```
 
-Device settings stay in place until you change them, so let's switch back before we record:
-
-```{r}
-page |>
-  pz_device(
-    width = 720,
-    height = 800,
-    mobile = FALSE,
-    color_scheme = "light"
-  )
-```
-
-## Record a video
-
-To record a video, wrap the steps in `pz_record()`. It starts recording, runs the code in braces, then stops and writes the file, even if the code throws an error. In a knitted document, leaving out the path writes the recording to the chunk's figure directory: an MP4 by default, or the `format` you ask for. With a path, the extension picks `.mp4`, `.webm`, or `.gif`. Use `code =` when you leave out the path. We'll ask for a GIF, which plays by itself in the page. A completed recording at the end of a chunk expression appears in the document.
-
-While recording, paparazzi **stages** the steps so they look like a person using the page. A cursor glides to each element before clicking, and text is typed one character at a time. `pz_stage()` controls the staging; here the cursor enters from the top and each action is followed by a short pause.
-
-We'll start again from a fresh page. The default cursor is 1.75 times the original size, and the default glide speed is 500 pixels per second: slow enough to follow, rather than as fast as a real mouse. Try 400-600 for a deliberate glide; smaller values take longer. Before re-recording, estimate a 300-pixel move at speed 400 with `0.25 + 300 / 400`: it takes 1 second. The actual duration stays between 0.5 and 2 seconds. For one-off timing, `pz_cursor_move(duration = ...)` and `pz_scroll(duration = ...)` override the staging speed while recording. Set `cursor_scale = 1` in `pz_stage()` for the original cursor size. `scale = 0.6` shrinks the video, which keeps the GIF small:
-
-```{r, fig.alt = "A cursor glides to the task form, types Repot the fern, and adds it. The new task appears at the top of the list."}
-page |>
-  pz_nav_reload() |>
-  pz_stage(enter = "top", pause = 0.4) |>
-  pz_record(
-    code = {
-      page |>
-        pz_type("Repot the fern", target = "#task-title") |>
-        pz_click("#add-task") |>
-        pz_expect_text(
-          "Repot the fern",
-          target = pz_loc(".task-title", which = "first")
-        ) |>
-        pz_cursor_leave()
-    },
-    format = "gif",
-    scale = 0.6
-  )
-```
-
-The GIF above shows the full interaction. `pz_cursor_leave()` moves the cursor out of the frame at the end, so it doesn't cover the new task. To record only part of the page, pass a `frame`, such as `frame = pz_frame(".task-list", pad = 16)`.
-
-Staging only happens during a recording. If you remove `pz_record()`, the same steps run at full speed, which is handy while you're working out the steps.
+`pz_device()` can also zoom the page, turn on reduced motion, or set the locale and time zone. Device settings stay in place until you change them, so a recording made now would also be a phone recording in dark mode.
 
 ## When something goes wrong
 
@@ -222,19 +273,39 @@ page |>
   pz_inspect(".task-done", show = "none")
 ```
 
-Here, `.task-done` matches eight buttons, one for each task. Button 4 belongs to "Return library books", which is already done, so the page hides its Done button and `pz_inspect()` lists it as `hidden`. An action targeting it would wait for it to become visible, then time out. With `show = "screenshot"`, `pz_inspect()` also saves a screenshot with the matches outlined and numbered.
+`.task-done` matches one button for each task. The buttons of finished tasks are hidden, so `pz_inspect()` lists them as `hidden`. An action targeting one of them would wait for it to become visible, then time out. With `show = "screenshot"`, `pz_inspect()` also saves a screenshot with the matches outlined and numbered.
 
-Finally, close the page to shut down the browser:
+We're done with the browser, so let's close it:
 
 ```{r}
 pz_close(page)
 ```
 
+## Bonus round: run it as a test
+
+Staging only happens during a recording, and camera moves and holds do nothing outside one. So if you take away `pz_record()`, the steps of the demo run at full speed, and the expectations still check the page. That's a browser test.
+
+Inside a testthat test, paparazzi's expectations count as test expectations, and a failed expectation is a test failure. `pz_local_page()` opens a page and closes it when the test ends. Here are the steps of our video as a test:
+
+```r
+test_that("a new task goes to the top of the list", {
+  page <- pz_local_page(pz_example("tasks"))
+
+  page |>
+    pz_type("Repot the fern", target = "#task-title") |>
+    pz_click("#add-task") |>
+    pz_expect_text(
+      "Repot the fern",
+      target = pz_loc(".task-title", which = "first")
+    )
+})
+```
+
 ## Where to go next
 
-You've now driven a page from R: finding elements with selectors and specs, acting on them, checking the results with expectations, and capturing screenshots and a video. From here:
+You've now built a demo video from a script: you drove a page with actions, kept the script in step with expectations, and framed, staged, and annotated the recording. From here:
 
-- The [three-part app walkthrough](walkthrough.html) builds a set of short MP4 recordings from the task tracker, with camera moves, a callout, captions, and redacted high-priority task titles.
-- The [annotations article](annotations.html) shows every kind of annotation — marks, callouts, spotlights, redactions, and captions — and how to style, frame, and clear them.
-- The [Shiny apps article](shiny.html) shows how paparazzi starts Shiny apps, waits for them, and sets their inputs, and how to use paparazzi in tests.
+- The [three-part app walkthrough](walkthrough.html) records a series of short MP4 videos with camera moves, a callout, captions, and redacted task titles.
+- The [annotations article](annotations.html) shows every kind of annotation, including marks, callouts, spotlights, redactions, and captions, and how to style, frame, and clear them.
+- The [Shiny apps article](shiny.html) shows how paparazzi starts Shiny apps, waits for them, and sets their inputs, and how to test them.
 - The [function reference](../reference/index.html) lists every function by task, with an example for each.
