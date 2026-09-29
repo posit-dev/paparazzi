@@ -130,12 +130,14 @@ camera_move <- function(
   } else {
     camera_shot(box, home, zoom, density)
   }
-  # A shot the camera is already on is not a move: without a duration
-  # nothing happens; with one, the camera holds still for that long.
-  stays <- all(
-    abs(camera_viewport(to, scroll, home) + rep(scroll, 2) - from) < 0.5
-  )
-  if (stays && is.null(duration)) {
+  # A shot the camera is already on, anchored to the same page position,
+  # is not a move: without a duration nothing happens; with one, the
+  # camera holds still for that long. Clamping can make different
+  # targets look the same now, so the anchor is compared unclamped.
+  if (
+    is.null(duration) &&
+      camera_same_shot(rec, from, to, reset, scroll, home, density)
+  ) {
     return(invisible(rec))
   }
   if (is.null(duration)) {
@@ -168,6 +170,25 @@ camera_settle <- function(page, rec) {
     pump_loop(page$child_loop, remaining)
   }
   invisible()
+}
+
+camera_same_shot <- function(rec, from, to, reset, scroll, home, density) {
+  close <- function(a, b) all(abs(a - b) < 0.5)
+  if (!close(camera_viewport(to, scroll, home) + rep(scroll, 2), from)) {
+    return(FALSE)
+  }
+  if (!length(rec$camera)) {
+    return(reset)
+  }
+  last <- rec$camera[[length(rec$camera)]]
+  last_to <- if (last$reset) {
+    home + rep(last$scroll, 2)
+  } else {
+    camera_shot(last$box, home, last$zoom, density)
+  }
+  identical(last$reset, reset) &&
+    close(last_to, to) &&
+    close(last$scroll, scroll)
 }
 
 camera_follow_move <- function(ctx, rect, duration) {

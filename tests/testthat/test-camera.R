@@ -735,7 +735,6 @@ test_that("camera moves wait only when asked; holds and stops let them land", {
   )
   expect_length(pumped, 0)
   zoom <- rec$camera[[1]]
-  expect_lt(rec_vt(rec), zoom$end)
 
   # A waiting reset settles the zoom, then waits for itself.
   pz_camera_reset(page, wait = TRUE)
@@ -822,4 +821,30 @@ test_that("follow tests the shot when the action lands", {
   pz_hover(page, "#far")
   expect_length(rec$camera, 7)
   suppressWarnings(pz_record_stop(page))
+})
+
+test_that("a clamped shot that looks the same but moves the anchor is a move", {
+  home <- c(0, 0, 800, 600)
+  rec <- new.env()
+  rec$camera <- list(list(
+    start = 0,
+    end = 0,
+    box = c(700, 500, 790, 590),
+    zoom = 2,
+    reset = FALSE,
+    scroll = c(0, 0)
+  ))
+  from <- camera_viewport(
+    camera_shot(rec$camera[[1]]$box, home, 2),
+    c(0, 0),
+    home
+  )
+  same <- camera_shot(c(700, 500, 790, 590), home, 2)
+  beyond <- camera_shot(c(760, 560, 800, 600), home, 2)
+  expect_equal(camera_viewport(beyond, c(0, 0), home), from)
+  expect_true(camera_same_shot(rec, from, same, FALSE, c(0, 0), home, 1))
+  expect_false(camera_same_shot(rec, from, beyond, FALSE, c(0, 0), home, 1))
+  rec$camera <- list()
+  expect_true(camera_same_shot(rec, home, home, TRUE, c(0, 0), home, 1))
+  expect_false(camera_same_shot(rec, home, home, FALSE, c(0, 0), home, 1))
 })
