@@ -159,6 +159,20 @@ pz_type <- function(ctx, text, ..., target = NULL) {
   # Nothing editable focused means the text goes nowhere, matching what
   # a real keypress does in that situation.
   if (is.null(target) && is.null(scope_top(ctx))) {
+    if (
+      stage_recording(ctx$page) && isTRUE(page_stage(ctx$page)$camera_follow)
+    ) {
+      rect <- pz_js(
+        ctx,
+        "(() => { const e = document.activeElement; if (!e || e === document.body) return null; const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })()"
+      )
+      if (!is.null(rect)) {
+        stage_follow_without_glide(
+          ctx,
+          set_names(unlist(rect), c("x", "y", "width", "height"))
+        )
+      }
+    }
     insert_text(ctx, "the focused element", text)
     return(invisible(ctx))
   }
@@ -174,6 +188,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
   # element is focused in the probe). Only the no-target path: an
   # explicit target keeps its click-to-focus.
   if (is.null(target) && isTRUE(els_call(found$els, type_selection_js))) {
+    stage_follow_without_glide(ctx, action_target_rect(found$els))
     insert_text(ctx, found$els$description, text)
     stage_action_pause(ctx)
     return(invisible(ctx))
@@ -561,6 +576,7 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
       class = "paparazzi_error_text"
     )
   }
+  stage_follow_without_glide(ctx, action_target_rect(found$els))
   stage_action_pause(ctx)
   invisible(ctx)
 }
@@ -965,8 +981,19 @@ el_pointer_point <- function(ctx, els, call = caller_env()) {
     width = rects$width[[1]],
     height = rects$height[[1]]
   )
+  attr(point, "camera_follow") <- TRUE
   stage_move_cursor(ctx, point)
   point
+}
+
+action_target_rect <- function(els) {
+  rects <- el_rects(els)
+  c(
+    x = rects$x[[1]],
+    y = rects$y[[1]],
+    width = rects$width[[1]],
+    height = rects$height[[1]]
+  )
 }
 
 el_actionable_point <- function(ctx, els, call = caller_env()) {

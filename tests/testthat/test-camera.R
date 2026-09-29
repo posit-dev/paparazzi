@@ -362,3 +362,187 @@ test_that("camera tick translation uses repeated frame scroll and home bounds", 
   expect_equal(camera_viewport(shot, c(900, 0), home), c(0, 150, 400, 450))
   expect_equal(camera_viewport(home, c(900, 0), home, reset = TRUE), home)
 })
+
+test_that("camera follow pans minimally and zooms out only to fit", {
+  home <- c(0, 0, 800, 600)
+  current <- c(100, 100, 500, 400)
+  expect_null(camera_follow_shot(current, c(200, 150, 250, 180), home, c(0, 0)))
+  expect_equal(
+    camera_follow_shot(current, c(480, 150, 510, 180), home, c(0, 0)),
+    c(134, 100, 534, 400)
+  )
+  expect_equal(
+    camera_follow_shot(current, c(200, 380, 250, 420), home, c(0, 0)),
+    c(100, 144, 500, 444)
+  )
+  expect_equal(
+    camera_follow_shot(current, c(450, 150, 950, 180), home, c(0, 0)),
+    c(252, 100, 800, 511)
+  )
+  expect_equal(
+    camera_follow_shot(current, c(100, 150, 950, 180), home, c(0, 0)),
+    home
+  )
+  expect_equal(
+    camera_follow_shot(
+      c(200, 600, 600, 900),
+      c(590, 850, 620, 880),
+      home,
+      c(100, 500)
+    ),
+    c(244, 604, 644, 904)
+  )
+  expect_null(camera_follow_shot(home, c(700, 500, 790, 590), home, c(0, 0)))
+})
+
+test_that("follow zoom is not treated as an explicit softness request", {
+  testthat::skip_if_not_installed("png")
+  path <- withr::local_tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(48, 64, 3)), path)
+  rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+  rec$camera_viewport_width <- 64
+  rec$files <- path
+  rec$scroll <- list(c(0, 0))
+  rec$camera <- list(list(
+    start = 0,
+    end = 0,
+    box = c(20, 10, 40, 30),
+    zoom = 1 + 1e-8,
+    reset = FALSE,
+    follow = TRUE,
+    scroll = c(0, 0)
+  ))
+  sampled <- list(files = path, index = 1L, vts = 0, n_ticks = 1L)
+  out <- record_output_spec(rec, png_read_size(path))
+  expect_no_warning(camera_filter(rec, sampled, out, png_read_size(path)))
+})
+
+test_that("follow keyframes share the pointer glide and skip in-shot actions", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}button,input{position:absolute;width:80px;height:50px}#a{left:90px;top:90px}#b{left:490px;top:290px}#field{left:480px;top:380px}</style><button id="a">A</button><button id="b">B</button><input id="field">',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_camera(page, "#a", zoom = 2, duration = 0)
+  pz_hover(page, "#a")
+  expect_length(rec$camera, 1)
+  start <- rec_vt(rec)
+  pz_hover(page, "#b")
+  expect_length(rec$camera, 2)
+  move <- rec$camera[[2]]
+  expect_true(move$follow)
+  expect_gte(move$start, start)
+  expect_lte(move$end, rec_vt(rec))
+  expect_equal(
+    move$end - move$start,
+    stage_glide_duration(c(x = 130, y = 115), c(x = 530, y = 315), 500),
+    tolerance = 0.02
+  )
+  pz_hover(page, "#b")
+  expect_length(rec$camera, 2)
+  pz_stage(page, camera_follow = FALSE)
+  pz_click(page, "#a")
+  expect_length(rec$camera, 2)
+  pz_stage(page, camera_follow = NULL, cursor = FALSE)
+  pz_camera(page, "#a", zoom = 2, duration = 0)
+  before <- rec_vt(rec)
+  pz_type(page, "hi", target = "#field")
+  expect_length(rec$camera, 4)
+  expect_true(rec$camera[[4]]$follow)
+  expect_equal(rec$camera[[4]]$end - rec$camera[[4]]$start, 0.5)
+  expect_gte(rec$camera[[4]]$start, before)
+  expect_lte(rec$camera[[4]]$end, rec_vt(rec))
+  suppressWarnings(pz_record_stop(page))
+})
+
+test_that("auto-scroll follow uses the resolved post-scroll target", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0;height:1500px}button{position:absolute;width:80px;height:50px}#near{left:90px;top:90px}#far{left:490px;top:900px}</style><button id="near">near</button><button id="far">far</button>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_hover(page, "#far")
+  expect_gt(pz_js(page, "window.scrollY"), 400)
+  move <- tail(rec$camera, 1)[[1]]
+  expect_true(move$follow)
+  expect_gte(move$end - move$start, 0.5)
+  expect_lte(move$end - move$start, 2)
+  expect_equal(move$box[2], 900 - 24, tolerance = 2)
+  suppressWarnings(pz_record_stop(page))
+})
+
+test_that("first appearance follows during fade; home and reads do not", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}#a,#b{position:absolute;width:80px;height:50px}#a{left:90px;top:90px}#b{left:490px;top:290px}</style><button id="a">A</button><button id="b">B</button>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_hover(page, "#a")
+  expect_length(rec$camera, 0)
+  pz_camera(page, "#a", zoom = 2, duration = 0)
+  pz_get_text(page, "#b")
+  pz_expect_text(page, "B", target = "#b")
+  pz_wait(page, 0.01)
+  expect_length(rec$camera, 1)
+  pz_hover(page, "#b")
+  expect_length(rec$camera, 2)
+  pz_camera_reset(page)
+  n <- length(rec$camera)
+  pz_hover(page, "#a")
+  expect_length(rec$camera, n)
+  suppressWarnings(pz_record_stop(page))
+
+  page2 <- local_page(html, width = 640, height = 480, scale = 2)
+  pz_record_start(
+    page2,
+    withr::local_tempfile(fileext = ".mp4"),
+    hold = c(0, 0)
+  )
+  defer_record_stop(page2)
+  rec2 <- page_recorder(page2)
+  pz_camera(page2, "#a", zoom = 2, duration = 0)
+  pz_hover(page2, "#b")
+  expect_length(rec2$camera, 2)
+  expect_equal(rec2$camera[[2]]$end - rec2$camera[[2]]$start, 0.3)
+  suppressWarnings(pz_record_stop(page2))
+})
+
+test_that("selection and focused typing follow without a pointer glide", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}[contenteditable]{position:absolute;width:120px;height:60px}#near{left:80px;top:80px}#far{left:480px;top:300px}</style><div id="near" contenteditable>near</div><div id="far" contenteditable>far text</div>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 640, height = 480, scale = 2)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_select_text(page, "far", target = "#far")
+  expect_length(rec$camera, 2)
+  expect_true(rec$camera[[2]]$follow)
+  expect_equal(rec$camera[[2]]$end - rec$camera[[2]]$start, 0.5)
+  pz_camera(page, "#near", zoom = 2, duration = 0)
+  scoped <- pz_find(page, "#far")
+  pz_type(scoped, "new")
+  expect_length(rec$camera, 4)
+  expect_true(rec$camera[[4]]$follow)
+  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_type(page, "!")
+  expect_length(rec$camera, 6)
+  expect_true(rec$camera[[6]]$follow)
+  suppressWarnings(pz_record_stop(page))
+})

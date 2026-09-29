@@ -458,7 +458,8 @@ cursor_show_at <- function(
   duration = NULL,
   from = NULL,
   icon = NULL,
-  destination = NULL
+  destination = NULL,
+  follow = FALSE
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -479,7 +480,8 @@ cursor_show_at <- function(
       from = start,
       icon = icon,
       rect = rect,
-      destination = destination
+      destination = destination,
+      follow = follow
     )
   } else if (!has_pos) {
     cursor_apply(
@@ -488,7 +490,8 @@ cursor_show_at <- function(
       fade = TRUE,
       icon = icon,
       rect = rect,
-      destination = destination
+      destination = destination,
+      follow = follow
     )
   } else {
     start <- c(x = cur$x, y = cur$y)
@@ -499,7 +502,8 @@ cursor_show_at <- function(
         stage_glide_duration(start, point, stage$cursor_speed),
       icon = icon,
       rect = rect,
-      destination = destination
+      destination = destination,
+      follow = follow
     )
   }
   invisible(ctx)
@@ -557,7 +561,8 @@ cursor_apply <- function(
   fade = FALSE,
   icon = NULL,
   rect = NULL,
-  destination = NULL
+  destination = NULL,
+  follow = FALSE
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -606,6 +611,9 @@ cursor_apply <- function(
     if (!identical(prior, landing)) {
       state$land <- list(from = prior, to = landing)
     }
+  }
+  if (follow && !is.null(rect)) {
+    camera_follow_move(ctx, rect, if (state$fade) 0.3 else state$duration)
   }
   cur$icon <- cursor_command(ctx, state)
   cur$x <- state$x

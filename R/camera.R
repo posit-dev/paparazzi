@@ -121,6 +121,85 @@ camera_move <- function(
   invisible(rec)
 }
 
+camera_follow_move <- function(ctx, rect, duration) {
+  page <- ctx$page
+  rec <- page_recorder(page)
+  if (is.null(rec) || !rec$active || !isTRUE(page_stage(page)$camera_follow)) {
+    return(FALSE)
+  }
+  now <- rec_vt(rec)
+  home <- camera_home(rec, ctx)
+  geometry <- page_geometry(ctx)
+  scroll <- c(geometry$scroll_x, geometry$scroll_y)
+  density <- if (length(rec$files) && !is.null(rec$camera_viewport_width)) {
+    png_read_size(rec$files[[1]])$width / rec$camera_viewport_width
+  } else if (identical(rec$method, "screencast")) {
+    1
+  } else {
+    pz_js(ctx, "window.devicePixelRatio")
+  }
+  at <- camera_at(rec$camera, now, home, density)
+  current <- camera_viewport(
+    as.numeric(at),
+    scroll,
+    home,
+    reset = isTRUE(attr(at, "reset"))
+  ) +
+    rep(scroll, 2)
+  target <- c(
+    rect[["x"]],
+    rect[["y"]],
+    rect[["x"]] + rect[["width"]],
+    rect[["y"]] + rect[["height"]]
+  ) +
+    rep(scroll, 2)
+  shot <- camera_follow_shot(current, target, home, scroll)
+  if (is.null(shot)) {
+    return(FALSE)
+  }
+  # Stop-time home is not measured yet: encode reinterprets this zoom
+  # against the final home, like automatic durations in manual moves.
+  rec$camera[[length(rec$camera) + 1L]] <- list(
+    start = now,
+    end = now + duration,
+    box = shot,
+    zoom = (home[3] - home[1]) / (shot[3] - shot[1]),
+    reset = FALSE,
+    scroll = scroll,
+    follow = TRUE
+  )
+  TRUE
+}
+
+camera_follow_shot <- function(current, target, home, scroll) {
+  home_width <- home[3] - home[1]
+  home_height <- home[4] - home[2]
+  width <- current[3] - current[1]
+  if (width >= home_width - 1e-7) {
+    return(NULL)
+  }
+  padded <- target + c(-24, -24, 24, 24)
+  if (
+    all(padded[1:2] >= current[1:2] - 1e-7) &&
+      all(padded[3:4] <= current[3:4] + 1e-7)
+  ) {
+    return(NULL)
+  }
+  width <- min(
+    home_width,
+    max(
+      width,
+      padded[3] - padded[1],
+      (padded[4] - padded[2]) * home_width / home_height
+    )
+  )
+  size <- c(width, width * home_height / home_width)
+  origin <- pmin(pmax(current[1:2], padded[3:4] - size), padded[1:2])
+  proposed <- c(origin, origin + size)
+  shot <- camera_viewport(proposed, scroll, home) + rep(scroll, 2)
+  if (all(abs(shot - current) < 1e-7)) NULL else shot
+}
+
 camera_home <- function(rec, ctx) {
   if (!is.null(rec$crop)) {
     return(c(
@@ -248,7 +327,9 @@ camera_filter <- function(rec, sampled, out, png_size, call = caller_env()) {
     !rec$camera_warned &&
       any(vapply(
         rec$camera,
-        function(move) !is.null(move$zoom) && move$zoom > density,
+        function(move) {
+          !isTRUE(move$follow) && !is.null(move$zoom) && move$zoom > density
+        },
         logical(1)
       ))
   ) {

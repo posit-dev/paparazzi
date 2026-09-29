@@ -52,6 +52,9 @@
 #'   Supply `NULL` to restore the default.
 #' @param pause Seconds to hold after each action while recording.
 #'   Supply `NULL` to restore the default.
+#' @param camera_follow Whether pointer and typing actions automatically pan
+#'   a zoomed recording camera to keep their target in view. Defaults to
+#'   `TRUE`; `FALSE` disables it and `NULL` restores the default.
 #' @param annotate_color CSS color for new annotations. Supply `NULL` to
 #'   restore the default.
 #' @param annotate_font_family CSS font family for new annotation badges.
@@ -98,6 +101,7 @@ pz_stage <- function(
   typing,
   typing_speed,
   pause,
+  camera_follow,
   annotate_color,
   annotate_font_family,
   annotate_font_size
@@ -175,6 +179,14 @@ pz_stage <- function(
       overrides$pause <- pause
     }
   }
+  if (!missing(camera_follow)) {
+    if (is.null(camera_follow)) {
+      overrides[["camera_follow"]] <- NULL
+    } else {
+      check_bool(camera_follow)
+      overrides$camera_follow <- camera_follow
+    }
+  }
   if (!missing(annotate_color)) {
     if (is.null(annotate_color)) {
       overrides[["annotate_color"]] <- NULL
@@ -241,6 +253,7 @@ STAGE_DEFAULTS <- list(
   typing = "natural",
   typing_speed = 16,
   pause = 0,
+  camera_follow = TRUE,
   annotate_color = "#e11d48",
   annotate_font_family = "sans-serif",
   annotate_font_size = 14
@@ -276,7 +289,11 @@ stage_glide_duration <- function(from, to, speed) {
 # jumps to the point so stills track the real pointer.
 stage_move_cursor <- function(ctx, point) {
   page <- ctx$page
+  follow <- isTRUE(attr(point, "camera_follow"))
   if (!cursor_visible(page)) {
+    if (follow) {
+      stage_follow_without_glide(ctx, attr(point, "rect"))
+    }
     return(invisible(ctx))
   }
   if (!stage_recording(page)) {
@@ -304,7 +321,15 @@ stage_move_cursor <- function(ctx, point) {
       )
     }
   }
-  cursor_show_at(ctx, point)
+  cursor_show_at(ctx, point, follow = follow)
+  invisible(ctx)
+}
+
+stage_follow_without_glide <- function(ctx, rect) {
+  if (is.null(rect) || !camera_follow_move(ctx, rect, 0.5)) {
+    return(invisible(ctx))
+  }
+  pump_loop(ctx$page$child_loop, 0.5)
   invisible(ctx)
 }
 

@@ -26,6 +26,7 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_identical(page_stage(page), STAGE_DEFAULTS)
   expect_equal(page_stage(page)$cursor_speed, 500)
   expect_equal(page_stage(page)$cursor_scale, 1.75)
+  expect_true(page_stage(page)$camera_follow)
 
   page |>
     pz_stage(
@@ -66,6 +67,11 @@ test_that("pz_stage merges settings onto the defaults and validates", {
     )
   expect_identical(page_stage(page), STAGE_DEFAULTS)
 
+  page |> pz_stage(camera_follow = FALSE)
+  expect_false(page_stage(page)$camera_follow)
+  page |> pz_stage(camera_follow = NULL)
+  expect_true(page_stage(page)$camera_follow)
+  expect_error(pz_stage(page, camera_follow = "yes"), class = "rlang_error")
   expect_error(pz_stage(page, cursor = "yes"), class = "rlang_error")
   expect_error(pz_stage(page, cursor_speed = 0), class = "rlang_error")
   expect_error(pz_stage(page, cursor_scale = 0), class = "rlang_error")

@@ -14,6 +14,7 @@ pz_stage(
   typing,
   typing_speed,
   pause,
+  camera_follow,
   annotate_color,
   annotate_font_family,
   annotate_font_size
@@ -59,6 +60,10 @@ Supply \code{NULL} to restore the default.}
 
 \item{pause}{Seconds to hold after each action while recording.
 Supply \code{NULL} to restore the default.}
+
+\item{camera_follow}{Whether pointer and typing actions automatically pan
+a zoomed recording camera to keep their target in view. Defaults to
+\code{TRUE}; \code{FALSE} disables it and \code{NULL} restores the default.}
 
 \item{annotate_color}{CSS color for new annotations. Supply \code{NULL} to
 restore the default.}
