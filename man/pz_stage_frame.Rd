@@ -37,8 +37,9 @@ to every screenshot and recording that doesn't pass its own
 settings are never merged -- and \code{frame = FALSE} disables framing for
 a single call.
 
-Unlike \code{\link[=pz_stage]{pz_stage()}}'s animation settings,
-framing applies to screenshots as well as recordings. An annotated
+Unlike \code{\link[=pz_stage]{pz_stage()}}'s animation settings, framing (like
+\code{\link[=pz_stage_annotate]{pz_stage_annotate()}}'s styles) applies to screenshots as well as
+recordings. An annotated
 staged frame measures attached annotations in stills; recordings use
 only its element boxes for the home frame, and camera shots use their
 own \code{target_box} setting.
@@ -62,5 +63,5 @@ pz_close(page)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=pz_frame]{pz_frame()}}, \code{\link[=pz_screenshot]{pz_screenshot()}}
+\code{\link[=pz_stage]{pz_stage()}}, \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}, \code{\link[=pz_frame]{pz_frame()}}, \code{\link[=pz_screenshot]{pz_screenshot()}}
 }

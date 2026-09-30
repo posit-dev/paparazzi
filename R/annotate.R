@@ -25,14 +25,14 @@ NULL
 #' @param id Optional nonempty id. Reusing it replaces its annotations;
 #'   `"spotlight"` and `"caption"` are reserved for other types.
 #' @param color CSS color for the outline and badge, or `NULL` for the
-#'   page default from [pz_stage()].
+#'   page default from [pz_stage_annotate()].
 #' @param font_family CSS font family for the badge, or `NULL` for the
 #'   page default.
 #' @param font_size Badge font size in CSS pixels, or `NULL` for the page
 #'   default.
 #'
 #' @return `ctx`, invisibly.
-#' @seealso [pz_annotate_clear()], [pz_stage()]
+#' @seealso [pz_annotate_clear()], [pz_stage_annotate()]
 #' @export
 pz_annotate <- function(
   ctx,

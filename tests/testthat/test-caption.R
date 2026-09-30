@@ -395,17 +395,17 @@ test_that("VTT-only output follows pause-aware ticks and does not burn", {
 
 test_that("caption style is independent of badge style and survives navigation", {
   page <- local_record_page()
-  pz_stage(
+  pz_stage_annotate(
     page,
-    annotate_color = "red",
-    annotate_font_family = "monospace",
-    annotate_font_size = 7
+    color = "red",
+    font_family = "monospace",
+    font_size = 7
   )
   pz_annotate_caption(page, "On every page", side = "top")
   expect_equal(page_caption(page)$color, "white")
   expect_equal(page_caption(page)$font_family, "monospace")
   expect_equal(page_caption(page)$font_size, 20)
-  pz_stage(page, annotate_font_family = "serif")
+  pz_stage_annotate(page, font_family = "serif")
   expect_equal(page_caption(page)$font_family, "monospace")
   pz_nav_reload(page)
   expect_equal(page_caption(page)$text, "On every page")

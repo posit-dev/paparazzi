@@ -11,10 +11,9 @@
 #' Stage the page for recording
 #'
 #' Sets the staging options that animate pointer actions, typing, and
-#' scrolling while the page is recording, as well as defaults for new
-#' annotations. Only supplied arguments
-#' change -- an omitted argument leaves its setting alone, while an
-#' explicit `NULL` restores the default for that setting (so
+#' scrolling while the page is recording. Only supplied arguments
+#' change -- an omitted argument leaves its setting alone, an explicit
+#' `NULL` restores the default, and a value sets it (so
 #' `pz_stage(cursor = FALSE)` can be undone with `pz_stage(cursor =
 #' NULL)`). Settings live on the page and persist across recordings, so
 #' [pz_record_start()] never repeats them. Without a recording, staging
@@ -49,25 +48,20 @@
 #'   `"instant"` inserts the whole string at once. Supply `NULL` to
 #'   restore the default.
 #' @param typing_speed Natural typing speed in characters per second.
-#'   Supply `NULL` to restore the default.
+#'   The default is 16. Supply `NULL` to restore the default.
 #' @param pause Seconds to hold after each action while recording.
-#'   Supply `NULL` to restore the default.
+#'   The default is 0. Supply `NULL` to restore the default.
 #' @param camera_follow Whether pointer and typing actions automatically pan
 #'   a zoomed recording camera to keep their target in view. Defaults to
 #'   `TRUE`; `FALSE` disables it and `NULL` restores the default.
 #' @param show_keys Keystroke callouts for [pz_press()]: `"none"` (default),
 #'   `"words"`, `"mac"`, or `"both"`. Supply `NULL` to restore the default.
 #'   Callouts appear only in recordings.
-#' @param annotate_color CSS color for new annotations. Supply `NULL` to
-#'   restore the default.
-#' @param annotate_font_family CSS font family for new annotation badges.
-#'   Supply `NULL` to restore the default.
-#' @param annotate_font_size Badge font size in CSS pixels. Supply `NULL`
-#'   to restore the default.
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_cursor_show()], [pz_record_start()]
+#' @seealso [pz_stage_frame()], [pz_stage_annotate()], [pz_cursor_show()],
+#'   [pz_record_start()]
 #'
 #' @examplesIf paparazzi:::examples_run("av")
 #' page <- pz_open(pz_example("tasks"))
@@ -97,18 +91,15 @@
 pz_stage <- function(
   ctx,
   ...,
-  cursor,
-  cursor_speed,
-  cursor_scale,
-  enter,
-  typing,
-  typing_speed,
-  pause,
-  camera_follow,
-  show_keys,
-  annotate_color,
-  annotate_font_family,
-  annotate_font_size
+  cursor = NULL,
+  cursor_speed = NULL,
+  cursor_scale = NULL,
+  enter = NULL,
+  typing = NULL,
+  typing_speed = NULL,
+  pause = NULL,
+  camera_follow = NULL,
+  show_keys = NULL
 ) {
   check_context(ctx)
   check_dots_empty()
@@ -198,30 +189,6 @@ pz_stage <- function(
       arg_match(show_keys, c("none", "words", "mac", "both"))
     }
   }
-  if (!missing(annotate_color)) {
-    if (is.null(annotate_color)) {
-      overrides[["annotate_color"]] <- NULL
-    } else {
-      check_string(annotate_color, allow_empty = FALSE)
-      overrides$annotate_color <- annotate_color
-    }
-  }
-  if (!missing(annotate_font_family)) {
-    if (is.null(annotate_font_family)) {
-      overrides[["annotate_font_family"]] <- NULL
-    } else {
-      check_string(annotate_font_family, allow_empty = FALSE)
-      overrides$annotate_font_family <- annotate_font_family
-    }
-  }
-  if (!missing(annotate_font_size)) {
-    if (is.null(annotate_font_size)) {
-      overrides[["annotate_font_size"]] <- NULL
-    } else {
-      check_annotation_font_size(annotate_font_size)
-      overrides$annotate_font_size <- annotate_font_size
-    }
-  }
   page_set_stage(page, overrides)
 
   # The cursor setting applies immediately: FALSE hides a drawn cursor;
@@ -250,9 +217,81 @@ pz_stage <- function(
   ctx_return(ctx)
 }
 
+#' Set the page's annotation style defaults
+#'
+#' Sets persistent page defaults for new annotations in screenshots and
+#' recordings. An omitted argument leaves its setting alone, an explicit
+#' `NULL` restores its default, and a value sets it. Per-call annotation
+#' style arguments override these defaults.
+#'
+#' @inheritParams pz_click
+#' @param ... Checked empty; reserved for future use.
+#' @param color CSS color for new annotations. The default is `"#e11d48"`.
+#'   Supply `NULL` to restore the default.
+#' @param font_family CSS font family for new annotation badges. The default
+#'   is `"sans-serif"`. Supply `NULL` to restore the default.
+#' @param font_size Badge font size in CSS pixels. The default is 14.
+#'   Supply `NULL` to restore the default.
+#'
+#' @return `ctx`, invisibly.
+#' @seealso [pz_stage()], [pz_stage_frame()], [pz_annotate()]
+#'
+#' @examplesIf paparazzi:::examples_run()
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "tasks.png")
+#'
+#' page |>
+#'   # New annotations on this page use these styles
+#'   pz_stage_annotate(color = "#2563eb", font_size = 16) |>
+#'   pz_annotate("#add-task", label = TRUE) |>
+#'   pz_screenshot(path) |>
+#'   # NULL restores a default
+#'   pz_stage_annotate(color = NULL)
+#' pz_close(page)
+#'
+#' @export
+pz_stage_annotate <- function(
+  ctx,
+  ...,
+  color = NULL,
+  font_family = NULL,
+  font_size = NULL
+) {
+  check_context(ctx)
+  check_dots_empty()
+  page <- ctx$page
+  overrides <- page$.__enclos_env__$private$staging_$stage %||% list()
+  if (!missing(color)) {
+    if (is.null(color)) {
+      overrides[["annotate_color"]] <- NULL
+    } else {
+      check_string(color, allow_empty = FALSE)
+      overrides$annotate_color <- color
+    }
+  }
+  if (!missing(font_family)) {
+    if (is.null(font_family)) {
+      overrides[["annotate_font_family"]] <- NULL
+    } else {
+      check_string(font_family, allow_empty = FALSE)
+      overrides$annotate_font_family <- font_family
+    }
+  }
+  if (!missing(font_size)) {
+    if (is.null(font_size)) {
+      overrides[["annotate_font_size"]] <- NULL
+    } else {
+      check_annotation_font_size(font_size)
+      overrides$annotate_font_size <- font_size
+    }
+  }
+  page_set_stage(page, overrides)
+  ctx_return(ctx)
+}
+
 # The settings list with defaults filled. The page stores only the
-# overrides pz_stage() was given, so later default changes reach pages
-# that never set the field.
+# overrides pz_stage() and pz_stage_annotate() were given, so later
+# default changes reach pages that never set the field.
 STAGE_DEFAULTS <- list(
   cursor = NULL,
   cursor_speed = 500,

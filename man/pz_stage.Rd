@@ -7,18 +7,15 @@
 pz_stage(
   ctx,
   ...,
-  cursor,
-  cursor_speed,
-  cursor_scale,
-  enter,
-  typing,
-  typing_speed,
-  pause,
-  camera_follow,
-  show_keys,
-  annotate_color,
-  annotate_font_family,
-  annotate_font_size
+  cursor = NULL,
+  cursor_speed = NULL,
+  cursor_scale = NULL,
+  enter = NULL,
+  typing = NULL,
+  typing_speed = NULL,
+  pause = NULL,
+  camera_follow = NULL,
+  show_keys = NULL
 )
 }
 \arguments{
@@ -57,10 +54,10 @@ default) inserts one character at a time with randomized delays;
 restore the default.}
 
 \item{typing_speed}{Natural typing speed in characters per second.
-Supply \code{NULL} to restore the default.}
+The default is 16. Supply \code{NULL} to restore the default.}
 
 \item{pause}{Seconds to hold after each action while recording.
-Supply \code{NULL} to restore the default.}
+The default is 0. Supply \code{NULL} to restore the default.}
 
 \item{camera_follow}{Whether pointer and typing actions automatically pan
 a zoomed recording camera to keep their target in view. Defaults to
@@ -69,25 +66,15 @@ a zoomed recording camera to keep their target in view. Defaults to
 \item{show_keys}{Keystroke callouts for \code{\link[=pz_press]{pz_press()}}: \code{"none"} (default),
 \code{"words"}, \code{"mac"}, or \code{"both"}. Supply \code{NULL} to restore the default.
 Callouts appear only in recordings.}
-
-\item{annotate_color}{CSS color for new annotations. Supply \code{NULL} to
-restore the default.}
-
-\item{annotate_font_family}{CSS font family for new annotation badges.
-Supply \code{NULL} to restore the default.}
-
-\item{annotate_font_size}{Badge font size in CSS pixels. Supply \code{NULL}
-to restore the default.}
 }
 \value{
 \code{ctx}, invisibly.
 }
 \description{
 Sets the staging options that animate pointer actions, typing, and
-scrolling while the page is recording, as well as defaults for new
-annotations. Only supplied arguments
-change -- an omitted argument leaves its setting alone, while an
-explicit \code{NULL} restores the default for that setting (so
+scrolling while the page is recording. Only supplied arguments
+change -- an omitted argument leaves its setting alone, an explicit
+\code{NULL} restores the default, and a value sets it (so
 \code{pz_stage(cursor = FALSE)} can be undone with \code{pz_stage(cursor = NULL)}). Settings live on the page and persist across recordings, so
 \code{\link[=pz_record_start]{pz_record_start()}} never repeats them. Without a recording, staging
 is skipped and the chain runs straight to its final state -- except
@@ -120,5 +107,6 @@ pz_close(page)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=pz_cursor_show]{pz_cursor_show()}}, \code{\link[=pz_record_start]{pz_record_start()}}
+\code{\link[=pz_stage_frame]{pz_stage_frame()}}, \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}, \code{\link[=pz_cursor_show]{pz_cursor_show()}},
+\code{\link[=pz_record_start]{pz_record_start()}}
 }

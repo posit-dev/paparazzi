@@ -87,15 +87,137 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_error(pz_stage(page, bogus = 1), class = "rlang_error")
 })
 
-test_that("stage rejects empty annotation style strings at assignment", {
+test_that("omitted staging settings leave all overrides alone", {
+  page <- local_cursor_page()
+  page |>
+    pz_stage(
+      cursor = FALSE,
+      cursor_speed = 800,
+      cursor_scale = 2,
+      enter = "left",
+      typing = "instant",
+      typing_speed = 30,
+      pause = 0.5,
+      camera_follow = FALSE,
+      show_keys = "words"
+    ) |>
+    pz_stage_annotate(color = "green")
+  before <- page_stage(page)
+
+  page |> pz_stage()
+
+  expect_identical(page_stage(page), before)
+})
+
+test_that("tri-state staging settings default to NULL in their signatures", {
+  for (fn in list(pz_stage, pz_stage_annotate)) {
+    settings <- formals(fn)[-c(1, 2)]
+    expect_true(all(vapply(settings, is.null, logical(1))))
+  }
+})
+
+test_that("pz_stage_annotate rejects invalid styles at assignment", {
   page <- local_cursor_page()
   expect_error(
-    pz_stage(page, annotate_color = ""),
-    "annotate_color.*empty string"
+    pz_stage_annotate(page, color = ""),
+    "color.*empty string"
   )
   expect_error(
-    pz_stage(page, annotate_font_family = ""),
-    "annotate_font_family.*empty string"
+    pz_stage_annotate(page, font_family = ""),
+    "font_family.*empty string"
+  )
+  expect_error(pz_stage_annotate(page, font_size = 0), class = "rlang_error")
+  expect_error(pz_stage_annotate(page, bogus = 1), class = "rlang_error")
+  expect_identical(page_stage(page), STAGE_DEFAULTS)
+})
+
+test_that("pz_stage_annotate sets defaults without changing other staging", {
+  page <- local_cursor_page()
+  page |> pz_stage(cursor_speed = 800)
+
+  result <- withVisible(pz_stage_annotate(
+    page,
+    color = "green",
+    font_family = "monospace",
+    font_size = 20
+  ))
+
+  expect_identical(result$value, page)
+  expect_false(result$visible)
+  expect_identical(
+    annotate_style(page, NULL, NULL, NULL),
+    list(color = "green", font_family = "monospace", font_size = 20)
+  )
+  expect_equal(page_stage(page)$cursor_speed, 800)
+})
+
+test_that("omitted annotation defaults stay set", {
+  page <- local_cursor_page()
+  page |>
+    pz_stage_annotate(
+      color = "green",
+      font_family = "monospace",
+      font_size = 20
+    )
+
+  page |> pz_stage_annotate()
+
+  expect_identical(
+    annotate_style(page, NULL, NULL, NULL),
+    list(color = "green", font_family = "monospace", font_size = 20)
+  )
+})
+
+test_that("NULL resets only supplied annotation defaults", {
+  page <- local_cursor_page()
+  page |>
+    pz_stage_annotate(
+      color = "green",
+      font_family = "monospace",
+      font_size = 20
+    )
+
+  page |> pz_stage_annotate(color = NULL)
+
+  expect_identical(
+    annotate_style(page, NULL, NULL, NULL),
+    list(color = "#e11d48", font_family = "monospace", font_size = 20)
+  )
+})
+
+test_that("NULL restores all annotation defaults without resetting other staging", {
+  page <- local_cursor_page()
+  page |> pz_stage(cursor_speed = 800)
+  page |>
+    pz_stage_annotate(
+      color = "green",
+      font_family = "monospace",
+      font_size = 20
+    )
+
+  page |> pz_stage_annotate(color = NULL, font_family = NULL, font_size = NULL)
+
+  expect_identical(
+    annotate_style(page, NULL, NULL, NULL),
+    list(color = "#e11d48", font_family = "sans-serif", font_size = 14)
+  )
+  expect_equal(page_stage(page)$cursor_speed, 800)
+})
+
+test_that("pz_stage no longer accepts annotation style settings", {
+  page <- local_cursor_page()
+
+  expect_error(
+    pz_stage(page, annotate_color = "red"),
+    class = "rlib_error_dots_nonempty"
+  )
+  expect_error(
+    pz_stage(page, annotate_font_family = "serif"),
+    class = "rlib_error_dots_nonempty"
+  )
+  expect_error(
+    pz_stage(page, annotate_font_size = 20),
+    class = "rlib_error_dots_nonempty"
   )
   expect_identical(page_stage(page), STAGE_DEFAULTS)
 })

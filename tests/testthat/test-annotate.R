@@ -28,7 +28,7 @@ annotation_state <- function(page) {
 
 test_that("boxes draw for every match, replace by id, and clear without leaking to find", {
   page <- annotation_page()
-  page |> pz_stage(annotate_color = "rgb(255, 0, 0)", annotate_font_size = 18)
+  page |> pz_stage_annotate(color = "rgb(255, 0, 0)", font_size = 18)
   expect_identical(
     pz_annotate(
       page,
@@ -170,10 +170,10 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
   )
   page |> pz_annotate_clear()
   page |>
-    pz_stage(
-      annotate_color = "green",
-      annotate_font_family = "monospace",
-      annotate_font_size = 20
+    pz_stage_annotate(
+      color = "green",
+      font_family = "monospace",
+      font_size = 20
     )
   page |> pz_annotate("#box", label = "A", reveal = "none")
   expect_identical(annotation_state(page)[[1]]$color, "green")
@@ -184,14 +184,13 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
   expect_equal(unlist(badge_style), c("20px", "monospace"))
   page |>
     pz_annotate_clear() |>
-    pz_stage(
-      annotate_color = NULL,
-      annotate_font_family = NULL,
-      annotate_font_size = NULL
+    pz_stage_annotate(
+      color = NULL,
+      font_family = NULL,
+      font_size = NULL
     )
   page |> pz_annotate("#box", reveal = "none")
   expect_identical(annotation_state(page)[[1]]$color, "rgb(225, 29, 72)")
-  expect_error(pz_stage(page, annotate_font_size = 0))
   expect_error(pz_annotate(page, "#box", pad = c(1, 2)))
 })
 
@@ -299,7 +298,7 @@ test_that("redaction fills every match immediately and hides after disconnection
     page,
     "document.querySelectorAll('.mark').forEach(el => el.textContent = 'SECRET')"
   )
-  page |> pz_stage(annotate_color = "#ff0000")
+  page |> pz_stage_annotate(color = "#ff0000")
   expect_identical(
     pz_annotate_redact(page, ".mark", id = "secret", pad = 2),
     page
