@@ -20,12 +20,12 @@ reference:
       - pz_open
       - pz_close
       - pz_example
-      - pz_device
+      - pz_with_page
       - pz_serve_shiny
       - pz_serve_quarto
       - pz_serve_static
+      - pz_device
       - pz_nav_goto
-      - pz_with_page
 
   - title: Screenshots and recording
     desc: >
