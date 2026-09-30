@@ -211,6 +211,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
       }
     }
     insert_text(ctx, "the focused element", text)
+    stage_action_pause(ctx)
     return(ctx_return(ctx))
   }
 

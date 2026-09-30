@@ -663,6 +663,37 @@ test_that("the stage pause holds after focus and root or scoped blur", {
   expect_length(pauses, 0)
 })
 
+test_that("the stage pause holds after root typing without a target", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(pause = 0.5, typing = "instant", camera_follow = FALSE)
+  page |> pz_act_focus("#name")
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_act_type("a")
+  recorded <- proc.time()[["elapsed"]] - t0
+  page |> pz_record_stop()
+
+  expect_equal(pz_get_value(page, target = "#name"), "a")
+  expect_true(recorded >= 0.45)
+
+  pauses <- numeric()
+  local_mocked_bindings(
+    pump_loop = function(loop, duration, ...) {
+      pauses <<- c(pauses, duration)
+    }
+  )
+  page |> pz_act_type("b")
+  expect_equal(pz_get_value(page, target = "#name"), "ab")
+  expect_length(pauses, 0)
+})
+
 test_that("the stage pause holds after press, select_text, and drag too", {
   skip_if_no_av()
   page <- local_cursor_page()
