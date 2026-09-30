@@ -10,7 +10,7 @@ app <- pz_open(pz_example("tasks-app"))
 app |>
   pz_set_shiny_input("priority", "high") |>
   pz_set_value("Buy milk", target = "#title") |>
-  pz_click("#add") |>
+  pz_act_click("#add") |>
   pz_expect_text("3 tasks", target = "#summary")
 
 pz_close(app)

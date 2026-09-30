@@ -57,7 +57,7 @@ page |> pz_expect_attr(
 )
 
 page |>
-  pz_click("#toggle-help") |>
+  pz_act_click("#toggle-help") |>
   pz_expect_attr("#toggle-help", `aria-expanded` = "true")
 pz_close(page)
 \dontshow{\}) # examplesIf}

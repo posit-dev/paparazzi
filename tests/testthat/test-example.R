@@ -23,19 +23,19 @@ test_that("pz_example() errors on unknown names", {
 test_that("walkthrough keeps both high-priority task titles in view", {
   page <- local_page(pz_example("tasks"), width = 800, height = 900)
   page |>
-    pz_type("Prepare release notes", target = "#task-title") |>
-    pz_click("#add-task") |>
+    pz_act_type("Prepare release notes", target = "#task-title") |>
+    pz_act_click("#add-task") |>
     pz_expect_text(
       "Prepare release notes",
       target = pz_loc(".task-title", which = "first")
     ) |>
     pz_find(pz_loc(".task", has_text = "Prepare release notes")) |>
-    pz_click(".task-done") |>
+    pz_act_click(".task-done") |>
     pz_find_reset() |>
-    pz_click(".filters a[href='#done']") |>
-    pz_click(".filters a[href='#all']") |>
+    pz_act_click(".filters a[href='#done']") |>
+    pz_act_click(".filters a[href='#all']") |>
     pz_expect_visible(pz_loc(".task", has_text = "File tax return")) |>
-    pz_scroll("#toggle-help") |>
+    pz_act_scroll("#toggle-help") |>
     pz_annotate_redact("[data-priority='high'] .task-title")
   rows <- pz_js(
     page,
@@ -67,29 +67,29 @@ test_that("task titles can be edited, committed, and reverted", {
   page <- local_page(pz_example("tasks"))
   task <- pz_find(page, pz_loc(".task", has_text = "Renew passport"))
   task |>
-    pz_click(".task-edit") |>
+    pz_act_click(".task-edit") |>
     pz_find(".task-title") |>
-    pz_select_text("passport") |>
-    pz_type("driving licence") |>
-    pz_press("Enter")
+    pz_act_select_text("passport") |>
+    pz_act_type("driving licence") |>
+    pz_act_press("Enter")
   expect_identical(pz_get_text(task, ".task-title"), "Renew driving licence")
   expect_identical(
     pz_get_text(page, "#status"),
     "Renamed to \u201cRenew driving licence\u201d."
   )
   task |>
-    pz_click(".task-edit") |>
+    pz_act_click(".task-edit") |>
     pz_find(".task-title") |>
-    pz_select_text("driving licence") |>
-    pz_type("passport") |>
-    pz_press("Escape")
+    pz_act_select_text("driving licence") |>
+    pz_act_type("passport") |>
+    pz_act_press("Escape")
   expect_identical(pz_get_text(task, ".task-title"), "Renew driving licence")
   task |>
-    pz_click(".task-edit") |>
+    pz_act_click(".task-edit") |>
     pz_find(".task-title") |>
-    pz_select_text("driving licence") |>
-    pz_type("passport")
-  page |> pz_click("h1")
+    pz_act_select_text("driving licence") |>
+    pz_act_type("passport")
+  page |> pz_act_click("h1")
   expect_identical(pz_get_text(task, ".task-title"), "Renew passport")
 })
 
@@ -99,8 +99,8 @@ test_that("new tasks carry attachments and support inline editing", {
   writeLines("Task attachment", file)
   page |>
     pz_set_files(file, target = "#attachment") |>
-    pz_type("Send documents", target = "#task-title") |>
-    pz_click("#add-task") |>
+    pz_act_type("Send documents", target = "#task-title") |>
+    pz_act_click("#add-task") |>
     pz_expect_text(
       "Send documents",
       target = pz_loc(".task-title", which = "first")
@@ -113,11 +113,11 @@ test_that("new tasks carry attachments and support inline editing", {
     0
   )
   task |>
-    pz_click(".task-edit") |>
+    pz_act_click(".task-edit") |>
     pz_find(".task-title") |>
-    pz_select_text("documents") |>
-    pz_type("forms") |>
-    pz_press("Enter")
+    pz_act_select_text("documents") |>
+    pz_act_type("forms") |>
+    pz_act_press("Enter")
   expect_identical(pz_get_text(task, ".task-title"), "Send forms")
 })
 

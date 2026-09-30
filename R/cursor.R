@@ -23,7 +23,7 @@ NULL
 #' size is 1.75 times the original artwork; set `cursor_scale` with
 #' [pz_stage()] to change the size in videos and stills.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs. The cursor centers on the match. `NULL` uses the current
 #'   scope's element or, at the root context, shows the cursor at its
@@ -120,7 +120,7 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL, icon = NULL) {
 #' `pz_cursor_hide()` from [pz_cursor_leave()], which keeps the cursor
 #' visible and glides back in on the next action.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -157,7 +157,7 @@ pz_cursor_hide <- function(ctx, ...) {
 #' (see [pz_stage()]); pass `duration` to override it. Without a
 #' recording the cursor jumps.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs. The cursor centers on the match.
 #' @inheritParams pz_cursor_show
@@ -229,7 +229,7 @@ pz_cursor_move <- function(
 #' visible (just off-frame); the next pointer action or cursor call
 #' glides it back in from that side.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @inheritParams pz_cursor_show
 #' @param side A side (`"top"`, `"bottom"`, `"left"`, `"right"`) or
 #'   corner (`"top left"`, `"bottom right"`, ...) of the frame to leave
@@ -249,7 +249,7 @@ pz_cursor_move <- function(
 #' page |>
 #'   pz_record(path, {
 #'     page |>
-#'       pz_click("#toggle-help") |>
+#'       pz_act_click("#toggle-help") |>
 #'       # Move the cursor out of the way so the help text is unobstructed
 #'       pz_cursor_leave("right", icon = "default") |>
 #'       pz_record_hold(1)

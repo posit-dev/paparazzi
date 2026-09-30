@@ -4,7 +4,7 @@
 #' scheduled on it (e.g. recording capture) keep firing during the wait.
 #' Never sleeps without pumping the loop.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param seconds Number of seconds to wait.
 #'
 #' @return `ctx`, invisibly.
@@ -15,7 +15,7 @@
 #' # A fixed pause; prefer an expectation or wait_for function when you
 #' # know what you're waiting for
 #' page |>
-#'   pz_click("#toggle-help") |>
+#'   pz_act_click("#toggle-help") |>
 #'   pz_wait(0.5)
 #' pz_close(page)
 #'
@@ -44,7 +44,7 @@ pz_wait <- function(ctx, seconds) {
 #' # Clicking Add makes the server re-render the task list, which takes a moment
 #' page |>
 #'   pz_set_value("Buy milk", target = "#title") |>
-#'   pz_click("#add") |>
+#'   pz_act_click("#add") |>
 #'   pz_wait_for_shiny_idle()
 #' pz_get_text(page, target = "#summary")
 #' pz_close(page)
@@ -150,7 +150,7 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
 #' state =)`): [pz_expect_visible()], [pz_expect_hidden()], and
 #' [pz_expect_exists()] with `not = TRUE` already retry, so they wait.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param expr A string of JavaScript that evaluates truthy when the
 #'   condition holds. A returned promise is awaited first.
 #' @param timeout Seconds before giving up; `NULL` uses the session
@@ -161,8 +161,8 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
-#'   pz_type("Buy milk", target = "#task-title") |>
-#'   pz_press("Enter") |>
+#'   pz_act_type("Buy milk", target = "#task-title") |>
+#'   pz_act_press("Enter") |>
 #'   pz_wait_for_js("document.querySelectorAll('.task').length === 8")
 #' pz_get_text(page, target = pz_loc(".task-title", which = "first"))
 #' pz_close(page)
@@ -204,7 +204,7 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
 #' [pz_expect_hidden()], and [pz_expect_exists()] with `not = TRUE` already
 #' retry, so they wait.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, the page body
@@ -224,8 +224,8 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
 #'
 #' # The status line reads "Saving..." and then "Saved"; wait for it to settle
 #' page |>
-#'   pz_type("Buy milk", target = "#task-title") |>
-#'   pz_click("#add-task") |>
+#'   pz_act_type("Buy milk", target = "#task-title") |>
+#'   pz_act_click("#add-task") |>
 #'   pz_wait_for_stable(target = "#status", for_ms = 500)
 #' pz_get_text(page, target = "#status")
 #' pz_close(page)
@@ -327,7 +327,7 @@ pz_wait_for_stable <- function(
 #' pinned scope object: contexts scoped before the navigation error on
 #' their next use instead of acting on a stale set.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param wait What to wait for: `"load"` settles the navigation;
 #'   `"shiny"` also waits for Shiny idle after load. `"auto"` uses
 #'   `"shiny"` only when the page was opened on an app handle or app path
@@ -340,12 +340,12 @@ pz_wait_for_stable <- function(
 #' @seealso [pz_find_reset()], [pz_wait_for_js()], [pz_wait_for_stable()]
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_click(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank")))
+#' page |> pz_act_click(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank")))
 #' pz_get_count(page, target = ".task.done")
 #'
 #' # "Start over" is a link to a new copy of the page
 #' page |>
-#'   pz_click("#start-over") |>
+#'   pz_act_click("#start-over") |>
 #'   pz_wait_for_navigation()
 #' pz_get_count(page, target = ".task.done")
 #' pz_close(page)

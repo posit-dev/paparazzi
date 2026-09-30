@@ -11,7 +11,7 @@
 #' Session-level state (timeout, staging, and recording) is
 #' untouched.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param url The URL to navigate to (any scheme, including `file://`).
 #' @param wait What to wait for before returning: `"load"` waits for the
 #'   document to finish loading; `"shiny"` also waits for Shiny idle.

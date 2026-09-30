@@ -5,7 +5,7 @@
 #' and an escape hatch for one-off scripts. Unlike most `pz_*()` functions it
 #' **ends the chain**: it returns the value, not the context.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param expr A string of JavaScript to evaluate.
 #' @param await Await a promise returned by `expr` before returning its value.
 #' @param timeout Seconds before the evaluation fails; `NULL` uses the
@@ -67,7 +67,7 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
 #'
 #' Escape hatch for raw Chrome DevTools Protocol calls.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return The `chromote::ChromoteSession` backing the page.
 #'

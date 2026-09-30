@@ -62,7 +62,7 @@ page <- pz_open(pz_example("tasks"))
 page |> pz_expect_value("normal", target = "#task-priority", match = "exact")
 
 page |>
-  pz_type("Buy milk", target = "#task-title") |>
+  pz_act_type("Buy milk", target = "#task-title") |>
   pz_expect_value("milk", target = "#task-title")
 pz_close(page)
 \dontshow{\}) # examplesIf}

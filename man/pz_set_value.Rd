@@ -54,6 +54,6 @@ pz_close(page)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=pz_type]{pz_type()}} for visible, keystroke-by-keystroke input and
+\code{\link[=pz_act_type]{pz_act_type()}} for visible, keystroke-by-keystroke input and
 \code{\link[=pz_set_files]{pz_set_files()}}.
 }

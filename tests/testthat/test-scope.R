@@ -242,7 +242,7 @@ test_that("a detached scope errors and never silently re-queries", {
   ctx <- pz_find(page, "#panel-inner")
 
   pz_js(page, 'document.getElementById("panel-a").remove()')
-  err <- expect_error(pz_click(ctx), class = "paparazzi_error_detached")
+  err <- expect_error(pz_act_click(ctx), class = "paparazzi_error_detached")
   msg <- paste(conditionMessage(err), collapse = " ")
   expect_match(msg, "Scope element is no longer in the page")
   expect_match(msg, "Scope: `#panel-inner`")
@@ -261,7 +261,7 @@ test_that("pop and reset unwind without releasing, and no-op at the root", {
   # was released. The lazy explicit target resolves against ctx's
   # still-live pinned set; a released array would raise the classed
   # detach error instead.
-  expect_no_error(pz_click(ctx, "#panel-inner"))
+  expect_no_error(pz_act_click(ctx, "#panel-inner"))
 
   expect_identical(pz_find_pop(page), page)
   expect_identical(pz_find_reset(page), page)
@@ -275,12 +275,12 @@ test_that("the object group release turns stale contexts into detach errors", {
   # A mid-session release (the navigation seam) invalidates the set;
   # the next use raises the classed error, not a raw chromote one.
   expect_no_error(page$release_object_group())
-  expect_error(pz_click(ctx), class = "paparazzi_error_detached")
+  expect_error(pz_act_click(ctx), class = "paparazzi_error_detached")
   expect_false(is.null(pinned$object_id))
 
   # A closed page reports closed before anything else runs.
   pz_close(page)
-  expect_error(pz_click(ctx), class = "paparazzi_error_closed")
+  expect_error(pz_act_click(ctx), class = "paparazzi_error_closed")
 })
 
 test_that("closing the page releases the object group", {

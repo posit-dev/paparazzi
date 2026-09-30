@@ -12,7 +12,7 @@
 #' matches the elements of any member.
 #'
 #' @param css A CSS selector string.
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param has_text Substring the element's text content must contain.
 #'   `NULL` omits text filtering. Case-sensitive; whitespace collapses on
 #'   both sides, so

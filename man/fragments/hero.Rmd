@@ -33,8 +33,8 @@ pz_record(
     page |>
       pz_annotate_caption("Add a task") |>
       pz_camera("#new-task", wait = TRUE) |>
-      pz_type("Prepare release notes", target = "#task-title") |>
-      pz_click("#add-task") |>
+      pz_act_type("Prepare release notes", target = "#task-title") |>
+      pz_act_click("#add-task") |>
       pz_expect_visible(new_task) |>
       pz_annotate(new_task, type = "box", pad = 4, id = "new") |>
       pz_annotate_caption("New tasks go to the top of the list") |>
@@ -43,7 +43,7 @@ pz_record(
       pz_annotate_clear(id = "new") |>
       pz_annotate_caption("Check it off when you're done") |>
       pz_find(new_task) |>
-      pz_click(".task-done") |>
+      pz_act_click(".task-done") |>
       pz_expect_class("done") |>
       pz_cursor_leave() |>
       pz_record_hold(1)

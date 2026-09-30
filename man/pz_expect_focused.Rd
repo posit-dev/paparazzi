@@ -28,8 +28,8 @@ live), the page body at the root.}
 \description{
 \code{\link[=pz_expect_focused]{pz_expect_focused()}} passes when at least one element matches and
 every match is the page's focused element (\code{document.activeElement}).
-Focus it with \code{\link[=pz_focus]{pz_focus()}} or a \code{\link[=pz_click]{pz_click()}}, and remove it with
-\code{\link[=pz_blur]{pz_blur()}}.
+Focus it with \code{\link[=pz_act_focus]{pz_act_focus()}} or a \code{\link[=pz_act_click]{pz_act_click()}}, and remove it with
+\code{\link[=pz_act_blur]{pz_act_blur()}}.
 
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
@@ -40,11 +40,11 @@ retry, timeout, and bridge behavior shared by all expectations.
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
-  pz_click("#task-title") |>
+  pz_act_click("#task-title") |>
   pz_expect_focused(target = "#task-title")
 
 page |>
-  pz_press("Tab") |>
+  pz_act_press("Tab") |>
   pz_expect_focused(target = "#task-priority")
 pz_close(page)
 \dontshow{\}) # examplesIf}

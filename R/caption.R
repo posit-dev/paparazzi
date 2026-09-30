@@ -6,7 +6,7 @@
 #' recording, a caption fades out when it is cleared or replaced; one that
 #' is still showing at [pz_record_stop()] stays on through the last frame.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param text Nonempty caption text. Newlines are preserved.
 #' @param ... Checked empty.
 #' @param side `"bottom"` (the default) or `"top"`.

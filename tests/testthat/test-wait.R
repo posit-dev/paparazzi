@@ -501,7 +501,7 @@ test_that("pz_wait_for_navigation times out when nothing navigates", {
 
 test_that("a completed link navigation is caught once after the click", {
   page <- local_nav_page()
-  clicked <- pz_click(page, "#fast-link")
+  clicked <- pz_act_click(page, "#fast-link")
   # Ensure the new document has already completed before starting the wait.
   clicked |>
     pz_expect_text("B", target = "#page", match = "exact") |>
@@ -605,13 +605,13 @@ test_that("a completed bfcache restore is caught once after history.back()", {
   identity <- pz_js(page, "window.identity")
   origin <- pz_js(page, "performance.timeOrigin")
 
-  pz_click(page, "#next")
+  pz_act_click(page, "#next")
   pz_wait_for_js(
     page,
     "document.readyState === 'complete' && !!document.querySelector('#back')"
   )
   back <- pz_find(page, "#back")
-  pz_click(back)
+  pz_act_click(back)
   pz_wait_for_js(
     page,
     "document.readyState === 'complete' && !!document.querySelector('#next') && window.shows.includes(true)"
@@ -631,7 +631,7 @@ test_that("a completed bfcache restore is caught once after history.back()", {
 
 test_that("a non-navigating action does not satisfy the navigation wait", {
   page <- local_nav_page()
-  pz_click(page, "#scope-target")
+  pz_act_click(page, "#scope-target")
   expect_error(
     pz_wait_for_navigation(page, timeout = 0.8),
     class = "paparazzi_error_timeout"
@@ -685,7 +685,7 @@ test_that("pz_wait_for_navigation waits for a pending navigation and resets scop
 test_that("pz_wait_for_navigation follows a clicked link", {
   page <- local_waits_page()
   ctx <- pz_find(page, "#nav-link")
-  reset <- ctx |> pz_click() |> pz_wait_for_navigation(timeout = 5)
+  reset <- ctx |> pz_act_click() |> pz_wait_for_navigation(timeout = 5)
   expect_length(reset$scope, 0)
   expect_match(pz_get_url(reset), "nav-target.html", fixed = TRUE)
   reset |> pz_expect_title("paparazzi navigation target", match = "exact")

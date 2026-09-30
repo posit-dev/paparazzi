@@ -13,7 +13,7 @@
 #' failure is instead reported as a test failure, and a pass counts as a
 #' successful testthat expectation.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context (so
@@ -90,8 +90,8 @@ pz_expect_exists <- function(
 #' # Expectations retry, so they wait for the page to catch up: the new task
 #' # appears after a short "Saving..." delay
 #' page |>
-#'   pz_type("Buy milk", target = "#task-title") |>
-#'   pz_click("#add-task") |>
+#'   pz_act_type("Buy milk", target = "#task-title") |>
+#'   pz_act_click("#add-task") |>
 #'   pz_expect_count(8, target = ".task")
 #' pz_close(page)
 #'
@@ -174,7 +174,7 @@ pz_expect_count <- function(
 #' page |> pz_expect_hidden(target = "#help")
 #'
 #' page |>
-#'   pz_click("#toggle-help") |>
+#'   pz_act_click("#toggle-help") |>
 #'   pz_expect_visible(target = "#help")
 #'
 #' # Every match must pass, so check one task or narrow the target
@@ -237,7 +237,7 @@ pz_expect_hidden <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param text A character vector of expected text: length 1 applies to
 #'   every match, length `n` is compared pairwise in order.
 #' @param match How to compare `text`: `"contains"` (substring),
@@ -310,7 +310,7 @@ pz_expect_text <- function(
 #' # Add is disabled until the title has text
 #' page |> pz_expect_enabled(target = "#add-task", not = TRUE)
 #' page |>
-#'   pz_type("Buy milk", target = "#task-title") |>
+#'   pz_act_type("Buy milk", target = "#task-title") |>
 #'   pz_expect_enabled(target = "#add-task")
 #' pz_close(page)
 #'
@@ -342,8 +342,8 @@ pz_expect_enabled <- function(
 #' @description
 #' [pz_expect_focused()] passes when at least one element matches and
 #' every match is the page's focused element (`document.activeElement`).
-#' Focus it with [pz_focus()] or a [pz_click()], and remove it with
-#' [pz_blur()].
+#' Focus it with [pz_act_focus()] or a [pz_act_click()], and remove it with
+#' [pz_act_blur()].
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
 #' `"paparazzi_expectation_failure"`; inside testthat, the failure is
@@ -356,11 +356,11 @@ pz_expect_enabled <- function(
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
-#'   pz_click("#task-title") |>
+#'   pz_act_click("#task-title") |>
 #'   pz_expect_focused(target = "#task-title")
 #'
 #' page |>
-#'   pz_press("Tab") |>
+#'   pz_act_press("Tab") |>
 #'   pz_expect_focused(target = "#task-priority")
 #' pz_close(page)
 #'
@@ -393,7 +393,7 @@ pz_expect_focused <- function(
 #' [pz_expect_checked()] passes when at least one element matches and
 #' every match is checked (the browser's `:checked` selector, so
 #' checkboxes, radios, and select options all count). Toggle with
-#' [pz_click()] or `pz_set_value()`.
+#' [pz_act_click()] or `pz_set_value()`.
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
 #' `"paparazzi_expectation_failure"`; inside testthat, the failure is
@@ -407,7 +407,7 @@ pz_expect_focused <- function(
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_expect_checked(target = "#task-urgent", not = TRUE)
 #' page |>
-#'   pz_click("#task-urgent") |>
+#'   pz_act_click("#task-urgent") |>
 #'   pz_expect_checked(target = "#task-urgent")
 #' pz_close(page)
 #'
@@ -458,7 +458,7 @@ pz_expect_checked <- function(
 #' last_task <- pz_loc(".task", which = "last")
 #' page |> pz_expect_in_viewport(target = last_task, not = TRUE)
 #' page |>
-#'   pz_scroll(last_task) |>
+#'   pz_act_scroll(last_task) |>
 #'   pz_expect_in_viewport(target = last_task)
 #' pz_close(page)
 #'
@@ -514,7 +514,7 @@ pz_expect_in_viewport <- function(
 #' page |> pz_expect_value("normal", target = "#task-priority", match = "exact")
 #'
 #' page |>
-#'   pz_type("Buy milk", target = "#task-title") |>
+#'   pz_act_type("Buy milk", target = "#task-title") |>
 #'   pz_expect_value("milk", target = "#task-title")
 #' pz_close(page)
 #'
@@ -578,7 +578,7 @@ pz_expect_value <- function(
 #' )
 #'
 #' page |>
-#'   pz_click("#toggle-help") |>
+#'   pz_act_click("#toggle-help") |>
 #'   pz_expect_attr("#toggle-help", `aria-expanded` = "true")
 #' pz_close(page)
 #'
@@ -627,7 +627,7 @@ pz_expect_attr <- function(
 #'
 #' page |>
 #'   pz_find(water) |>
-#'   pz_click(".task-done") |>
+#'   pz_act_click(".task-done") |>
 #'   pz_expect_class("done")
 #' pz_close(page)
 #'
@@ -729,7 +729,7 @@ pz_expect_js <- function(
 #' reported as a test failure instead. See [pz_expect_exists()] for the
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param url The expected URL, a single string.
 #' @param match How to compare `url`: `"contains"` (substring),
 #'   `"exact"`, or `"regex"` (an R regex matched with [grepl()]).
@@ -743,7 +743,7 @@ pz_expect_js <- function(
 #' page |> pz_expect_url("tasks.html")
 #'
 #' page |>
-#'   pz_click(pz_loc(".filters a", has_text = "Done")) |>
+#'   pz_act_click(pz_loc(".filters a", has_text = "Done")) |>
 #'   pz_expect_url("#done$", match = "regex")
 #' pz_close(page)
 #'

@@ -34,7 +34,7 @@ path <- file.path(tempdir(), "help.mp4")
 page |>
   pz_record(path, {
     page |>
-      pz_click("#toggle-help") |>
+      pz_act_click("#toggle-help") |>
       # Move the cursor out of the way so the help text is unobstructed
       pz_cursor_leave("right", icon = "default") |>
       pz_record_hold(1)

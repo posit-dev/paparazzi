@@ -492,7 +492,7 @@ test_that("pz_expect_enabled retries until a control is enabled", {
 
 test_that("pz_expect_focused checks document.activeElement", {
   page <- local_state_page()
-  pz_focus(page, target = "#focus-target")
+  pz_act_focus(page, target = "#focus-target")
   pz_expect_focused(page, target = "#focus-target")
   pz_expect_focused(page, target = "#btn-enabled", not = TRUE)
 
@@ -517,7 +517,7 @@ test_that("pz_expect_checked covers checkboxes and radios", {
   expect_match(conditionMessage(err), "2 of 4 checked", fixed = TRUE)
 
   # Clicking toggles the checkbox, and the expectation follows.
-  pz_click(page, target = "#cb-off")
+  pz_act_click(page, target = "#cb-off")
   pz_expect_checked(page, target = "#cb-off")
 })
 

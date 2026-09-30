@@ -24,7 +24,7 @@
 #' are called on, and contexts derived from the same parent share its
 #' pinned sets.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). Required: there
 #'   is nothing to find without a target, so `NULL` is an error. To
@@ -44,7 +44,7 @@
 #' # Inside a scope, targets resolve among the scope's descendants
 #' page |>
 #'   pz_find(pz_loc(".task", has_text = "dentist")) |>
-#'   pz_click(".task-done")
+#'   pz_act_click(".task-done")
 #' pz_get_attr(page, "class", target = pz_loc(".task", has_text = "dentist"))
 #'
 #' # Assign a scoped context to start more than one chain from it
@@ -55,7 +55,7 @@
 #' # from_root looks outside the current scope, but still pushes a new scope
 #' task_list |>
 #'   pz_find("#new-task", from_root = TRUE) |>
-#'   pz_type("Buy milk", target = "#task-title")
+#'   pz_act_type("Buy milk", target = "#task-title")
 #' pz_get_value(page, target = "#task-title")
 #' pz_close(page)
 #'
@@ -83,7 +83,7 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
 #' narrows the current scope to its first element: one eager slice of
 #' the pinned set, with no re-query and no waiting.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string or a [pz_loc()] spec. `NULL`
 #'   narrows the current scope; a union can't pick one match by
 #'   position, and a spec that already carries `which` is an error.
@@ -167,7 +167,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #' # Mark the second task as done
 #' page |>
 #'   pz_find_nth(2, target = ".task") |>
-#'   pz_click(".task-done")
+#'   pz_act_click(".task-done")
 #' pz_get_text(page, target = pz_loc(".task.done .task-title"))
 #' pz_close(page)
 #'
@@ -187,7 +187,7 @@ pz_find_nth <- function(ctx, n, target = NULL, ..., from_root = FALSE) {
 #' pop may still hold it -- and popping never mutates the context it
 #' was called on. At the root it is a no-op returning `ctx` unchanged.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return A new context one level up, or `ctx` itself at the root.
 #'
@@ -198,7 +198,7 @@ pz_find_nth <- function(ctx, n, target = NULL, ..., from_root = FALSE) {
 #' page |>
 #'   pz_find(".task-list") |>
 #'   pz_find_last(".task") |>
-#'   pz_click(".task-done") |>
+#'   pz_act_click(".task-done") |>
 #'   # Back to the whole list, to check the result
 #'   pz_find_pop() |>
 #'   pz_expect_count(2, target = ".task.done")
@@ -220,7 +220,7 @@ pz_find_pop <- function(ctx) {
 #' still hold them -- and resetting never mutates the context it was
 #' called on. At the root it is a no-op returning `ctx` unchanged.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return A new root context, or `ctx` itself at the root.
 #'
@@ -231,10 +231,10 @@ pz_find_pop <- function(ctx) {
 #' page |>
 #'   pz_find(".task-list") |>
 #'   pz_find_first(".task") |>
-#'   pz_click(".task-done") |>
+#'   pz_act_click(".task-done") |>
 #'   # The help toggle is outside the list, so start again from the root
 #'   pz_find_reset() |>
-#'   pz_click("#toggle-help") |>
+#'   pz_act_click("#toggle-help") |>
 #'   pz_expect_visible(target = "#help")
 #' pz_close(page)
 #'

@@ -41,7 +41,7 @@ Shiny apps do their work on the server, so the page changes a little after each 
 ```{r}
 page |>
   pz_set_value("Buy milk", target = "#title") |>
-  pz_click("#add") |>
+  pz_act_click("#add") |>
   pz_wait_for_shiny_idle()
 
 pz_get_text(page, target = "#summary")
@@ -54,7 +54,7 @@ When you know what the page should show, an expectation is usually better. It re
 ```{r}
 page |>
   pz_set_value("Renew library card", target = "#title") |>
-  pz_click("#add") |>
+  pz_act_click("#add") |>
   pz_expect_text("4 tasks", target = "#summary")
 ```
 
@@ -68,7 +68,7 @@ page |>
   pz_screenshot(target = ".selectize-control", frame = pz_frame(pad = 8))
 ```
 
-`pz_set_shiny_input()` takes the input's ID and waits for Shiny to go idle afterward, so the app has reacted by the time the next step runs. It works with inputs whose binding can set a value, including sliders and date ranges; file inputs and action buttons aren't supported, so use `pz_set_files()` and `pz_click()` for those. For inputs that are easy to reach, like text boxes and buttons, `pz_type()`, `pz_set_value()`, and `pz_click()` are closer to what a person does, and those are what you want in a recording.
+`pz_set_shiny_input()` takes the input's ID and waits for Shiny to go idle afterward, so the app has reacted by the time the next step runs. It works with inputs whose binding can set a value, including sliders and date ranges; file inputs and action buttons aren't supported, so use `pz_set_files()` and `pz_act_click()` for those. For inputs that are easy to reach, like text boxes and buttons, `pz_act_type()`, `pz_set_value()`, and `pz_act_click()` are closer to what a person does, and those are what you want in a recording.
 
 ## Share one app across pages
 
@@ -104,7 +104,7 @@ test_that("adding a task updates the summary", {
 
   page |>
     pz_set_value("Buy milk", target = "#title") |>
-    pz_click("#add") |>
+    pz_act_click("#add") |>
     pz_expect_text("3 tasks", target = "#summary")
 })
 ```
@@ -123,8 +123,8 @@ page |>
   pz_record(
     code = {
       page |>
-        pz_type("Water the plants", target = "#title") |>
-        pz_click("#add") |>
+        pz_act_type("Water the plants", target = "#title") |>
+        pz_act_click("#add") |>
         pz_expect_text("5 tasks", target = "#summary") |>
         pz_cursor_leave()
     },

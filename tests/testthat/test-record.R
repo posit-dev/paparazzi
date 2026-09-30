@@ -1225,7 +1225,7 @@ test_that("recorded clicks reach above- and below-fold buttons at DPR 2", {
   defer_record_stop(page)
   targets <- rep(c("bottom", "top"), 4)
   for (target in targets) {
-    pz_click(page, paste0("#", target))
+    pz_act_click(page, paste0("#", target))
   }
   pz_record_stop(page)
 
@@ -1265,7 +1265,7 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
   )
   defer_record_stop(page)
   for (target in rep(c("task-title", "add-task"), 4)) {
-    pz_click(page, paste0("#", target))
+    pz_act_click(page, paste0("#", target))
   }
   pz_record_stop(page)
 

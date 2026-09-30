@@ -39,7 +39,7 @@ page <- pz_open(pz_example("tasks-app"))
 page |>
   pz_set_shiny_input("title", "Buy milk") |>
   pz_set_shiny_input("priority", "high") |>
-  pz_click("#add") |>
+  pz_act_click("#add") |>
   pz_expect_text("3 tasks", target = "#summary")
 pz_get_attr(page, "data-priority", target = ".task")
 pz_close(page)

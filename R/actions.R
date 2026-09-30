@@ -1,10 +1,40 @@
 # The pointer and keyboard actions. Input goes through CDP's Input
 # domain -- real trusted events, never JS .click() substitutes. The one
-# sanctioned exception is element focus()/blur() in pz_focus()/pz_blur()
+# sanctioned exception is element focus()/blur() in pz_act_focus()/pz_act_blur()
 # (element-state methods, not input events; Playwright does the same).
 # Value and file setting is DOM state, not pointer input: the native
 # prototype setters plus dispatched events (pz_set_value()), and
 # DOM.setFileInputFiles (pz_set_files()).
+
+#' Acting on the page
+#'
+#' @description
+#' The contract shared by the `pz_act_*()` functions.
+#'
+#' @section Acting on the page:
+#' The `pz_act_*()` functions use the page the way a person would. They send
+#' real browser input, such as pointer moves, clicks and key presses, or use
+#' the browser's own focus and text-selection methods. They never set a form
+#' value directly.
+#'
+#' An action with a `target` looks for it in the current scope and waits until
+#' it matches an element. Inside a scope, `target = NULL` acts on the scope's
+#' element, and scrolling with `by` or `to` scrolls the scope's container. An
+#' explicit target is scrolled into view first when needed. A few actions,
+#' like [pz_act_press()], take no target and act on the focused element
+#' instead.
+#'
+#' While the page is recording, actions are staged as [pz_stage()] sets them
+#' up: the cursor glides to pointer targets, typing is paced, scrolls normally
+#' use the mouse wheel, and the page holds for the staged `pause` afterward.
+#' Without a recording, actions go straight to their final state.
+#'
+#' To set a value directly instead, without staging, use [pz_set_value()],
+#' [pz_set_files()], or [pz_set_shiny_input()].
+#'
+#' @name paparazzi-actions
+NULL
+
 #' Click an element
 #'
 #' Auto-waits for the element to be actionable -- visible with a
@@ -26,22 +56,24 @@
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_hover()], [pz_type()], [pz_press()]
+#' @seealso [pz_act_hover()], [pz_act_type()], [pz_act_press()]
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_click("#toggle-help")
+#' page |> pz_act_click("#toggle-help")
 #' pz_get_text(page, target = "#toggle-help")
 #'
 #' # In a scoped context, target = NULL clicks the scope element
 #' page |>
 #'   pz_find(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank"))) |>
-#'   pz_click()
+#'   pz_act_click()
 #' pz_get_count(page, target = ".task.done")
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
-pz_click <- function(ctx, target = NULL, ...) {
+pz_act_click <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
@@ -64,11 +96,11 @@ pz_click <- function(ctx, target = NULL, ...) {
 #' pressing any button. This is what drives `:hover` styles and
 #' `mouseenter`/`mouseover` handlers.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_click()]
+#' @seealso [pz_act_click()]
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
@@ -76,12 +108,14 @@ pz_click <- function(ctx, target = NULL, ...) {
 #'
 #' # Tasks change colour on :hover
 #' pz_get_style(page, "background-color", target = passport)
-#' page |> pz_hover(passport)
+#' page |> pz_act_hover(passport)
 #' pz_get_style(page, "background-color", target = passport)
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
-pz_hover <- function(ctx, target = NULL, ...) {
+pz_act_hover <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
@@ -126,7 +160,7 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #' a value-setting primitive that works on selects, checkboxes, and range
 #' inputs, see [pz_set_value()].
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param text A string to type.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs (a union matching any of them). `NULL` uses the current
@@ -134,24 +168,26 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_press()] for key combos (Enter, Control+A, ...) and
-#'   [pz_click()].
+#' @seealso [pz_act_press()] for key combos (Enter, Control+A, ...) and
+#'   [pz_act_click()].
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_type("Buy milk", target = "#task-title")
+#' page |> pz_act_type("Buy milk", target = "#task-title")
 #' pz_get_value(page, target = "#task-title")
 #'
 #' # Typing fires input events, so the page reacts: Add is now enabled
 #' pz_expect_enabled(page, target = "#add-task")
 #'
 #' # At the root, target = NULL types into the focused element
-#' page |> pz_type(" and eggs")
+#' page |> pz_act_type(" and eggs")
 #' pz_get_value(page, target = "#task-title")
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
-pz_type <- function(ctx, text, ..., target = NULL) {
+pz_act_type <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
@@ -176,6 +212,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
       }
     }
     insert_text(ctx, "the focused element", text)
+    stage_action_pause(ctx)
     return(ctx_return(ctx))
   }
 
@@ -220,10 +257,10 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #' letter or shifted symbol implies Shift: `"Control+A"` sends
 #' Control+Shift+A.
 #'
-#' Keys only reach focused elements; call [pz_click()] or [pz_focus()]
+#' Keys only reach focused elements; call [pz_act_click()] or [pz_act_focus()]
 #' first to focus the element you're typing into.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param key A character vector of key specs.
 #' @param show_keys `NULL` uses the page's [pz_stage()] setting (initially
 #'   `"none"`). `"words"` shows named modifier keycaps, `"mac"` uses
@@ -234,27 +271,29 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_type()] to insert text.
+#' @seealso [pz_act_type()] to insert text.
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
-#'   pz_type("Buy milkk", target = "#task-title") |>
-#'   pz_press("Backspace")
+#'   pz_act_type("Buy milkk", target = "#task-title") |>
+#'   pz_act_press("Backspace")
 #' pz_get_value(page, target = "#task-title")
 #'
 #' # Enter submits the form; the page shows "Saving..." before the task appears
-#' page |> pz_press("Enter")
+#' page |> pz_act_press("Enter")
 #' pz_expect_text(page, "Saved", target = "#status")
 #' pz_get_text(page, target = pz_loc(".task-title", which = "first"))
 #'
 #' # A vector presses keys in sequence; + joins keys pressed together
-#' page |> pz_press(c("Tab", "Shift+Tab"))
+#' page |> pz_act_press(c("Tab", "Shift+Tab"))
 #' pz_expect_focused(page, target = "#task-title")
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
-pz_press <- function(ctx, key, ..., show_keys = NULL) {
+pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
@@ -325,20 +364,22 @@ pz_press <- function(ctx, key, ..., show_keys = NULL) {
 #' element-state change, not an input event, so the direct method call
 #' is the faithful implementation (Playwright does the same).
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_blur()], [pz_type()]
+#' @seealso [pz_act_blur()], [pz_act_type()]
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_focus("#task-title")
+#' page |> pz_act_focus("#task-title")
 #' pz_expect_focused(page, target = "#task-title")
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
-pz_focus <- function(ctx, target = NULL, ...) {
+pz_act_focus <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
@@ -351,6 +392,7 @@ pz_focus <- function(ctx, target = NULL, ...) {
     found$els,
     "function() { if (this.length) this[0].focus(); }"
   )
+  stage_action_pause(ctx)
   ctx_return(ctx)
 }
 
@@ -361,23 +403,25 @@ pz_focus <- function(ctx, target = NULL, ...) {
 #' .activeElement`). A no-op when the body is focused. Useful to clear
 #' focus rings before a screenshot.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_focus()]
+#' @seealso [pz_act_focus()]
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_focus("#task-title")
+#' page |> pz_act_focus("#task-title")
 #'
 #' # Remove the focus ring, e.g. before a screenshot
-#' page |> pz_blur()
+#' page |> pz_act_blur()
 #' pz_expect_focused(page, target = "#task-title", not = TRUE)
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
-pz_blur <- function(ctx, ...) {
+pz_act_blur <- function(ctx, ...) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
@@ -400,6 +444,7 @@ pz_blur <- function(ctx, ...) {
       )
     )
   }
+  stage_action_pause(ctx)
   ctx_return(ctx)
 }
 
@@ -419,13 +464,13 @@ pz_blur <- function(ctx, ...) {
 #' element (plain or framework-driven, e.g. ProseMirror) has its
 #' content replaced in one step.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param value A string (most controls), a number (range, number), or
 #'   `TRUE`/`FALSE` (checkboxes, radios).
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_type()] for visible, keystroke-by-keystroke input and
+#' @seealso [pz_act_type()] for visible, keystroke-by-keystroke input and
 #'   [pz_set_files()].
 #'
 #' @examplesIf paparazzi:::examples_run()
@@ -482,7 +527,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
 #' input's `FileList` holds the real names, sizes, and contents, and
 #' `change` fires exactly as if the files had been picked in a dialog.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param files A character vector of paths to existing local files.
 #'
 #' @return `ctx`, invisibly.
@@ -553,14 +598,14 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 #' text nodes (so a match spanning inline tags, e.g. across an `<em>`
 #' and a `<strong>`, is selected as one piece) and becomes the page's
 #' real window selection. Typing afterwards replaces it -- call
-#' [pz_type()] with `target = NULL`, which inserts into whatever has
+#' [pz_act_type()] with `target = NULL`, which inserts into whatever has
 #' focus.
 #'
 #' A contenteditable target is focused too (dragging across editable
 #' text focuses it, and that focus is where the typing lands); a static
 #' target is not.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param text A string to select. Must appear exactly in the element,
 #'   across tags if needed; not found is an error.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
@@ -569,7 +614,7 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_type()], [pz_set_value()]
+#' @seealso [pz_act_type()], [pz_set_value()]
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
@@ -577,16 +622,18 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 #' # Typing replaces the selection
 #' page |>
 #'   pz_find(pz_loc(".task", has_text = "Renew passport")) |>
-#'   pz_click(".task-edit") |>
+#'   pz_act_click(".task-edit") |>
 #'   pz_find(".task-title") |>
-#'   pz_select_text("passport") |>
-#'   pz_type("driving licence") |>
-#'   pz_press("Enter") |>
+#'   pz_act_select_text("passport") |>
+#'   pz_act_type("driving licence") |>
+#'   pz_act_press("Enter") |>
 #'   pz_get_text()
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
-pz_select_text <- function(ctx, text, ..., target = NULL) {
+pz_act_select_text <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
@@ -645,7 +692,7 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
 #' best-effort: if the page swallows the events, the instant scroll
 #' still guarantees the final position.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs (a union matching any of them). Scrolled into view. `NULL`
 #'   disables the element-target mode; use `by` or `to` instead.
@@ -661,28 +708,30 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_find()], [pz_click()]
+#' @seealso [pz_find()], [pz_act_click()]
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"), height = 600)
 #'
 #' # With a target, scroll it into view
-#' page |> pz_scroll("#toggle-help")
+#' page |> pz_act_scroll("#toggle-help")
 #' pz_expect_in_viewport(page, target = "#toggle-help")
 #'
 #' # With `to` or `by`, scroll the current scope's container: here the list
 #' page |>
 #'   pz_find(".task-list") |>
-#'   pz_scroll(to = "bottom")
+#'   pz_act_scroll(to = "bottom")
 #' pz_expect_in_viewport(page, target = pz_loc(".task", which = "last"))
 #'
 #' # At the root, the container is the page itself
-#' page |> pz_scroll(to = "top")
+#' page |> pz_act_scroll(to = "top")
 #' pz_js(page, "window.scrollY")
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
-pz_scroll <- function(
+pz_act_scroll <- function(
   ctx,
   target = NULL,
   ...,
@@ -787,7 +836,7 @@ pz_scroll <- function(
 #' `to` names the element to drop onto; `by = c(x, y)` drops at that
 #' offset in pixels from the source's center. Supply exactly one.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs (a union matching any of them). The drag source. Unlike most
 #'   actions it is always required.
@@ -799,7 +848,7 @@ pz_scroll <- function(
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_click()], [pz_hover()]
+#' @seealso [pz_act_click()], [pz_act_hover()]
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
@@ -807,15 +856,17 @@ pz_scroll <- function(
 #'
 #' # The tasks are HTML5 drag sources; drop "Water the plants" on the first task
 #' page |>
-#'   pz_drag(
+#'   pz_act_drag(
 #'     pz_loc(".task", has_text = "plants"),
 #'     to = pz_loc(".task", which = "first")
 #'   )
 #' pz_get_text(page, target = ".task-title")
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
-pz_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
+pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
@@ -1124,7 +1175,7 @@ dispatch_mouse <- function(
   )
 }
 
-# The real pointer sequence behind pz_click() and pz_type()'s
+# The real pointer sequence behind pz_act_click() and pz_act_type()'s
 # focus-via-click: a move to the point first so pointer state stays
 # real (:hover, the cursor), then a left-button press and release at the
 # same point. While recording with a visible cursor, the staging adds a
@@ -1214,7 +1265,7 @@ insert_text_once <- function(ctx, target, text, call = caller_env()) {
   )
 }
 
-# Does the element hold the page's active selection (pz_select_text's
+# Does the element hold the page's active selection (pz_act_select_text's
 # work), ready for a keypress to replace it? TRUE means the caller
 # skips the focusing click -- a click collapses the selection -- and
 # inserts instead; the focus the click would have produced is taken

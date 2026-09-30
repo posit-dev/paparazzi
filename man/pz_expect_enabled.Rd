@@ -43,7 +43,7 @@ page <- pz_open(pz_example("tasks"))
 # Add is disabled until the title has text
 page |> pz_expect_enabled(target = "#add-task", not = TRUE)
 page |>
-  pz_type("Buy milk", target = "#task-title") |>
+  pz_act_type("Buy milk", target = "#task-title") |>
   pz_expect_enabled(target = "#add-task")
 pz_close(page)
 \dontshow{\}) # examplesIf}

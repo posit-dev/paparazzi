@@ -20,7 +20,7 @@
 #' `reduced_motion = TRUE` gives deterministic stills (animations stop);
 #' it's opt-in because it's usually wrong for videos.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param width,height Viewport size in CSS pixels. Only the supplied
 #'   one changes; the other keeps its current value.
 #' @param scale Device scale factor. `NULL` retains the stored value, or

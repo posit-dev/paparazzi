@@ -2,7 +2,7 @@
 
 The cursor animation and typing only happen while recording. Take away `pz_record()` and the same steps run at full speed: the cursor stays hidden, text goes in without the typing animation, and camera moves and holds do nothing. That makes a demo script a browser test too.
 
-The steps behave well in a test. Actions like `pz_click()` wait for their element to be ready before acting. Expectations like `pz_expect_text()` retry until the page shows what they expect, or time out with an error that says what they last saw. Inside a testthat test, expectations count as test expectations. `pz_local_page()` closes the page, and stops its app, when the test ends:
+The steps behave well in a test. Actions like `pz_act_click()` wait for their element to be ready before acting. Expectations like `pz_expect_text()` retry until the page shows what they expect, or time out with an error that says what they last saw. Inside a testthat test, expectations count as test expectations. `pz_local_page()` closes the page, and stops its app, when the test ends:
 
 ```r
 test_that("adding a task updates the summary", {
@@ -10,7 +10,7 @@ test_that("adding a task updates the summary", {
 
   page |>
     pz_set_value("Buy milk", target = "#title") |>
-    pz_click("#add") |>
+    pz_act_click("#add") |>
     pz_expect_text("3 tasks", target = "#summary")
 })
 ```

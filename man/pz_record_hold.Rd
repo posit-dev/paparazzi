@@ -32,7 +32,7 @@ system.time(pz_record_hold(page, 2))
 path <- file.path(tempdir(), "help.mp4")
 page |>
   pz_record_start(path) |>
-  pz_click("#toggle-help") |>
+  pz_act_click("#toggle-help") |>
   # Give viewers a second to read the help text
   pz_record_hold(1) |>
   pz_record_stop()

@@ -240,9 +240,9 @@ test_that("natural typing is per-character while recording, instant otherwise", 
   page |> pz_stage()
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
   page |>
-    pz_type("otters", target = "#name") |>
-    pz_type("abc", target = "#bio") |>
-    pz_type("xy", target = "#edit")
+    pz_act_type("otters", target = "#name") |>
+    pz_act_type("abc", target = "#bio") |>
+    pz_act_type("xy", target = "#edit")
   page |> pz_record_stop()
 
   expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
@@ -261,7 +261,7 @@ test_that("natural typing is per-character while recording, instant otherwise", 
       fps = 10,
       hold = c(0, 0)
     )
-  page2 |> pz_type("otters", target = "#name")
+  page2 |> pz_act_type("otters", target = "#name")
   page2 |> pz_record_stop()
   expect_equal(pz_js(page2, "window.__log.inputs.name"), 1)
   expect_equal(pz_js(page2, "document.getElementById('name').value"), "otters")
@@ -269,7 +269,7 @@ test_that("natural typing is per-character while recording, instant otherwise", 
   # Not recording: instant whatever the setting.
   page3 <- local_cursor_page()
   page3 |> pz_stage()
-  page3 |> pz_type("otters", target = "#name")
+  page3 |> pz_act_type("otters", target = "#name")
   expect_equal(pz_js(page3, "window.__log.inputs.name"), 1)
 })
 
@@ -284,12 +284,12 @@ test_that("smooth scrolling uses real wheel events while recording", {
       hold = c(0, 0)
     )
 
-  page |> pz_scroll(by = c(0, 600))
+  page |> pz_act_scroll(by = c(0, 600))
   expect_equal(pz_js(page, "window.scrollY"), 600)
   expect_true(pz_js(page, "window.__log.wheels") > 0)
   expect_true(pz_js(page, "window.__log.wheelsTrusted"))
 
-  page |> pz_scroll(to = "bottom")
+  page |> pz_act_scroll(to = "bottom")
   expect_equal(
     pz_js(page, "window.scrollY"),
     pz_js(page, "document.scrollingElement.scrollHeight - window.innerHeight")
@@ -297,7 +297,7 @@ test_that("smooth scrolling uses real wheel events while recording", {
 
   # A scoped scroll wheels the scope's container, not the page.
   wheels <- pz_js(page, "window.__log.wheels")
-  page |> pz_find("#scroller") |> pz_scroll(to = "bottom")
+  page |> pz_find("#scroller") |> pz_act_scroll(to = "bottom")
   expect_equal(
     pz_js(page, "document.getElementById('scroller').scrollTop"),
     650
@@ -307,7 +307,7 @@ test_that("smooth scrolling uses real wheel events while recording", {
   page |> pz_record_stop()
 })
 
-test_that("pz_scroll duration overrides staged wheels for by, to, and target", {
+test_that("pz_act_scroll duration overrides staged wheels for by, to, and target", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |> pz_stage(cursor_speed = 500)
@@ -327,13 +327,13 @@ test_that("pz_scroll duration overrides staged wheels for by, to, and target", {
     }
   )
 
-  page |> pz_scroll(by = c(0, 300), duration = 0.05)
+  page |> pz_act_scroll(by = c(0, 300), duration = 0.05)
   expect_equal(pz_js(page, "window.scrollY"), 300)
   expect_true(length(wheel_durations) > 0)
   expect_true(all(wheel_durations == 0.05))
   wheel_durations <- numeric()
 
-  page |> pz_scroll(to = "bottom", duration = 0.05)
+  page |> pz_act_scroll(to = "bottom", duration = 0.05)
   expect_equal(
     pz_js(page, "window.scrollY"),
     pz_js(page, "document.scrollingElement.scrollHeight - window.innerHeight")
@@ -342,7 +342,7 @@ test_that("pz_scroll duration overrides staged wheels for by, to, and target", {
   expect_true(all(wheel_durations == 0.05))
   wheel_durations <- numeric()
 
-  page |> pz_scroll(target = "#plain", duration = 0.05)
+  page |> pz_act_scroll(target = "#plain", duration = 0.05)
   expect_true(pz_js(
     page,
     "document.getElementById('plain').getBoundingClientRect().y >= 0"
@@ -351,7 +351,7 @@ test_that("pz_scroll duration overrides staged wheels for by, to, and target", {
   expect_true(all(wheel_durations == 0.05))
 
   before <- pz_js(page, "window.scrollY")
-  page |> pz_scroll(by = c(0, 0), duration = 0)
+  page |> pz_act_scroll(by = c(0, 0), duration = 0)
   expect_equal(pz_js(page, "window.scrollY"), before)
   page |> pz_record_stop()
 })
@@ -366,14 +366,14 @@ test_that("zero-duration scrolls land instantly without queued wheel events", {
       hold = c(0, 0)
     )
 
-  page |> pz_scroll(by = c(0, 300), duration = 0L)
+  page |> pz_act_scroll(by = c(0, 300), duration = 0L)
   expect_equal(pz_js(page, "window.scrollY"), 300)
-  page |> pz_scroll(to = "bottom", duration = 0)
+  page |> pz_act_scroll(to = "bottom", duration = 0)
   expect_equal(
     pz_js(page, "window.scrollY"),
     pz_js(page, "document.scrollingElement.scrollHeight - window.innerHeight")
   )
-  page |> pz_scroll(target = "#plain", duration = 0)
+  page |> pz_act_scroll(target = "#plain", duration = 0)
   expect_true(pz_js(
     page,
     "document.getElementById('plain').getBoundingClientRect().y >= 0"
@@ -392,7 +392,7 @@ test_that("the auto-scroll before actions is the same staged wheel scroll", {
       fps = 10,
       hold = c(0, 0)
     )
-  page |> pz_click("#below")
+  page |> pz_act_click("#below")
   page |> pz_record_stop()
 
   expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
@@ -436,7 +436,7 @@ test_that("a target visible in a below-the-fold container is wheeled into view",
       fps = 10,
       hold = c(0, 0)
     )
-  page |> pz_click("#deep-btn")
+  page |> pz_act_click("#deep-btn")
   page |> pz_record_stop()
 
   expect_equal(pz_js(page, "window.__log.deepClicks"), 1)
@@ -457,12 +457,12 @@ test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
       fps = 10,
       hold = c(0, 0)
     )
-  page |> pz_click("#btn")
+  page |> pz_act_click("#btn")
   # cursor = FALSE never draws, even while recording.
   expect_null(cursor_overlay_state(page))
 
   page |> pz_stage(cursor = NULL)
-  page |> pz_click("#btn")
+  page |> pz_act_click("#btn")
   # The NULL restored the default: auto draws while recording.
   st <- cursor_overlay_state(page)
   expect_equal(st[[1]], 1)
@@ -506,7 +506,7 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
       fps = 10,
       hold = c(0, 0)
     )
-  page |> pz_scroll(by = c(0, 400))
+  page |> pz_act_scroll(by = c(0, 400))
   expect_equal(pz_js(page, "window.scrollY"), 400)
   # Not one wheel fired: the scroll was applied instantly, and the
   # covering scroller is untouched.
@@ -517,7 +517,7 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
   )
   # The auto-scroll before an action hits the same fallback: the fixed
   # scroller still covers every root wheel point.
-  page |> pz_click("#below")
+  page |> pz_act_click("#below")
   expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
   expect_equal(pz_js(page, "window.__log.wheels"), 0)
   expect_equal(
@@ -532,8 +532,8 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
 
   page2 <- local_cursor_page()
   cover_center(page2)
-  page2 |> pz_scroll(by = c(0, 400))
-  page2 |> pz_click("#below")
+  page2 |> pz_act_scroll(by = c(0, 400))
+  page2 |> pz_act_click("#below")
   unrecorded <- c(
     scrollY = pz_js(page2, "window.scrollY"),
     scoped = pz_js(
@@ -582,7 +582,7 @@ test_that("an off-screen scope is brought into view with staged wheels too", {
   # The scope's container is already at its target (top), so every
   # wheel has to come from the into-view: a recorded scoped scroll
   # must animate the scope on screen, not jump it with scrollIntoView.
-  page |> pz_find("#deep-scope") |> pz_scroll(to = "top", duration = 0.05)
+  page |> pz_find("#deep-scope") |> pz_act_scroll(to = "top", duration = 0.05)
   page |> pz_record_stop()
 
   expect_true(length(wheel_durations) > 0)
@@ -607,15 +607,91 @@ test_that("the stage pause holds after each action only while recording", {
       hold = c(0, 0)
     )
   t0 <- proc.time()[["elapsed"]]
-  page |> pz_click("#btn")
+  page |> pz_act_click("#btn")
   recorded <- proc.time()[["elapsed"]] - t0
   page |> pz_record_stop()
   expect_true(recorded >= 0.45)
 
   page2 <- local_cursor_page()
   page2 |> pz_stage(pause = 0.5)
-  page2 |> pz_click("#btn")
+  page2 |> pz_act_click("#btn")
   expect_equal(pz_js(page2, "window.__log.clicks"), 1)
+})
+
+test_that("the stage pause holds after focus and root or scoped blur", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(pause = 0.5)
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_act_focus("#name")
+  t_focus <- proc.time()[["elapsed"]] - t0
+  expect_true(pz_js(page, "document.activeElement.id === 'name'"))
+
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_act_blur()
+  t_blur <- proc.time()[["elapsed"]] - t0
+  expect_false(pz_js(page, "document.activeElement.id === 'name'"))
+
+  field <- pz_find(page, "#name")
+  field |> pz_act_focus()
+  t0 <- proc.time()[["elapsed"]]
+  field |> pz_act_blur()
+  t_scoped_blur <- proc.time()[["elapsed"]] - t0
+  page |> pz_record_stop()
+
+  expect_true(t_focus >= 0.45)
+  expect_true(t_blur >= 0.45)
+  expect_true(t_scoped_blur >= 0.45)
+
+  pauses <- numeric()
+  local_mocked_bindings(
+    pump_loop = function(loop, duration, ...) {
+      pauses <<- c(pauses, duration)
+    }
+  )
+  page |> pz_act_focus("#name")
+  page |> pz_act_blur()
+  field |> pz_act_focus()
+  field |> pz_act_blur()
+  expect_length(pauses, 0)
+})
+
+test_that("the stage pause holds after root typing without a target", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(pause = 0.5, typing = "instant", camera_follow = FALSE)
+  page |> pz_act_focus("#name")
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_act_type("a")
+  recorded <- proc.time()[["elapsed"]] - t0
+  page |> pz_record_stop()
+
+  expect_equal(pz_get_value(page, target = "#name"), "a")
+  expect_true(recorded >= 0.45)
+
+  pauses <- numeric()
+  local_mocked_bindings(
+    pump_loop = function(loop, duration, ...) {
+      pauses <<- c(pauses, duration)
+    }
+  )
+  page |> pz_act_type("b")
+  expect_equal(pz_get_value(page, target = "#name"), "ab")
+  expect_length(pauses, 0)
 })
 
 test_that("the stage pause holds after press, select_text, and drag too", {
@@ -631,13 +707,13 @@ test_that("the stage pause holds after press, select_text, and drag too", {
 
   # Focus the field for the keypress (the click's own hold is outside
   # the timed stretch).
-  page |> pz_click("#name")
+  page |> pz_act_click("#name")
   t0 <- proc.time()[["elapsed"]]
-  page |> pz_press("a")
+  page |> pz_act_press("a")
   t_press <- proc.time()[["elapsed"]] - t0
 
   t0 <- proc.time()[["elapsed"]]
-  page |> pz_select_text("Go", target = "#btn")
+  page |> pz_act_select_text("Go", target = "#btn")
   t_select <- proc.time()[["elapsed"]] - t0
 
   # The drag's glide time is timing noise, so two identical drags are
@@ -646,12 +722,12 @@ test_that("the stage pause holds after press, select_text, and drag too", {
   page |> pz_stage(pause = 0)
   page |> pz_cursor_move("#plain", duration = 0)
   t0 <- proc.time()[["elapsed"]]
-  page |> pz_drag("#plain", by = c(50, 0))
+  page |> pz_act_drag("#plain", by = c(50, 0))
   t_drag0 <- proc.time()[["elapsed"]] - t0
   page |> pz_stage(pause = 0.5)
   page |> pz_cursor_move("#plain", duration = 0)
   t0 <- proc.time()[["elapsed"]]
-  page |> pz_drag("#plain", by = c(50, 0))
+  page |> pz_act_drag("#plain", by = c(50, 0))
   t_drag <- proc.time()[["elapsed"]] - t0
 
   page |> pz_record_stop()
@@ -672,9 +748,9 @@ test_that("recorded demo glides, presses, types, and scrolls on camera", {
     pz_stage(enter = "left", typing_speed = 6) |>
     pz_record_start(out, fps = 15, hold = c(0, 0.2), keep_frames = TRUE)
   page |>
-    pz_click("#btn") |>
-    pz_type("otters", target = "#name") |>
-    pz_click("#below") |>
+    pz_act_click("#btn") |>
+    pz_act_type("otters", target = "#name") |>
+    pz_act_click("#below") |>
     pz_record_stop()
 
   expect_equal(pz_js(page, "window.__log.clicks"), 1)
@@ -753,9 +829,9 @@ test_that("without a recording the same chain runs straight to the final state",
   t0 <- proc.time()[["elapsed"]]
   page |>
     pz_stage(enter = "left") |>
-    pz_click("#btn") |>
-    pz_type("otters", target = "#name") |>
-    pz_click("#below")
+    pz_act_click("#btn") |>
+    pz_act_type("otters", target = "#name") |>
+    pz_act_click("#below")
   elapsed <- proc.time()[["elapsed"]] - t0
 
   expect_true(elapsed < 5)

@@ -36,8 +36,8 @@ demo |>
       demo |>
         pz_annotate_caption("Add a task") |>
         pz_camera("#new-task", wait = TRUE) |>
-        pz_type("Repot the fern", target = "#task-title") |>
-        pz_click("#add-task") |>
+        pz_act_type("Repot the fern", target = "#task-title") |>
+        pz_act_click("#add-task") |>
         pz_camera_reset() |>
         pz_expect_visible(fern) |>
         pz_annotate(fern, type = "box", pad = 4) |>
@@ -86,12 +86,12 @@ A screenshot without a file path at the end of a knitted chunk becomes a figure 
 
 To add a task, a person would type a title into the form and click Add. The script does the same, but it has to say which elements to use. paparazzi finds elements with CSS selectors: the title field is `#task-title` and the Add button is `#add-task`.
 
-**Actions** like `pz_type()` and `pz_click()` use the page the way a person would, with real mouse and keyboard events. Each action takes the page first and returns it, so a script reads as one chain of steps joined by `|>`:
+**Actions** like `pz_act_type()` and `pz_act_click()` use the page the way a person would, with real mouse and keyboard events. Each action takes the page first and returns it, so a script reads as one chain of steps joined by `|>`:
 
 ```{r}
 page |>
-  pz_type("Repot the fern", target = "#task-title") |>
-  pz_click("#add-task")
+  pz_act_type("Repot the fern", target = "#task-title") |>
+  pz_act_click("#add-task")
 ```
 
 Before acting, each action waits for its element to be ready: on the page, visible, and not covered by anything else. Then it scrolls the element into view and acts.
@@ -148,8 +148,8 @@ page |>
     scale = 800,
     code = {
       page |>
-        pz_type("Repot the fern", target = "#task-title") |>
-        pz_click("#add-task") |>
+        pz_act_type("Repot the fern", target = "#task-title") |>
+        pz_act_click("#add-task") |>
         pz_expect_visible(fern)
     }
   )
@@ -197,8 +197,8 @@ page |>
       page |>
         pz_annotate_caption("Add a task") |>
         pz_camera("#new-task", wait = TRUE) |>
-        pz_type("Repot the fern", target = "#task-title") |>
-        pz_click("#add-task") |>
+        pz_act_type("Repot the fern", target = "#task-title") |>
+        pz_act_click("#add-task") |>
         pz_camera_reset() |>
         pz_expect_visible(fern) |>
         pz_annotate(fern, type = "box", pad = 4) |>
@@ -230,13 +230,13 @@ Every task in our list has its own Done button. To mark the fern done, the scrip
 ```{r}
 page |>
   pz_find(fern) |>
-  pz_click(".task-done") |>
+  pz_act_click(".task-done") |>
   pz_expect_class("done")
 ```
 
 With no `target`, `pz_expect_class()` checks the scope element itself: the task.
 
-The scope belongs to the chain, not to `page`. `pz_click()` changed the browser tab, and every chain on `page` will see the fern marked done. `pz_find()` changed nothing in the browser. It returned a new, scoped context, which went down the chain, while `page` still refers to the whole page. The next chain that starts from `page` starts at the whole page again. To keep working in a scope, assign it to a variable:
+The scope belongs to the chain, not to `page`. `pz_act_click()` changed the browser tab, and every chain on `page` will see the fern marked done. `pz_find()` changed nothing in the browser. It returned a new, scoped context, which went down the chain, while `page` still refers to the whole page. The next chain that starts from `page` starts at the whole page again. To keep working in a scope, assign it to a variable:
 
 ```{r}
 task_list <- pz_find(page, ".task-list")
@@ -292,8 +292,8 @@ test_that("a new task goes to the top of the list", {
   page <- pz_local_page(pz_example("tasks"))
 
   page |>
-    pz_type("Repot the fern", target = "#task-title") |>
-    pz_click("#add-task") |>
+    pz_act_type("Repot the fern", target = "#task-title") |>
+    pz_act_click("#add-task") |>
     pz_expect_text(
       "Repot the fern",
       target = pz_loc(".task-title", which = "first")

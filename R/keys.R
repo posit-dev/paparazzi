@@ -1,4 +1,4 @@
-# Key specs for pz_press(): "Mod+Mod+Key" strings like "Control+A" or
+# Key specs for pz_act_press(): "Mod+Mod+Key" strings like "Control+A" or
 # "Meta+Enter", parsed into Input.dispatchKeyEvent argument lists.
 
 # Canonical modifier order, also the order of the mask bits below.
@@ -41,7 +41,7 @@ key_table <- list(
   ArrowDown = list(key = "ArrowDown", code = "ArrowDown", keyCode = 40L),
   # Space and Enter are the named keys that produce a character.
   Space = list(key = " ", code = "Space", keyCode = 32L, text = " "),
-  # The modifier keys are pressable keys too (pz_press(ctx, "Control")
+  # The modifier keys are pressable keys too (pz_act_press(ctx, "Control")
   # presses and releases Control itself).
   Control = list(key = "Control", code = "ControlLeft", keyCode = 17L),
   Shift = list(key = "Shift", code = "ShiftLeft", keyCode = 16L),

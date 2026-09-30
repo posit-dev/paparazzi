@@ -21,7 +21,7 @@ A tibble with columns \code{x}, \code{y}, \code{width}, \code{height} (doubles,
 CSS pixels, viewport-relative), one row per match, plus an
 \code{element} list-column. Each \code{element} entry is a context scoped
 to that one match, pinned at get time, so a chain can continue
-from it: \code{rects$element[[2]] |> pz_hover()}.
+from it: \code{rects$element[[2]] |> pz_act_hover()}.
 }
 \description{
 \code{\link[=pz_get_rect]{pz_get_rect()}} returns the bounding box of every element matching
@@ -35,7 +35,7 @@ rects
 
 # Each row's element column is a context scoped to that match
 rects$element[[3]] |>
-  pz_click() |>
+  pz_act_click() |>
   pz_expect_url("#done")
 pz_close(page)
 \dontshow{\}) # examplesIf}

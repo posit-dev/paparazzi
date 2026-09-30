@@ -24,10 +24,10 @@ page <- pz_open(pz_example("tasks"))
 page |>
   pz_find(".task-list") |>
   pz_find_first(".task") |>
-  pz_click(".task-done") |>
+  pz_act_click(".task-done") |>
   # The help toggle is outside the list, so start again from the root
   pz_find_reset() |>
-  pz_click("#toggle-help") |>
+  pz_act_click("#toggle-help") |>
   pz_expect_visible(target = "#help")
 pz_close(page)
 \dontshow{\}) # examplesIf}

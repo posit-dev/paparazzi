@@ -27,7 +27,7 @@ property (non-form elements) give \code{NA}.
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_type("Buy milk", target = "#task-title")
+page |> pz_act_type("Buy milk", target = "#task-title")
 pz_get_value(page, target = list("#task-title", "#task-priority"))
 pz_close(page)
 \dontshow{\}) # examplesIf}

@@ -26,7 +26,7 @@ page <- pz_open(pz_example("tasks"))
 # A fixed pause; prefer an expectation or wait_for function when you
 # know what you're waiting for
 page |>
-  pz_click("#toggle-help") |>
+  pz_act_click("#toggle-help") |>
   pz_wait(0.5)
 pz_close(page)
 \dontshow{\}) # examplesIf}

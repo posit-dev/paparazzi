@@ -64,8 +64,8 @@ page |> pz_expect_count(min = 1, max = 2, target = ".task.done")
 # Expectations retry, so they wait for the page to catch up: the new task
 # appears after a short "Saving..." delay
 page |>
-  pz_type("Buy milk", target = "#task-title") |>
-  pz_click("#add-task") |>
+  pz_act_type("Buy milk", target = "#task-title") |>
+  pz_act_click("#add-task") |>
   pz_expect_count(8, target = ".task")
 pz_close(page)
 \dontshow{\}) # examplesIf}
