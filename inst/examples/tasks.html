@@ -4,201 +4,120 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tasks</title>
+  <link href="bootstrap.min.css" rel="stylesheet">
+  <script>
+    const colorScheme = matchMedia("(prefers-color-scheme: dark)");
+    function updateTheme() {
+      document.documentElement.dataset.bsTheme = colorScheme.matches ? "dark" : "light";
+    }
+    updateTheme();
+    colorScheme.addEventListener("change", updateTheme);
+  </script>
   <style>
-    :root {
-      --accent: #0d6efd;
-      --muted: #6c757d;
-      --border: #dee2e6;
-      --surface: #ffffff;
-      --page: #f5f6f8;
-      --text: #212529;
-      --hover: #eef4ff;
-      color-scheme: light;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --border: #3a3f45;
-        --surface: #1f2328;
-        --page: #121417;
-        --text: #e9ecef;
-        --muted: #9aa3ab;
-        --hover: #1c2a3d;
-        color-scheme: dark;
-      }
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 2rem 1rem;
-      background: var(--page);
-      color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-    main {
-      max-width: 36rem;
-      margin: 0 auto;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
-    }
-    h1 { margin: 0 0 1rem; font-size: 1.5rem; }
-    h2 { margin: 1.5rem 0 0.5rem; font-size: 1rem; color: var(--muted); }
-    button {
-      font: inherit;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--surface);
-      color: inherit;
-      padding: 0.25rem 0.75rem;
-      cursor: pointer;
-    }
-    button:disabled { cursor: not-allowed; opacity: 0.5; }
-    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-    input[type="text"], select {
-      font: inherit;
-      padding: 0.375rem 0.5rem;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--surface);
-      color: inherit;
-    }
-    input:focus-visible, select:focus-visible, #notes:focus-visible {
-      outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent);
-      outline-offset: 1px;
-    }
-
-    #new-task { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-    #new-task label[for="task-title"] { position: absolute; left: -9999px; }
-    #task-title { flex: 1 1 12rem; }
-    #status { min-height: 1.5em; margin: 0.5rem 0 0; color: var(--muted); font-size: 0.875rem; }
-
-    .filters { display: flex; gap: 1rem; margin: 1rem 0 0.5rem; }
-    .filters a { color: var(--muted); text-decoration: none; }
-    .filters a[aria-current="page"] { color: var(--accent); font-weight: 600; }
-
-    .task-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      max-height: 14rem;
-      overflow-y: auto;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-    .task {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-      padding: 0.5rem 0.75rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .task:last-child { border-bottom: 0; }
-    .task:hover { background: var(--hover); }
-    .task.dragging { opacity: 0.4; }
-    .task-title { flex: 1; }
-    .task.done .task-title { color: var(--muted); text-decoration: line-through; }
-    .task-priority {
-      font-size: 0.75rem;
-      border-radius: 999px;
-      padding: 0 0.5rem;
-      background: var(--border);
-    }
-    .task[data-priority="high"] .task-priority { background: #f8d7da; color: #842029; }
-    .task-done { font-size: 0.875rem; }
+    /* Bootstrap's h1 is display-sized; this page stays compact. */
+    h1 { font-size: 1.5rem; }
+    .task-list { max-height: 16rem; overflow-y: auto; }
+    .task-list-frame { overflow: hidden; }
+    #attachment { flex: 1 1 10rem; max-width: 16rem; }
+    .done .task-title { text-decoration: line-through; opacity: 0.6; }
     .task.done .task-done { visibility: hidden; }
-    .hidden { display: none; }
-
-    #notes {
-      min-height: 3rem;
-      padding: 0.5rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-    .footer { margin: 1rem 0 0; font-size: 0.875rem; }
-    .footer a { color: var(--accent); }
-    #help {
-      margin-top: 1rem;
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      background: color-mix(in srgb, var(--accent) 10%, transparent);
-    }
+    .dragging { opacity: 0.4; }
+    .hidden { display: none !important; }
+    .task-edit { opacity: 0; }
+    .task:hover .task-edit, .task:focus-within .task-edit { opacity: 1; }
+    .task-title { overflow-wrap: anywhere; min-width: 0; }
+    .task-title[contenteditable="true"] { outline: 2px solid var(--bs-primary); }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Tasks</h1>
-
-    <form id="new-task" autocomplete="off">
-      <label for="task-title">New task</label>
-      <input type="text" id="task-title" placeholder="What needs doing?">
-      <select id="task-priority" aria-label="Priority">
-        <option value="low">Low</option>
-        <option value="normal" selected>Normal</option>
-        <option value="high">High</option>
-      </select>
-      <label><input type="checkbox" id="task-urgent"> Urgent</label>
-      <button type="submit" id="add-task" class="btn-primary" disabled>Add</button>
-    </form>
-    <p id="status" role="status"></p>
-
-    <nav class="filters" aria-label="Filter tasks">
-      <a href="#all" aria-current="page">All</a>
-      <a href="#open">Open</a>
-      <a href="#done">Done</a>
-    </nav>
-
-    <ul class="task-list">
-      <li class="task" draggable="true" data-priority="high">
-        <span class="task-title">Renew passport</span>
-        <span class="task-priority">high</span>
-        <button type="button" class="task-done">Done</button>
-      </li>
-      <li class="task" draggable="true" data-priority="high">
-        <span class="task-title">File tax return</span>
-        <span class="task-priority">high</span>
-        <button type="button" class="task-done">Done</button>
-      </li>
-      <li class="task" draggable="true" data-priority="normal">
-        <span class="task-title">Book dentist appointment</span>
-        <span class="task-priority">normal</span>
-        <button type="button" class="task-done">Done</button>
-      </li>
-      <li class="task done" draggable="true" data-priority="low">
-        <span class="task-title">Return library books</span>
-        <span class="task-priority">low</span>
-        <button type="button" class="task-done">Done</button>
-      </li>
-      <li class="task" draggable="true" data-priority="normal">
-        <span class="task-title">Water the plants</span>
-        <span class="task-priority">normal</span>
-        <button type="button" class="task-done">Done</button>
-      </li>
-      <li class="task" draggable="true" data-priority="low">
-        <span class="task-title">Sort out the garage</span>
-        <span class="task-priority">low</span>
-        <button type="button" class="task-done">Done</button>
-      </li>
-      <li class="task" draggable="true" data-priority="normal">
-        <span class="task-title">Call the bank</span>
-        <span class="task-priority">normal</span>
-        <button type="button" class="task-done">Done</button>
-      </li>
-    </ul>
-
-    <h2>Notes</h2>
-    <div id="notes" contenteditable="true">Pick up the parcel from the post office on Friday.</div>
-
-    <h2>Attachment</h2>
-    <input type="file" id="attachment" aria-label="Attachment">
-    <p id="attachment-name">No file attached.</p>
-
-    <button type="button" id="toggle-help" aria-expanded="false" aria-controls="help">Show help</button>
-    <div id="help" class="hidden">
-      Type a task and press Enter to add it. Drag tasks to reorder them.
+  <main class="container py-3 py-sm-4">
+    <div class="col-lg-9 col-xl-8 mx-auto">
+      <h1 class="mb-3">Tasks</h1>
+  
+      <form id="new-task" autocomplete="off" class="mb-2">
+        <label for="task-title" class="form-label">New task</label>
+        <div class="d-flex gap-2 mb-2">
+          <input type="text" id="task-title" class="form-control" placeholder="What needs doing?">
+          <button type="submit" id="add-task" class="btn btn-primary" disabled>Add</button>
+        </div>
+        <div class="d-flex align-items-center flex-wrap gap-2 gap-sm-3 mb-2">
+          <select id="task-priority" class="form-select form-select-sm w-auto" aria-label="Priority">
+            <option value="low">Low</option>
+            <option value="normal" selected>Normal</option>
+            <option value="high">High</option>
+          </select>
+          <div class="form-check mb-0">
+            <input type="checkbox" id="task-urgent" class="form-check-input">
+            <label for="task-urgent" class="form-check-label">Urgent</label>
+          </div>
+          <input type="file" id="attachment" class="form-control form-control-sm w-auto" aria-label="Attachment" aria-describedby="attachment-name">
+        </div>
+        <p id="attachment-name" class="form-text text-body-secondary small mb-0">No file attached.</p>
+      </form>
+      <p id="status" role="status" class="small text-body-secondary my-2"></p>
+  
+      <nav class="filters nav nav-pills gap-1 mb-2" aria-label="Filter tasks">
+        <a class="nav-link active py-1" href="#all" aria-current="page">All</a>
+        <a class="nav-link py-1" href="#open">Open</a>
+        <a class="nav-link py-1" href="#done">Done</a>
+      </nav>
+  
+      <div class="task-list-frame border rounded-3 mb-3">
+      <ul class="task-list list-group list-group-flush">
+        <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="high">
+          <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Renew passport</span></div>
+          <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
+          <span class="task-priority badge text-bg-danger">high</span>
+          <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
+        </li>
+        <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="high">
+          <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">File tax return</span></div>
+          <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
+          <span class="task-priority badge text-bg-danger">high</span>
+          <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
+        </li>
+        <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="normal">
+          <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Book dentist appointment</span></div>
+          <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
+          <span class="task-priority badge text-bg-secondary">normal</span>
+          <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
+        </li>
+        <li class="task done list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="low">
+          <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Return library books</span></div>
+          <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
+          <span class="task-priority badge text-bg-secondary">low</span>
+          <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
+        </li>
+        <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="normal">
+          <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Water the plants</span></div>
+          <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
+          <span class="task-priority badge text-bg-secondary">normal</span>
+          <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
+        </li>
+        <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="low">
+          <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Sort out the garage</span></div>
+          <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
+          <span class="task-priority badge text-bg-secondary">low</span>
+          <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
+        </li>
+        <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="normal">
+          <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Call the bank</span></div>
+          <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
+          <span class="task-priority badge text-bg-secondary">normal</span>
+          <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
+        </li>
+      </ul>
+      </div>
+  
+      <div class="d-flex align-items-center justify-content-between">
+        <button type="button" id="toggle-help" class="btn btn-sm btn-outline-secondary" aria-expanded="false" aria-controls="help">Show help</button>
+        <a id="start-over" href="tasks.html" class="small">Start over</a>
+      </div>
+      <div id="help" class="hidden alert alert-info mt-3 mb-0">
+        Type a task and press Enter to add it. Edit a title, mark a task done, or drag tasks to reorder them.
+        Nothing is saved: reload or Start over resets the list.
+      </div>
     </div>
-
-    <p class="footer"><a id="start-over" href="tasks.html">Start over</a></p>
   </main>
 
   <script>
@@ -214,18 +133,30 @@
       add.disabled = title.value.trim() === "";
     });
 
-    function taskItem(text, level) {
+    const attachment = document.getElementById("attachment");
+    const attachmentName = document.getElementById("attachment-name");
+
+    function taskItem(text, level, filename) {
       const li = document.createElement("li");
-      li.className = "task";
+      li.className = "task list-group-item d-flex align-items-center gap-2";
       li.draggable = true;
       li.dataset.priority = level;
       ensureId(li);
       li.innerHTML =
-        '<span class="task-title"></span>' +
-        '<span class="task-priority"></span>' +
-        '<button type="button" class="task-done">Done</button>';
+        '<div class="flex-grow-1 overflow-hidden"><span class="task-title d-block"></span></div>' +
+        '<button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>' +
+        '<span class="task-priority badge"></span>' +
+        '<button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>';
       li.querySelector(".task-title").textContent = text;
-      li.querySelector(".task-priority").textContent = level;
+      const badge = li.querySelector(".task-priority");
+      badge.textContent = level;
+      badge.classList.add(level === "high" ? "text-bg-danger" : "text-bg-secondary");
+      if (filename) {
+        const label = document.createElement("small");
+        label.className = "d-block text-body-secondary text-break";
+        label.textContent = "\u{1F4CE} " + filename;
+        li.querySelector(".task-title").after(label);
+      }
       return li;
     }
 
@@ -236,11 +167,14 @@
       const text = title.value.trim();
       if (text === "") return;
       const level = urgent.checked ? "high" : priority.value;
+      const filename = attachment.files[0]?.name;
+      attachment.value = "";
+      attachmentName.textContent = "No file attached.";
       title.value = "";
       add.disabled = true;
       status.textContent = "Saving\u2026";
       setTimeout(() => {
-        list.prepend(taskItem(text, level));
+        list.prepend(taskItem(text, level, filename));
         status.textContent = "Saved \u201c" + text + "\u201d.";
         applyFilter();
       }, 400);
@@ -251,6 +185,35 @@
         event.target.closest(".task").classList.add("done");
         applyFilter();
       }
+      if (event.target.matches(".task-edit")) {
+        const editable = event.target.closest(".task").querySelector(".task-title");
+        editable.dataset.original = editable.textContent;
+        editable.contentEditable = "true";
+        editable.closest(".task").draggable = false;
+        editable.focus();
+      }
+    });
+
+    list.addEventListener("focusout", (event) => {
+      const editable = event.target;
+      if (!editable.matches('.task-title[contenteditable="true"]')) return;
+      const text = editable.textContent.trim() || editable.dataset.original;
+      if (text !== editable.dataset.original) {
+        status.textContent = "Renamed to \u201c" + text + "\u201d.";
+      }
+      editable.textContent = text;
+      editable.removeAttribute("contenteditable");
+      delete editable.dataset.original;
+      editable.closest(".task").draggable = true;
+    });
+    list.addEventListener("keydown", (event) => {
+      const editable = event.target;
+      if (!editable.matches('.task-title[contenteditable="true"]')) return;
+      if (event.key === "Enter" || event.key === "Escape") {
+        event.preventDefault();
+        if (event.key === "Escape") editable.textContent = editable.dataset.original;
+        editable.blur();
+      }
     });
 
     // Filters live in the URL fragment, so each one is a history entry.
@@ -259,8 +222,10 @@
       for (const a of document.querySelectorAll(".filters a")) {
         if (a.getAttribute("href") === "#" + filter) {
           a.setAttribute("aria-current", "page");
+          a.classList.add("active");
         } else {
           a.removeAttribute("aria-current");
+          a.classList.remove("active");
         }
       }
       for (const li of list.querySelectorAll(".task")) {

@@ -71,6 +71,7 @@ test_that("spotlight dims the visible bottom of a tall document", {
     color_scheme = "light"
   )
   path <- withr::local_tempfile(fileext = ".png")
+  pz_js(page, "document.body.style.minHeight = '840px'")
   doc_height <- pz_js(page, "document.documentElement.scrollHeight")
   expect_gt(doc_height, 800)
   expect_gt(780, doc_height * 0.9)

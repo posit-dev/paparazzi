@@ -101,7 +101,7 @@ page |> pz_stage(pause = NULL)
 # cursor = TRUE shows the cursor in screenshots too
 page |>
   pz_stage(cursor = TRUE) |>
-  pz_hover("#add-task") |>
+  pz_hover("#task-title") |>
   pz_screenshot(file.path(tempdir(), "cursor.png"), target = "#new-task")
 pz_close(page)
 \dontshow{\}) # examplesIf}

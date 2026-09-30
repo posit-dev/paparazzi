@@ -23,9 +23,10 @@ articles. \code{pz_example()} returns the path to one of them, ready to pass to
 \itemize{
 \item \code{"tasks"}: a static task tracker page (an HTML file) with a form, a
 scrollable list of draggable tasks, filter links that change the URL
-fragment, an editable notes area, a file input, a help panel that starts
-hidden, and a "Start over" link that loads the page again. Adding a task
-shows "Saving..." for 400ms before the task appears.
+fragment, inline title editing, an attachment input for new tasks, a
+help panel that starts hidden, and a "Start over" link that loads the
+page again. Adding a task shows "Saving..." for 400ms before the task
+appears.
 \item \code{"tasks-app"}: a Shiny app directory with a text input, a selectize
 priority input, an Add button, and a task list whose output takes half
 a second to render. Running it requires the shiny package.
