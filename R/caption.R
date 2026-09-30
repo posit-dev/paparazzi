@@ -240,12 +240,12 @@ caption_windows <- function(rec, sampled) {
         function(event) event$vt <= vt + 1e-9,
         logical(1)
       ))
-      if (length(matches)) tail(matches, 1L) else 0L
+      if (length(matches)) utils::tail(matches, 1L) else 0L
     },
     integer(1)
   )
   runs <- rle(active)
-  starts <- cumsum(c(1L, head(runs$lengths, -1L)))
+  starts <- cumsum(c(1L, utils::head(runs$lengths, -1L)))
   windows <- lapply(which(runs$values > 0), function(i) {
     index <- runs$values[[i]]
     list(
