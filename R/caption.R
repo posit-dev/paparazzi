@@ -173,7 +173,7 @@ key_callout_render <- function(
     "gap:(6*c.scale)+'px',fontFamily:'sans-serif',",
     "fontSize:(18*c.scale)+'px',color:'white'});",
     "c.groups.forEach((group,i)=>{",
-    "if(i){const arrow=document.createElement('span');arrow.textContent='→';",
+    "if(i){const arrow=document.createElement('span');arrow.textContent='\u2192';",
     "row.appendChild(arrow)}",
     "const chord=document.createElement('span');",
     "Object.assign(chord.style,{display:'inline-flex',flexWrap:'wrap',",
