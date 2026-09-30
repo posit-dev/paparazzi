@@ -1249,6 +1249,106 @@ test_that("pz_act_drag routes an HTML5 source through the drag pipeline", {
   expect_true(drops$isTrusted)
 })
 
+test_that("pz_act_drag glides the cursor while holding an HTML5 drag when recording", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(pause = 0)
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+  defer_record_stop(page)
+
+  # Cursor pre-placed on the source, so the timed stretch is the carry,
+  # not the approach glide.
+  page |> pz_cursor_move("#draggable", duration = 0)
+  t0 <- proc.time()[["elapsed"]]
+  pz_act_drag(page, "#draggable", "#dropzone")
+  recorded <- proc.time()[["elapsed"]] - t0
+
+  # The drop still lands with the page's payload.
+  expect_equal(
+    pz_js(page, "document.getElementById('dropzone').textContent"),
+    "got:payload-123"
+  )
+  # The carry is staged: the press beats plus the holding glide (the
+  # staged glide floor is 0.5s) on top of the dispatch.
+  expect_true(recorded >= 1)
+  # The overlay cursor ends on the drop point.
+  state <- cursor_overlay_state(page)
+  drop <- unlist(pz_js(
+    page,
+    paste(
+      "(() => { const r = document.getElementById('dropzone').getBoundingClientRect();",
+      "return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+    )
+  ))
+  expect_lt(abs(state[[2]] - drop[[1]]), 2)
+  expect_lt(abs(state[[3]] - drop[[2]]), 2)
+  pz_record_stop(page)
+})
+
+test_that("pz_act_drag glides the cursor while holding a mouse drag when recording", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(pause = 0)
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+  defer_record_stop(page)
+
+  page |> pz_cursor_move("#dragbox", duration = 0)
+  t0 <- proc.time()[["elapsed"]]
+  pz_act_drag(page, "#dragbox", "#dropzone")
+  recorded <- proc.time()[["elapsed"]] - t0
+
+  # The box follows the pointer while held, so it ends on the zone.
+  centers <- function(sel) {
+    unlist(pz_js(
+      page,
+      paste0(
+        "(() => { const r = document.querySelector('",
+        sel,
+        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+      )
+    ))
+  }
+  box <- centers("#dragbox")
+  zone <- centers("#dropzone")
+  expect_lt(abs(box[[1]] - zone[[1]]), 2)
+  expect_lt(abs(box[[2]] - zone[[2]]), 2)
+  expect_true(recorded >= 1)
+  # The overlay cursor ends on the drop point.
+  state <- cursor_overlay_state(page)
+  expect_lt(abs(state[[2]] - zone[[1]]), 2)
+  expect_lt(abs(state[[3]] - zone[[2]]), 2)
+  pz_record_stop(page)
+})
+
+test_that("without a recording both drag paths stay instant", {
+  page <- local_advanced_page()
+  pauses <- numeric()
+  local_mocked_bindings(
+    pump_loop = function(loop, duration, ...) {
+      pauses <<- c(pauses, duration)
+    }
+  )
+  # HTML5 first: the mouse drag parks #dragbox over #dropzone, which
+  # would then block the HTML5 drag's destination probe.
+  pz_act_drag(page, "#draggable", "#dropzone")
+  pz_act_drag(page, "#dragbox", "#dropzone")
+  expect_length(pauses, 0L)
+  expect_equal(
+    pz_js(page, "document.getElementById('dropzone').textContent"),
+    "got:payload-123"
+  )
+})
+
 test_that("pz_act_drag validates its input and errors on multiple matches", {
   page <- local_advanced_page()
   expect_error(pz_act_drag(page, "#dragbox"), class = "paparazzi_error_input")
