@@ -56,7 +56,7 @@ NULL
 #' pz_frame(ratio = 16/9, pad = 24, anchor = "top")
 #' pz_frame(".task-list", ratio = 4/3, bounds = "main")
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tasks.png")
 #'
@@ -139,7 +139,7 @@ print.paparazzi_frame <- function(x, ...) {
 #'
 #' @seealso [pz_stage()], [pz_stage_annotate()], [pz_frame()], [pz_screenshot()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tasks.png")
 #'

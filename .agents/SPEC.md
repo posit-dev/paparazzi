@@ -460,7 +460,7 @@ Robustness:
 
 ### Camera, annotations, and captions
 
-Video-editor features for recordings and annotated stills. Design discussion, rationale and probe notes are on kata `1a3m`; the full idea backlog is on `54b1`. Implemented; per-feature mechanism decisions are in comments on the corresponding kata issues.
+Video-editor features for recordings and annotated stills. Design discussion, rationale and probe notes are on kata `1a3m`; the full idea backlog is on `54b1`. Implemented; per-feature mechanism decisions are in kata comments on `40bm`, `7sq5`, `gdjm`, `m6kv`, `mkns`, `b0y7`, `3t7j`, `0rdt`, `aq35`, and `51my`.
 
 There are two families, split by where the effect shows up, paired with persistent page defaults in `pz_stage()` or `pz_stage_annotate()` (like `pz_cursor_*()` with `pz_stage(cursor_*)`):
 

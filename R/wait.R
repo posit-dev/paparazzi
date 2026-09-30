@@ -9,7 +9,7 @@
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # A fixed pause; prefer an expectation or wait_for function when you
@@ -38,7 +38,7 @@ pz_wait <- function(ctx, seconds) {
 #' @inheritParams pz_wait_for_js
 #' @return `ctx`, invisibly.
 #' @seealso [pz_open()]
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")
+#' @examplesIf paparazzi:::examples_run("shiny")
 #' page <- pz_open(pz_example("tasks-app"))
 #'
 #' # Clicking Add makes the server re-render the task list, which takes a moment
@@ -158,7 +158,7 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
 #'
 #' @return `ctx`, invisibly.
 #' @seealso [pz_wait_for_stable()], [pz_wait_for_navigation()]
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_type("Buy milk", target = "#task-title") |>
@@ -219,7 +219,7 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
 #'
 #' @return `ctx`, invisibly.
 #' @seealso [pz_wait_for_js()], [pz_wait_for_navigation()]
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # The status line reads "Saving..." and then "Saved"; wait for it to settle
@@ -338,7 +338,7 @@ pz_wait_for_stable <- function(
 #'
 #' @return `ctx`, invisibly, with the scope reset to the root.
 #' @seealso [pz_find_reset()], [pz_wait_for_js()], [pz_wait_for_stable()]
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_click(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank")))
 #' pz_get_count(page, target = ".task.done")

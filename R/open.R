@@ -38,7 +38,7 @@
 #' with [chromote::set_chrome_args()]. A default set with
 #' [chromote::set_default_chromote_object()] is used as-is.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' # A local HTML file opens as a file:// URL
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_url(page)
@@ -49,7 +49,7 @@
 #' pz_js(phone, "window.innerWidth")
 #' pz_close(phone)
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")
+#' @examplesIf paparazzi:::examples_run("shiny")
 #' # An app directory runs in a background R process that the page owns.
 #' # pz_open() returns once Shiny has connected and gone idle.
 #' page <- pz_open(pz_example("tasks-app"))
@@ -169,7 +169,7 @@ pz_open <- function(
 #'
 #' @return The page, invisibly.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' pz_close(page)
 #'
@@ -212,7 +212,7 @@ pz_close <- function(page) {
 #' @return [pz_with_page()] returns the page invisibly; [pz_local_page()]
 #'   returns it visibly.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' path <- file.path(tempdir(), "task-list.png")
 #'
 #' # The page closes when the function returns, even if it errors

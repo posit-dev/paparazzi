@@ -34,7 +34,7 @@ already-open page or anything \code{\link[=pz_open]{pz_open()}} accepts, and alw
 exit: the block owns the resource.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 path <- file.path(tempdir(), "task-list.png")
 
 # The page closes when the function returns, even if it errors

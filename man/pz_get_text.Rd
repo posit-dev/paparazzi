@@ -28,7 +28,7 @@ collapsed to single spaces and trimmed, matching \code{\link[=pz_expect_text]{pz
 \code{raw = TRUE} returns the text exactly as the browser holds it.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 pz_get_text(page, target = "h1")
 

@@ -28,7 +28,7 @@
 #'
 #' @seealso [pz_hover()], [pz_type()], [pz_press()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_click("#toggle-help")
 #' pz_get_text(page, target = "#toggle-help")
@@ -70,7 +70,7 @@ pz_click <- function(ctx, target = NULL, ...) {
 #'
 #' @seealso [pz_click()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' passport <- pz_loc(".task", has_text = "passport")
 #'
@@ -137,7 +137,7 @@ pz_hover <- function(ctx, target = NULL, ...) {
 #' @seealso [pz_press()] for key combos (Enter, Control+A, ...) and
 #'   [pz_click()].
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_type("Buy milk", target = "#task-title")
 #' pz_get_value(page, target = "#task-title")
@@ -236,7 +236,7 @@ pz_type <- function(ctx, text, ..., target = NULL) {
 #'
 #' @seealso [pz_type()] to insert text.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_type("Buy milkk", target = "#task-title") |>
@@ -331,7 +331,7 @@ pz_press <- function(ctx, key, ..., show_keys = NULL) {
 #'
 #' @seealso [pz_blur()], [pz_type()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_focus("#task-title")
 #' pz_expect_focused(page, target = "#task-title")
@@ -367,7 +367,7 @@ pz_focus <- function(ctx, target = NULL, ...) {
 #'
 #' @seealso [pz_focus()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_focus("#task-title")
 #'
@@ -428,7 +428,7 @@ pz_blur <- function(ctx, ...) {
 #' @seealso [pz_type()] for visible, keystroke-by-keystroke input and
 #'   [pz_set_files()].
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_set_value("Buy milk", target = "#task-title") |>
@@ -489,7 +489,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
 #'
 #' @seealso [pz_set_value()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' notes <- file.path(tempdir(), "meeting-notes.txt")
 #' writeLines("Agenda: plants, parcel, passport", notes)
 #'
@@ -571,7 +571,7 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 #'
 #' @seealso [pz_type()], [pz_set_value()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Typing replaces the selection
@@ -658,7 +658,7 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
 #'
 #' @seealso [pz_find()], [pz_click()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"), height = 600)
 #'
 #' # With a target, scroll it into view
@@ -795,7 +795,7 @@ pz_scroll <- function(
 #'
 #' @seealso [pz_click()], [pz_hover()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_text(page, target = ".task-title")
 #'

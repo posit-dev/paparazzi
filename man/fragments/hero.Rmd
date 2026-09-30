@@ -55,7 +55,7 @@ pz_close(page)
 
 ```{r}
 #| echo: false
-#| results: asis
+#| fig.alt: "A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Check it off when you're done, the cursor clicks the task's Done button and the task is crossed out."
 
 path <- if (identical(Sys.getenv("IN_INDEX", ""), "true")) {
   "images/readme-hero-1.gif"
@@ -63,11 +63,7 @@ path <- if (identical(Sys.getenv("IN_INDEX", ""), "true")) {
   "https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-hero-1.gif"
 }
 
-cat(sprintf(
-  '<img src="%s" alt="%s" />',
-  path,
-  "A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Check it off when you&#39;re done, the cursor clicks the task&#39;s Done button and the task is crossed out."
-))
+knitr::include_graphics(path, error = FALSE)
 ```
 
 

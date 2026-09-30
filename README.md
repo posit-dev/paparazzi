@@ -10,7 +10,7 @@
 **Polished demo videos and screenshots of anything that runs in a
 browser, written as R scripts.**
 
-<img src="https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-hero-1.gif" alt="A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Check it off when you&#39;re done, the cursor clicks the task&#39;s Done button and the task is crossed out." />
+<img src="https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-hero-1.gif" alt="A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Check it off when you're done, the cursor clicks the task's Done button and the task is crossed out."  />
 
 That video came from the short R script shown below. paparazzi opened
 the page in a headless Chrome browser and did what the script said. The
@@ -179,7 +179,7 @@ so it stays hidden from the very first frame.
 Screenshots use the same annotations and framing. Here’s the task
 tracker on a phone in dark mode, with a callout:
 
-<img src="https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-phone-1.png" alt="The task tracker on a narrow phone screen in dark mode. A red-bordered callout under the first task's Done button reads Tap Done to finish a task." />
+<img src="https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-phone-1.png" alt="The task tracker on a narrow phone screen in dark mode. A red-bordered callout under the first task's Done button reads Tap Done to finish a task." width="300px" />
 
 Like the recording, a screenshot at the end of a knitted chunk becomes a
 figure in the document.

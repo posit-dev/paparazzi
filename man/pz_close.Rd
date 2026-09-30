@@ -20,7 +20,7 @@ stops that app. A page opened from a shared \code{\link[=pz_app]{pz_app()}} hand
 app running. Idempotent; closing an already-closed page is a no-op.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 pz_close(page)
 

@@ -32,7 +32,7 @@ There is deliberately no element-state wait (\code{pz_wait_for(target, state =)}
 \code{\link[=pz_expect_exists]{pz_expect_exists()}} with \code{not = TRUE} already retry, so they wait.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
   pz_type("Buy milk", target = "#task-title") |>

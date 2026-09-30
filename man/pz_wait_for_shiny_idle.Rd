@@ -25,7 +25,7 @@ transitions. A page without the Shiny global errors instead of waiting;
 a page whose Shiny app never connects times out.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run("shiny")) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks-app"))
 
 # Clicking Add makes the server re-render the task list, which takes a moment
