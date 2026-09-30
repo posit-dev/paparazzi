@@ -351,6 +351,7 @@ pz_act_focus <- function(ctx, target = NULL, ...) {
     found$els,
     "function() { if (this.length) this[0].focus(); }"
   )
+  stage_action_pause(ctx)
   ctx_return(ctx)
 }
 
@@ -400,6 +401,7 @@ pz_act_blur <- function(ctx, ...) {
       )
     )
   }
+  stage_action_pause(ctx)
   ctx_return(ctx)
 }
 

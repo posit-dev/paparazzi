@@ -618,6 +618,51 @@ test_that("the stage pause holds after each action only while recording", {
   expect_equal(pz_js(page2, "window.__log.clicks"), 1)
 })
 
+test_that("the stage pause holds after focus and root or scoped blur", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |> pz_stage(pause = 0.5)
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_act_focus("#name")
+  t_focus <- proc.time()[["elapsed"]] - t0
+  expect_true(pz_js(page, "document.activeElement.id === 'name'"))
+
+  t0 <- proc.time()[["elapsed"]]
+  page |> pz_act_blur()
+  t_blur <- proc.time()[["elapsed"]] - t0
+  expect_false(pz_js(page, "document.activeElement.id === 'name'"))
+
+  field <- pz_find(page, "#name")
+  field |> pz_act_focus()
+  t0 <- proc.time()[["elapsed"]]
+  field |> pz_act_blur()
+  t_scoped_blur <- proc.time()[["elapsed"]] - t0
+  page |> pz_record_stop()
+
+  expect_true(t_focus >= 0.45)
+  expect_true(t_blur >= 0.45)
+  expect_true(t_scoped_blur >= 0.45)
+
+  pauses <- numeric()
+  local_mocked_bindings(
+    pump_loop = function(loop, duration, ...) {
+      pauses <<- c(pauses, duration)
+    }
+  )
+  page |> pz_act_focus("#name")
+  page |> pz_act_blur()
+  field |> pz_act_focus()
+  field |> pz_act_blur()
+  expect_length(pauses, 0)
+})
+
 test_that("the stage pause holds after press, select_text, and drag too", {
   skip_if_no_av()
   page <- local_cursor_page()
