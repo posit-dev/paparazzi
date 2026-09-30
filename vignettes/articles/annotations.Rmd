@@ -149,11 +149,11 @@ page |> pz_annotate_clear(id = "spotlight")
 
 [`pz_annotate_redact()`](../reference/pz_annotate_redact.html) covers elements so their contents don't reach the screenshot or recording. `method = "fill"` (the default) paints an opaque cover, near-black unless you pass a `color`:
 
-```{r redact-fill, fig.alt = "The notes area covered by a solid near-black bar."}
-page |> pz_annotate_redact("#notes", method = "fill")
+```{r redact-fill, fig.alt = "The high-priority task titles covered by solid near-black bars."}
+page |> pz_annotate_redact('[data-priority="high"] .task-title', method = "fill")
 page |>
   pz_screenshot(
-    target = "#notes",
+    target = '[data-priority="high"] .task-title',
     frame = pz_frame(pad = 24, target_box = "annotated")
   )
 page |> pz_annotate_clear()
@@ -161,11 +161,11 @@ page |> pz_annotate_clear()
 
 `method = "blur"` blurs what's underneath instead:
 
-```{r redact-blur, fig.alt = "The notes area blurred so the text is unreadable but its shape is visible."}
-page |> pz_annotate_redact("#notes", method = "blur")
+```{r redact-blur, fig.alt = "The high-priority task titles blurred so the text is unreadable but its shape is visible."}
+page |> pz_annotate_redact('[data-priority="high"] .task-title', method = "blur")
 page |>
   pz_screenshot(
-    target = "#notes",
+    target = '[data-priority="high"] .task-title',
     frame = pz_frame(pad = 24, target_box = "annotated")
   )
 page |> pz_annotate_clear()

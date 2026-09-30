@@ -41,9 +41,13 @@ page <- pz_open(pz_example("tasks"))
 
 # Typing replaces the selection
 page |>
-  pz_select_text("Friday", target = "#notes") |>
-  pz_type("Saturday")
-pz_get_text(page, target = "#notes")
+  pz_find(pz_loc(".task", has_text = "Renew passport")) |>
+  pz_click(".task-edit") |>
+  pz_find(".task-title") |>
+  pz_select_text("passport") |>
+  pz_type("driving licence") |>
+  pz_press("Enter") |>
+  pz_get_text()
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }
