@@ -17,13 +17,24 @@ test_that("camera shot includes a callout only with explicit annotated target bo
     side = "right",
     reveal = "none"
   )
-  expect_error(pz_camera(page, "#shot", target_box = "all"), "annotated")
-  pz_camera(page, "#shot", pad = 0, duration = 0)
+  expect_error(
+    pz_camera(page, pz_frame("#shot", target_box = "all")),
+    "annotated"
+  )
+  pz_camera(page, pz_frame("#shot", pad = 0), duration = 0)
   rec <- page_recorder(page)
   expect_equal(rec$camera[[1]]$box, c(220, 180, 300, 220))
-  pz_camera(page, "#shot", pad = 0, duration = 0, target_box = "annotated")
+  pz_camera(
+    page,
+    pz_frame("#shot", pad = 0, target_box = "annotated"),
+    duration = 0
+  )
   expect_gt(rec$camera[[2]]$box[3], 300)
-  pz_camera(page, "#shot", pad = 0, duration = 0, target_box = "element")
+  pz_camera(
+    page,
+    pz_frame("#shot", pad = 0, target_box = "element"),
+    duration = 0
+  )
   expect_equal(rec$camera[[3]]$box, c(220, 180, 300, 220))
   pz_record_stop(page)
 })
@@ -79,11 +90,11 @@ test_that("camera calls are no-ops outside recording and reset with the recorder
   skip_if_no_av()
   page <- local_record_page()
   expect_identical(
-    withVisible(pz_camera(page, "#missing", zoom = 2))$value,
+    withVisible(pz_camera(page, pz_frame("#missing", zoom = 2)))$value,
     page
   )
-  expect_error(pz_camera(page, "#missing", zoom = -1), "zoom")
-  expect_error(pz_camera(page, "#missing", zoom = Inf), "zoom")
+  expect_error(pz_camera(page, pz_frame("#missing", zoom = -1)), "zoom")
+  expect_error(pz_camera(page, pz_frame("#missing", zoom = Inf)), "zoom")
   expect_error(pz_camera(page, "#missing", duration = Inf), "duration")
   pz_js(
     page,
@@ -92,14 +103,14 @@ test_that("camera calls are no-ops outside recording and reset with the recorder
   gone <- pz_find(page, "#gone")
   pz_js(page, "document.getElementById('gone').remove()")
   expect_identical(pz_camera(gone), gone)
-  expect_error(pz_camera(page), "target")
+  expect_error(pz_camera(page), "absent")
   expect_identical(withVisible(pz_camera_reset(page))$value, page)
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, out, hold = c(0, 0))
   defer_record_stop(page)
-  expect_error(pz_camera(page), "target")
-  expect_error(pz_camera(page, "#box", zoom = 0), "zoom")
-  pz_camera(page, "#box", zoom = 2, duration = 0)
+  expect_error(pz_camera(page), "absent")
+  expect_error(pz_camera(page, pz_frame("#box", zoom = 0)), "zoom")
+  pz_camera(page, pz_frame("#box", zoom = 2), duration = 0)
   expect_length(page_recorder(page)$camera, 1)
   expect_equal(page_recorder(page)$camera[[1]]$box, c(16, 6, 164, 114))
   suppressWarnings(pz_record_stop(page))
@@ -121,7 +132,7 @@ test_that("camera zoom and reset change MP4 and GIF content, not dimensions", {
     out <- withr::local_tempfile(fileext = paste0(".", ext))
     pz_record_start(page, out, fps = 10, hold = c(0.2, 0.2))
     defer_record_stop(page)
-    pz_camera(page, "#red", zoom = 2, duration = 0.2)
+    pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.2)
     pz_wait(page, 0.25)
     pz_camera_reset(page)
     pz_wait(page, 0.2)
@@ -152,7 +163,7 @@ test_that("camera shot tracks page target after a scrolled poll capture", {
   pz_record_start(page, out, fps = 10, hold = c(0, 0))
   defer_record_stop(page)
   pz_js(page, "window.scrollTo(0,500)")
-  pz_camera(page, "#red", zoom = 2, duration = 0.1)
+  pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.1)
   pz_wait(page, 0.15)
   suppressWarnings(pz_record_stop(page))
   decoded <- tempfile("camera-scrolled-")
@@ -184,7 +195,7 @@ test_that("framed camera uses final home, scale and each method's capture densit
       hold = c(0.2, 0.2)
     )
     defer_record_stop(page)
-    pz_camera(page, "#red", zoom = 2, duration = 0.15)
+    pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.15)
     pz_wait(page, 0.25)
     pz_js(page, "document.getElementById('home').style.width = '480px'")
     pz_camera_reset(page)
@@ -456,7 +467,7 @@ test_that("follow keyframes share the pointer glide and skip in-shot actions", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_camera(page, "#a", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#a", zoom = 2), duration = 0)
   pz_act_hover(page, "#a")
   expect_length(rec$camera, 1)
   start <- rec_vt(rec)
@@ -477,7 +488,7 @@ test_that("follow keyframes share the pointer glide and skip in-shot actions", {
   pz_act_click(page, "#a")
   expect_length(rec$camera, 2)
   pz_stage(page, camera_follow = NULL, cursor = FALSE)
-  pz_camera(page, "#a", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#a", zoom = 2), duration = 0)
   before <- rec_vt(rec)
   pz_act_type(page, "hi", target = "#field")
   expect_length(rec$camera, 4)
@@ -498,7 +509,7 @@ test_that("auto-scroll follow uses the resolved post-scroll target", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   pz_act_hover(page, "#far")
   expect_gt(pz_js(page, "window.scrollY"), 400)
   move <- tail(rec$camera, 1)[[1]]
@@ -521,7 +532,7 @@ test_that("first appearance follows during fade; home and reads do not", {
   rec <- page_recorder(page)
   pz_act_hover(page, "#a")
   expect_length(rec$camera, 0)
-  pz_camera(page, "#a", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#a", zoom = 2), duration = 0)
   pz_get_text(page, "#b")
   pz_expect_text(page, "B", target = "#b")
   pz_wait(page, 0.01)
@@ -542,7 +553,7 @@ test_that("first appearance follows during fade; home and reads do not", {
   )
   defer_record_stop(page2)
   rec2 <- page_recorder(page2)
-  pz_camera(page2, "#a", zoom = 2, duration = 0)
+  pz_camera(page2, pz_frame("#a", zoom = 2), duration = 0)
   pz_act_hover(page2, "#b")
   expect_length(rec2$camera, 2)
   expect_equal(rec2$camera[[2]]$end - rec2$camera[[2]]$start, 0.3)
@@ -559,17 +570,17 @@ test_that("selection and focused typing follow without a pointer glide", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   pz_act_select_text(page, "far", target = "#far")
   expect_length(rec$camera, 2)
   expect_true(rec$camera[[2]]$follow)
   expect_equal(rec$camera[[2]]$end - rec$camera[[2]]$start, 0.5)
-  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   scoped <- pz_find(page, "#far")
   pz_act_type(scoped, "new")
   expect_length(rec$camera, 4)
   expect_true(rec$camera[[4]]$follow)
-  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   pz_act_type(page, "!")
   expect_length(rec$camera, 6)
   expect_true(rec$camera[[6]]$follow)
@@ -587,7 +598,7 @@ test_that("paused follow, manual camera, and reset moves are instant without pum
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   pz_record_pause(page)
   frozen <- rec_vt(rec)
   pumped <- numeric()
@@ -727,7 +738,7 @@ test_that("camera moves wait only when asked; holds and stops let them land", {
   rec <- page_recorder(page)
   pumped <- numeric()
   testthat::with_mocked_bindings(
-    pz_camera(page, "#near", zoom = 2, duration = 0.8),
+    pz_camera(page, pz_frame("#near", zoom = 2), duration = 0.8),
     pump_loop = function(loop, seconds) {
       pumped <<- c(pumped, seconds)
     }
@@ -741,7 +752,7 @@ test_that("camera moves wait only when asked; holds and stops let them land", {
   expect_gte(reset$start, zoom$end - 0.05)
   expect_gte(rec_vt(rec), reset$end - 0.05)
 
-  pz_camera(page, "#near", zoom = 2, duration = 0.5)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0.5)
   move <- rec$camera[[3]]
   pz_record_hold(page, 1)
   expect_gte(rec$holds[[1]]$vt, move$end - 0.05)
@@ -766,20 +777,20 @@ test_that("camera calls settle earlier moves and keyframe non-moves", {
   defer_record_stop(page)
   rec <- page_recorder(page)
 
-  pz_camera(page, "#near", zoom = 2, duration = 0.6)
-  pz_camera(page, "#far", zoom = 2, duration = 0.6)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0.6)
+  pz_camera(page, pz_frame("#far", zoom = 2), duration = 0.6)
   expect_length(rec$camera, 2)
   expect_gte(rec$camera[[2]]$start, rec$camera[[1]]$end - 0.05)
 
   # Already there: an instantaneous keyframe records the anchor without pumping.
-  pz_camera(page, "#far", zoom = 2)
+  pz_camera(page, pz_frame("#far", zoom = 2))
   expect_length(rec$camera, 3)
   expect_equal(rec$camera[[3]]$end, rec$camera[[3]]$start)
 
   # With a duration, staying put is a still keyframe that can be waited on.
   pumped <- numeric()
   testthat::with_mocked_bindings(
-    pz_camera(page, "#far", zoom = 2, duration = 0.7, wait = TRUE),
+    pz_camera(page, pz_frame("#far", zoom = 2), duration = 0.7, wait = TRUE),
     pump_loop = function(loop, seconds) {
       pumped <<- c(pumped, seconds)
     }
@@ -805,20 +816,20 @@ test_that("follow tests the shot when the action lands", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_camera(page, "#near", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   # Landing after the move ends: the move already frames the target.
-  pz_camera(page, "#far", zoom = 2, duration = 0.3)
+  pz_camera(page, pz_frame("#far", zoom = 2), duration = 0.3)
   pz_act_hover(page, "#far")
   expect_length(rec$camera, 2)
   # In the shot now, but the move pans away before the action lands.
-  pz_camera(page, "#far", zoom = 2, duration = 0)
-  pz_camera(page, "#near", zoom = 2, duration = 0.4)
+  pz_camera(page, pz_frame("#far", zoom = 2), duration = 0)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0.4)
   pz_act_hover(page, "#far")
   expect_length(rec$camera, 5)
   expect_true(rec$camera[[5]]$follow)
   # Landing early in a long move toward the target: leave it alone.
-  pz_camera(page, "#near", zoom = 2, duration = 0)
-  pz_camera(page, "#far", zoom = 2, duration = 3)
+  pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
+  pz_camera(page, pz_frame("#far", zoom = 2), duration = 3)
   pz_act_hover(page, "#far")
   expect_length(rec$camera, 7)
   suppressWarnings(pz_record_stop(page))
@@ -835,14 +846,14 @@ test_that("a clamped same-viewport keyframe changes the later scroll anchor", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_camera(page, "#first", zoom = 2, pad = 0, duration = 0)
+  pz_camera(page, pz_frame("#first", zoom = 2, pad = 0), duration = 0)
   home <- c(0, 0, 800, 600)
   before <- camera_viewport(
     as.numeric(camera_at(rec$camera, rec_vt(rec), home, 2)),
     c(0, 0),
     home
   )
-  pz_camera(page, "#beyond", zoom = 2, pad = 0)
+  pz_camera(page, pz_frame("#beyond", zoom = 2, pad = 0))
   expect_length(rec$camera, 2)
   expect_equal(rec$camera[[2]]$end, rec$camera[[2]]$start)
   expect_equal(rec$camera[[2]]$box, c(760, 560, 800, 600))
@@ -862,7 +873,7 @@ test_that("a clamped same-viewport keyframe changes the later scroll anchor", {
   ) +
     rep(scroll, 2)
   expect_equal(as.numeric(anchor), camera_shot(rec$camera[[2]]$box, home, 2, 2))
-  pz_camera(page, "#next", zoom = 2, pad = 0, duration = 0.5)
+  pz_camera(page, pz_frame("#next", zoom = 2, pad = 0), duration = 0.5)
   expect_equal(rec$camera[[3]]$scroll, scroll)
   expect_equal(
     as.numeric(camera_at(rec$camera, rec$camera[[3]]$start, home, 2)),
@@ -879,12 +890,12 @@ test_that("repeated target and reset add no camera time or settle pump", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_camera(page, "#box", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#box", zoom = 2), duration = 0)
   pumped <- numeric()
   before <- rec_vt(rec)
   testthat::with_mocked_bindings(
     {
-      pz_camera(page, "#box", zoom = 2, wait = TRUE)
+      pz_camera(page, pz_frame("#box", zoom = 2), wait = TRUE)
       camera_settle(page$page, rec)
     },
     pump_loop = function(loop, seconds) pumped <<- c(pumped, seconds)
@@ -918,7 +929,7 @@ test_that("a repeated reset after a page scroll records its new anchor", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_camera(page, "#a", zoom = 2, duration = 0)
+  pz_camera(page, pz_frame("#a", zoom = 2), duration = 0)
   pz_camera_reset(page)
   n <- length(rec$camera)
   pz_js(page, "window.scrollTo(0, 400)")
@@ -929,10 +940,105 @@ test_that("a repeated reset after a page scroll records its new anchor", {
   suppressWarnings(pz_record_stop(page))
 })
 
-test_that("camera padding rejects NULL even without a recording", {
-  page <- local_page()
-  expect_error(pz_camera(page, "body", pad = NULL), "pad.*NULL")
-  expect_invisible(pz_camera(page, "body"))
-  expect_invisible(pz_camera(page, "body", pad = 24))
-  expect_equal(formals(pz_camera)$pad, 24)
+test_that("camera shots place the padded target by anchor", {
+  home <- c(0, 0, 800, 600)
+  box <- c(395, 290, 405, 310)
+  # Center (the default) keeps the historical behavior.
+  expect_equal(
+    camera_shot(box, home, zoom = 2, density = 1),
+    c(200, 150, 600, 450)
+  )
+  # A side anchor pins the target to that edge of the shot.
+  expect_equal(
+    camera_shot(box, home, zoom = 2, density = 1, anchor = "left"),
+    c(395, 150, 795, 450)
+  )
+  expect_equal(
+    camera_shot(box, home, zoom = 2, density = 1, anchor = c("left", "top")),
+    c(395, 290, 795, 590)
+  )
+  # Fit grows by the anchor too: 10x20 fit to 4:3 grows right only.
+  expect_equal(
+    camera_shot(box, home, zoom = NULL, density = 100, anchor = "left"),
+    c(395, 290, 395 + 80 / 3, 310)
+  )
+})
+
+test_that("camera shots ignore the staged frame and use camera defaults", {
+  skip_if_no_av()
+  page <- local_record_page()
+  # The staged recipe must not leak into camera shots: the pad is the
+  # camera default 24, not the staged 96.
+  pz_stage_frame(page, "#box", pad = 96, target_box = "annotated")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+
+  pz_camera(page, "#box", duration = 0)
+  move <- page_recorder(page)$camera[[1]]
+  # #box (40, 30) 100x60 + 24 pad, unpolluted by the staged recipe
+  expect_equal(move$box, c(16, 6, 164, 114))
+  pz_record_stop(page)
+})
+
+test_that("camera warns on explicit ratio and when, only when set", {
+  skip_if_no_av()
+  page <- local_record_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+
+  expect_warning(pz_camera(page, pz_frame("#box", ratio = 2)), "ratio")
+  expect_warning(pz_camera(page, pz_frame("#box", when = "start")), "when")
+  expect_no_warning(pz_camera(page, "#box", duration = 0))
+  expect_no_warning(pz_camera(page, pz_frame("#box", pad = 8), duration = 0))
+  pz_record_stop(page)
+})
+
+test_that("a missing or NULL camera frame errors at the root", {
+  page <- local_record_page()
+
+  expect_error(pz_camera(page), "absent")
+  expect_error(pz_camera(page, frame = NULL), "absent")
+  expect_error(pz_camera(page), "pz_camera_reset")
+})
+
+test_that("a missing camera frame shoots the scope box when scoped", {
+  skip_if_no_av()
+  page <- local_record_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+
+  pz_find(page, "#box") |> pz_camera(duration = 0)
+  move <- page_recorder(page)$camera[[1]]
+  # #box (40, 30) 100x60 + camera default pad 24
+  expect_equal(move$box, c(16, 6, 164, 114))
+  pz_record_stop(page)
+})
+
+test_that("frame = FALSE shoots the unframed scope box or viewport", {
+  skip_if_no_av()
+  page <- local_record_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+  view <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+
+  # FALSE at the root: the viewport, unframed (no pad)
+  pz_camera(page, frame = FALSE, duration = 0)
+  expect_equal(page_recorder(page)$camera[[1]]$box, c(0, 0, view))
+  # FALSE scoped: the scope box, unframed
+  pz_find(page, "#box") |> pz_camera(frame = FALSE, duration = 0)
+  expect_equal(page_recorder(page)$camera[[2]]$box, c(40, 30, 140, 90))
+  pz_record_stop(page)
+})
+
+test_that("removed camera arguments error", {
+  page <- local_record_page()
+
+  expect_error(pz_camera(page, "#box", zoom = 2), "empty")
+  expect_error(pz_camera(page, "#box", pad = 0), "empty")
+  expect_error(pz_camera(page, "#box", target_box = "element"), "empty")
+  expect_error(pz_camera(page, target = "#box"), "empty")
 })

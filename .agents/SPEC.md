@@ -44,15 +44,19 @@ Known bugs to fix while porting:
 - `...` separates positional inputs from named-only options where it is checked empty. In `pz_expect_attr()` and `pz_expect_style()`, it instead carries named attribute/style pairs; dot-prefixed control arguments (`.target`, `.match`, `.not`, `.timeout`, `.normalize`) avoid collisions with pair names. `pz_open()` forwards its dots to `pz_device()`. All other dots are checked empty with `rlang::check_dots_empty()`.
 - `target = NULL` means **the current context**:
 
-  | Context | click / hover | type / press | screenshot |
-  |---|---|---|---|
-  | Scoped | the scope element | the scope element | the scope's box |
-  | Root | error: needs a target | the focused element | viewport |
+  | Context | click / hover | type / press |
+  |---|---|---|
+  | Scoped | the scope element | the scope element |
+  | Root | error: needs a target | the focused element |
+
+  Captures have no `target`: `pz_screenshot()` and `pz_camera()` take a
+  `frame` instead (see Framing), and a missing frame captures the
+  scope's box, or the viewport at the root.
 
 ```r
 pz_act_click(ctx, target = NULL, ...)
 pz_act_type(ctx, text, ..., target = NULL)
-pz_screenshot(ctx, path = NULL, ..., target = NULL, frame = NULL)
+pz_screenshot(ctx, path = NULL, ..., frame = NULL)
 # path may be omitted while knitting (numbered PNG in the chunk's figure directory)
 # or at an interactive console (temporary PNG preview); otherwise it is required.
 pz_set_files(ctx, files, ..., target = NULL)
@@ -336,7 +340,7 @@ Capture:
 pz_record_start(
   ctx, path = NULL, ...,
   method = c("poll", "screencast"),
-  frame = NULL,             # NULL = page default or viewport; a pz_frame(); FALSE
+  frame = NULL,             # NULL = staged frame or viewport; a pz_frame() or bare locator; FALSE
   fps = 15,
   scale = NULL,             # output width or scale factor
   hold = c(0.5, 1),         # seconds to hold first/last frame
@@ -361,22 +365,26 @@ Encoding:
 
 ### Framing
 
-`pz_frame()` is a lazy spec for the capture region, used by both `pz_screenshot(frame =)` and `pz_record_start(frame =)`. It generalizes the blog's `union_png()` and `movie_clip_fit()` (with the union bug fixed).
+`pz_frame()` is a lazy spec for the capture region, and `frame` is the only what-and-how argument on every capture: `pz_screenshot(frame =)`, `pz_record_start(frame =)`, and `pz_camera(frame =)`. Wherever a frame is accepted, a bare locator (a CSS selector string, a `pz_loc()` spec, or a list of either) is promoted to `pz_frame(<locator>)`. It generalizes the blog's `union_png()` and `movie_clip_fit()` (with the union bug fixed).
 
 ```r
 pz_frame(
-  target = NULL,        # NULL = use the calling function's target
+  target = NULL,        # NULL = scope box (viewport at root); see precedence below
   ...,
   ratio = NULL,         # e.g. 4/3, 16/9; NULL = tight to content
-  pad = 0,              # number, or c(top, right, bottom, left)
-  offset = c(0, 0),     # nudge in px
-  anchor = "center",    # direction vocabulary
+  pad = NULL,           # number, or c(top, right, bottom, left)
+  offset = NULL,        # nudge in px
+  anchor = NULL,        # direction vocabulary
   bounds = NULL,        # target to clamp within
-  when = c("stop", "start")   # recordings only
+  when = NULL,          # "stop"/"start"; recordings only
+  target_box = NULL,    # "element"/"annotated"
+  zoom = NULL           # magnification relative to the full view
 )
 ```
 
-Computation:
+Every field defaults to `NULL`, meaning "inherit": at capture time an unset field takes the `pz_stage_frame()` value if one is staged, else the built-in default (`pad = 0`, `offset = c(0, 0)`, `anchor = "center"`, `when = "stop"`, `target_box = "element"`; `ratio`, `bounds`, `zoom` unset). The target resolves by precedence instead: the frame's own target, then the scope (scoped contexts), then the staged frame's target, then the viewport. Camera shots never inherit the staged frame; their defaults are `pad = 24` and `target_box = "element"`.
+
+Computation, with `zoom = NULL`:
 
 1. Union the targets' bounding boxes.
 2. Add `pad`, then shift by `offset`.
@@ -384,27 +392,28 @@ Computation:
 4. Clamp to `bounds` and to the capture surface: the rendered document for stills (`captureBeyondViewport` renders below-fold content, so a below-fold frame stays capturable) and the visible viewport for recordings.
 5. Round to even pixels for video, whole pixels for stills.
 
-`pz_screenshot()` has no `pad` argument; padding lives in the frame.
+With a numeric `zoom`, the region is the view divided by `zoom` -- the viewport for stills and recordings, the recording's home frame for camera shots -- with `ratio` setting its aspect (the largest such box inside `view / zoom`) when set, else the view's aspect. The padded target is placed inside the region by `anchor` (center by default), then shifted by `offset`, then clamped as above. Stills crop only, never upscale: a zoomed still is a smaller PNG at the page's pixel ratio.
 
 ```r
-page |> pz_screenshot("card.png", target = card, frame = pz_frame(pad = 32))
-page |> pz_screenshot("card.png", target = card, frame = pz_frame(ratio = 16/9, pad = 24, anchor = "top"))
+page |> pz_screenshot("card.png", frame = pz_frame(card, pad = 32))
+page |> pz_screenshot("card.png", frame = pz_frame(card, ratio = 16/9, pad = 24, anchor = "top"))
+page |> pz_screenshot("close-up.png", frame = pz_frame(card, zoom = 2))
 page |> pz_record_start("demo.mp4", frame = pz_frame(".shiny-chat-container", ratio = 4/3))
 ```
 
 Default framing is page state set with `pz_stage_frame()`:
 
 ```r
-pz_stage_frame(ctx, ..., ratio = NULL, pad = NULL, offset = NULL, anchor = NULL, bounds = NULL)
+pz_stage_frame(ctx, ..., ratio = NULL, pad = NULL, offset = NULL, anchor = NULL, bounds = NULL, target_box = NULL, zoom = NULL)
 
 page |>
   pz_stage_frame(ratio = 4/3, pad = 32, offset = c(0, 14)) |>
-  pz_screenshot("tool-collapsed.png", target = card) |>    # framed by default
+  pz_screenshot("tool-collapsed.png", frame = card) |>     # framed by default
   pz_screenshot("full.png", frame = FALSE) |>              # opt out: plain viewport
-  pz_record_start("demo.mp4", frame = pz_frame(".shiny-chat-container"))  # explicit wins
+  pz_record_start("demo.mp4", frame = pz_frame(".shiny-chat-container"))  # explicit target wins
 ```
 
-- An explicit `frame =` replaces the default entirely (no field merging). `frame = FALSE` disables framing for one call. `pz_stage_frame(NULL)` clears the default.
+- Fields inherit per-field: an explicit value beats the staged value, which beats the built-in default. `frame = FALSE` disables framing for one call. `pz_stage_frame(NULL)` clears the default.
 - `pz_stage_frame()`, `pz_stage()` and `pz_stage_annotate()` set persistent page defaults. Framing and annotation styles apply to screenshots as well as recordings; `pz_stage()` primarily controls recording animation, with cursor visibility and scale also applying to stills.
 
 ### Cursor and staging
@@ -490,13 +499,13 @@ There are three layers:
 #### Camera
 
 ```r
-pz_camera(ctx, target = NULL, ..., zoom = NULL, pad = 24, duration = NULL, target_box = c("element", "annotated"), wait = FALSE)
+pz_camera(ctx, frame, ..., duration = NULL, wait = FALSE)
 pz_camera_reset(ctx, ..., wait = FALSE)
 ```
 
 - The camera is an **encode-time crop**. Capture stays full-viewport. Each camera call records a keyframe (video time, shot rect in page CSS px, easing), and at stop every output frame gets an interpolated crop, scaled back to the output size. It works for both capture methods, and camera motion runs at the output fps. Sharpness is capped by the capture DPR (2 by default). The per-frame scroll position is logged so page-coordinate shots map into viewport frames.
-- **Home shot:** the recording's frame (`pz_record_start(frame =)` or `pz_stage_frame()`), falling back to the full viewport. It defines the output size. Every shot grows to home's aspect ratio (centered) and is clamped inside home, so the camera never shows anything outside the recording's frame. `pz_camera_reset()` returns home, from any context.
-- **Shot:** `target` takes element targets only (selector, `pz_loc()`, or a list whose union is the shot); coordinates may come later. Multiple matches are unioned. At the root, `target = NULL` is an error, as for `pz_act_click()`. `pad` uses `pz_frame()` semantics, but `NULL` means 24 CSS px. `zoom = NULL` fits `target` + `pad`, capped at the capture DPR (so a scale-1 page never zooms on a fit); a number is magnification relative to home. Beyond the DPR, a softness warning is given once per recording. A shot is measured when its call runs.
+- **Home shot:** the recording's frame (`pz_record_start(frame =)` or `pz_stage_frame()`), falling back to the full viewport. It defines the output size. Every shot grows to home's aspect ratio and is clamped inside home, so the camera never shows anything outside the recording's frame. `pz_camera_reset()` returns home, from any context.
+- **Shot:** `frame` is a `pz_frame()` spec or a bare locator (selector, `pz_loc()`, or a list whose union is the shot) promoted to one; coordinates may come later. Multiple matches are unioned. At the root, `frame` is required -- a missing or `NULL` frame errors like a missing R argument, pointing at `pz_camera_reset()`; in a scoped context a missing or `NULL` frame shoots the scope's box, and `FALSE` shoots the scope box or viewport unframed. Camera shots never inherit the staged frame: unset fields use the camera defaults (`pad = 24`, `target_box = "element"`); `ratio` and `when` are ignored, with a warning when set explicitly. `zoom = NULL` fits the padded target, capped at the capture DPR (so a scale-1 page never zooms on a fit); a number fixes the shot at home divided by `zoom`. `anchor` places the padded target in the shot. Beyond the DPR, a softness warning is given once per recording. A shot is measured when its call runs.
 - **Duration:** `duration = NULL` is distance-based, `clamp(0.66 + 2 * d, 0.66, 2)` seconds, with `d = |Δcenter| / home_diagonal + 0.5 * |log2(zoom_to / zoom_from)|` (constants to be tuned against a prototype). Easing is the cursor's cubic ease-in-out. While recording, the call pumps for the move's duration so the move plays out in the video.
 - **Concurrency:** `wait = FALSE` (the default) records the keyframe and returns at once, so the next step (typically a cursor glide) runs during the move; `wait = TRUE` pumps the loop for the move's duration. Manual camera calls settle first: a second `pz_camera()` waits for the previous move to land, then starts from there, so `pz_camera(x) |> ...steps... |> pz_camera(x)` moves toward `x` during the steps and then settles on it. A call whose shot is where the camera already is records a zero-length keyframe without a `duration`: it updates the target/scroll/reset anchor but adds no video time. With an explicit duration, it's a still keyframe (with `wait = TRUE`, the same as `pz_wait(duration)`). Follow moves win: they may interrupt an in-flight manual move, and since they end when their action lands, a later camera call never waits on one. `pz_record_hold()`, `pz_record_pause()` and `pz_record_stop()` let an in-flight move land first, because holds and pauses freeze video time (camera included) and stop ends it. A numeric lead delay is deferred: `pz_camera() |> pz_wait(n)` covers it.
 - **Follow the action:** `pz_stage(camera_follow = TRUE)` is the default. While zoomed in, a pointer or typing action whose resolved target falls outside the shot plus a margin triggers a minimal pan at the current zoom, zooming out only as far as needed to fit the target. The move is keyframed to the cursor glide, so it lands when the cursor does; with the cursor off, it gets its own short staged pause. Expectations, getters and waits never move the camera, and it never triggers at home. With a non-waiting move in flight, follow leaves it alone when its destination frames the target (a zoom toward it, or a reset); otherwise containment is tested at the moment the action lands. Accepted tradeoff: an action that lands before such a move arrives can briefly land off-shot; `wait = TRUE` is the remedy, rather than coordinating action timing with the camera.
@@ -808,8 +817,8 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 | `pz_record_resume()` | `(ctx)` | confirmed |
 | `pz_record_hold()` | `(ctx, seconds)` | confirmed |
 | `pz_record()` | `(ctx, path = NULL, code, ...)` | confirmed |
-| `pz_frame()` | `(target = NULL, ..., ratio = NULL, pad = 0, offset = c(0, 0), anchor = "center", bounds = NULL, when = c("stop", "start"))` → spec | confirmed |
-| `pz_stage_frame()` | `(ctx, ..., ratio, pad, offset, anchor, bounds)` | confirmed |
+| `pz_frame()` | `(target = NULL, ..., ratio = NULL, pad = NULL, offset = NULL, anchor = NULL, bounds = NULL, when = NULL, target_box = NULL, zoom = NULL)` → spec | confirmed |
+| `pz_stage_frame()` | `(ctx, ..., ratio, pad, offset, anchor, bounds, target_box, zoom)` | confirmed |
 
 ### Cursor and staging
 
@@ -830,7 +839,7 @@ Implemented (kata `1a3m`).
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_camera()` | `(ctx, target = NULL, ..., zoom = NULL, pad = 24, duration = NULL, target_box = c("element", "annotated"), wait = FALSE)` | confirmed |
+| `pz_camera()` | `(ctx, frame, ..., duration = NULL, wait = FALSE)` | confirmed |
 | `pz_camera_reset()` | `(ctx, ..., wait = FALSE)` | confirmed |
 | `pz_annotate()` | `(ctx, target = NULL, ..., type = "box", label = NULL, pad = 0, reveal = c("auto", "fade", "draw", "pop", "slide", "wipe", "none"), id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_annotate_callout()` | `(ctx, text, ..., target = NULL, side = NULL, arrow = TRUE, label = NULL, reveal = c("pop", "fade", "draw", "slide", "wipe", "none"), id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |

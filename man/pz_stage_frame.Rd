@@ -12,7 +12,8 @@ pz_stage_frame(
   offset = NULL,
   anchor = NULL,
   bounds = NULL,
-  target_box = NULL
+  target_box = NULL,
+  zoom = NULL
 )
 }
 \arguments{
@@ -20,29 +21,29 @@ pz_stage_frame(
 
 \item{...}{The default frame's target: a CSS selector string, a
 \code{\link[=pz_loc]{pz_loc()}} spec, or a list of either. Several unnamed arguments are
-unioned. With no target, the default frames each call's own target.
-A single \code{NULL} clears the default.}
+unioned. With no target, framed captures use the current scope's
+box (the viewport at the root). A single \code{NULL} clears the
+default.}
 
-\item{ratio, pad, offset, anchor, bounds, target_box}{Framing settings, as in
-\code{\link[=pz_frame]{pz_frame()}}; \code{NULL} means the \code{\link[=pz_frame]{pz_frame()}} default for that
-setting.}
+\item{ratio, pad, offset, anchor, bounds, target_box, zoom}{Framing
+settings, as in \code{\link[=pz_frame]{pz_frame()}}; \code{NULL} leaves the field unset, so
+captures fall back to the built-in default for it.}
 }
 \value{
 \code{ctx}, invisibly.
 }
 \description{
-\code{\link[=pz_stage_frame]{pz_stage_frame()}} stores a default \code{\link[=pz_frame]{pz_frame()}} on the page, applied
-to every screenshot and recording that doesn't pass its own
-\verb{frame =}. An explicit \code{\link[=pz_frame]{pz_frame()}} replaces the default entirely --
-settings are never merged -- and \code{frame = FALSE} disables framing for
-a single call.
+\code{\link[=pz_stage_frame]{pz_stage_frame()}} stores a default \code{\link[=pz_frame]{pz_frame()}} on the page. Every
+screenshot and recording resolves its own \verb{frame =} field by field:
+an unset field takes the staged value if one is set, else the
+built-in default. \code{frame = FALSE} disables framing for a single
+call. Camera shots ignore the staged frame; see \code{\link[=pz_camera]{pz_camera()}}.
 
 Unlike \code{\link[=pz_stage]{pz_stage()}}'s animation settings, framing (like
 \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}'s styles) applies to screenshots as well as
 recordings. An annotated
 staged frame measures attached annotations in stills; recordings use
-only its element boxes for the home frame, and camera shots use their
-own \code{target_box} setting.
+only its element boxes for the home frame.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
@@ -52,9 +53,9 @@ path <- file.path(tempdir(), "tasks.png")
 page |>
   pz_stage_frame(pad = 24) |>
   # Framed by the default: the form plus 24px of padding
-  pz_screenshot(path, target = "#new-task") |>
-  # An explicit frame replaces the default, settings and all
-  pz_screenshot(path, target = "#new-task", frame = pz_frame(ratio = 16/9)) |>
+  pz_screenshot(path, frame = "#new-task") |>
+  # Fields not set here still come from the staged default
+  pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9)) |>
   # FALSE turns framing off for one call
   pz_screenshot(path, frame = FALSE) |>
   # NULL clears the default

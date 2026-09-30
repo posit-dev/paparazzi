@@ -1195,7 +1195,7 @@ test_that("the even crop rounds clamped edges inward, staying inside bounds", {
        'position:absolute; left:40.8px; top:20px; width:60.4px; height:120px';
      document.body.appendChild(b);"
   )
-  crop <- record_crop_box(page, pz_frame("#box", bounds = "#frac"))
+  crop <- record_crop_box(page, frame_fill(pz_frame("#box", bounds = "#frac")))
 
   # pinned edges round inward: left up to 42, right down to 100
   expect_equal(crop$x, 42)
@@ -2142,4 +2142,37 @@ test_that("NULL and omitted paths both preview start and block recordings", {
     expect_true(file.exists(preview))
     expect_equal(tools::file_ext(preview), "mp4")
   }
+})
+
+test_that("pz_record_start promotes a bare locator frame", {
+  skip_if_no_av()
+  page <- local_record_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+
+  pz_record_start(page, out, hold = c(0, 0), frame = "#box")
+  defer_record_stop(page)
+  frame <- page_recorder(page)$frame
+  expect_s3_class(frame, "paparazzi_frame")
+  expect_identical(frame$target[[1]]$css, "#box")
+  expect_identical(frame$pad, rep(0, 4))
+  pz_record_stop(page)
+})
+
+test_that("an inherited annotated target box downgrades for the home frame", {
+  skip_if_no_av()
+  page <- local_record_page()
+  pz_stage_frame(page, "#box", target_box = "annotated")
+  out <- withr::local_tempfile(fileext = ".mp4")
+
+  # An explicit spec without target_box inherits the staged annotated
+  # box, which silently measures element boxes for the home frame.
+  expect_no_error(
+    pz_record_start(page, out, hold = c(0, 0), frame = pz_frame(pad = 8))
+  )
+  defer_record_stop(page)
+  frame <- page_recorder(page)$frame
+  expect_identical(frame$target_box, "element")
+  expect_identical(frame$pad, rep(8, 4))
+  expect_identical(frame$target[[1]]$css, "#box")
+  pz_record_stop(page)
 })

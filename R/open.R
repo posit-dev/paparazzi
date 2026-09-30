@@ -219,7 +219,7 @@ pz_close <- function(page) {
 #'
 #' # The page closes when the function returns, even if it errors
 #' pz_with_page(pz_example("tasks"), function(page) {
-#'   pz_screenshot(page, path, target = ".task-list")
+#'   pz_screenshot(page, path, frame = ".task-list")
 #' })
 #' file.exists(path)
 #'
