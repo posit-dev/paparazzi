@@ -51,13 +51,10 @@ reverses the reveal. Wipe sweeps clockwise from 12 o'clock.}
 \item{color}{CSS accent color for the mark outline, or \code{NULL} for the
 page default from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}.}
 
-\item{label_fill, label_text_color}{CSS colors for the label badge's
-background and text. The badge follows its mark: by default it is
-filled with the mark's resolved \code{color} with white text, and these
-per-call arguments override that. The staged \code{fill}/\code{text_color} from
-\code{\link[=pz_stage_annotate]{pz_stage_annotate()}} do not apply to marks; they style callout
-chrome only. (The per-call names differ from the staged names, so a
-badge style isn't read as filling a \code{"box"} or \code{"highlight"} mark.)}
+\item{label_fill, label_text_color}{CSS colors for the badge background
+and text. \code{NULL} (the default) fills the badge with the mark's \code{color}
+and uses white text. The \code{fill} and \code{text_color} set by
+\code{\link[=pz_stage_annotate]{pz_stage_annotate()}} style callouts, not mark badges.}
 
 \item{stroke_width}{Mark stroke width in CSS pixels, or \code{NULL} for the
 staged \code{stroke_width} from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}.}

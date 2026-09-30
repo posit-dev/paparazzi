@@ -39,8 +39,8 @@
 #'   staged `stroke_width` from [pz_stage_annotate()]. Decoration sizes
 #'   scale with it. Shared with [pz_annotate()] marks.
 #' @param distance Bubble-to-target gap in CSS pixels, or `NULL` for the
-#'   staged `distance` from [pz_stage_annotate()]. Applies with or without
-#'   a leader.
+#'   staged `distance` from [pz_stage_annotate()]. Without either, the gap
+#'   is 24 with a leader and 8 without one.
 #' @param font_family CSS font family; `NULL` uses the staged default.
 #' @param font_size Font size in CSS pixels; `NULL` uses the staged default.
 #' @return `ctx`, invisibly.
@@ -77,7 +77,7 @@ pz_annotate_callout <- function(
   style <- annotate_style(ctx, color, font_family, font_size)
   surface <- annotate_fill_style(ctx, fill, text_color)
   stroke_width <- annotate_stroke_width(ctx, stroke_width)
-  distance <- annotate_distance(ctx, distance)
+  distance <- annotate_distance(ctx, distance, leader)
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)

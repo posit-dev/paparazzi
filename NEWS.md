@@ -11,7 +11,8 @@
   (defaults keep the dark bubble with white text), `stroke_width` (one width
   shared with `pz_annotate()` marks, replacing the old 2-vs-3 split, with
   decoration sizes scaled to it) and `distance` (the bubble-to-target gap,
-  default 24 CSS px, replacing the hardcoded 8px so leaders read as arrows).
+  default 24 CSS px with a leader and 8 without, replacing the hardcoded 8px
+  so leaders read as arrows).
   `pz_annotate()` badges follow their mark's color and gain per-call
   `label_fill`/`label_text_color` overrides.
 

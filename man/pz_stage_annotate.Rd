@@ -35,11 +35,12 @@ badges. The default is \code{"white"}. Supply \code{NULL} to restore the
 default. Callout chrome only, like \code{fill}.}
 
 \item{stroke_width}{Stroke width in CSS pixels for new annotation marks
-and callout leader lines; decoration sizes scale with it. Supply \code{NULL}
-to restore the default.}
+and callout leader lines; decoration sizes scale with it. The default
+is 2.5. Supply \code{NULL} to restore the default.}
 
-\item{distance}{Bubble-to-target gap in CSS pixels for new callouts.
-Supply \code{NULL} to restore the default.}
+\item{distance}{Bubble-to-target gap in CSS pixels for new callouts,
+with or without a leader. By default the gap is 24 with a leader and
+8 without one. Supply \code{NULL} to restore the default.}
 
 \item{font_family}{CSS font family for new annotation badges. The default
 is \code{"sans-serif"}. Supply \code{NULL} to restore the default.}

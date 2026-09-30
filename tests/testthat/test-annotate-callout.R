@@ -957,6 +957,25 @@ test_that("distance sets the bubble-to-target gap and is stageable", {
   page |> pz_stage_annotate(distance = NULL)
 })
 
+test_that("an unset distance is 24 with a leader and 8 without one", {
+  page <- callout_page()
+  captured <- NULL
+  local_mocked_bindings(annotate_call = function(ctx, els, fn, options, what) {
+    captured <<- options
+  })
+  pz_annotate_callout(page, "x", target = "#target")
+  expect_identical(captured$distance, 24)
+  pz_annotate_callout(page, "x", target = "#target", leader = FALSE)
+  expect_identical(captured$distance, 8)
+
+  page |> pz_stage_annotate(distance = 30)
+  pz_annotate_callout(page, "x", target = "#target", leader = FALSE)
+  expect_identical(captured$distance, 30)
+  page |> pz_stage_annotate(distance = NULL)
+  pz_annotate_callout(page, "x", target = "#target", leader = FALSE)
+  expect_identical(captured$distance, 8)
+})
+
 test_that("stroke_width scales the leader and decorations and is stageable", {
   page <- callout_page()
   leader_metrics <- function() {

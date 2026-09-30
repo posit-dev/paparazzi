@@ -1304,9 +1304,11 @@ test_that("stroke_width reaches mark shapes and is stageable", {
   page <- annotation_page()
   page |>
     pz_annotate("#box", type = "box", reveal = "none", id = "mark")
+  # The declared width: computed border widths snap to device pixels, so
+  # a fractional default reads back rounded at a device pixel ratio of 1.
   default_border <- pz_js(
     page,
-    "getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape')).borderTopWidth"
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape').style.borderTopWidth"
   )
   page |>
     pz_annotate(

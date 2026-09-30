@@ -73,8 +73,8 @@ staged \code{stroke_width} from \code{\link[=pz_stage_annotate]{pz_stage_annotat
 scale with it. Shared with \code{\link[=pz_annotate]{pz_annotate()}} marks.}
 
 \item{distance}{Bubble-to-target gap in CSS pixels, or \code{NULL} for the
-staged \code{distance} from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}. Applies with or without
-a leader.}
+staged \code{distance} from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}. Without either, the gap
+is 24 with a leader and 8 without one.}
 
 \item{font_family}{CSS font family; \code{NULL} uses the staged default.}
 

@@ -28,13 +28,10 @@ NULL
 #'   `"spotlight"` and `"caption"` are reserved for other types.
 #' @param color CSS accent color for the mark outline, or `NULL` for the
 #'   page default from [pz_stage_annotate()].
-#' @param label_fill,label_text_color CSS colors for the label badge's
-#'   background and text. The badge follows its mark: by default it is
-#'   filled with the mark's resolved `color` with white text, and these
-#'   per-call arguments override that. The staged `fill`/`text_color` from
-#'   [pz_stage_annotate()] do not apply to marks; they style callout
-#'   chrome only. (The per-call names differ from the staged names, so a
-#'   badge style isn't read as filling a `"box"` or `"highlight"` mark.)
+#' @param label_fill,label_text_color CSS colors for the badge background
+#'   and text. `NULL` (the default) fills the badge with the mark's `color`
+#'   and uses white text. The `fill` and `text_color` set by
+#'   [pz_stage_annotate()] style callouts, not mark badges.
 #' @param stroke_width Mark stroke width in CSS pixels, or `NULL` for the
 #'   staged `stroke_width` from [pz_stage_annotate()].
 #' @param font_family CSS font family for the badge, or `NULL` for the
@@ -250,8 +247,12 @@ annotate_stroke_width <- function(ctx, stroke_width, call = caller_env()) {
   stroke_width
 }
 
-annotate_distance <- function(ctx, distance, call = caller_env()) {
-  distance <- distance %||% page_stage(ctx$page)$annotate_distance
+# Unset, a callout with a leader stands off far enough for the line to
+# read as an arrow; a leaderless tooltip hugs its target.
+annotate_distance <- function(ctx, distance, leader, call = caller_env()) {
+  distance <- distance %||%
+    page_stage(ctx$page)$annotate_distance %||%
+    if (isFALSE(leader)) 8 else 24
   check_number_decimal(
     distance,
     min = 0,
