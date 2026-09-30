@@ -64,7 +64,7 @@ A screen-space caption set with \code{\link[=pz_annotate_caption]{pz_annotate_ca
 onto the captured PNG after framing; captioned stills require \pkg{png}.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 

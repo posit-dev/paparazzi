@@ -28,7 +28,7 @@ from it: \code{rects$element[[2]] |> pz_act_hover()}.
 \code{target}, one row per match in match order.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 rects <- pz_get_rect(page, target = ".filters a")
 rects

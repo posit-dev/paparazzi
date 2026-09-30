@@ -33,7 +33,7 @@ NULL
 #'   capture), `"browser"` (outlines left in the live page), or `"none"`.
 #'
 #' @return `ctx`, invisibly, so it can be dropped anywhere in a chain.
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_inspect()
 #'

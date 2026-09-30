@@ -77,7 +77,7 @@ zoom 2).
 it's opt-in because it's usually wrong for videos.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 
 # Only the settings you supply change

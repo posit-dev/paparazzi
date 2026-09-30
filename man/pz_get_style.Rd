@@ -44,7 +44,7 @@ select it with \code{df$`font-size` }); custom properties
 every computed property the browser reports (longhands only).
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 pz_get_style(page, c("font-size", "font_weight"), target = "h1")
 

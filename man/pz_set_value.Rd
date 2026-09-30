@@ -38,7 +38,7 @@ element (plain or framework-driven, e.g. ProseMirror) has its
 content replaced in one step.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
   pz_set_value("Buy milk", target = "#task-title") |>

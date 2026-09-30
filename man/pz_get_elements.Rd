@@ -28,7 +28,7 @@ the \code{id} and \code{class} attributes, and the whitespace-collapsed text.
 \code{id} and \code{class} are \code{NA} when the attribute is absent.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 pz_get_elements(page, target = "#new-task > *")
 pz_close(page)

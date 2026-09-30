@@ -27,7 +27,7 @@ input's \code{FileList} holds the real names, sizes, and contents, and
 \code{change} fires exactly as if the files had been picked in a dialog.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 notes <- file.path(tempdir(), "meeting-notes.txt")
 writeLines("Agenda: plants, parcel, passport", notes)
 

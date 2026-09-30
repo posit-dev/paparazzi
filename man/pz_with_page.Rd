@@ -34,7 +34,7 @@ already-open page or anything \code{\link[=pz_open]{pz_open()}} accepts, and alw
 exit: the block owns the resource.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 path <- file.path(tempdir(), "task-list.png")
 
 # The page closes when the function returns, even if it errors

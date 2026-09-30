@@ -58,7 +58,7 @@ NULL
 #'
 #' @seealso [pz_act_hover()], [pz_act_type()], [pz_act_press()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_act_click("#toggle-help")
 #' pz_get_text(page, target = "#toggle-help")
@@ -102,7 +102,7 @@ pz_act_click <- function(ctx, target = NULL, ...) {
 #'
 #' @seealso [pz_act_click()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' passport <- pz_loc(".task", has_text = "passport")
 #'
@@ -171,7 +171,7 @@ pz_act_hover <- function(ctx, target = NULL, ...) {
 #' @seealso [pz_act_press()] for key combos (Enter, Control+A, ...) and
 #'   [pz_act_click()].
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_act_type("Buy milk", target = "#task-title")
 #' pz_get_value(page, target = "#task-title")
@@ -273,7 +273,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 #'
 #' @seealso [pz_act_type()] to insert text.
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_act_type("Buy milkk", target = "#task-title") |>
@@ -473,7 +473,7 @@ pz_act_blur <- function(ctx, ...) {
 #' @seealso [pz_act_type()] for visible, keystroke-by-keystroke input and
 #'   [pz_set_files()].
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_set_value("Buy milk", target = "#task-title") |>
@@ -534,7 +534,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
 #'
 #' @seealso [pz_set_value()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' notes <- file.path(tempdir(), "meeting-notes.txt")
 #' writeLines("Agenda: plants, parcel, passport", notes)
 #'
@@ -616,7 +616,7 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 #'
 #' @seealso [pz_act_type()], [pz_set_value()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Typing replaces the selection
@@ -710,7 +710,7 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
 #'
 #' @seealso [pz_find()], [pz_act_click()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"), height = 600)
 #'
 #' # With a target, scroll it into view
@@ -850,7 +850,7 @@ pz_act_scroll <- function(
 #'
 #' @seealso [pz_act_click()], [pz_act_hover()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_text(page, target = ".task-title")
 #'

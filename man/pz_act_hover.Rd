@@ -50,7 +50,7 @@ To set a value directly instead, without staging, use \code{\link[=pz_set_value]
 }
 
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 passport <- pz_loc(".task", has_text = "passport")
 

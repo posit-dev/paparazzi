@@ -54,7 +54,7 @@ NULL
 #'   pkgdown examples, an image preview. These image results are terminal,
 #'   not contexts.
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tasks.png")
 #'

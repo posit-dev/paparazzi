@@ -38,7 +38,7 @@
 #'
 #' @seealso [pz_find_first()], [pz_find_pop()], [pz_find_reset()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Inside a scope, targets resolve among the scope's descendants
@@ -94,7 +94,7 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_last()], [pz_find_nth()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_find_first(".task") |>
@@ -128,7 +128,7 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_nth()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_find_last(".task") |>
@@ -161,7 +161,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_last()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Mark the second task as done

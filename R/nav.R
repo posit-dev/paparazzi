@@ -27,7 +27,7 @@
 #'
 #' @seealso [pz_find_reset()] for scope-only resets (no navigation).
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' url <- pz_get_url(page)
 #'

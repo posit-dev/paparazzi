@@ -16,7 +16,7 @@ A character vector of length one.
 \code{\link[=pz_get_title]{pz_get_title()}} returns the page's current title.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 pz_get_title(page)
 pz_close(page)

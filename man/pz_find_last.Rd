@@ -28,7 +28,7 @@ narrows the current scope to its last element: one eager slice of
 the pinned set, with no re-query and no waiting.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
   pz_find_last(".task") |>

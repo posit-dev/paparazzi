@@ -47,7 +47,7 @@
 #' with [chromote::set_chrome_args()]. A default set with
 #' [chromote::set_default_chromote_object()] is used as-is.
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' # A local HTML file opens as a file:// URL
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_url(page)
@@ -214,7 +214,7 @@ pz_close <- function(page) {
 #' @return [pz_with_page()] returns the page invisibly; [pz_local_page()]
 #'   returns it visibly.
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' path <- file.path(tempdir(), "task-list.png")
 #'
 #' # The page closes when the function returns, even if it errors

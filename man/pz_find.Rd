@@ -43,7 +43,7 @@ are called on, and contexts derived from the same parent share its
 pinned sets.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 
 # Inside a scope, targets resolve among the scope's descendants
