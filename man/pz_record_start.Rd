@@ -123,8 +123,8 @@ MP4 and WebM recordings require \pkg{av}; GIF recordings require
 \pkg{gifski}. Simple GIFs need only gifski, but two features call in
 extra packages: framed GIFs require \pkg{png}, and GIFs with camera
 movement or burned-in captions require \pkg{av}.
-Packages are checked at \code{pz_record_start()} or when a caption is
-added to an active GIF recording.
+Packages are checked at \code{pz_record_start()}, or during a GIF
+recording at the first camera move or caption.
 }
 
 \section{Recording chains}{
