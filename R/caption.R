@@ -11,9 +11,9 @@
 #' @param ... Checked empty.
 #' @param side `"bottom"` (the default) or `"top"`.
 #' @param color Text color. `NULL` always uses white, not the
-#'   `annotate_color` mark accent in [pz_stage()].
+#'   `color` mark accent in [pz_stage_annotate()].
 #' @param font_family CSS font family. `NULL` uses the page's
-#'   `annotate_font_family` setting in [pz_stage()] (initially sans-serif).
+#'   `font_family` setting in [pz_stage_annotate()] (initially sans-serif).
 #' @param font_size Font size in CSS pixels. `NULL` uses 20, independent
 #'   of the annotation badge size. Captions scale with the output.
 #' @return `ctx`, invisibly.

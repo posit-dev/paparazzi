@@ -137,7 +137,7 @@ print.paparazzi_frame <- function(x, ...) {
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_frame()], [pz_screenshot()]
+#' @seealso [pz_stage()], [pz_stage_annotate()], [pz_frame()], [pz_screenshot()]
 #'
 #' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
 #' page <- pz_open(pz_example("tasks"))

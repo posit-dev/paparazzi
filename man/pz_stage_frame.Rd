@@ -62,5 +62,5 @@ pz_close(page)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=pz_frame]{pz_frame()}}, \code{\link[=pz_screenshot]{pz_screenshot()}}
+\code{\link[=pz_stage]{pz_stage()}}, \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}, \code{\link[=pz_frame]{pz_frame()}}, \code{\link[=pz_screenshot]{pz_screenshot()}}
 }
