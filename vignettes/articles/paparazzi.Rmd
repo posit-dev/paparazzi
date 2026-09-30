@@ -281,7 +281,7 @@ We're done with the browser, so let's close it:
 pz_close(page)
 ```
 
-## Bonus round: run it as a test
+## Browser tests with paparazzi
 
 Staging only happens during a recording, and camera moves and holds do nothing outside one. So if you take away `pz_record()`, the steps of the demo run at full speed, and the expectations still check the page. That's a browser test.
 
