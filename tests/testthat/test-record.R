@@ -1195,7 +1195,7 @@ test_that("the even crop rounds clamped edges inward, staying inside bounds", {
        'position:absolute; left:40.8px; top:20px; width:60.4px; height:120px';
      document.body.appendChild(b);"
   )
-  crop <- record_crop_box(page, pz_frame("#box", bounds = "#frac"))
+  crop <- record_crop_box(page, frame_fill(pz_frame("#box", bounds = "#frac")))
 
   # pinned edges round inward: left up to 42, right down to 100
   expect_equal(crop$x, 42)

@@ -185,7 +185,7 @@ test_that("show = screenshot annotates, captures, and cleans up", {
   expect_identical(inspect_overlay_count(page), 0L)
   # And a plain screenshot of the same region has no outline pixels.
   plain <- withr::local_tempfile(fileext = ".png")
-  pz_screenshot(ctx, plain, target = ".insp-item")
+  pz_screenshot(ctx, plain, frame = ".insp-item")
 
   counts <- inspect_png_colors(
     page,
@@ -247,7 +247,7 @@ test_that("outlines drawn into the page never appear in pz_screenshot", {
   expect_gt(inspect_overlay_count(page), 0L)
 
   path <- withr::local_tempfile(fileext = ".png")
-  pz_screenshot(page, path, target = "#insp-plain")
+  pz_screenshot(page, path, frame = "#insp-plain")
   counts <- inspect_png_colors(
     page,
     path,

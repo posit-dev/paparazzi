@@ -1,24 +1,31 @@
 #' Move the recording camera
 #'
-#' Moves an encode-time camera over a recording. The target is an element,
-#' locator, or list of targets; without a target, the current scope is used
-#' (at the root, a target is required). The camera does not change the live
-#' page or still screenshots. Outside a recording it does nothing, and each
-#' [pz_record_start()] begins at the recording frame.
+#' Moves an encode-time camera over a recording. The shot comes from
+#' `frame`: a [pz_frame()] spec, or a bare locator (a CSS selector
+#' string, a [pz_loc()] spec, or a list of either) promoted to one,
+#' whose union is the shot. In a scoped context `frame` may be omitted
+#' or `NULL` to shoot the scope's box; at the root it is required
+#' ([pz_camera_reset()] returns to the home view). `frame = FALSE`
+#' shoots the scope's box, or the viewport at the root, unframed. The
+#' camera does not change the live page or still screenshots. Outside a
+#' recording it does nothing, and each [pz_record_start()] begins at
+#' the recording frame.
 #'
 #' @inheritParams pz_act_click
-#' @param zoom Magnification relative to the recording frame. `NULL` fits
-#'   the target with padding, capped at the capture's pixel density.
-#' @param pad Padding in CSS pixels around the target; one number or
-#'   `c(top, right, bottom, left)`. Defaults to 24 pixels.
+#' @param frame The shot's what-and-how: a [pz_frame()] spec or a bare
+#'   locator promoted to one. Camera shots never inherit the staged
+#'   frame: unset fields use the camera defaults (`pad = 24`,
+#'   `target_box = "element"`, everything else as in [pz_frame()]).
+#'   `ratio` and `when` are ignored, with a warning when set. `zoom`
+#'   is magnification relative to the recording frame: `NULL` fits the
+#'   padded target, capped at the capture's pixel density; a number
+#'   fixes the shot at the home frame divided by `zoom`. `anchor`
+#'   places the padded target in the shot.
 #' @param duration Movement duration in seconds. `NULL` chooses a duration
 #'   based on the pan and zoom distance. When the move wouldn't change the
 #'   view, `NULL` takes the new shot instantly, adding no video time, so the
 #'   camera follows the new target if the page scrolls later. A number holds
 #'   the camera still for that long.
-#' @param target_box `"element"` measures just the shot target; `"annotated"`
-#'   also includes its attached annotations. Defaults to `"element"` even
-#'   when [pz_stage_frame()] stages an annotated frame for stills.
 #' @param wait Whether to wait for the move to finish before the next step.
 #'   `FALSE` (the default) lets the next step run while the camera moves,
 #'   so a cursor glide can happen during a zoom. Either way, a camera call
@@ -28,49 +35,79 @@
 #'   first.
 #' @return `ctx`, invisibly.
 #' @export
-pz_camera <- function(
-  ctx,
-  target = NULL,
-  ...,
-  zoom = NULL,
-  pad = 24,
-  duration = NULL,
-  target_box = c("element", "annotated"),
-  wait = FALSE
-) {
+pz_camera <- function(ctx, frame, ..., duration = NULL, wait = FALSE) {
   check_context(ctx)
   check_dots_empty()
-  target_box <- arg_match(target_box)
   check_bool(wait)
-  check_number_decimal(
-    zoom,
-    min = 0,
-    allow_infinite = FALSE,
-    allow_null = TRUE
-  )
-  if (!is.null(zoom) && zoom == 0) {
-    cli::cli_abort("{.arg zoom} must be greater than zero.")
-  }
   check_number_decimal(
     duration,
     min = 0,
     allow_infinite = FALSE,
     allow_null = TRUE
   )
-  pad <- check_pad(pad)
-  if (is.null(target) && is.null(scope_top(ctx))) {
-    cli::cli_abort("Supply a {.arg target} or use a scoped context.")
+  if (missing(frame)) {
+    frame <- NULL
+  }
+  frame <- as_frame_spec(frame)
+  if (is.null(frame) && is.null(scope_top(ctx))) {
+    cli::cli_abort(
+      c(
+        "{.arg frame} is absent but must be supplied.",
+        i = "Use {.fn pz_camera_reset} to return the camera to the home view."
+      ),
+      class = "paparazzi_error_input"
+    )
+  }
+  if (inherits(frame, "paparazzi_frame")) {
+    if (!is.null(frame$ratio)) {
+      cli::cli_warn("{.arg ratio} is ignored by camera shots.")
+    }
+    if (!is.null(frame$when)) {
+      cli::cli_warn("{.arg when} is ignored by camera shots.")
+    }
+    frame <- frame_fill(frame, defaults = frame_camera_defaults)
+  } else {
+    # FALSE (unframed) or NULL (the scope box): camera defaults, with
+    # FALSE dropping the pad.
+    frame <- frame_fill(
+      new_frame_spec(pad = if (identical(frame, FALSE)) 0),
+      defaults = frame_camera_defaults
+    )
   }
   rec <- page_recorder(ctx$page)
   if (is.null(rec) || !rec$active) {
     return(ctx_return(ctx))
   }
-  box <- frame_content_box(ctx, target, new_frame_spec(target_box = target_box))
-  box <- box + c(-pad[4], -pad[1], pad[2], pad[3])
-  frame_region(box)
+  box <- frame_content_box(ctx, frame)
   geometry <- page_geometry(ctx)
+  if (is.null(box)) {
+    box <- c(0, 0, geometry$viewport_width, geometry$viewport_height)
+  }
+  pad <- frame$pad
+  box <- box + c(-pad[4], -pad[1], pad[2], pad[3])
+  box <- box + rep(frame$offset, 2)
+  if (!is.null(frame$bounds)) {
+    els <- loc_resolve(ctx, frame$bounds, multiple = "all")
+    withr::defer(release_elements(els))
+    bounds <- box_union(el_rects(els))
+    box <- c(
+      max(box[1], bounds[1]),
+      max(box[2], bounds[2]),
+      min(box[3], bounds[3]),
+      min(box[4], bounds[4])
+    )
+  }
+  frame_region(box)
   box <- box + rep(c(geometry$scroll_x, geometry$scroll_y), 2)
-  camera_move(ctx, rec, box, zoom = zoom, duration = duration, wait = wait)
+  camera_move(
+    ctx,
+    rec,
+    box,
+    zoom = frame$zoom,
+    anchor = frame$anchor,
+    duration = duration,
+    wait = wait
+  )
   ctx_return(ctx)
 }
 
@@ -99,6 +136,7 @@ camera_move <- function(
   rec,
   box = NULL,
   zoom = NULL,
+  anchor = "center",
   duration = NULL,
   reset = FALSE,
   wait = FALSE
@@ -129,7 +167,7 @@ camera_move <- function(
   to <- if (reset) {
     home + rep(scroll, 2)
   } else {
-    camera_shot(box, home, zoom, density)
+    camera_shot(box, home, zoom, density, anchor)
   }
   if (is.null(duration)) {
     same <- all(
@@ -143,6 +181,7 @@ camera_move <- function(
     end = now + duration,
     box = box,
     zoom = zoom,
+    anchor = anchor,
     reset = reset,
     scroll = scroll
   )
@@ -285,18 +324,25 @@ camera_home <- function(rec, ctx) {
   c(0, 0, geometry$viewport_width, geometry$viewport_height)
 }
 
-camera_shot <- function(target, home, zoom = NULL, density = 1) {
+# The shot for a move: zoom = NULL fits the box, grown to home's
+# aspect and capped at the capture's pixel density; a number fixes the
+# shot at home / zoom. The box is placed in the shot by the anchor.
+camera_shot <- function(
+  box,
+  home,
+  zoom = NULL,
+  density = 1,
+  anchor = "center"
+) {
   width <- home[3] - home[1]
   height <- home[4] - home[2]
-  if (is.null(zoom)) {
-    fitted <- frame_grow_ratio(width / height, target, "center")
-    shot_width <- min(width, max(fitted[3] - fitted[1], width / density))
+  shot_width <- if (is.null(zoom)) {
+    fitted <- frame_grow_ratio(width / height, box, anchor)
+    min(width, max(fitted[3] - fitted[1], width / density))
   } else {
-    shot_width <- width / max(zoom, 1)
+    width / max(zoom, 1)
   }
-  center <- c((target[1] + target[3]) / 2, (target[2] + target[4]) / 2)
-  half <- c(shot_width / 2, shot_width * height / width / 2)
-  c(center - half, center + half)
+  frame_place(c(shot_width, shot_width * height / width), box, anchor)
 }
 
 camera_viewport <- function(shot, scroll, home, reset = FALSE) {
@@ -363,7 +409,7 @@ camera_at <- function(moves, time, home, density) {
     to <- if (move$reset) {
       home + rep(move$scroll, 2)
     } else {
-      camera_shot(move$box, home, move$zoom, density)
+      camera_shot(move$box, home, move$zoom, density, move$anchor %||% "center")
     }
     prior <- list(
       start = move$start,

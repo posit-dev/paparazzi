@@ -217,7 +217,7 @@ test_that("stills sync box after immediate shift and hide inspect outlines", {
   expect_equal(at(img, 225, 311), c(1, 1, 1), tolerance = 0.04)
   # The inspect box at x=200..300 is rose, not red; it must not enter stills.
   expect_true(inspect_overlay_count(page) > 0)
-  page |> pz_screenshot(framed, target = "#box")
+  page |> pz_screenshot(framed, frame = "#box")
   cropped <- png::readPNG(framed)
   expect_equal(at(cropped, 25, 1), c(1, 0, 0), tolerance = 0.04)
   overlay_clear(page)
@@ -734,7 +734,7 @@ test_that("below-fold redaction covers a target-framed still without scrolling",
   page |> pz_annotate_redact("#far")
   expect_equal(pz_js(page, "window.scrollY"), 0)
   path <- withr::local_tempfile(fileext = ".png")
-  page |> pz_screenshot(path, target = "#far")
+  page |> pz_screenshot(path, frame = "#far")
   expect_equal(pz_js(page, "window.scrollY"), 0)
   img <- png::readPNG(path)
   expect_equal(mean(img[,, 1:3]), 23 / 255, tolerance = 0.025)

@@ -70,12 +70,15 @@
 #' @param method Capture method: `"poll"` (the default) for regular,
 #'   higher-resolution captures, or `"screencast"` for captures driven
 #'   by visual changes. See *Choosing a capture method* for tradeoffs.
-#' @param frame Area to show in the finished recording: `NULL` uses
-#'   the page default set with [pz_stage_frame()], if any, or shows the
-#'   full viewport; a [pz_frame()] spec replaces that default;
-#'   `FALSE` ignores it. An explicit frame with
-#'   `target_box = "annotated"` is invalid for the home frame. A staged
-#'   annotated frame silently measures element boxes only for recording.
+#' @param frame Area to show in the finished recording: a [pz_frame()]
+#'   spec, or a bare locator (a CSS selector string, a [pz_loc()] spec,
+#'   or a list of either) promoted to one; `NULL` uses the page default
+#'   set with [pz_stage_frame()], if any, or shows the full viewport;
+#'   `FALSE` ignores the default. Unset fields inherit the staged
+#'   value, then the built-in default. A frame with
+#'   `target_box = "annotated"` set explicitly is invalid for the home
+#'   frame; an annotated box inherited from the staged frame silently
+#'   measures element boxes only for recording.
 #' @param fps Frames per second in the finished recording. Poll aims
 #'   to capture at this rate; screencast capture depends on visual
 #'   changes.
@@ -158,16 +161,23 @@ pz_record_start <- function(
   if (identical(format, "gif") && captions != "burn") {
     cli::cli_abort("WebVTT sidecars need an MP4 or WebM recording.")
   }
-  staged_frame <- is.null(frame)
+  frame <- as_frame_spec(frame)
+  if (
+    inherits(frame, "paparazzi_frame") &&
+      identical(frame$target_box, "annotated")
+  ) {
+    cli::cli_abort(
+      "The recording's home {.arg frame} cannot use {.code target_box = 'annotated'}; use {.code target_box = 'element'} for the home frame."
+    )
+  }
   frame <- frame_effective(ctx, frame)
-  if (inherits(frame, "paparazzi_frame") && frame$target_box == "annotated") {
-    if (staged_frame) {
-      frame$target_box <- "element"
-    } else {
-      cli::cli_abort(
-        "The recording's home {.arg frame} cannot use {.code target_box = 'annotated'}; use {.code target_box = 'element'} for the home frame."
-      )
-    }
+  # An annotated target_box inherited from the staged frame measures
+  # element boxes only for the home frame.
+  if (
+    inherits(frame, "paparazzi_frame") &&
+      identical(frame$target_box, "annotated")
+  ) {
+    frame$target_box <- "element"
   }
   record_check_packages(
     format,
@@ -1052,7 +1062,7 @@ record_nav_rebased <- function(page) {
 # The crop box is viewport-relative CSS pixels (the PNG's coordinate
 # space). viewport_width is kept for CSS-to-pixel conversion at encode time.
 record_crop_box <- function(ctx, spec, call = caller_env()) {
-  m <- frame_measure(ctx, NULL, spec, extent = "viewport", call = call)
+  m <- frame_measure(ctx, spec, extent = "viewport", call = call)
   box <- frame_round(m$box, pinned = m$pinned, even = TRUE)
   c(frame_region(box, call = call), viewport_width = m$geometry$viewport_width)
 }

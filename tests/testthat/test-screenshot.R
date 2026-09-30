@@ -15,7 +15,7 @@ test_that("pz_screenshot captures a single element's bounding box", {
   dpr <- page_dpr(page)
 
   # #shot-a: left 40, top 30, 100x60
-  pz_screenshot(page, path, target = "#shot-a")
+  pz_screenshot(page, path, frame = "#shot-a")
   expect_identical(png_dimensions(path), as.integer(round(c(100, 60) * dpr)))
 })
 
@@ -27,7 +27,7 @@ test_that("pz_screenshot captures the union of a list of targets", {
   # #shot-b sits right of AND below #shot-a, so the union is
   # x=40 y=30 w=300 h=170: the prior-art bug (mutating x before
   # computing width) would report the wrong width here.
-  pz_screenshot(page, path, target = list("#shot-a", "#shot-b"))
+  pz_screenshot(page, path, frame = list("#shot-a", "#shot-b"))
   expect_identical(png_dimensions(path), as.integer(round(c(300, 170) * dpr)))
 })
 
@@ -39,7 +39,7 @@ test_that("pz_screenshot unions every element a multi-match selector finds", {
   # .multi matches #multi-1 (40, 260, 80x50) and #multi-2
   # (180, 300, 80x50); the union is x=40 y=260 w=220 h=90. No strict
   # argument: several matches are a union, not an error.
-  pz_screenshot(page, path, target = ".multi")
+  pz_screenshot(page, path, frame = ".multi")
   expect_identical(png_dimensions(path), as.integer(round(c(220, 90) * dpr)))
 })
 
@@ -48,7 +48,7 @@ test_that("pz_screenshot accepts a mixed list of pz_loc() specs and strings", {
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(page)
 
-  pz_screenshot(page, path, target = list(pz_loc("#shot-a"), "#shot-b"))
+  pz_screenshot(page, path, frame = list(pz_loc("#shot-a"), "#shot-b"))
   expect_identical(png_dimensions(path), as.integer(round(c(300, 170) * dpr)))
 })
 
@@ -60,7 +60,7 @@ test_that("pz_screenshot captures a below-fold element without scrolling", {
   # #below-fold: left 60, top 2400, 200x100 -- far beyond the default
   # viewport, so this exercises the captureBeyondViewport path. The
   # capture must not scroll the page as a side effect.
-  pz_screenshot(page, path, target = "#below-fold")
+  pz_screenshot(page, path, frame = "#below-fold")
   expect_identical(png_dimensions(path), as.integer(round(c(200, 100) * dpr)))
   expect_equal(pz_js(page, "window.scrollY"), 0)
 })
@@ -114,13 +114,13 @@ test_that("pz_screenshot captures the right pixels", {
 
   # #shot-a: 100x60 red at (40, 30); center of the capture.
   path_a <- withr::local_tempfile(fileext = ".png")
-  pz_screenshot(page, path_a, target = "#shot-a")
+  pz_screenshot(page, path_a, frame = "#shot-a")
   expect_png_pixel(page, path_a, 50, 30, c(255, 0, 0), dpr = dpr)
 
   # Union of #shot-a + #shot-b: origin (40, 30), so offsets are relative
   # to the union box.
   path_u <- withr::local_tempfile(fileext = ".png")
-  pz_screenshot(page, path_u, target = list("#shot-a", "#shot-b"))
+  pz_screenshot(page, path_u, frame = list("#shot-a", "#shot-b"))
   expect_png_pixel(page, path_u, 10, 15, c(255, 0, 0), dpr = dpr)
   # CSS "green" is #008000, not (0, 255, 0).
   expect_png_pixel(page, path_u, 230, 130, c(0, 128, 0), dpr = dpr)
@@ -129,7 +129,7 @@ test_that("pz_screenshot captures the right pixels", {
 
   # #below-fold: 200x100 purple at (60, 2400); center of the capture.
   path_f <- withr::local_tempfile(fileext = ".png")
-  pz_screenshot(page, path_f, target = "#below-fold")
+  pz_screenshot(page, path_f, frame = "#below-fold")
   expect_png_pixel(page, path_f, 100, 50, c(128, 0, 128), dpr = dpr)
 })
 
@@ -148,8 +148,8 @@ test_that("pathless screenshots are numbered knitr figures", {
   withr::local_dir(dir)
   text <- paste(
     '```{r fig-shot, echo=FALSE, fig.path="figures/", fig.cap="The page", fig.alt="Red box", out.width="50%"}',
-    'page |> pz_screenshot(target = "#shot-a")',
-    'page |> pz_screenshot(path = NULL, target = "#shot-b")',
+    'page |> pz_screenshot(frame = "#shot-a")',
+    'page |> pz_screenshot(path = NULL, frame = "#shot-b")',
     '```',
     sep = "\n"
   )
@@ -173,7 +173,7 @@ test_that("pathless screenshots are numbered knitr figures", {
         '```{r fig-css, echo=FALSE, fig.path="figures/", fig.retina=%d}',
         retina
       ),
-      'page |> pz_screenshot(target = "#shot-a")',
+      'page |> pz_screenshot(frame = "#shot-a")',
       '```',
       sep = "\n"
     )
@@ -196,7 +196,7 @@ test_that("a pathless screenshot resolves in rendered R Markdown", {
       "---",
       "",
       '```{r fig-live-shot, echo=FALSE, fig.cap="The red box", fig.alt="Red box"}',
-      'page |> pz_screenshot(target = "#shot-a")',
+      'page |> pz_screenshot(frame = "#shot-a")',
       '```'
     ),
     input
@@ -262,7 +262,7 @@ test_that("a Quarto screenshot figure resolves with its cross-reference", {
       "#| echo: false",
       "#| fig-cap: The red box",
       "#| fig-alt: Red box",
-      'page |> pz_screenshot(target = "#shot-a")',
+      'page |> pz_screenshot(frame = "#shot-a")',
       "```",
       "",
       "```{r}",
@@ -306,7 +306,7 @@ test_that("explicit paths stay chainable while knitting", {
   withr::local_dir(dir)
   text <- paste(
     '```{r fig-manual, echo=FALSE}',
-    'page |> pz_screenshot("manual.png", target = "#shot-a") |> pz_act_click("#shot-a")',
+    'page |> pz_screenshot("manual.png", frame = "#shot-a") |> pz_act_click("#shot-a")',
     '```',
     sep = "\n"
   )
@@ -322,7 +322,7 @@ test_that("pathless screenshots preview interactively without magick", {
   shown <- NULL
   withr::local_options(viewer = function(path) shown <<- path)
 
-  preview <- pz_screenshot(page, target = "#shot-a")
+  preview <- pz_screenshot(page, frame = "#shot-a")
   withr::defer(unlink(unclass(preview)))
   expect_s3_class(preview, "paparazzi_preview")
   expect_true(file.exists(unclass(preview)))
@@ -343,10 +343,13 @@ test_that("pz_screenshot validates its inputs", {
   path <- withr::local_tempfile(fileext = ".png")
 
   expect_error(
-    pz_screenshot(page, path, target = list()),
+    pz_screenshot(page, path, frame = list()),
     class = "paparazzi_error_target"
   )
-  expect_error(pz_screenshot(page, path, target = 42), class = "rlang_error")
+  expect_error(
+    pz_screenshot(page, path, frame = 42),
+    class = "paparazzi_error_unsupported"
+  )
   expect_error(pz_screenshot(page, path, extra = 1), "empty")
   expect_error(pz_screenshot(page, 42), class = "rlang_error")
 })
@@ -373,8 +376,8 @@ test_that("pz_screenshot raises on a detached scope", {
 test_that("NULL and omitted screenshot paths both produce implicit output", {
   page <- local_screenshot_page()
   rlang::local_interactive()
-  omitted <- pz_screenshot(page, target = "#shot-a")
-  explicit <- pz_screenshot(page, path = NULL, target = "#shot-a")
+  omitted <- pz_screenshot(page, frame = "#shot-a")
+  explicit <- pz_screenshot(page, path = NULL, frame = "#shot-a")
   withr::defer(unlink(c(unclass(omitted), unclass(explicit))))
   expect_s3_class(omitted, "paparazzi_preview")
   expect_s3_class(explicit, "paparazzi_preview")
