@@ -25,7 +25,7 @@
    `R/utils-check.R` (e.g. `check_character()`, `check_page()`) where they
    fit; extend that file as new shared checkers come up.
 1. **Test scope:** On feature branches, run tests mirroring changed sources
-   and cross-module seams named in the phase note; a full run is optional at
+   and cross-module seams named in the kata task; a full run is optional at
    the implementer's discretion. Run `btw pkg test` on main as the merge gate;
    filtered tests may miss integration breaks.
 1. **Serialize competing Chrome-heavy runs:** use `.agents/chrome-lock.sh`
