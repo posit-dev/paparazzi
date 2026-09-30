@@ -21,6 +21,7 @@ reference:
       - pz_close
       - pz_with_page
       - pz_serve_shiny
+      - pz_serve_quarto
       - pz_serve_static
       - pz_nav_goto
       - pz_device

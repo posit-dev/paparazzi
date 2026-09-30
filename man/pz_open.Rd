@@ -17,18 +17,24 @@ pz_open(
 \item{x}{What to open:
 \itemize{
 \item a URL string (any scheme, including \verb{file://}, \verb{about:}, \verb{data:});
-\item a static directory or \code{.html} file, served over HTTP by this page;
+\item a Shiny app directory or runnable app file (\code{app.R}, \verb{app-*.R},
+\verb{*_app.R}, etc.);
+\item a \code{.qmd} or \code{.Rmd} file, or a Quarto project directory;
+\item a static directory or \code{.html} file;
 \item another existing local file (opened as \verb{file://});
-\item a Shiny app directory (including split \code{ui.R}/\code{server.R} apps) or
-runnable app file (\code{app.R}, \verb{app-*.R}, \verb{*_app.R}, etc.), started by
-this page and stopped when it closes;
-\item a \code{\link[=pz_serve_shiny]{pz_serve_shiny()}} or \code{\link[=pz_serve_static]{pz_serve_static()}} handle, shared across pages
-(closing the page leaves the server running); \code{ui.R} and \code{server.R} passed alone open as files;
+\item a handle from \code{\link[=pz_serve_shiny]{pz_serve_shiny()}}, \code{\link[=pz_serve_quarto]{pz_serve_quarto()}}, or
+\code{\link[=pz_serve_static]{pz_serve_static()}}, shared across pages;
 \item an existing \code{ChromoteSession} (wrapped as-is; nothing is navigated).
 }
 
-Shiny app \strong{objects} are not supported -- run the app in another
-process and pass its URL.}
+Path detection checks Shiny first (directories containing \code{app.R} or
+\code{server.R}, or named app files), then Quarto (\code{.qmd}, \code{.Rmd}, or a
+directory containing \verb{_quarto.yml}), then static directories and HTML
+files. \code{ui.R} and \code{server.R} passed alone open as files.
+A path starts a one-off server using the backend defaults; closing the
+page stops it. Closing a page opened from a handle leaves its server
+running. Shiny app \strong{objects} are not supported; supply an app path
+or a running app's URL instead.}
 
 \item{...}{Forwarded to \code{\link[=pz_device]{pz_device()}} as device settings (e.g.
 \verb{width = 390, mobile = TRUE}); they must be named.}

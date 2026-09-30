@@ -16,7 +16,8 @@ The page, invisibly.
 }
 \description{
 Closes the page's browser session and any server it started. A page
-opened from a shared serving handle leaves the server running. Idempotent; closing an already-closed page is a no-op.
+opened from a shared serving handle leaves the server running.
+Closing an already-closed page is a no-op.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}

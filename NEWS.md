@@ -6,7 +6,7 @@
 
 * First development version. paparazzi drives a headless Chrome browser from R
   through chromote, with one `|>` chain per script: open pages and Shiny apps
-  (`pz_open()`, `pz_app()`), find elements (`pz_loc()`, `pz_find()`), act on
+  (`pz_open()`, `pz_serve_shiny()`), find elements (`pz_loc()`, `pz_find()`), act on
   them (`pz_click()`, `pz_type()`, `pz_set_shiny_input()`, ...), check the page
   with retrying expectations (`pz_expect_*()`), and capture screenshots and
   recordings (`pz_screenshot()`, `pz_record()`).

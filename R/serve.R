@@ -126,6 +126,52 @@ pz_serve_static <- function(path, ...) {
   serve_static(normalizePath(path, winslash = "/", mustWork = TRUE))
 }
 
+#' Serve a document or project with Quarto
+#'
+#' Starts a local `quarto preview` process for a `.qmd` or `.Rmd` file,
+#' or a directory containing `_quarto.yml`. Quarto renders `.Rmd` files
+#' with knitr. The Quarto CLI must be on `PATH`, or its executable path
+#' must be set in `QUARTO_PATH`; the quarto R package is not required.
+#'
+#' Input watching and automatic navigation are disabled. Quarto may
+#' still reload pages after resource changes, such as CSS edits; keep
+#' those resources unchanged during a capture. Interactive documents
+#' (`runtime: shiny` or `server: shiny`) are not supported.
+#'
+#' @param path A path to a `.qmd` or `.Rmd` file, or a Quarto project directory.
+#' @param ... Reserved; must be empty.
+#' @param render Whether to request a full render before previewing.
+#'   `FALSE` passes `--no-render`; projects use Quarto's preview preparation
+#'   and cached execution results. Quarto still renders standalone documents
+#'   on startup. `TRUE` passes `--render all`.
+#' @return A `PaparazziServe` handle with `$url`, `$port`, `$stop()`,
+#'   `$is_running()`, and `$logs()`. Each handle owns its process, so
+#'   multiple previews can run at once. Standard output and errors go to
+#'   a temporary log file, readable during and after the preview.
+#'   Pass the handle to [pz_open()] to share it across pages; closing those
+#'   pages leaves it running. `$stop()` is idempotent; use
+#'   `withr::defer(server$stop())` for cleanup. A finalizer stops the
+#'   preview as a last resort.
+#' @export
+pz_serve_quarto <- function(path, ..., render = FALSE) {
+  check_dots_empty()
+  check_string(path)
+  check_bool(render)
+  if (
+    !((dir.exists(path) && file.exists(file.path(path, "_quarto.yml"))) ||
+      (!dir.exists(path) &&
+        file.exists(path) &&
+        grepl("[.](qmd|rmd)$", path, ignore.case = TRUE)))
+  ) {
+    cli::cli_abort(
+      "{.arg path} must be an existing {.file .qmd} or {.file .Rmd} file, or a directory containing {.file _quarto.yml}.",
+      class = "paparazzi_error_input"
+    )
+  }
+  path <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  quarto_start(path, render, quarto_cli())
+}
+
 serve_open <- function(x, kind, shiny_options, envvars, timeout) {
   switch(
     kind,
@@ -135,6 +181,7 @@ serve_open <- function(x, kind, shiny_options, envvars, timeout) {
       envvars = envvars,
       timeout = timeout
     ),
+    quarto = pz_serve_quarto(x),
     static = pz_serve_static(x)
   )
 }
@@ -144,16 +191,19 @@ serve_kind <- function(x) {
     return(NULL)
   }
   if (dir.exists(x)) {
-    if (
-      file.exists(file.path(x, "app.R")) ||
-        all(file.exists(file.path(x, c("ui.R", "server.R"))))
-    ) {
+    if (any(tolower(list.files(x)) %in% c("app.r", "server.r"))) {
       return("shiny")
+    }
+    if (file.exists(file.path(x, "_quarto.yml"))) {
+      return("quarto")
     }
     return("static")
   }
   if (is_file_app(x) && is_shiny_app_file(basename(x))) {
     return("shiny")
+  }
+  if (grepl("[.](qmd|rmd)$", x, ignore.case = TRUE)) {
+    return("quarto")
   }
   if (grepl("[.]html$", x, ignore.case = TRUE)) {
     return("static")
@@ -165,69 +215,103 @@ serve_static <- function(x) {
   rlang::check_installed("httpuv", reason = "to serve static files.")
   port <- random_port()
   dir <- if (dir.exists(x)) x else dirname(x)
-  server <- httpuv::runStaticServer(
+  server <- suppressMessages(httpuv::runStaticServer(
     dir,
     host = "127.0.0.1",
     port = port,
     background = TRUE,
     browse = FALSE
-  )
+  ))
   url <- paste0("http://127.0.0.1:", port, "/")
   if (!dir.exists(x)) {
-    url <- paste0(url, utils::URLencode(basename(x), reserved = TRUE))
+    url <- paste0(
+      url,
+      utils::URLencode(basename(x), reserved = TRUE, repeated = TRUE)
+    )
   }
-  ServedSite$new(
-    url,
-    port,
-    stop = function() httpuv::stopServer(server),
-    is_running = function() server$isRunning()
+  PaparazziServe$new(
+    process = NULL,
+    log_file = NULL,
+    port = port,
+    url = url,
+    backend = "static",
+    server = server
   )
 }
 
-ServedSite <- R6::R6Class(
-  "PaparazziServe",
-  public = list(
-    url = NULL,
-    port = NULL,
-    backend = NULL,
+quarto_cli <- function() {
+  path <- Sys.getenv("QUARTO_PATH", unset = "")
+  if (!nzchar(path)) {
+    path <- unname(Sys.which("quarto"))
+  }
+  if (!nzchar(path) || !file.exists(path) || dir.exists(path)) {
+    cli::cli_abort(
+      c(
+        "The Quarto CLI could not be found.",
+        i = "Install Quarto from {.url https://quarto.org/docs/get-started/}, add it to PATH, or set QUARTO_PATH to its executable path."
+      ),
+      class = "paparazzi_error_quarto_not_found"
+    )
+  }
+  path
+}
 
-    initialize = function(url, port, stop, is_running, backend = "static") {
-      self$url <- url
-      self$port <- port
-      self$backend <- backend
-      private$stop_ <- stop
-      private$is_running_ <- is_running
-    },
-
-    stop = function() {
-      if (!private$stopped_) {
-        private$stop_()
-        private$stopped_ <- TRUE
+quarto_start <- function(path, render, cli, timeout = 60, call = caller_env()) {
+  for (attempt in seq_len(5)) {
+    port <- random_port()
+    preview <- new_quarto(path, render, cli, port)
+    failure <- if (is.null(preview)) {
+      list(kind = "exited", port_taken = TRUE, log = character())
+    } else {
+      app_wait_ready(preview, timeout)
+    }
+    if (is.null(failure)) {
+      logs <- gsub("\033\\[[0-9;]*m", "", preview$logs())
+      logs <- logs[grepl("Browse at ", logs, fixed = TRUE)]
+      url <- regmatches(logs, regexpr("http://[^[:space:]]+", logs))
+      url <- sub("http://localhost:", "http://127.0.0.1:", url, fixed = TRUE)
+      url <- url[startsWith(url, paste0("http://127.0.0.1:", port, "/"))]
+      if (length(url)) {
+        preview$url <- url[[1]]
       }
-      invisible(self)
-    },
-
-    is_running = function() {
-      !private$stopped_ && private$is_running_()
-    },
-
-    logs = function() character(),
-
-    print = function(...) {
-      status <- if (self$is_running()) "running" else "stopped"
-      cli::cat_line("<paparazzi serve> ", self$url, " -- ", status)
-      invisible(self)
+      return(preview)
     }
-  ),
-  private = list(
-    stop_ = NULL,
-    is_running_ = NULL,
-    stopped_ = FALSE,
-    finalize = function() {
-      try(self$stop(), silent = TRUE)
+    if (!is.null(preview)) {
+      preview$stop()
     }
+    if (failure$port_taken && attempt < 5) {
+      next
+    }
+    app_startup_error(failure, path, timeout, call, engine = "Quarto preview")
+  }
+}
+
+new_quarto <- function(path, render, cli, port) {
+  log_file <- tempfile(pattern = "paparazzi-quarto-", fileext = ".log")
+  if (app_port_connectable(port)) {
+    return(NULL)
+  }
+  process <- processx::process$new(
+    cli,
+    args = c(
+      "preview",
+      path,
+      "--host",
+      "127.0.0.1",
+      "--port",
+      as.character(port),
+      "--no-browser",
+      "--no-watch-inputs",
+      "--no-navigate",
+      if (render) c("--render", "all") else "--no-render"
+    ),
+    stdout = log_file,
+    stderr = "2>&1",
+    cleanup = TRUE,
+    cleanup_tree = TRUE
   )
-)
+  PaparazziServe$new(process, log_file, port, backend = "quarto")
+}
 
 # A file path is an app only if shiny::runApp() would source it.
 is_file_app <- function(path) {
@@ -311,7 +395,7 @@ app_wait_ready <- function(app, timeout) {
       return(list(
         kind = "exited",
         port_taken = any(grepl(
-          "address already in use|failed to create server",
+          "address already in use|port .*already in use|failed to create server",
           log,
           ignore.case = TRUE
         )),
@@ -328,7 +412,13 @@ app_wait_ready <- function(app, timeout) {
   }
 }
 
-app_startup_error <- function(failure, app_dir, timeout, call) {
+app_startup_error <- function(
+  failure,
+  app_dir,
+  timeout,
+  call,
+  engine = "Shiny app"
+) {
   what <- switch(
     if (failure$port_taken) "port_taken" else failure$kind,
     port_taken = "could not bind a port",
@@ -339,7 +429,7 @@ app_startup_error <- function(failure, app_dir, timeout, call) {
   )
   cli::cli_abort(
     c(
-      "The Shiny app at {.path {app_dir}} {what}.",
+      "The {engine} at {.path {app_dir}} {what}.",
       if (length(failure$log)) {
         # Tail and escape opaque child output before cli parses its braces.
         log <- paste(utils::tail(failure$log, 20L), collapse = "\n")
@@ -347,7 +437,11 @@ app_startup_error <- function(failure, app_dir, timeout, call) {
         c(x = cli_escape(log))
       }
     ),
-    class = "paparazzi_error_app_startup",
+    class = if (identical(engine, "Shiny app")) {
+      "paparazzi_error_app_startup"
+    } else {
+      "paparazzi_error_quarto_startup"
+    },
     call = call
   )
 }
@@ -433,11 +527,20 @@ PaparazziServe <- R6::R6Class(
     port = NULL,
     backend = "shiny",
 
-    initialize = function(process, log_file, port) {
+    initialize = function(
+      process,
+      log_file,
+      port,
+      backend = "shiny",
+      url = NULL,
+      server = NULL
+    ) {
       private$process_ <- process
       private$log_file_ <- log_file
+      private$server_ <- server
       self$port <- port
-      self$url <- sprintf("http://127.0.0.1:%d/", port)
+      self$backend <- backend
+      self$url <- url %||% sprintf("http://127.0.0.1:%d/", port)
     },
 
     # Interrupt, wait, kill; each step no-ops once the process is gone,
@@ -445,11 +548,18 @@ PaparazziServe <- R6::R6Class(
     stop = function() {
       if (!private$stopped_) {
         private$stopped_ <- TRUE
+        if (identical(self$backend, "static")) {
+          httpuv::stopServer(private$server_)
+          return(invisible(self))
+        }
         if (private$process_$is_alive()) {
           private$process_$interrupt()
           private$process_$wait(2000)
         }
-        if (private$process_$is_alive()) {
+        if (identical(self$backend, "quarto")) {
+          private$process_$kill_tree()
+          private$process_$wait(3000)
+        } else if (private$process_$is_alive()) {
           private$process_$kill()
         }
       }
@@ -457,20 +567,27 @@ PaparazziServe <- R6::R6Class(
     },
 
     logs = function() {
-      if (!file.exists(private$log_file_)) {
+      if (is.null(private$log_file_) || !file.exists(private$log_file_)) {
         return(character())
       }
       readLines(private$log_file_, warn = FALSE)
     },
 
     is_running = function() {
+      if (identical(self$backend, "static")) {
+        return(!private$stopped_ && private$server_$isRunning())
+      }
       !private$stopped_ && private$process_$is_alive()
     },
 
     print = function(...) {
       status <- if (self$is_running()) {
-        sprintf("running (pid %d)", private$process_$get_pid())
-      } else if (private$stopped_) {
+        if (identical(self$backend, "static")) {
+          "running"
+        } else {
+          sprintf("running (pid %d)", private$process_$get_pid())
+        }
+      } else if (private$stopped_ || identical(self$backend, "static")) {
         "stopped"
       } else {
         sprintf("exited (status %d)", private$process_$get_exit_status())
@@ -481,6 +598,7 @@ PaparazziServe <- R6::R6Class(
   ),
   private = list(
     process_ = NULL,
+    server_ = NULL,
     log_file_ = NULL,
     stopped_ = FALSE,
     finalize = function() {

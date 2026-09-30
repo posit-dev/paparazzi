@@ -169,7 +169,7 @@ test_that("pz_open errors on a Shiny app object with advice", {
   app_obj <- structure(list(), class = "shiny.appobj")
   expect_error(
     pz_open(app_obj),
-    regexp = "another process",
+    regexp = "pz_serve_shiny",
     class = "paparazzi_error_unsupported"
   )
 })
@@ -544,7 +544,7 @@ test_that("file_url percent-encodes special characters", {
   expect_no_match(url, "#")
 
   skip_if_no_chrome()
-  page <- pz_open(weird)
+  page <- pz_open(url)
   withr::defer(pz_close(page))
   expect_match(pz_js(page, "location.protocol"), "file:")
 })
@@ -557,7 +557,7 @@ test_that("file_url encodes literal percent signs in file names", {
   expect_match(url, "a%2520b%20%231.html", fixed = TRUE)
 
   skip_if_no_chrome()
-  page <- pz_open(pct)
+  page <- pz_open(url)
   withr::defer(pz_close(page))
   expect_match(pz_js(page, "location.pathname"), "a%2520b", fixed = TRUE)
 })
@@ -566,7 +566,7 @@ test_that("print() works on open and closed pages", {
   skip_if_no_chrome()
   page <- pz_open(fixture_file())
   expect_output(print(page), "── paparazzi page")
-  expect_output(print(page), "URL        file:")
+  expect_output(print(page), "URL        http:")
   pz_close(page)
   expect_output(print(page), "<paparazzi page> \\(closed\\)")
 })

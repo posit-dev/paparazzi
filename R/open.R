@@ -6,17 +6,23 @@
 #'
 #' @param x What to open:
 #'   * a URL string (any scheme, including `file://`, `about:`, `data:`);
-#'   * a static directory or `.html` file, served over HTTP by this page;
+#'   * a Shiny app directory or runnable app file (`app.R`, `app-*.R`,
+#'     `*_app.R`, etc.);
+#'   * a `.qmd` or `.Rmd` file, or a Quarto project directory;
+#'   * a static directory or `.html` file;
 #'   * another existing local file (opened as `file://`);
-#'   * a Shiny app directory (including split `ui.R`/`server.R` apps) or
-#'     runnable app file (`app.R`, `app-*.R`, `*_app.R`, etc.), started by
-#'     this page and stopped when it closes;
-#'   * a [pz_serve_shiny()] or [pz_serve_static()] handle, shared across pages
-#'     (closing the page leaves the server running); `ui.R` and `server.R` passed alone open as files;
+#'   * a handle from [pz_serve_shiny()], [pz_serve_quarto()], or
+#'     [pz_serve_static()], shared across pages;
 #'   * an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
 #'
-#'   Shiny app **objects** are not supported -- run the app in another
-#'   process and pass its URL.
+#'   Path detection checks Shiny first (directories containing `app.R` or
+#'   `server.R`, or named app files), then Quarto (`.qmd`, `.Rmd`, or a
+#'   directory containing `_quarto.yml`), then static directories and HTML
+#'   files. `ui.R` and `server.R` passed alone open as files.
+#'   A path starts a one-off server using the backend defaults; closing the
+#'   page stops it. Closing a page opened from a handle leaves its server
+#'   running. Shiny app **objects** are not supported; supply an app path
+#'   or a running app's URL instead.
 #' @param ... Forwarded to [pz_device()] as device settings (e.g.
 #'   `width = 390, mobile = TRUE`); they must be named.
 #' @param wait What to wait for before returning. `"auto"` (the default)
@@ -155,7 +161,8 @@ pz_open <- function(
 #' Close a page
 #'
 #' Closes the page's browser session and any server it started. A page
-#' opened from a shared serving handle leaves the server running. Idempotent; closing an already-closed page is a no-op.
+#' opened from a shared serving handle leaves the server running.
+#' Closing an already-closed page is a no-op.
 #'
 #' @param page A `PaparazziPage` from [pz_open()], or any context on it
 #'   (such as the end of a chain). A chain from [pz_record_start()] whose
@@ -292,7 +299,7 @@ open_target_url <- function(x, call = caller_env()) {
   }
   if (!is_string(x)) {
     cli::cli_abort(
-      "{.arg x} must be a URL, a path to a local file, or a ChromoteSession; not {.obj_type_friendly {x}}.",
+      "{.arg x} must be a URL, a supported local path, a serving handle, or a ChromoteSession; not {.obj_type_friendly {x}}.",
       class = "paparazzi_error_input",
       call = call
     )

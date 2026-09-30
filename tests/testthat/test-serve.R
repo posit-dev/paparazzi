@@ -328,7 +328,7 @@ test_that("static handles stop on scope exit and finalization", {
 })
 
 test_that("static inputs and reserved dots are validated", {
-  expect_error(pz_serve_static(42), "must be a string")
+  expect_error(pz_serve_static(42), "must be a single string")
   expect_error(
     pz_serve_static("does/not/exist"),
     class = "paparazzi_error_input"
@@ -338,4 +338,268 @@ test_that("static inputs and reserved dots are validated", {
     class = "paparazzi_error_input"
   )
   expect_error(pz_serve_static(fixture_file(), port = 1234), "must be empty")
+})
+
+test_that("Quarto document handles own independent processes and shared pages", {
+  skip_if_no_chrome()
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "document.qmd")
+  file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+  other_dir <- withr::local_tempdir()
+  other_path <- file.path(other_dir, "document.qmd")
+  file.copy(path, other_path)
+
+  server <- pz_serve_quarto(path, render = TRUE)
+  withr::defer(server$stop())
+  other <- pz_serve_quarto(other_path)
+  withr::defer(other$stop())
+  expect_s3_class(server, "PaparazziServe")
+  expect_true(server$is_running())
+  expect_true(other$is_running())
+  expect_false(identical(server$port, other$port))
+  expect_true(any(grepl("Output created", server$logs(), fixed = TRUE)))
+
+  page <- local_page(server)
+  second <- local_page(server)
+  expect_identical(
+    pz_get_text(page, target = "#document-marker"),
+    "Quarto capture"
+  )
+  expect_identical(
+    pz_get_text(second, target = "#document-marker"),
+    "Quarto capture"
+  )
+  pz_close(page)
+  pz_close(second)
+  expect_true(server$is_running())
+  expect_invisible(server$stop())
+  expect_no_error(server$stop())
+  expect_false(server$is_running())
+  expect_true(wait_until(function() !app_port_reachable(server$port)))
+  expect_true(other$is_running())
+  expect_type(server$logs(), "character")
+  expect_gt(length(server$logs()), 0)
+})
+
+test_that("pz_open owns a one-off Quarto document preview", {
+  skip_if_no_chrome()
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "document.qmd")
+  file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+  page <- local_page(path)
+  port <- page$.__enclos_env__$private$owned_app_$port
+  expect_identical(
+    pz_get_text(page, target = "#document-marker"),
+    "Quarto capture"
+  )
+  pz_nav_reload(page)
+  expect_identical(
+    pz_get_text(page, target = "#document-marker"),
+    "Quarto capture"
+  )
+  pz_close(page)
+  expect_true(wait_until(function() !app_port_reachable(port)))
+})
+
+test_that("Quarto renders R Markdown with knitr", {
+  skip_if_no_chrome()
+  skip_if_not_installed("knitr")
+  skip_if_not_installed("rmarkdown")
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "document.Rmd")
+  writeLines(
+    c(
+      "---",
+      "format: html",
+      "---",
+      "",
+      "```{r}",
+      "cat('R Markdown marker')",
+      "```"
+    ),
+    path
+  )
+  server <- pz_serve_quarto(path)
+  withr::defer(server$stop())
+  page <- local_page(server)
+  expect_match(
+    pz_get_text(page, target = "body"),
+    "R Markdown marker",
+    fixed = TRUE
+  )
+})
+
+test_that("Quarto projects use their output URL", {
+  skip_if_no_chrome()
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  writeLines(
+    c("project:", "  type: website", "format: html"),
+    file.path(dir, "_quarto.yml")
+  )
+  path <- file.path(dir, "index.qmd")
+  file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+  server <- pz_serve_quarto(dir, render = TRUE)
+  withr::defer(server$stop())
+  page <- local_page(server)
+  expect_identical(
+    pz_get_text(page, target = "#document-marker"),
+    "Quarto capture"
+  )
+})
+
+test_that("Quarto finalizers stop the process tree", {
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "document.qmd")
+  file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+  port <- pz_serve_quarto(path)$port
+  gc()
+  gc()
+  expect_true(wait_until(function() !app_port_reachable(port)))
+})
+
+test_that("Quarto CLI lookup respects QUARTO_PATH and fails with advice", {
+  dir <- withr::local_tempdir()
+  executable <- file.path(dir, "quarto")
+  file.create(executable)
+  withr::local_envvar(QUARTO_PATH = executable)
+  expect_identical(quarto_cli(), executable)
+  withr::local_envvar(QUARTO_PATH = "", PATH = "")
+  err <- expect_error(quarto_cli(), class = "paparazzi_error_quarto_not_found")
+  expect_match(conditionMessage(err), "Install Quarto", fixed = TRUE)
+  withr::local_envvar(QUARTO_PATH = file.path(dir, "missing"))
+  expect_error(quarto_cli(), class = "paparazzi_error_quarto_not_found")
+})
+
+test_that("Quarto paths, rendering, and dots are validated", {
+  path <- test_path("fixtures", "quarto", "document.qmd")
+  expect_error(pz_serve_quarto(42), "must be a single string")
+  expect_error(
+    pz_serve_quarto("does/not/exist"),
+    class = "paparazzi_error_input"
+  )
+  expect_error(pz_serve_quarto(fixture_file()), class = "paparazzi_error_input")
+  expect_error(pz_serve_quarto(dirname(path)), class = "paparazzi_error_input")
+  expect_error(pz_serve_quarto(path, render = NA), "render")
+  expect_error(pz_serve_quarto(path, render = "all"), "render")
+  expect_error(pz_serve_quarto(path, port = 1234), "must be empty")
+})
+
+test_that("Quarto startup failures include logs and release the port", {
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "broken.qmd")
+  writeLines(c("---", "format: nonexistent-format", "---", "Broken"), path)
+  port <- random_port()
+  local_mocked_bindings(random_port = function(...) port)
+  expect_error(
+    pz_serve_quarto(path),
+    class = "paparazzi_error_quarto_startup",
+    regexp = "exited during startup"
+  )
+  expect_true(wait_until(function() !app_port_reachable(port)))
+})
+
+test_that("Quarto preflight retries a port takeover", {
+  skip_if_not_installed("httpuv")
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "document.qmd")
+  file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+  taken <- random_port()
+  listener <- httpuv::startServer("127.0.0.1", taken, list())
+  withr::defer(httpuv::stopServer(listener))
+  picker <- random_port
+  attempts <- 0L
+  local_mocked_bindings(random_port = function(...) {
+    attempts <<- attempts + 1L
+    if (attempts == 1L) taken else picker()
+  })
+  server <- pz_serve_quarto(path)
+  withr::defer(server$stop())
+  expect_false(identical(server$port, taken))
+  expect_true(server$is_running())
+})
+
+test_that("automatic serving detection prioritizes Shiny, then Quarto, then static", {
+  dir <- withr::local_tempdir()
+  expect_identical(serve_kind(dir), "static")
+  file.create(file.path(dir, "_quarto.yml"))
+  expect_identical(serve_kind(dir), "quarto")
+  file.create(file.path(dir, "app.R"))
+  expect_identical(serve_kind(dir), "shiny")
+  unlink(file.path(dir, "app.R"))
+  file.create(file.path(dir, "server.R"))
+  expect_identical(serve_kind(dir), "shiny")
+  file.create(file.path(dir, "ui.R"))
+  expect_identical(serve_kind(dir), "shiny")
+  expect_null(serve_kind(file.path(dir, "ui.R")))
+  expect_null(serve_kind(file.path(dir, "server.R")))
+  expect_identical(serve_kind(shiny_app_fixture_file()), "shiny")
+  expect_identical(serve_kind(fixture_file()), "static")
+  doc <- file.path(dir, "document.Rmd")
+  file.create(doc)
+  expect_identical(serve_kind(doc), "quarto")
+  expect_identical(
+    serve_kind(test_path("fixtures", "quarto", "document.qmd")),
+    "quarto"
+  )
+  expect_null(serve_kind(42))
+  expect_null(serve_kind("does/not/exist"))
+})
+
+test_that("static file URLs encode literal percent signs and reserved characters", {
+  skip_if_no_chrome()
+  skip_if_not_installed("httpuv")
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "a%20b #1.html")
+  writeLines('<html><body><h1>Encoded filename</h1></body></html>', path)
+  server <- pz_serve_static(path)
+  withr::defer(server$stop())
+  expect_match(server$url, "a%2520b%20%231.html", fixed = TRUE)
+  page <- local_page(server)
+  expect_identical(pz_get_text(page, target = "h1"), "Encoded filename")
+})
+
+test_that("Quarto startup timeouts clean up the process tree", {
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "document.qmd")
+  file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+  port <- random_port()
+  local_mocked_bindings(random_port = function(...) port)
+  expect_error(
+    quarto_start(path, FALSE, quarto_cli(), timeout = 0),
+    class = "paparazzi_error_quarto_startup",
+    regexp = "did not start within"
+  )
+  expect_true(wait_until(function() !app_port_reachable(port)))
 })
