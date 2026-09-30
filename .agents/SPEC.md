@@ -73,8 +73,7 @@ Design rule: `pz_act_*` is for functions that send real user input
 Focus and blur use the browser's element methods, and text selection uses
 DOM selection methods. `pz_act_scroll()` uses wheel input while recording
 except with `duration = 0` or an instant-scroll fallback, and changes scroll
-position directly otherwise. Currently, root typing without a target is
-paced but skips the staged pause.
+position directly otherwise.
 
 Pointer and keyboard:
 

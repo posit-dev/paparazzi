@@ -5,37 +5,31 @@
 # Value and file setting is DOM state, not pointer input: the native
 # prototype setters plus dispatched events (pz_set_value()), and
 # DOM.setFileInputFiles (pz_set_files()).
+
 #' Acting on the page
 #'
 #' @description
 #' The contract shared by the `pz_act_*()` functions.
 #'
 #' @section Acting on the page:
-#' The `pz_act_*()` functions interact with the page the way a person would.
-#' Each one uses real browser input (pointer moves and clicks, key presses,
-#' or wheel scrolls), the browser's focus methods, or a real text selection
-#' rather than setting a form value directly. [pz_act_scroll()] uses wheel
-#' input while recording, except with `duration = 0` or an instant-scroll
-#' fallback; without a recording, it changes scroll position directly.
+#' The `pz_act_*()` functions use the page the way a person would. They send
+#' real browser input, such as pointer moves, clicks and key presses, or use
+#' the browser's own focus and text-selection methods. They never set a value
+#' directly.
 #'
-#' An action that takes a `target` finds it in the current scope, waiting for
-#' a DOM match, or acts on the scope itself when `target` is `NULL`, where
-#' supported. At the root, [pz_act_type()] without a target types into the
-#' focused element. [pz_act_press()] and [pz_act_blur()] take no target:
-#' key presses use the focused element, and blur removes focus from the
-#' scope's element or, at the root, the focused element. Scrolling with `by`
-#' or `to` acts on the scope's scroll container, or the page at the root.
-#' Actions with an explicit target scroll it into view when needed.
+#' An action with a `target` looks for it in the current scope and waits until
+#' it matches an element. Inside a scope, `target = NULL` acts on the scope's
+#' element. The action scrolls its target into view first when needed. A few
+#' actions, like [pz_act_press()], take no target and act on the focused
+#' element instead.
 #'
-#' While the page is recording, actions are staged: the visible cursor
-#' glides to pointer targets, typing is paced when `typing = "natural"`,
-#' and the page holds for the staged `pause` afterward, except for typing
-#' into the focused element at the root without a target. Without a recording,
-#' actions run straight to their final state. See [pz_stage()] for staging
-#' settings.
+#' While the page is recording, actions are staged as [pz_stage()] sets them
+#' up: the cursor glides to pointer targets, typing is paced, scrolls use the
+#' mouse wheel, and the page holds for the staged `pause` afterward. Without a
+#' recording, actions go straight to their final state.
 #'
-#' To set a value directly instead (without action staging in a recording),
-#' use [pz_set_value()], [pz_set_files()], or [pz_set_shiny_input()].
+#' To set a value directly instead, without staging, use [pz_set_value()],
+#' [pz_set_files()], or [pz_set_shiny_input()].
 #'
 #' @name paparazzi-actions
 NULL

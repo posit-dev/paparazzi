@@ -8,30 +8,23 @@ The contract shared by the \verb{pz_act_*()} functions.
 }
 \section{Acting on the page}{
 
-The \verb{pz_act_*()} functions interact with the page the way a person would.
-Each one uses real browser input (pointer moves and clicks, key presses,
-or wheel scrolls), the browser's focus methods, or a real text selection
-rather than setting a form value directly. \code{\link[=pz_act_scroll]{pz_act_scroll()}} uses wheel
-input while recording, except with \code{duration = 0} or an instant-scroll
-fallback; without a recording, it changes scroll position directly.
+The \verb{pz_act_*()} functions use the page the way a person would. They send
+real browser input, such as pointer moves, clicks and key presses, or use
+the browser's own focus and text-selection methods. They never set a value
+directly.
 
-An action that takes a \code{target} finds it in the current scope, waiting for
-a DOM match, or acts on the scope itself when \code{target} is \code{NULL}, where
-supported. At the root, \code{\link[=pz_act_type]{pz_act_type()}} without a target types into the
-focused element. \code{\link[=pz_act_press]{pz_act_press()}} and \code{\link[=pz_act_blur]{pz_act_blur()}} take no target:
-key presses use the focused element, and blur removes focus from the
-scope's element or, at the root, the focused element. Scrolling with \code{by}
-or \code{to} acts on the scope's scroll container, or the page at the root.
-Actions with an explicit target scroll it into view when needed.
+An action with a \code{target} looks for it in the current scope and waits until
+it matches an element. Inside a scope, \code{target = NULL} acts on the scope's
+element. The action scrolls its target into view first when needed. A few
+actions, like \code{\link[=pz_act_press]{pz_act_press()}}, take no target and act on the focused
+element instead.
 
-While the page is recording, actions are staged: the visible cursor
-glides to pointer targets, typing is paced when \code{typing = "natural"},
-and the page holds for the staged \code{pause} afterward, except for typing
-into the focused element at the root without a target. Without a recording,
-actions run straight to their final state. See \code{\link[=pz_stage]{pz_stage()}} for staging
-settings.
+While the page is recording, actions are staged as \code{\link[=pz_stage]{pz_stage()}} sets them
+up: the cursor glides to pointer targets, typing is paced, scrolls use the
+mouse wheel, and the page holds for the staged \code{pause} afterward. Without a
+recording, actions go straight to their final state.
 
-To set a value directly instead (without action staging in a recording),
-use \code{\link[=pz_set_value]{pz_set_value()}}, \code{\link[=pz_set_files]{pz_set_files()}}, or \code{\link[=pz_set_shiny_input]{pz_set_shiny_input()}}.
+To set a value directly instead, without staging, use \code{\link[=pz_set_value]{pz_set_value()}},
+\code{\link[=pz_set_files]{pz_set_files()}}, or \code{\link[=pz_set_shiny_input]{pz_set_shiny_input()}}.
 }
 
