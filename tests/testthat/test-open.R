@@ -169,7 +169,7 @@ test_that("pz_open errors on a Shiny app object with advice", {
   app_obj <- structure(list(), class = "shiny.appobj")
   expect_error(
     pz_open(app_obj),
-    regexp = "another process",
+    regexp = "pz_serve_shiny",
     class = "paparazzi_error_unsupported"
   )
 })
@@ -236,7 +236,7 @@ test_that("a page opened on a handle does not own the app", {
 test_that("a temporary app handle survives GC while its page is open", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  page <- pz_open(pz_app(shiny_app_fixture_dir()))
+  page <- pz_open(pz_serve_shiny(shiny_app_fixture_dir()))
   withr::defer({
     pz_close(page)
     page$.__enclos_env__$private$shared_app_$stop()
@@ -544,7 +544,7 @@ test_that("file_url percent-encodes special characters", {
   expect_no_match(url, "#")
 
   skip_if_no_chrome()
-  page <- pz_open(weird)
+  page <- pz_open(url)
   withr::defer(pz_close(page))
   expect_match(pz_js(page, "location.protocol"), "file:")
 })
@@ -557,7 +557,7 @@ test_that("file_url encodes literal percent signs in file names", {
   expect_match(url, "a%2520b%20%231.html", fixed = TRUE)
 
   skip_if_no_chrome()
-  page <- pz_open(pct)
+  page <- pz_open(url)
   withr::defer(pz_close(page))
   expect_match(pz_js(page, "location.pathname"), "a%2520b", fixed = TRUE)
 })

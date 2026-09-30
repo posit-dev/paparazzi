@@ -1,21 +1,29 @@
 #' Open a page
 #'
-#' Opens a URL, local file, Shiny app, or existing
+#' Opens a URL, local file, local server, or existing
 #' [chromote::ChromoteSession] as a paparazzi page: the root context that
 #' starts every `|>` chain.
 #'
 #' @param x What to open:
 #'   * a URL string (any scheme, including `file://`, `about:`, `data:`);
-#'   * a path to an existing local file (opened as `file://`);
-#'   * a Shiny app directory (including split `ui.R`/`server.R` apps) or
-#'     runnable app file (`app.R`, `app-*.R`, `*_app.R`, etc.), started by
-#'     this page and stopped when it closes;
-#'   * a [pz_app()] handle, shared across pages (closing the page leaves
-#'     the app running); `ui.R` and `server.R` passed alone open as files;
+#'   * a Shiny app directory or runnable app file (`app.R`, `app-*.R`,
+#'     `*_app.R`, etc.);
+#'   * a `.qmd` or `.Rmd` file, or a Quarto project directory;
+#'   * a directory of static files, served over HTTP;
+#'   * any other existing local file, including `.html` files, opened as
+#'     `file://` (use [pz_serve_static()] to serve a page over HTTP);
+#'   * a handle from [pz_serve_shiny()], [pz_serve_quarto()], or
+#'     [pz_serve_static()], shared across pages;
 #'   * an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
 #'
-#'   Shiny app **objects** are not supported -- run the app in another
-#'   process and pass its URL.
+#'   Path detection checks Shiny first (directories containing `app.R` or
+#'   `server.R`, or named app files), then Quarto (`.qmd`, `.Rmd`, or a
+#'   directory containing `_quarto.yml`), then other directories as static
+#'   sites. `ui.R` and `server.R` passed alone open as files.
+#'   A path starts a one-off server using the backend defaults; closing the
+#'   page stops it. Closing a page opened from a handle leaves its server
+#'   running. Shiny app **objects** are not supported; supply an app path
+#'   or a running app's URL instead.
 #' @param ... Forwarded to [pz_device()] as device settings (e.g.
 #'   `width = 390, mobile = TRUE`); they must be named.
 #' @param wait What to wait for before returning. `"auto"` (the default)
@@ -26,7 +34,7 @@
 #'   navigated, so only `"shiny"` waits there.
 #' @param timeout Session default timeout in seconds; defaults to 10.
 #'   Per-call `timeout = NULL` in waits and expectations uses this default.
-#' @param shiny_options,envvars Passed to [pz_app()] when opening an app path.
+#' @param shiny_options,envvars Passed to [pz_serve_shiny()] when opening an app path.
 #'   `envvars = NULL` adds no process environment overrides.
 #'
 #' @return A `PaparazziPage` (the root context).
@@ -87,20 +95,13 @@ pz_open <- function(
   }
 
   owned_app <- NULL
-  shared_app <- if (inherits(x, "PaparazziApp")) x else NULL
-  is_app <- inherits(x, "PaparazziApp") ||
-    (is_string(x) &&
-      file.exists(x) &&
-      (dir.exists(x) || is_shiny_app_file(basename(x))))
-  if (inherits(x, "PaparazziApp")) {
+  shared_app <- if (inherits(x, "PaparazziServe")) x else NULL
+  kind <- if (inherits(x, "PaparazziServe")) x$backend else serve_kind(x)
+  is_app <- identical(kind, "shiny")
+  if (inherits(x, "PaparazziServe")) {
     url <- x$url
-  } else if (is_app) {
-    owned_app <- pz_app(
-      x,
-      shiny_options = shiny_options,
-      envvars = envvars,
-      timeout = timeout
-    )
+  } else if (!is.null(kind)) {
+    owned_app <- serve_open(x, kind, shiny_options, envvars, timeout)
     withr::defer(if (!is.null(owned_app)) owned_app$stop())
     url <- owned_app$url
   } else {
@@ -160,9 +161,9 @@ pz_open <- function(
 
 #' Close a page
 #'
-#' Closes the page's browser session and, if the page started a Shiny app,
-#' stops that app. A page opened from a shared [pz_app()] handle leaves the
-#' app running. Idempotent; closing an already-closed page is a no-op.
+#' Closes the page's browser session and any server it started. A page
+#' opened from a shared serving handle leaves the server running.
+#' Closing an already-closed page is a no-op.
 #'
 #' @param page A `PaparazziPage` from [pz_open()], or any context on it
 #'   (such as the end of a chain). A chain from [pz_record_start()] whose
@@ -291,7 +292,7 @@ open_target_url <- function(x, call = caller_env()) {
     cli::cli_abort(
       c(
         "Shiny app objects can't be opened directly.",
-        i = "Run the app in another process (e.g. {.fn shiny::runApp}) and pass its URL to {.fn pz_open}."
+        i = "Use {.fn pz_serve_shiny} with an app directory or R file, or pass a running app's URL to {.fn pz_open}."
       ),
       class = "paparazzi_error_unsupported",
       call = call
@@ -299,7 +300,7 @@ open_target_url <- function(x, call = caller_env()) {
   }
   if (!is_string(x)) {
     cli::cli_abort(
-      "{.arg x} must be a URL, a path to a local file, or a ChromoteSession; not {.obj_type_friendly {x}}.",
+      "{.arg x} must be a URL, a supported local path, a serving handle, or a ChromoteSession; not {.obj_type_friendly {x}}.",
       class = "paparazzi_error_input",
       call = call
     )

@@ -169,10 +169,10 @@ nav_settle_shiny <- function(page, wait, timeout) {
   if (identical(wait, "auto")) {
     private <- page$.__enclos_env__$private
     app <- private$owned_app_ %||% private$shared_app_
-    if (is.null(app)) {
+    if (is.null(app) || !identical(app$backend, "shiny")) {
       return(invisible(page))
     }
-    # pz_app() URLs are root URLs ending in a slash.
+    # pz_serve_shiny() URLs are root URLs ending in a slash.
     app_origin <- sub("/$", "", app$url)
     if (
       !identical(pz_js(page, "location.origin", timeout = timeout), app_origin)

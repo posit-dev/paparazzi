@@ -17,17 +17,25 @@ pz_open(
 \item{x}{What to open:
 \itemize{
 \item a URL string (any scheme, including \verb{file://}, \verb{about:}, \verb{data:});
-\item a path to an existing local file (opened as \verb{file://});
-\item a Shiny app directory (including split \code{ui.R}/\code{server.R} apps) or
-runnable app file (\code{app.R}, \verb{app-*.R}, \verb{*_app.R}, etc.), started by
-this page and stopped when it closes;
-\item a \code{\link[=pz_app]{pz_app()}} handle, shared across pages (closing the page leaves
-the app running); \code{ui.R} and \code{server.R} passed alone open as files;
+\item a Shiny app directory or runnable app file (\code{app.R}, \verb{app-*.R},
+\verb{*_app.R}, etc.);
+\item a \code{.qmd} or \code{.Rmd} file, or a Quarto project directory;
+\item a directory of static files, served over HTTP;
+\item any other existing local file, including \code{.html} files, opened as
+\verb{file://} (use \code{\link[=pz_serve_static]{pz_serve_static()}} to serve a page over HTTP);
+\item a handle from \code{\link[=pz_serve_shiny]{pz_serve_shiny()}}, \code{\link[=pz_serve_quarto]{pz_serve_quarto()}}, or
+\code{\link[=pz_serve_static]{pz_serve_static()}}, shared across pages;
 \item an existing \code{ChromoteSession} (wrapped as-is; nothing is navigated).
 }
 
-Shiny app \strong{objects} are not supported -- run the app in another
-process and pass its URL.}
+Path detection checks Shiny first (directories containing \code{app.R} or
+\code{server.R}, or named app files), then Quarto (\code{.qmd}, \code{.Rmd}, or a
+directory containing \verb{_quarto.yml}), then other directories as static
+sites. \code{ui.R} and \code{server.R} passed alone open as files.
+A path starts a one-off server using the backend defaults; closing the
+page stops it. Closing a page opened from a handle leaves its server
+running. Shiny app \strong{objects} are not supported; supply an app path
+or a running app's URL instead.}
 
 \item{...}{Forwarded to \code{\link[=pz_device]{pz_device()}} as device settings (e.g.
 \verb{width = 390, mobile = TRUE}); they must be named.}
@@ -42,14 +50,14 @@ navigated, so only \code{"shiny"} waits there.}
 \item{timeout}{Session default timeout in seconds; defaults to 10.
 Per-call \code{timeout = NULL} in waits and expectations uses this default.}
 
-\item{shiny_options, envvars}{Passed to \code{\link[=pz_app]{pz_app()}} when opening an app path.
+\item{shiny_options, envvars}{Passed to \code{\link[=pz_serve_shiny]{pz_serve_shiny()}} when opening an app path.
 \code{envvars = NULL} adds no process environment overrides.}
 }
 \value{
 A \code{PaparazziPage} (the root context).
 }
 \description{
-Opens a URL, local file, Shiny app, or existing
+Opens a URL, local file, local server, or existing
 \link[chromote:ChromoteSession]{chromote::ChromoteSession} as a paparazzi page: the root context that
 starts every \verb{|>} chain.
 }

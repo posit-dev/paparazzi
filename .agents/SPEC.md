@@ -541,28 +541,33 @@ pz_open(
 )
 ```
 
-- `x` can be a URL, a local file (opened as `file://`), a Shiny app directory or `app.R` (run in a background process), a `pz_app()`, or an existing `ChromoteSession`.
-- Shiny app objects are not supported; they error with advice to run the app in another process and pass its URL. No serialization, no process inversion.
+- `x` can be a URL, a Shiny app path, a `.qmd`/`.Rmd` file or Quarto project directory, a static directory/`.html` file, a serving handle, another local file (opened as `file://`), or an existing `ChromoteSession`.
+- Path detection checks Shiny directories/named app files first, then Quarto documents/projects, then static directories/HTML files. A directory with `app.R` or `server.R` wins over `_quarto.yml`. One-off servers belong to the page; shared handles do not.
+- Shiny app objects are not supported; they error with advice to supply an app path to `pz_serve_shiny()` or pass a running app's URL. No serialization, no process inversion.
 - `wait = "auto"` uses `"shiny"` (connected and idle) for Shiny apps and `"load"` otherwise.
-- Other servers (Python Shiny, `quarto preview`, …) are started by the user and opened by URL.
+- Other servers (such as Python Shiny) can be started by the user and opened by URL.
 
-Apps:
+Serving:
 
 ```r
-app <- pz_app("apps/complete-app", envvars = c(MOCK = "1"), shiny_options = list())
+app <- pz_serve_shiny("apps/complete-app", envvars = c(MOCK = "1"), shiny_options = list())
 desktop <- pz_open(app, width = 1440)
 mobile <- pz_open(app, width = 390, mobile = TRUE)
 app$logs()
 app$stop()
 ```
 
-`pz_app()` returns a handle with `$stop()` and `$logs()` methods and a `print()` method (URL, port, status). This is the one place the API relies on methods rather than `pz_*()` functions. Cleanup works with withr: `withr::defer(app$stop())`.
+All three serving functions return a `PaparazziServe` handle with `$url`, `$port`, `$stop()`, `$is_running()`, `$logs()`, and a `print()` method (URL, port, status). This is the one place the API relies on methods rather than `pz_*()` functions. Cleanup works with withr: `withr::defer(app$stop())`.
 
-- `pz_open(dir)` starts and owns an app, and closing the page stops it. `pz_app()` shares one app across pages.
+- `pz_serve_shiny(app, ..., envvars = NULL, shiny_options = list(), timeout = 10)` preserves the Shiny background-process behavior.
+- `pz_serve_quarto(path, ..., render = FALSE)` owns a `quarto preview` process for `.qmd`, `.Rmd` (via knitr), and project directories. It needs the CLI, found through `QUARTO_PATH` or `Sys.which("quarto")`, not the quarto R package. Handles own independent processes, so multiple previews can run at once.
+- `render = FALSE` passes `--no-render`; Quarto still renders standalone documents on startup. Projects use preview preparation and cached execution results. `TRUE` passes `--render all`.
+- Quarto input watching and automatic navigation are disabled; resource changes can still reload pages. Interactive `runtime: shiny` / `server: shiny` documents are outside the supported scope.
+- `pz_serve_static(path, ...)` serves a directory or `.html` file through `httpuv::runStaticServer(background = TRUE)`. For a file, its directory is served and the URL points to the file. Its logs are empty.
 - App stdout/stderr go to a temp log file (no undrained pipes), readable with `app$logs()`.
 - Shutdown: interrupt, wait, kill. Runs on close, on error in block forms, and from a finalizer as a last resort.
 - Ports come from a base-R picker using `serverSocket()` (R >= 4.0), not httpuv. If the app dies because the port was taken, retry with a new port.
-- shiny and httpuv stay out of Imports; `rlang::check_installed("shiny")` runs only when opening an app directory.
+- shiny and httpuv stay in Suggests and are checked at point of use. No quarto R package dependency is added.
 
 Page lifecycle:
 
@@ -572,7 +577,7 @@ pz_with_page(x, code, ...)     # withr-style block, closes on exit
 pz_local_page(x, ..., .env)    # closes when the calling frame (e.g. a test) exits
 ```
 
-`pz_with_page()` and `pz_local_page()` accept an open page or anything `pz_open()` accepts (including a `pz_app()`), and call `pz_close()` on scope exit. Given an app, they open a page on it and close only the page.
+`pz_with_page()` and `pz_local_page()` accept an open page or anything `pz_open()` accepts (including a serving handle), and call `pz_close()` on scope exit. Given an app, they open a page on it and close only the page.
 
 Navigation (resets scope to root; staging and recorder carry over):
 
@@ -686,7 +691,9 @@ Every function takes `ctx` first and returns it invisibly unless noted. The `pz_
 | `pz_close()` | `(page)` | confirmed |
 | `pz_with_page()` | `(x, code, ...)` | confirmed |
 | `pz_local_page()` | `(x, ..., .env = parent.frame())` → page | confirmed |
-| `pz_app()` | `(app_dir, ..., envvars = NULL, shiny_options = list(), timeout = 10)` → app handle with `$stop()`, `$logs()` | confirmed |
+| `pz_serve_shiny()` | `(app, ..., envvars = NULL, shiny_options = list(), timeout = 10)` → app handle with `$stop()`, `$logs()` | confirmed |
+| `pz_serve_quarto()` | `(path, ..., render = FALSE)` → serving handle | confirmed |
+| `pz_serve_static()` | `(path, ...)` → serving handle | confirmed |
 | `pz_nav_goto()` | `(ctx, url, ..., wait = "auto")` | confirmed |
 | `pz_nav_reload()` | `(ctx, ..., wait = "auto")` | confirmed |
 | `pz_nav_back()` | `(ctx, ...)` | confirmed |

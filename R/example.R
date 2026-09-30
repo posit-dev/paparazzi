@@ -2,7 +2,7 @@
 #'
 #' paparazzi ships a few small pages and apps for its examples and
 #' articles. `pz_example()` returns the path to one of them, ready to pass to
-#' [pz_open()] or [pz_app()]. The examples are:
+#' [pz_open()] or [pz_serve_shiny()]. The examples are:
 #'
 #' * `"tasks"`: a static task tracker page (an HTML file) with a form, a
 #'   scrollable list of draggable tasks, filter links that change the URL
