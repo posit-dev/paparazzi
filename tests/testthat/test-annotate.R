@@ -1236,3 +1236,118 @@ test_that("auto reveals preserve the type defaults and zero padding", {
   expect_identical(captured, omitted)
   expect_equal(captured$pad, rep(0, 4))
 })
+
+test_that("mark badges resolve label fill and text color per-call then staged", {
+  page <- annotation_page()
+  badge_style <- function() {
+    pz_js(
+      page,
+      "(() => { const s = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').style; return [s.backgroundColor, s.color]; })()"
+    )
+  }
+  page |> pz_annotate("#box", label = "A", reveal = "none", id = "mark")
+  expect_equal(unlist(badge_style()), c("rgb(23, 23, 23)", "rgb(255, 255, 255)"))
+
+  page |>
+    pz_stage_annotate(fill = "#fef3c7", text_color = "#1c1917") |>
+    pz_annotate("#box", label = "A", reveal = "none", id = "mark")
+  expect_equal(unlist(badge_style()), c("rgb(254, 243, 199)", "rgb(28, 25, 23)"))
+
+  page |>
+    pz_annotate(
+      "#box",
+      label = "A",
+      reveal = "none",
+      id = "mark",
+      label_fill = "#dbeafe",
+      label_text_color = "#172554"
+    )
+  expect_equal(unlist(badge_style()), c("rgb(219, 234, 254)", "rgb(23, 37, 84)"))
+  page |>
+    pz_annotate_clear() |>
+    pz_stage_annotate(fill = NULL, text_color = NULL)
+})
+
+test_that("marks validate label_fill, label_text_color and stroke_width", {
+  page <- annotation_page()
+  expect_error(
+    pz_annotate(page, "#box", label = "A", label_fill = ""),
+    "label_fill.*empty string"
+  )
+  expect_error(
+    pz_annotate(page, "#box", label = "A", label_text_color = ""),
+    "label_text_color.*empty string"
+  )
+  expect_error(pz_annotate(page, "#box", stroke_width = 0), "stroke_width")
+  expect_error(pz_annotate(page, "#box", stroke_width = -1), "stroke_width")
+})
+
+test_that("stroke_width reaches mark shapes and is stageable", {
+  page <- annotation_page()
+  page |>
+    pz_annotate("#box", type = "box", reveal = "none", id = "mark")
+  default_border <- pz_js(
+    page,
+    "getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape')).borderTopWidth"
+  )
+  page |>
+    pz_annotate(
+      "#box",
+      type = "box",
+      reveal = "none",
+      id = "mark",
+      stroke_width = 6
+    )
+  expect_identical(
+    pz_js(
+      page,
+      "getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape')).borderTopWidth"
+    ),
+    "6px"
+  )
+  page |>
+    pz_annotate(
+      "#box",
+      type = "circle",
+      reveal = "none",
+      id = "mark",
+      stroke_width = 5
+    )
+  expect_equal(
+    pz_js(
+      page,
+      "parseFloat(getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape ellipse')).strokeWidth)"
+    ),
+    5
+  )
+  page |>
+    pz_annotate(
+      "#box",
+      type = "underline",
+      reveal = "none",
+      id = "mark",
+      stroke_width = 7
+    )
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape').style.height"
+    ),
+    "7px"
+  )
+  page |>
+    pz_stage_annotate(stroke_width = 2) |>
+    pz_annotate("#box", type = "box", reveal = "none", id = "mark")
+  expect_identical(
+    pz_js(
+      page,
+      "getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape')).borderTopWidth"
+    ),
+    "2px"
+  )
+  expect_identical(
+    default_border,
+    paste0(STAGE_DEFAULTS$annotate_stroke_width, "px")
+  )
+  page |> pz_annotate_clear() |> pz_stage_annotate(stroke_width = NULL)
+})

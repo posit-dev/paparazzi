@@ -855,3 +855,53 @@ test_that("show_keys defaults to none and restores its staged default", {
   pz_stage(page, show_keys = NULL)
   expect_identical(page_stage(page)$show_keys, "none")
 })
+
+test_that("pz_stage_annotate stages fill, text color, stroke width and distance", {
+  page <- local_cursor_page()
+  expect_error(pz_stage_annotate(page, fill = ""), "fill.*empty string")
+  expect_error(
+    pz_stage_annotate(page, text_color = ""),
+    "text_color.*empty string"
+  )
+  expect_error(pz_stage_annotate(page, stroke_width = 0), "stroke_width")
+  expect_error(pz_stage_annotate(page, stroke_width = -1), "stroke_width")
+  expect_error(pz_stage_annotate(page, distance = -1), "distance")
+  expect_identical(page_stage(page), STAGE_DEFAULTS)
+
+  page |>
+    pz_stage_annotate(
+      fill = "red",
+      text_color = "black",
+      stroke_width = 5,
+      distance = 30
+    )
+  expect_identical(page_stage(page)$annotate_fill, "red")
+  expect_identical(page_stage(page)$annotate_text_color, "black")
+  expect_identical(page_stage(page)$annotate_stroke_width, 5)
+  expect_identical(page_stage(page)$annotate_distance, 30)
+
+  page |> pz_stage_annotate()
+  expect_identical(page_stage(page)$annotate_fill, "red")
+  expect_identical(page_stage(page)$annotate_distance, 30)
+
+  page |>
+    pz_stage_annotate(
+      fill = NULL,
+      text_color = NULL,
+      stroke_width = NULL,
+      distance = NULL
+    )
+  expect_identical(page_stage(page)$annotate_fill, STAGE_DEFAULTS$annotate_fill)
+  expect_identical(
+    page_stage(page)$annotate_text_color,
+    STAGE_DEFAULTS$annotate_text_color
+  )
+  expect_identical(
+    page_stage(page)$annotate_stroke_width,
+    STAGE_DEFAULTS$annotate_stroke_width
+  )
+  expect_identical(
+    page_stage(page)$annotate_distance,
+    STAGE_DEFAULTS$annotate_distance
+  )
+})
