@@ -936,3 +936,85 @@ test_that("camera padding rejects NULL even without a recording", {
   expect_invisible(pz_camera(page, "body", pad = 24))
   expect_equal(formals(pz_camera)$pad, 24)
 })
+
+test_that("camera shots place the padded target by anchor", {
+  home <- c(0, 0, 800, 600)
+  box <- c(395, 290, 405, 310)
+  # Center (the default) keeps the historical behavior.
+  expect_equal(camera_shot(box, home, zoom = 2, density = 1), c(200, 150, 600, 450))
+  # A side anchor pins the target to that edge of the shot.
+  expect_equal(
+    camera_shot(box, home, zoom = 2, density = 1, anchor = "left"),
+    c(395, 150, 795, 450)
+  )
+  expect_equal(
+    camera_shot(box, home, zoom = 2, density = 1, anchor = "top left"),
+    c(395, 290, 795, 590)
+  )
+  # Fit grows by the anchor too: 10x20 fit to 4:3 grows right only.
+  expect_equal(
+    camera_shot(box, home, zoom = NULL, density = 100, anchor = "left"),
+    c(395, 290, 395 + 80 / 3, 310)
+  )
+})
+
+test_that("camera shots ignore the staged frame and use camera defaults", {
+  skip_if_no_av()
+  page <- local_record_page()
+  # The staged recipe must not leak into camera shots: the pad is the
+  # camera default 24, not the staged 96.
+  pz_stage_frame(page, "#box", pad = 96, target_box = "annotated")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+
+  pz_camera(page, "#box", duration = 0)
+  move <- page_recorder(page)$camera[[1]]
+  # #box (40, 30) 100x60 + 24 pad, unpolluted by the staged recipe
+  expect_equal(move$box, c(16, 6, 164, 114))
+  pz_record_stop(page)
+})
+
+test_that("camera warns on explicit ratio and when, only when set", {
+  skip_if_no_av()
+  page <- local_record_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+
+  expect_warning(pz_camera(page, pz_frame("#box", ratio = 2)), "ratio")
+  expect_warning(pz_camera(page, pz_frame("#box", when = "start")), "when")
+  expect_no_warning(pz_camera(page, "#box", duration = 0))
+  expect_no_warning(pz_camera(page, pz_frame("#box", pad = 8), duration = 0))
+  pz_record_stop(page)
+})
+
+test_that("frame = FALSE and NULL shoot the scope box, or viewport at the root", {
+  skip_if_no_av()
+  page <- local_record_page()
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, hold = c(0, 0))
+  defer_record_stop(page)
+  view <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+
+  # FALSE: the viewport, unframed (no pad)
+  pz_camera(page, frame = FALSE, duration = 0)
+  expect_equal(page_recorder(page)$camera[[1]]$box, c(0, 0, view))
+
+  # NULL at the root: the viewport with camera defaults (pad 24)
+  pz_camera(page, duration = 0)
+  expect_equal(
+    page_recorder(page)$camera[[2]]$box,
+    c(0, 0, view) + c(-24, -24, 24, 24)
+  )
+  pz_record_stop(page)
+})
+
+test_that("removed camera arguments error", {
+  page <- local_record_page()
+
+  expect_error(pz_camera(page, "#box", zoom = 2), "empty")
+  expect_error(pz_camera(page, "#box", pad = 0), "empty")
+  expect_error(pz_camera(page, "#box", target_box = "element"), "empty")
+  expect_error(pz_camera(page, target = "#box"), "empty")
+})

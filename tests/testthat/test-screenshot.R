@@ -383,3 +383,25 @@ test_that("NULL and omitted screenshot paths both produce implicit output", {
     readBin(explicit, "raw", file.info(explicit)$size)
   )
 })
+
+test_that("frame promotes a bare locator to a frame spec", {
+  page <- local_screenshot_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- page_dpr(page)
+
+  # #shot-a: left 40, top 30, 100x60
+  pz_screenshot(page, path, frame = "#shot-a")
+  expect_identical(png_dimensions(path), as.integer(round(c(100, 60) * dpr)))
+
+  # A list promotes to the union frame
+  pz_screenshot(page, path, frame = list("#shot-a", "#shot-b"))
+  expect_identical(png_dimensions(path), as.integer(round(c(300, 170) * dpr)))
+})
+
+test_that("the removed target argument errors", {
+  page <- local_screenshot_page()
+  path <- withr::local_tempfile(fileext = ".png")
+
+  expect_error(pz_screenshot(page, path, target = "#shot-a"), "empty")
+  expect_false(file.exists(path))
+})

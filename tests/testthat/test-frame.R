@@ -833,3 +833,140 @@ test_that("a framed screenshot returns its context invisibly", {
     ctx
   )
 })
+
+test_that("pz_frame fields default to NULL, filled only at capture time", {
+  spec <- pz_frame("#card")
+  expect_s3_class(spec, "paparazzi_frame")
+  fields <- c(
+    "ratio",
+    "pad",
+    "offset",
+    "anchor",
+    "bounds",
+    "when",
+    "target_box",
+    "zoom"
+  )
+  for (field in fields) {
+    expect_null(spec[[field]])
+  }
+  expect_identical(pz_frame(zoom = 2)$zoom, 2)
+})
+
+test_that("pz_frame validates zoom", {
+  expect_error(pz_frame(zoom = 0), "greater than zero")
+  expect_error(pz_frame(zoom = -1), class = "rlang_error")
+  expect_error(pz_frame(zoom = Inf), class = "rlang_error")
+  expect_error(pz_frame(zoom = "2x"), class = "rlang_error")
+})
+
+test_that("frame_effective promotes bare locators and fills per-field", {
+  page <- local_frame_page()
+
+  promoted <- frame_effective(page, "#card")
+  expect_s3_class(promoted, "paparazzi_frame")
+  expect_identical(promoted$target[[1]]$css, "#card")
+  expect_identical(promoted$pad, rep(0, 4))
+  expect_identical(promoted$offset, c(0, 0))
+  expect_identical(promoted$anchor, "center")
+  expect_identical(promoted$when, "stop")
+  expect_identical(promoted$target_box, "element")
+  expect_null(promoted$zoom)
+
+  listed <- frame_effective(page, list("#card", pz_loc("#small")))
+  expect_length(listed$target, 2)
+
+  pz_stage_frame(page, "#small", pad = 24, ratio = 2)
+  # Explicit beats staged; staged beats the built-in default. Even the
+  # target inherits.
+  filled <- frame_effective(page, pz_frame(pad = 8))
+  expect_identical(filled$pad, rep(8, 4))
+  expect_identical(filled$ratio, 2)
+  expect_identical(filled$target[[1]]$css, "#small")
+  expect_identical(filled$anchor, "center")
+  # frame = NULL resolves the staged recipe itself
+  expect_identical(frame_effective(page, NULL)$pad, rep(24, 4))
+  # FALSE opts out entirely
+  expect_false(frame_effective(page, FALSE))
+  expect_error(
+    frame_effective(page, TRUE),
+    class = "paparazzi_error_unsupported"
+  )
+})
+
+test_that("a staged frame keeps its unset fields NULL", {
+  page <- local_frame_page()
+
+  pz_stage_frame(page, pad = 24)
+  spec <- page_frame(page)
+  expect_identical(spec$pad, rep(24, 4))
+  expect_null(spec$ratio)
+  expect_null(spec$target)
+
+  pz_stage_frame(page, "#card", zoom = 2)
+  expect_identical(page_frame(page)$zoom, 2)
+  expect_identical(page_frame(page)$target[[1]]$css, "#card")
+})
+
+test_that("an explicit frame inherits unset fields from the staged frame", {
+  page <- local_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- page_dpr(page)
+
+  pz_stage_frame(page, "#card", pad = 32)
+  # Only ratio is explicit; pad and target inherit: (68, 48) 184x154
+  # grown to 2:1 is 308x154.
+  pz_screenshot(page, path, frame = pz_frame(ratio = 2))
+  expect_identical(png_dimensions(path), as.integer(round(c(308, 154) * dpr)))
+  # An explicit field wins over the staged one.
+  pz_screenshot(page, path, frame = pz_frame(pad = 8))
+  expect_identical(png_dimensions(path), as.integer(round(c(136, 106) * dpr)))
+})
+
+test_that("numeric zoom fixes the still region at view / zoom", {
+  page <- local_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- page_dpr(page)
+  view <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+
+  # #bound (200, 200) 400x400, center (400, 400): zoom 2 crops view/2
+  # centered on it -- a smaller PNG, cropped only, never resampled up.
+  pz_screenshot(page, path, frame = pz_frame("#bound", zoom = 2))
+  expect_identical(png_dimensions(path), as.integer(round(view / 2 * dpr)))
+  expect_png_pixel(
+    page,
+    path,
+    view[1] / 4,
+    view[2] / 4,
+    c(240, 240, 240),
+    dpr = dpr
+  )
+
+  # zoom 1 is the full view, however small the target.
+  pz_screenshot(page, path, frame = pz_frame("#card", zoom = 1))
+  expect_identical(png_dimensions(path), as.integer(round(view * dpr)))
+})
+
+test_that("zoom places the padded target by anchor and honors ratio", {
+  page <- local_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  dpr <- page_dpr(page)
+  view <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+
+  # anchor "top left": the region's top-left is the padded target's
+  pz_screenshot(
+    page,
+    path,
+    frame = pz_frame("#bound", pad = 10, zoom = 2, anchor = "top left")
+  )
+  expect_identical(png_dimensions(path), as.integer(round(view / 2 * dpr)))
+  # (20, 20) in the capture is (210, 210) on the page: inside #bound
+  expect_png_pixel(page, path, 20, 20, c(240, 240, 240), dpr = dpr)
+  # (5, 5) is (195, 195): the pad ring, i.e. the page background
+  expect_png_pixel(page, path, 5, 5, c(255, 255, 255), dpr = dpr)
+
+  # ratio sets the aspect inside view / zoom: the largest 1:1 box
+  side <- min(view) / 2
+  pz_screenshot(page, path, frame = pz_frame("#bound", zoom = 2, ratio = 1))
+  expect_identical(png_dimensions(path), as.integer(round(c(side, side) * dpr)))
+})
