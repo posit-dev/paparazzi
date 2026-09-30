@@ -1,4 +1,15 @@
-```{r hero, eval = identical(Sys.getenv("IN_INDEX", ""), "true")}
+```{r should-update}
+#| include: false
+
+# Recording is slow and the GIF churns on every render, so re-record
+# only when the image is missing or the source has changed since.
+should_update <- identical(Sys.getenv("IN_INDEX", ""), "true") && {
+  img <- knitr::fig_chunk("hero", "gif", 1)
+  !file.exists(img) || file.mtime("man/fragments/hero.Rmd") > file.mtime(img)
+}
+```
+
+```{r hero, eval = should_update}
 #| include: false
 
 library(paparazzi)

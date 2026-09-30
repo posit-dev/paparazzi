@@ -22,7 +22,18 @@ Record or capture the same steps on a phone, in dark mode, zoomed in, or in anot
 
 Screenshots use the same annotations and framing. Here's the task tracker on a phone in dark mode, with a callout:
 
-```{r phone, eval = identical(Sys.getenv("IN_INDEX", ""), "true")}
+```{r should-update-phone}
+#| include: false
+
+# Same staleness gate as the hero: only recapture when the image is
+# missing or the source fragment has changed since.
+should_update_phone <- identical(Sys.getenv("IN_INDEX", ""), "true") && {
+  img <- knitr::fig_chunk("phone", "png", 1)
+  !file.exists(img) || file.mtime("man/fragments/features.Rmd") > file.mtime(img)
+}
+```
+
+```{r phone, eval = should_update_phone}
 #| include: false
 #| out.width: 300px
 
@@ -43,7 +54,7 @@ phone |>
   pz_screenshot()
 ```
 
-```{r, eval = identical(Sys.getenv("IN_INDEX", ""), "true")}
+```{r, eval = should_update_phone}
 #| include: false
 
 pz_close(phone)
