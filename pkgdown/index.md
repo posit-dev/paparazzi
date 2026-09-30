@@ -34,14 +34,20 @@ You can install the development version of paparazzi from GitHub:
 pak::pak("posit-dev/paparazzi")
 ```
 
+### Additional requirements
+
 paparazzi controls Chrome (or another Chromium-based browser) through
 [chromote](https://rstudio.github.io/chromote/), so you’ll need one
 installed. If chromote can’t find it, see `?chromote::find_chrome`.
-Recording MP4 or WebM videos needs the
-[av](https://docs.ropensci.org/av/) package. GIFs need
-[gifski](https://r-rust.github.io/gifski/) instead, plus
-[png](https://cran.r-project.org/package=png) if you crop them to part
-of the page with a frame and av if they have captions.
+
+paparazzi routes each recording to the encoder that suits it best: MP4
+and WebM videos go to the [av](https://docs.ropensci.org/av/) package,
+GIFs to [gifski](https://r-rust.github.io/gifski/). These are suggested
+dependencies, checked only when a recording needs them. Simple GIFs need
+only gifski, but two features call in extra packages: cropping a GIF to
+a framed region of the page needs
+[png](https://cran.r-project.org/package=png), and camera movement or
+burned-in captions need av to composite the frames.
 
 ## The code that made the video
 

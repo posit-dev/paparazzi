@@ -47,9 +47,10 @@
 #' [pz_record_hold()] intervals but exclude pauses. Caption burn and VTT
 #' use the current caption set by [pz_annotate_caption()].
 #'
-#' `.mp4` and `.webm` recordings require \pkg{av}. All `.gif` recordings
-#' require \pkg{gifski}; framed GIFs also require \pkg{png}, and GIFs
-#' burning captions require \pkg{av}.
+#' MP4 and WebM recordings require \pkg{av}; GIF recordings require
+#' \pkg{gifski}. Simple GIFs need only gifski, but two features call in
+#' extra packages: framed GIFs require \pkg{png}, and GIFs with camera
+#' movement or burned-in captions require \pkg{av}.
 #' Packages are checked at `pz_record_start()` or when a caption is
 #' added to an active GIF recording.
 #'
