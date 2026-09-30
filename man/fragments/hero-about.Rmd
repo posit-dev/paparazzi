@@ -1,0 +1,22 @@
+## The code that made the video
+
+Here's the whole script for the video at the top of this page, running on a small task-tracker page that ships with paparazzi:
+
+```{r}
+#| label: hero-code
+#| eval: false
+#| ref.label: hero
+```
+
+The first few lines set the scene. `pz_open()` opens the page at the size you want to record. `pz_stage()` sets how the recording looks: the cursor enters from the bottom, and each step pauses for a moment so viewers can follow. `pz_loc()` describes the task we're about to add, so we can point at it once it exists.
+
+`pz_record()` records everything in its `code` block. The `frame` is the part of the page the video shows: the task card, from its heading to the bottom of the list, padded and widened to 16:9. `format` and `scale` make the result an 800-pixel-wide GIF, small enough for a README.
+
+Inside the block, each line is one step, and the steps fall into two groups:
+
+- **Using the page.** `pz_type()` clicks the title field and types into it, and `pz_click()` presses a button. `pz_find()` narrows the next steps to the new task, so `".task-done"` means that task's Done button.
+- **Directing the viewer.** `pz_camera()` zooms in and `pz_camera_reset()` pulls back out. `pz_annotate()` outlines the new task, `pz_annotate_caption()` changes the caption, and `pz_record_hold()` gives viewers a moment to read. `pz_cursor_leave()` moves the cursor out of the shot at the end.
+
+`pz_expect_visible()` waits for the page to finish saving the task before the script outlines it, and `pz_expect_class()` waits for it to be marked done. Waits like this keep a scripted demo in step with a real page. The video keeps rolling while the script waits, so if a step takes longer than you'd like viewers to watch, `pz_record_pause()` and `pz_record_resume()` cut it out.
+
+When a recording is the last thing in a knitted R Markdown or Quarto chunk, it appears in the document, so rendering the document again records the demo again.

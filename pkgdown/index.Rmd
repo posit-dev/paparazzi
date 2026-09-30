@@ -1,0 +1,65 @@
+---
+output: github_document
+---
+
+<!-- index.md is generated from index.Rmd. Please edit that file -->
+
+```{r}
+#| include: false
+
+root <- function(dir = getwd()) {
+  if (file.exists(file.path(dir, "DESCRIPTION"))) {
+    return(dir)
+  } else if (dirname(dir) == dir) {
+    return(NULL)
+  }
+  root(dirname(dir))
+}
+
+withr::local_envvar(IN_INDEX = "true")
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = file.path(root(), "pkgdown/assets/images/readme-")
+)
+```
+
+# paparazzi <a href="https://posit-dev.github.io/paparazzi/"><img src="../man/figures/logo.png" align="right" height="138" alt="paparazzi website" /></a>
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+**Polished demo videos and screenshots of anything that runs in a browser, written as R scripts.**
+
+```{r}
+#| child: ../man/fragments/hero.Rmd
+```
+
+```{r}
+#| child: ../man/fragments/installation.Rmd
+```
+
+```{r}
+#| child: ../man/fragments/hero-about.Rmd
+```
+
+```{r}
+#| child: ../man/fragments/features.Rmd
+```
+
+```{r}
+#| child: ../man/fragments/shiny.Rmd
+```
+
+```{r}
+#| child: ../man/fragments/testing.Rmd
+```
+
+## Learn more
+
+- [Get started](articles/paparazzi.html) builds a demo video one step at a time, from opening a page to framing the finished recording.
+- [Make a three-part app walkthrough](articles/walkthrough.html) records a series of short videos with camera moves, callouts, captions, and redactions.
+- [Annotate pages](articles/annotations.html) tours every kind of mark, callout, spotlight, redaction, and caption.
+- [Shiny apps](articles/shiny.html) covers starting apps, waiting for the server, setting inputs, and testing.
+- The [function reference](reference/) lists every function by task.
