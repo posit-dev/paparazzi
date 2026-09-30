@@ -20,14 +20,14 @@
 #' An action with a `target` looks for it in the current scope and waits until
 #' it matches an element. Inside a scope, `target = NULL` acts on the scope's
 #' element, and scrolling with `by` or `to` scrolls the scope's container. An
-#' explicit target is scrolled into view first when needed. A few
-#' actions, like [pz_act_press()], take no target and act on the focused
-#' element instead.
+#' explicit target is scrolled into view first when needed. A few actions,
+#' like [pz_act_press()], take no target and act on the focused element
+#' instead.
 #'
 #' While the page is recording, actions are staged as [pz_stage()] sets them
-#' up: the cursor glides to pointer targets, typing is paced, scrolls use the
-#' mouse wheel, and the page holds for the staged `pause` afterward. Without a
-#' recording, actions go straight to their final state.
+#' up: the cursor glides to pointer targets, typing is paced, scrolls normally
+#' use the mouse wheel, and the page holds for the staged `pause` afterward.
+#' Without a recording, actions go straight to their final state.
 #'
 #' To set a value directly instead, without staging, use [pz_set_value()],
 #' [pz_set_files()], or [pz_set_shiny_input()].

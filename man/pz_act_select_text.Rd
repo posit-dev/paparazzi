@@ -45,14 +45,14 @@ value directly.
 An action with a \code{target} looks for it in the current scope and waits until
 it matches an element. Inside a scope, \code{target = NULL} acts on the scope's
 element, and scrolling with \code{by} or \code{to} scrolls the scope's container. An
-explicit target is scrolled into view first when needed. A few
-actions, like \code{\link[=pz_act_press]{pz_act_press()}}, take no target and act on the focused
-element instead.
+explicit target is scrolled into view first when needed. A few actions,
+like \code{\link[=pz_act_press]{pz_act_press()}}, take no target and act on the focused element
+instead.
 
 While the page is recording, actions are staged as \code{\link[=pz_stage]{pz_stage()}} sets them
-up: the cursor glides to pointer targets, typing is paced, scrolls use the
-mouse wheel, and the page holds for the staged \code{pause} afterward. Without a
-recording, actions go straight to their final state.
+up: the cursor glides to pointer targets, typing is paced, scrolls normally
+use the mouse wheel, and the page holds for the staged \code{pause} afterward.
+Without a recording, actions go straight to their final state.
 
 To set a value directly instead, without staging, use \code{\link[=pz_set_value]{pz_set_value()}},
 \code{\link[=pz_set_files]{pz_set_files()}}, or \code{\link[=pz_set_shiny_input]{pz_set_shiny_input()}}.
