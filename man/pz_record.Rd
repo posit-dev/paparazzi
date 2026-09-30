@@ -10,11 +10,11 @@ pz_record(ctx, path = NULL, code, ...)
 \item{ctx}{A paparazzi context.}
 
 \item{path}{Output file path; the extension (\code{.mp4}, \code{.webm}, or
-\code{.gif}) selects the format. An existing file is overwritten. If
-\code{NULL} or omitted while knitting, a numbered file in the chunk's
-figure directory is used and the recording appears in the document.
-If \code{NULL} or omitted interactively, a temporary file is used and shown
-in the viewer when recording stops. Otherwise a path is required.}
+\code{.gif}) selects the format. An existing file is overwritten. With
+\code{NULL} (the default) while knitting, a numbered file in the chunk's
+figure directory is used and the recording appears in the document;
+in an interactive session, a temporary file is used and shown in the
+viewer when recording stops. A path is required otherwise.}
 
 \item{code}{An expression to evaluate while recording.}
 
@@ -29,8 +29,8 @@ the embraced expression \code{code}, and stops and encodes on exit --
 including on error, so a failed run still produces the video up to
 the failure. Returns what \code{\link[=pz_record_stop]{pz_record_stop()}} returns, never the block's
 value: \code{ctx} invisibly when a path was given outside knitting, media
-while knitting, or a viewer preview when the path is \code{NULL} or omitted
-in an interactive session. Write \code{pz_record(code = { ... })} to omit the
+while knitting, or a viewer preview when the path is \code{NULL} in an
+interactive session. Write \code{pz_record(code = { ... })} to omit the
 path.
 }
 \examples{

@@ -22,11 +22,11 @@ pz_record_start(
 \item{ctx}{A paparazzi context.}
 
 \item{path}{Output file path; the extension (\code{.mp4}, \code{.webm}, or
-\code{.gif}) selects the format. An existing file is overwritten. If
-\code{NULL} or omitted while knitting, a numbered file in the chunk's
-figure directory is used and the recording appears in the document.
-If \code{NULL} or omitted interactively, a temporary file is used and shown
-in the viewer when recording stops. Otherwise a path is required.}
+\code{.gif}) selects the format. An existing file is overwritten. With
+\code{NULL} (the default) while knitting, a numbered file in the chunk's
+figure directory is used and the recording appears in the document;
+in an interactive session, a temporary file is used and shown in the
+viewer when recording stops. A path is required otherwise.}
 
 \item{...}{Checked empty; reserved for future use.}
 
@@ -60,7 +60,7 @@ written to a temporary directory and deleted after encoding.}
 \code{"vtt"} writes a WebVTT sidecar without drawing captions; \code{"both"}
 does both. WebVTT needs an MP4 or WebM recording, not a GIF.}
 
-\item{format}{The format when \code{path} is \code{NULL} or omitted: \code{"auto"} (the
+\item{format}{The format when \code{path} is \code{NULL}: \code{"auto"} (the
 default) records MP4, or GIF when knitting to a non-HTML format,
 where video can only be linked. With a \code{path}, the extension decides
 and \code{format} must be \code{"auto"}.}

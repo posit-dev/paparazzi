@@ -10,10 +10,10 @@ pz_screenshot(ctx, path = NULL, ..., target = NULL, frame = NULL)
 \item{ctx}{A paparazzi context.}
 
 \item{path}{File path the PNG is written to; an existing file is
-overwritten. If \code{NULL} or omitted while knitting, a numbered file in
-the chunk's figure directory is used and included in the document. If
-\code{NULL} or omitted interactively, a temporary PNG is shown when the
-result is printed. A path is required otherwise.
+overwritten. With \code{NULL} (the default) while knitting, a numbered file
+in the chunk's figure directory is used and included in the document;
+in an interactive session, a temporary PNG is shown when the result is
+printed. A path is required otherwise.
 In a document, end the pipe with \code{pz_screenshot()} to include it; give
 intermediate screenshots a path to keep chaining.}
 
