@@ -698,6 +698,24 @@ test_that("frame = FALSE opts out of the default for one call", {
   expect_identical(png_dimensions(path), as.integer(round(c(120, 90) * dpr)))
 })
 
+test_that("an explicit frame without a target frames the viewport under a targetless default", {
+  page <- local_frame_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  viewport <- withr::local_tempfile(fileext = ".png")
+
+  dpr <- page_dpr(page)
+
+  pz_stage_frame(page, pad = 32)
+  pz_screenshot(page, viewport, frame = FALSE)
+  pz_screenshot(page, path, frame = pz_frame(pad = 8))
+  # The padded viewport clamps to the document: the left, top and right
+  # pads fall off the page, and the bottom pad reaches below the fold.
+  expect_identical(
+    png_dimensions(path),
+    png_dimensions(viewport) + c(0L, as.integer(round(8 * dpr)))
+  )
+})
+
 test_that("pz_stage_frame(NULL) clears the default", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")

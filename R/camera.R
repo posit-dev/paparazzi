@@ -21,6 +21,12 @@
 #'   padded target, capped at the capture's pixel density; a number
 #'   fixes the shot at the home frame divided by `zoom`. `anchor`
 #'   places the padded target in the shot.
+#'
+#'   `frame` is required at the root. In a scoped context, leaving it out
+#'   (or `NULL`) shoots the scope's box. A spec without a target also
+#'   frames the scope's box, or the viewport at the root, so
+#'   `pz_frame(zoom = 2)` zooms in on the middle of the view. `FALSE`
+#'   shoots the scope's box or the viewport with no padding.
 #' @param duration Movement duration in seconds. `NULL` chooses a duration
 #'   based on the pan and zoom distance. When the move wouldn't change the
 #'   view, `NULL` takes the new shot instantly, adding no video time, so the

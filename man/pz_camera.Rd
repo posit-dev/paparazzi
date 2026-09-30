@@ -17,7 +17,13 @@ frame: unset fields use the camera defaults (\code{pad = 24},
 is magnification relative to the recording frame: \code{NULL} fits the
 padded target, capped at the capture's pixel density; a number
 fixes the shot at the home frame divided by \code{zoom}. \code{anchor}
-places the padded target in the shot.}
+places the padded target in the shot.
+
+\code{frame} is required at the root. In a scoped context, leaving it out
+(or \code{NULL}) shoots the scope's box. A spec without a target also
+frames the scope's box, or the viewport at the root, so
+\code{pz_frame(zoom = 2)} zooms in on the middle of the view. \code{FALSE}
+shoots the scope's box or the viewport with no padding.}
 
 \item{...}{Checked empty; reserved for future use.}
 

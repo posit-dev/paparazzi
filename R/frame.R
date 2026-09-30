@@ -127,7 +127,7 @@ print.paparazzi_frame <- function(x, ...) {
   describe <- function(t) {
     if (is.null(t)) "<scope>" else format_loc(t)
   }
-  fields <- paste0("target: ", describe(x$target))
+  fields <- paste0("target: ", describe(x[["target"]]))
   for (field in c(
     "ratio",
     "pad",
@@ -567,8 +567,8 @@ frame_effective <- function(ctx, frame, call = caller_env()) {
     }
     return(out)
   }
-  if (!scoped && is.null(frame$target) && !is.null(staged)) {
-    frame$target <- staged$target
+  if (!scoped && is.null(frame[["target"]]) && !is.null(staged[["target"]])) {
+    frame["target"] <- list(staged[["target"]])
   }
   frame_fill(frame, staged, frame_defaults)
 }
@@ -672,8 +672,8 @@ frame_clip <- function(ctx, spec, call = caller_env()) {
 # context), else NULL for the viewport fallback (the caller fills it
 # from the geometry it reads after resolution).
 frame_content_box <- function(ctx, spec, call = caller_env()) {
-  if (!is.null(spec$target)) {
-    els <- loc_resolve(ctx, spec$target, multiple = "all", call = call)
+  if (!is.null(spec[["target"]])) {
+    els <- loc_resolve(ctx, spec[["target"]], multiple = "all", call = call)
     withr::defer(release_elements(els))
     return(frame_target_box(ctx, els, spec, call = call))
   }
