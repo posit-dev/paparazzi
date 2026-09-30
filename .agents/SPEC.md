@@ -52,7 +52,7 @@ Known bugs to fix while porting:
 ```r
 pz_click(ctx, target = NULL, ...)
 pz_type(ctx, text, ..., target = NULL)
-pz_screenshot(ctx, path, ..., target = NULL, frame = NULL)
+pz_screenshot(ctx, path = NULL, ..., target = NULL, frame = NULL)
 # path may be omitted while knitting (numbered PNG in the chunk's figure directory)
 # or at an interactive console (temporary PNG preview); otherwise it is required.
 pz_set_files(ctx, files, ..., target = NULL)
@@ -71,7 +71,7 @@ Pointer and keyboard:
 - `pz_press(ctx, key, ...)`: Playwright-style key syntax, e.g. `"Enter"`, `"Control+A"`, `"Meta+Enter"`, `"Shift+Tab"`. A vector presses keys in sequence: `pz_press(c("ArrowDown", "Enter"))`. Discussed: a `Mod` modifier and a `show_keys` option (see Camera, annotations, and captions).
 - `pz_focus(ctx, target = NULL, ...)` / `pz_blur(ctx, ...)`: e.g. focus to show an input's enabled look, blur to remove focus rings before a screenshot.
 - `pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)`: with a target, scroll it into view; with `by = c(x, y)` or `to = "bottom"` (direction vocabulary), scroll the current scope's container. While recording, scrolling is smooth, using real `mouseWheel` events with the cursor over the container; positive `duration` overrides the staged time per wheel scroll, while `duration = 0` uses the existing instant path (no queued wheels). Auto-scroll before other actions is animated the same way.
-- `pz_drag(ctx, target, to, ..., by = NULL)`: `to` is a target, or use an offset `by = c(x, y)`. Real mouse press/move/release; the cursor glides while holding when recording. HTML5 drag and drop (`dragstart`/`drop`) needs `Input.setInterceptDrags` + `Input.dispatchDragEvent`, chosen when the source is `draggable`.
+- `pz_drag(ctx, target, to = NULL, ..., by = NULL)`: `to` is a target, or use an offset `by = c(x, y)`. Real mouse press/move/release; the cursor glides while holding when recording. HTML5 drag and drop (`dragstart`/`drop`) needs `Input.setInterceptDrags` + `Input.dispatchDragEvent`, chosen when the source is `draggable`.
 - `pz_select_text(ctx, text, ..., target = NULL)`: highlights an exact substring inside an element, as if dragging across it (TreeWalker over text nodes, DOM `Range`, window selection; works across inline tags). Typing afterwards replaces the selection. While recording, it's staged as a real mouse drag from the start of the text to the end.
 
 Setting values:
@@ -298,7 +298,7 @@ air and styler flatten pipe indentation, so scope depth can't be shown with inde
 Lifecycle:
 
 - Recorder state lives on the page, so recording happens inside a single chain.
-- `pz_record_start(ctx, path, ..., format = c("auto", "mp4", "webm", "gif"))`: `path` is the main input. If omitted while knitting, a numbered path in the chunk's figure directory is used; if omitted interactively, a temp file, previewed in the viewer at stop. Otherwise `path` is required. `format` applies only without a path (an error alongside one): `"auto"` is MP4, or GIF when knitting to non-HTML output, where video can only be linked.
+- `pz_record_start(ctx, path = NULL, ..., format = c("auto", "mp4", "webm", "gif"))`: `path` is the main input. If `NULL` or omitted while knitting, a numbered path in the chunk's figure directory is used; if `NULL` or omitted interactively, a temp file, previewed in the viewer at stop. Otherwise `path` is required. `format` applies only without a path (an error alongside one): `"auto"` is MP4, or GIF when knitting to non-HTML output, where video can only be linked.
 - **Recording chains:** start returns, invisibly, a new context carrying its recorder; `ctx_derive()` keeps it through `pz_find*()` and navigation resets. Chainable functions return through `ctx_return()`, which is visible only while that context's recorder is the page's active one. Printing such a context (`print()` or `knit_print()`) calls `pz_record_stop()` and shows the media: knitr media while knitting, a viewer preview interactively (video previews get an HTML wrapper page in a temp dir). So `page |> pz_record_start() |> ... ` needs no stop at the end of an expression; assign it or call `pz_record_stop()` to span statements. Chains not from start (`page |> pz_click()`) never stop a recording. Considered and rejected: making every chain visible, which would print page summaries after every action in knitted docs and consoles and cost CDP round trips per print.
 - `pz_record_stop(ctx)`: encodes and writes the file. During knitting, the completed recording is returned as printable media, including when the path was explicit; outside knitting it returns the context.
 - `pz_record_pause()` / `pz_record_resume()`: cut stretches out of the recording. There's no cancel.
@@ -324,7 +324,7 @@ Capture:
 
 ```r
 pz_record_start(
-  ctx, path, ...,
+  ctx, path = NULL, ...,
   method = c("poll", "screencast"),
   frame = NULL,             # NULL = page default or viewport; a pz_frame(); FALSE
   fps = 15,
@@ -432,7 +432,7 @@ Cursor functions:
 ```r
 pz_cursor_show(ctx, target = NULL, ..., from = NULL, icon = NULL)
 pz_cursor_hide(ctx, ...)
-pz_cursor_move(ctx, target, ..., duration = NULL, icon = NULL, offset = NULL)
+pz_cursor_move(ctx, target, ..., duration = NULL, icon = NULL, offset = c(0, 0))
 pz_cursor_leave(ctx, side = "right", icon = NULL)
 pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)
 ```
@@ -480,7 +480,7 @@ There are three layers:
 #### Camera
 
 ```r
-pz_camera(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL, target_box = c("element", "annotated"), wait = FALSE)
+pz_camera(ctx, target = NULL, ..., zoom = NULL, pad = 24, duration = NULL, target_box = c("element", "annotated"), wait = FALSE)
 pz_camera_reset(ctx, ..., wait = FALSE)
 ```
 
@@ -496,21 +496,21 @@ pz_camera_reset(ctx, ..., wait = FALSE)
 #### Annotations
 
 ```r
-pz_annotate(ctx, target = NULL, ..., type = c("box", "circle", "underline", "highlight"),
-            label = NULL, pad = NULL, reveal = NULL, id = NULL,
+pz_annotate(ctx, target = NULL, ..., type = "box",
+            label = NULL, pad = 0, reveal = c("auto", "fade", "draw", "pop", "slide", "wipe", "none"), id = NULL,
             color = NULL, font_family = NULL, font_size = NULL)
 pz_annotate_callout(ctx, text, ..., target = NULL, side = NULL, arrow = TRUE, label = NULL,
-                    reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)
-pz_annotate_spotlight(ctx, target = NULL, ..., pad = NULL, dim = NULL, reveal = NULL)
-pz_annotate_redact(ctx, target = NULL, ..., method = c("fill", "blur"), pad = NULL, id = NULL, color = NULL)
-pz_annotate_caption(ctx, text, ..., side = "bottom", color = NULL, font_family = NULL, font_size = NULL)
+                    reveal = c("pop", "fade", "draw", "slide", "wipe", "none"), id = NULL, color = NULL, font_family = NULL, font_size = NULL)
+pz_annotate_spotlight(ctx, target = NULL, ..., pad = 0, dim = 0.6, reveal = c("fade", "none"))
+pz_annotate_redact(ctx, target = NULL, ..., method = c("fill", "blur"), pad = 0, id = NULL, color = NULL)
+pz_annotate_caption(ctx, text, ..., side = "bottom", color = "white", font_family = NULL, font_size = 20)
 pz_annotate_clear(ctx, id = NULL, ...)
 ```
 
 - **Multiple matches:** every function accepts them, so each match is annotated, and each match is redacted (anything else would leak).
 - **Lifetime:** annotations persist until cleared or replaced. There is no `duration` argument; clearing is an explicit step in the chain (e.g. after `pz_wait()` or `pz_record_hold()`). Reusing an `id` replaces that annotation. `pz_annotate_clear(id = NULL)` clears everything. Spotlight and caption are single-slot (each new call replaces the last), with the reserved ids `"spotlight"` and `"caption"`. Annotations and captions are page state and persist across recordings; a caption set before `pz_record_start()` shows from the first frame. Page annotations belong to the current document: navigating to a new document removes them (a bfcache restore brings them back with the page), and the empty annotation layer is re-injected like the cursor.
 - **Geometry:** each annotation keeps a reference to its element. A page-side `requestAnimationFrame` loop, running only while annotations exist, repositions the boxes in a `position: fixed` layer, which handles scrolling, inner scroll containers, fixed and sticky elements, and layout shifts. The loop only mirrors layout and orders nothing relative to R. A disconnected element hides its annotation, including redaction. Redactions also hide when their target stops rendering or is fully clipped, and follow axis-aligned overflow clipping along the target's containing-block chain (not custom `overflow-clip-margin`); they do not clip to the viewport, so below-fold framed captures stay redacted. (CSS anchor positioning can't reach page anchors from the shadow root.)
-- **Reveal:** `"fade"`, `"draw"`, `"pop"`, `"slide"`, `"wipe"` (a clockwise conic sweep from 12 o'clock) or `"none"`, with a default per type. Clearing plays the reverse. Reveals animate only while recording; draw and clear calls pump through their animations, since a reveal can't play during a `pz_record_hold()` frozen frame. Without a recording, annotations draw and clear instantly. Redaction has no `reveal` and always appears instantly.
+- **Reveal:** `"auto"` uses fade for boxes and draw for other marks. Explicit choices are `"fade"`, `"draw"`, `"pop"`, `"slide"`, `"wipe"` (a clockwise conic sweep from 12 o'clock) or `"none"`, with a default per type. Clearing plays the reverse. Reveals animate only while recording; draw and clear calls pump through their animations, since a reveal can't play during a `pz_record_hold()` frozen frame. Without a recording, annotations draw and clear instantly. Redaction has no `reveal` and always appears instantly.
 - **Options:**
   - `label`: a badge (`1`, `"A"`); `TRUE` numbers the matches 1..n, as `pz_inspect()` does.
   - `side`: the direction vocabulary. For a callout, `NULL` picks the side with the most room.
@@ -523,7 +523,7 @@ pz_annotate_clear(ctx, id = NULL, ...)
 
 #### Captions and keystroke callouts
 
-- **Captions:** screen-space. At encode (or still) time, a separate Chrome target renders each caption as a transparent PNG at output resolution, styled with CSS. Page webfonts don't carry over, so the font family is passed explicitly. The encoder composites it over its time window: one av filtergraph after the camera for MP4, WebM and GIF (GIF renders PNG ticks through it before gifski), and an R alpha blend for stills. The caption is a declarative page-level slot that persists across navigation and recordings. A caption still active at recording stop remains fully visible through the last frame in MP4, WebM, and GIF; an explicit clear or replacement retains its fade-out. The default look is a translucent dark pill with white text, centered, at most about 80% of the output width, wrapping. Style defaults are caption-specific: `color = NULL` is white (not the annotation `color` default), `font_size = NULL` is a caption built-in default, and `font_family = NULL` follows the `pz_stage_annotate()` font family. `pz_record_start(captions = c("burn", "vtt", "both"))` defaults to `"burn"`; `"vtt"` and `"both"` write `<name>.vtt` next to the video, which knitr can wire up as a `<track>` (kata ks7r), and are an error for GIF.
+- **Captions:** screen-space. At encode (or still) time, a separate Chrome target renders each caption as a transparent PNG at output resolution, styled with CSS. Page webfonts don't carry over, so the font family is passed explicitly. The encoder composites it over its time window: one av filtergraph after the camera for MP4, WebM and GIF (GIF renders PNG ticks through it before gifski), and an R alpha blend for stills. The caption is a declarative page-level slot that persists across navigation and recordings. A caption still active at recording stop remains fully visible through the last frame in MP4, WebM, and GIF; an explicit clear or replacement retains its fade-out. The default look is a translucent dark pill with white text, centered, at most about 80% of the output width, wrapping. Style defaults are caption-specific: `color = "white"` is independent of the annotation accent, `font_size = 20` is a caption built-in default, and `font_family = NULL` follows the `pz_stage_annotate()` font family. `pz_record_start(captions = c("burn", "vtt", "both"))` defaults to `"burn"`; `"vtt"` and `"both"` write `<name>.vtt` next to the video, which knitr can wire up as a `<track>` (kata ks7r), and are an error for GIF.
 - **Keystroke callouts:** `pz_press(show_keys = NULL)`, with the page default `pz_stage(show_keys = "none")`. Values are `c("none", "words", "mac", "both")`: `"words"` shows Ctrl, Shift, Alt and Meta keycaps; `"mac"` shows ⌃ ⌥ ⇧ ⌘; `"both"` renders `Mod` as "Ctrl / ⌘". They're screen-space, shown bottom-center and stacked above any caption. A callout appears at the press, holds about 1 s after the last key, then fades over 0.25 s, all computed at encode. They're recording-only, and `pz_type()` has no `show_keys` argument.
 - **`Mod` modifier:** `pz_press("Mod+K")` presses Meta when the browser reports a Mac platform, and Control otherwise.
 
@@ -535,7 +535,7 @@ Opening pages:
 pz_open(
   x, ...,                    # ... forwarded to pz_device(), checked for typos
   wait = c("auto", "load", "shiny", "none"),
-  timeout = NULL,
+  timeout = 10,
   shiny_options = list(),    # passed to shiny::runApp() when x is an app dir
   envvars = NULL
 )
@@ -682,11 +682,11 @@ Every function takes `ctx` first and returns it invisibly unless noted. The `pz_
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_open()` | `(x, ..., wait = c("auto", "load", "shiny", "none"), timeout = NULL, shiny_options = list(), envvars = NULL)` → page | confirmed |
+| `pz_open()` | `(x, ..., wait = c("auto", "load", "shiny", "none"), timeout = 10, shiny_options = list(), envvars = NULL)` → page | confirmed |
 | `pz_close()` | `(page)` | confirmed |
 | `pz_with_page()` | `(x, code, ...)` | confirmed |
 | `pz_local_page()` | `(x, ..., .env = parent.frame())` → page | confirmed |
-| `pz_app()` | `(app_dir, ..., envvars = NULL, shiny_options = list(), timeout = NULL)` → app handle with `$stop()`, `$logs()` | confirmed |
+| `pz_app()` | `(app_dir, ..., envvars = NULL, shiny_options = list(), timeout = 10)` → app handle with `$stop()`, `$logs()` | confirmed |
 | `pz_nav_goto()` | `(ctx, url, ..., wait = "auto")` | confirmed |
 | `pz_nav_reload()` | `(ctx, ..., wait = "auto")` | confirmed |
 | `pz_nav_back()` | `(ctx, ...)` | confirmed |
@@ -720,12 +720,12 @@ Arguments: `target` and `from_root` are confirmed. `pz_find_nth()` takes `n` as 
 | `pz_focus()` | `(ctx, target = NULL, ...)` | confirmed |
 | `pz_blur()` | `(ctx, ...)` | confirmed |
 | `pz_scroll()` | `(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)` | confirmed |
-| `pz_drag()` | `(ctx, target, to, ..., by = NULL)` | confirmed |
+| `pz_drag()` | `(ctx, target, to = NULL, ..., by = NULL)` | confirmed |
 | `pz_select_text()` | `(ctx, text, ..., target = NULL)` | confirmed |
 | `pz_set_value()` | `(ctx, value, ..., target = NULL)` | confirmed |
 | `pz_set_shiny_input()` | `(ctx, id, value, ..., wait = TRUE)` | confirmed |
 | `pz_set_files()` | `(ctx, files, ..., target = NULL)` | confirmed |
-| `pz_screenshot()` | `(ctx, path, ..., target = NULL, frame = NULL)` | confirmed |
+| `pz_screenshot()` | `(ctx, path = NULL, ..., target = NULL, frame = NULL)` | confirmed |
 
 Arguments: the `pz_press()` key syntax is confirmed. Discussed additions: a `Mod` modifier and `show_keys = NULL`.
 
@@ -785,12 +785,12 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_record_start()` | `(ctx, path, ..., method = c("poll", "screencast"), frame = NULL, fps = 15, scale = NULL, hold = c(0.5, 1), keep_frames = FALSE, captions = c("burn", "vtt", "both"), format = c("auto", "mp4", "webm", "gif"))` | confirmed |
+| `pz_record_start()` | `(ctx, path = NULL, ..., method = c("poll", "screencast"), frame = NULL, fps = 15, scale = NULL, hold = c(0.5, 1), keep_frames = FALSE, captions = c("burn", "vtt", "both"), format = c("auto", "mp4", "webm", "gif"))` | confirmed |
 | `pz_record_stop()` | `(ctx)` | confirmed |
 | `pz_record_pause()` | `(ctx)` | confirmed |
 | `pz_record_resume()` | `(ctx)` | confirmed |
 | `pz_record_hold()` | `(ctx, seconds)` | confirmed |
-| `pz_record()` | `(ctx, path, code, ...)` | confirmed |
+| `pz_record()` | `(ctx, path = NULL, code, ...)` | confirmed |
 | `pz_frame()` | `(target = NULL, ..., ratio = NULL, pad = 0, offset = c(0, 0), anchor = "center", bounds = NULL, when = c("stop", "start"))` → spec | confirmed |
 | `pz_stage_frame()` | `(ctx, ..., ratio, pad, offset, anchor, bounds)` | confirmed |
 
@@ -802,7 +802,7 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 | `pz_stage_annotate()` | `(ctx, ..., color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_cursor_show()` | `(ctx, target = NULL, ..., from = NULL, icon = NULL)` | confirmed |
 | `pz_cursor_hide()` | `(ctx, ...)` | confirmed |
-| `pz_cursor_move()` | `(ctx, target, ..., duration = NULL, icon = NULL, offset = NULL)` | confirmed |
+| `pz_cursor_move()` | `(ctx, target, ..., duration = NULL, icon = NULL, offset = c(0, 0))` | confirmed |
 | `pz_cursor_leave()` | `(ctx, side = "right", icon = NULL)` | confirmed |
 
 Annotation style defaults are set separately with `pz_stage_annotate(ctx, ..., color = NULL, font_family = NULL, font_size = NULL)`: the defaults are `"#e11d48"`, `"sans-serif"` and 14 CSS pixels. They persist on the page and apply to new annotations in stills and recordings.
@@ -813,13 +813,13 @@ Implemented (kata `1a3m`).
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_camera()` | `(ctx, target = NULL, ..., zoom = NULL, pad = NULL, duration = NULL, target_box = c("element", "annotated"), wait = FALSE)` | confirmed |
+| `pz_camera()` | `(ctx, target = NULL, ..., zoom = NULL, pad = 24, duration = NULL, target_box = c("element", "annotated"), wait = FALSE)` | confirmed |
 | `pz_camera_reset()` | `(ctx, ..., wait = FALSE)` | confirmed |
-| `pz_annotate()` | `(ctx, target = NULL, ..., type = c("box", "circle", "underline", "highlight"), label = NULL, pad = NULL, reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
-| `pz_annotate_callout()` | `(ctx, text, ..., target = NULL, side = NULL, arrow = TRUE, label = NULL, reveal = NULL, id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
-| `pz_annotate_spotlight()` | `(ctx, target = NULL, ..., pad = NULL, dim = NULL, reveal = NULL)` | confirmed |
-| `pz_annotate_redact()` | `(ctx, target = NULL, ..., method = c("fill", "blur"), pad = NULL, id = NULL, color = NULL)` | confirmed |
-| `pz_annotate_caption()` | `(ctx, text, ..., side = "bottom", color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
+| `pz_annotate()` | `(ctx, target = NULL, ..., type = "box", label = NULL, pad = 0, reveal = c("auto", "fade", "draw", "pop", "slide", "wipe", "none"), id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
+| `pz_annotate_callout()` | `(ctx, text, ..., target = NULL, side = NULL, arrow = TRUE, label = NULL, reveal = c("pop", "fade", "draw", "slide", "wipe", "none"), id = NULL, color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
+| `pz_annotate_spotlight()` | `(ctx, target = NULL, ..., pad = 0, dim = 0.6, reveal = c("fade", "none"))` | confirmed |
+| `pz_annotate_redact()` | `(ctx, target = NULL, ..., method = c("fill", "blur"), pad = 0, id = NULL, color = NULL)` | confirmed |
+| `pz_annotate_caption()` | `(ctx, text, ..., side = "bottom", color = "white", font_family = NULL, font_size = 20)` | confirmed |
 | `pz_annotate_clear()` | `(ctx, id = NULL, ...)` | confirmed |
 
 Arguments added to existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))` and `pz_stage_frame(target_box =)`, `pz_press(show_keys = NULL)`, and `pz_stage(camera_follow = NULL, show_keys = NULL)`. Annotation style defaults are set with `pz_stage_annotate()`.

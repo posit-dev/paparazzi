@@ -26,7 +26,8 @@ boxes.}
 \item{...}{Checked empty; reserved for future use.}
 
 \item{ratio}{Width/height ratio to grow the region to, e.g. \code{16/9}.
-\code{NULL} keeps the region tight to its content.}
+\code{NULL} disables aspect-ratio expansion, keeping the region tight to its
+content.}
 
 \item{pad}{Padding in CSS pixels: one number for all sides, or
 \code{c(top, right, bottom, left)}. Negative values crop inside the
@@ -42,7 +43,9 @@ a corner (\code{"top left"}, \code{"top right"}, \code{"bottom left"},
 and \code{"top-right"} are equivalent.}
 
 \item{bounds}{A target (a CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or
-a list of either) whose union box the region is clamped within.}
+a list of either) whose union box the region is clamped within.
+\code{NULL} adds no bounds target; the page's rendered area still limits the
+region.}
 
 \item{when}{When a recording measures the frame: \code{"stop"} (the
 default) measures against the final layout; \code{"start"} clips at

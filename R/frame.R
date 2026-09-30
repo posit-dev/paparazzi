@@ -26,7 +26,8 @@ NULL
 #'   boxes.
 #' @param ... Checked empty; reserved for future use.
 #' @param ratio Width/height ratio to grow the region to, e.g. `16/9`.
-#'   `NULL` keeps the region tight to its content.
+#'   `NULL` disables aspect-ratio expansion, keeping the region tight to its
+#'   content.
 #' @param pad Padding in CSS pixels: one number for all sides, or
 #'   `c(top, right, bottom, left)`. Negative values crop inside the
 #'   content box.
@@ -39,6 +40,8 @@ NULL
 #'   and `"top-right"` are equivalent.
 #' @param bounds A target (a CSS selector string, a [pz_loc()] spec, or
 #'   a list of either) whose union box the region is clamped within.
+#'   `NULL` adds no bounds target; the page's rendered area still limits the
+#'   region.
 #' @param when When a recording measures the frame: `"stop"` (the
 #'   default) measures against the final layout; `"start"` clips at
 #'   capture start. Screenshots ignore this.

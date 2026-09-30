@@ -23,13 +23,14 @@
 #' @inheritParams pz_click
 #' @param width,height Viewport size in CSS pixels. Only the supplied
 #'   one changes; the other keeps its current value.
-#' @param scale Device scale factor. Defaults to 2 when an override is
-#'   applied and no `scale` was supplied.
+#' @param scale Device scale factor. `NULL` retains the stored value, or
+#'   uses 2 when applying the first override.
 #' @param mobile Emulate a mobile device (touch input, mobile viewport
-#'   semantics)?
+#'   semantics)? `NULL` retains the stored value, or uses `FALSE` when unset.
 #' @param zoom Zoom factor; `1` disables zoom.
-#' @param zoom_method `"viewport"` (default) or `"css"`; see above. Used
-#'   when a `zoom` is (or later becomes) active.
+#' @param zoom_method `"viewport"` or `"css"`; see above. `NULL` retains the
+#'   stored method, or uses `"viewport"` when unset. Used when a `zoom` is
+#'   (or later becomes) active.
 #' @param color_scheme `"light"` or `"dark"` for
 #'   `prefers-color-scheme`.
 #' @param reduced_motion Emulate `prefers-reduced-motion`? `TRUE` maps

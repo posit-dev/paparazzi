@@ -18,7 +18,8 @@ pz_expect_count(
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{n}{Exact expected count. Exclusive with \code{min} and \code{max}.}
+\item{n}{Exact expected count. Exclusive with \code{min} and \code{max}.
+\code{NULL} disables the exact-count check; supply \code{min} or \code{max}.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
@@ -28,9 +29,11 @@ live), the page body at the root.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{min}{Minimum count; with \code{max}, an inclusive range check.}
+\item{min}{Minimum count; with \code{max}, an inclusive range check.
+\code{NULL} omits the lower bound.}
 
-\item{max}{Maximum count; with \code{min}, an inclusive range check.}
+\item{max}{Maximum count; with \code{min}, an inclusive range check.
+\code{NULL} omits the upper bound.}
 
 \item{not}{Invert the check.}
 

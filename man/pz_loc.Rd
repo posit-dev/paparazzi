@@ -12,16 +12,19 @@ pz_loc(css, ..., has_text = NULL, which = NULL, within = NULL)
 \item{...}{Checked empty; reserved for future use.}
 
 \item{has_text}{Substring the element's text content must contain.
-Case-sensitive; whitespace collapses on both sides, so
+\code{NULL} omits text filtering. Case-sensitive; whitespace collapses on
+both sides, so
 \code{has_text = "Save now"} matches text reading "Save   now".}
 
 \item{which}{Pick one match by position: \code{"first"}, \code{"last"}, or a
 1-based positive integer. Applied after \code{css} and \code{has_text}
-filtering; an out-of-range position means \emph{no} match, not an error.}
+filtering; an out-of-range position means \emph{no} match, not an error.
+\code{NULL} keeps all matches.}
 
 \item{within}{Only match descendants of elements matching this spec
 (a string or \code{\link[=pz_loc]{pz_loc()}}, itself fully qualified). If \code{within}
-matches nothing, the whole spec matches nothing.}
+matches nothing, the whole spec matches nothing. \code{NULL} omits the
+ancestor qualifier.}
 }
 \value{
 An S3 object of class \code{paparazzi_loc}.

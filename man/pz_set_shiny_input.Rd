@@ -14,7 +14,7 @@ pz_set_shiny_input(ctx, id, value, ..., wait = TRUE)
 \item{value}{Value accepted by the binding's \code{setValue()}. Date ranges
 accept \code{c(start, end)} or \code{list(start = ..., end = ...)}, with ISO date
 strings. Date-valued sliders accept ISO date strings, converted to
-JavaScript timestamps.}
+JavaScript timestamps. Top-level \code{NULL} and atomic \code{NA} are rejected.}
 
 \item{...}{Checked empty; reserved for future use.}
 

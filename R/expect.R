@@ -75,8 +75,11 @@ pz_expect_exists <- function(
 #'
 #' @inheritParams pz_expect_exists
 #' @param n Exact expected count. Exclusive with `min` and `max`.
+#'   `NULL` disables the exact-count check; supply `min` or `max`.
 #' @param min Minimum count; with `max`, an inclusive range check.
+#'   `NULL` omits the lower bound.
 #' @param max Maximum count; with `min`, an inclusive range check.
+#'   `NULL` omits the upper bound.
 #'
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()

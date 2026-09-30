@@ -643,11 +643,12 @@ pz_select_text <- function(ctx, text, ..., target = NULL) {
 #'
 #' @inheritParams pz_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs (a union matching any of them). Scrolled into view.
+#'   specs (a union matching any of them). Scrolled into view. `NULL`
+#'   disables the element-target mode; use `by` or `to` instead.
 #' @param by Offset in pixels, `c(x, y)` (or a single number for both
-#'   axes).
+#'   axes). `NULL` disables the offset mode.
 #' @param to A direction string: the sides, the four corners, or
-#'   `"center"`.
+#'   `"center"`. `NULL` disables the direction mode.
 #' @param duration Seconds per staged wheel scroll; `NULL` computes the
 #'   time from the scroll distance and `cursor_speed` in [pz_stage()].
 #'   Applies only while recording, including `target` and any scroll
@@ -787,9 +788,10 @@ pz_scroll <- function(
 #'   specs (a union matching any of them). The drag source. Unlike most
 #'   actions it is always required.
 #' @param to A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs (a union matching any of them): the drop target.
+#'   specs (a union matching any of them): the drop target. `NULL` omits
+#'   the absolute destination. Supply exactly one of `to` or `by`.
 #' @param by Offset in pixels from the source's center, `c(x, y)` (or a
-#'   single number for both axes).
+#'   single number for both axes). `NULL` disables the offset mode.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -809,7 +811,7 @@ pz_scroll <- function(
 #' pz_close(page)
 #'
 #' @export
-pz_drag <- function(ctx, target, to, ..., by = NULL) {
+pz_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)

@@ -4,7 +4,7 @@
 \alias{pz_drag}
 \title{Drag an element to another element or by an offset}
 \usage{
-pz_drag(ctx, target, to, ..., by = NULL)
+pz_drag(ctx, target, to = NULL, ..., by = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -14,12 +14,13 @@ specs (a union matching any of them). The drag source. Unlike most
 actions it is always required.}
 
 \item{to}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs (a union matching any of them): the drop target.}
+specs (a union matching any of them): the drop target. \code{NULL} omits
+the absolute destination. Supply exactly one of \code{to} or \code{by}.}
 
 \item{...}{Checked empty; reserved for future use.}
 
 \item{by}{Offset in pixels from the source's center, \code{c(x, y)} (or a
-single number for both axes).}
+single number for both axes). \code{NULL} disables the offset mode.}
 }
 \value{
 \code{ctx}, invisibly.
