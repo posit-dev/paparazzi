@@ -462,7 +462,8 @@ cursor_show_at <- function(
   from = NULL,
   icon = NULL,
   destination = NULL,
-  follow = FALSE
+  follow = FALSE,
+  pressed = FALSE
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -484,7 +485,8 @@ cursor_show_at <- function(
       icon = icon,
       rect = rect,
       destination = destination,
-      follow = follow
+      follow = follow,
+      pressed = pressed
     )
   } else if (!has_pos) {
     cursor_apply(
@@ -494,7 +496,8 @@ cursor_show_at <- function(
       icon = icon,
       rect = rect,
       destination = destination,
-      follow = follow
+      follow = follow,
+      pressed = pressed
     )
   } else {
     start <- c(x = cur$x, y = cur$y)
@@ -506,7 +509,8 @@ cursor_show_at <- function(
       icon = icon,
       rect = rect,
       destination = destination,
-      follow = follow
+      follow = follow,
+      pressed = pressed
     )
   }
   ctx_return(ctx)
@@ -549,10 +553,11 @@ cursor_check_icon <- function(icon) {
   arg_match(icon, values = names(CURSOR_ART))
 }
 
-# The one mover: draw the cursor at `point` (visible, unpressed, shape
+# The one mover: draw the cursor at `point` (visible, shape
 # auto-detected from the element under the point), animating only while
 # recording -- a glide of `duration` seconds, an instant pre-position at
-# `from` first for frame entries, or a fade-in at the point. Without a
+# `from` first for frame entries, or a fade-in at the point. `pressed`
+# holds the press scale-down through the move (a drag carry). Without a
 # recording every variant is a static jump. Updates the cursor state and
 # the new-document script, and pumps the child loop for the animation,
 # so the recorder's ticks capture it.
@@ -565,7 +570,8 @@ cursor_apply <- function(
   icon = NULL,
   rect = NULL,
   destination = NULL,
-  follow = FALSE
+  follow = FALSE,
+  pressed = FALSE
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -576,7 +582,7 @@ cursor_apply <- function(
     visible = TRUE,
     icon = icon,
     previous = cur$icon,
-    pressed = FALSE,
+    pressed = pressed,
     duration = if (recording) duration else 0,
     from = if (recording && !is.null(from)) unname(from),
     fade = recording && fade,

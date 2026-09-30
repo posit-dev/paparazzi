@@ -39,6 +39,12 @@ genuine \code{dragstart} (so \code{dataTransfer} holds whatever the page put
 there), and the drop is delivered to the destination as trusted
 \code{dragenter}/\code{dragover}/\code{drop} events with that payload.
 
+While recording, the staging (\code{\link[=pz_stage]{pz_stage()}}) shows the press at the
+source and glides the cursor while holding from the source to the
+destination, so the drop lands as the cursor arrives. On the HTML5
+path the carry runs between the page's \code{dragstart} and the replayed
+\code{drop}, so \code{dragstart} styling stays visible through the carry.
+
 \code{to} names the element to drop onto; \code{by = c(x, y)} drops at that
 offset in pixels from the source's center. Supply exactly one.
 }
