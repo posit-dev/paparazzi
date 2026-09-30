@@ -241,7 +241,7 @@ pz_stage <- function(
 #'   default. Callout chrome only, like `fill`.
 #' @param stroke_width Stroke width in CSS pixels for new annotation marks
 #'   and callout leader lines; decoration sizes scale with it. The default
-#'   is 2.5. Supply `NULL` to restore the default.
+#'   is 3. Supply `NULL` to restore the default.
 #' @param distance Bubble-to-target gap in CSS pixels for new callouts,
 #'   with or without a leader. By default the gap is 24 with a leader and
 #'   8 without one. Supply `NULL` to restore the default.
@@ -358,7 +358,7 @@ STAGE_DEFAULTS <- list(
   annotate_color = "#e11d48",
   annotate_fill = "#171717",
   annotate_text_color = "white",
-  annotate_stroke_width = 2.5,
+  annotate_stroke_width = 3,
   annotate_distance = NULL,
   annotate_font_family = "sans-serif",
   annotate_font_size = 14

@@ -225,7 +225,7 @@ Only the circle remains: the second `id = "mark"` call replaced the box. During 
 
 ## Styling defaults
 
-Every annotation defaults to the page's staged color, stroke width, font family, and badge size, and every callout to the staged bubble colors and distance. Change them for all later annotations with [`pz_stage_annotate()`](../reference/pz_stage_annotate.html), and pass `NULL` to restore a default (crimson `#e11d48`, 2.5 pixel lines, sans-serif, 14 pixel text, and callouts with white text on `#171717`, 24 pixels away or 8 without a line):
+Every annotation defaults to the page's staged color, stroke width, font family, and badge size, and every callout to the staged bubble colors and distance. Change them for all later annotations with [`pz_stage_annotate()`](../reference/pz_stage_annotate.html), and pass `NULL` to restore a default (crimson `#e11d48`, 3 pixel lines, sans-serif, 14 pixel text, and callouts with white text on `#171717`, 24 pixels away or 8 without a line):
 
 ```{r stage-style, fig.alt = "The Add button boxed in blue with a large monospace A badge."}
 page |>

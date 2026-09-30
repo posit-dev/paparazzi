@@ -719,15 +719,18 @@ test_that("callouts validate leader shapes and decorations", {
   page <- callout_page()
   expect_error(
     pz_annotate_callout(page, "x", target = "#target", leader = "arrow"),
-    "leader"
+    "leader",
+    class = "paparazzi_error_input"
   )
   expect_error(
     pz_annotate_callout(page, "x", target = "#target", leader = 1),
-    "leader"
+    "leader",
+    class = "paparazzi_error_input"
   )
   expect_error(
     pz_annotate_callout(page, "x", target = "#target", leader = c("arrow")),
-    "leader"
+    "leader",
+    class = "paparazzi_error_input"
   )
   expect_error(
     pz_annotate_callout(
@@ -736,7 +739,8 @@ test_that("callouts validate leader shapes and decorations", {
       target = "#target",
       leader = c(middle = "arrow")
     ),
-    "leader"
+    "leader",
+    class = "paparazzi_error_input"
   )
   expect_error(
     pz_annotate_callout(
@@ -745,7 +749,8 @@ test_that("callouts validate leader shapes and decorations", {
       target = "#target",
       leader = c(start = "dot", start = "bar")
     ),
-    "leader"
+    "leader",
+    class = "paparazzi_error_input"
   )
   expect_error(
     pz_annotate_callout(
@@ -754,11 +759,13 @@ test_that("callouts validate leader shapes and decorations", {
       target = "#target",
       leader = c(end = "squiggle")
     ),
-    "leader"
+    "leader",
+    class = "paparazzi_error_input"
   )
   expect_error(
     pz_annotate_callout(page, "x", target = "#target", leader = c(end = NA)),
-    "leader"
+    "leader",
+    class = "paparazzi_error_input"
   )
 })
 

@@ -121,6 +121,7 @@ check_callout_leader <- function(leader, call = caller_env()) {
         "{.arg leader} must be {.val TRUE}, {.val FALSE}, or a named ",
         "character vector of decorations."
       ),
+      class = "paparazzi_error_input",
       call = call
     )
   }
@@ -137,6 +138,7 @@ check_callout_leader <- function(leader, call = caller_env()) {
         "{.arg leader} must be a character vector named from ",
         "{.val start} and {.val end}."
       ),
+      class = "paparazzi_error_input",
       call = call
     )
   }
@@ -147,6 +149,7 @@ check_callout_leader <- function(leader, call = caller_env()) {
         "{.arg leader} decorations must be one of ",
         "{.val {CALLOUT_DECORATIONS}}, not {.val {leader[bad]}}."
       ),
+      class = "paparazzi_error_input",
       call = call
     )
   }
