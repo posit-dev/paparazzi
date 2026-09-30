@@ -17,7 +17,7 @@ character vector of example names when \code{name} is \code{NULL}.
 \description{
 paparazzi ships a few small pages and apps for its examples and
 articles. \code{pz_example()} returns the path to one of them, ready to pass to
-\code{\link[=pz_open]{pz_open()}} or \code{\link[=pz_serve]{pz_serve()}}. The examples are:
+\code{\link[=pz_open]{pz_open()}} or \code{\link[=pz_serve_shiny]{pz_serve_shiny()}}. The examples are:
 }
 \details{
 \itemize{

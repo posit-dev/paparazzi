@@ -40,12 +40,12 @@ free_port <- function() {
 # Start an app and stop it when the calling test exits.
 local_shiny_app <- function(..., .env = parent.frame()) {
   skip_if_no_shiny()
-  app <- pz_serve(...)
+  app <- pz_serve_shiny(...)
   withr::defer(app$stop(), envir = .env)
   app
 }
 
-# Loopback-connect probe matching the one pz_serve() uses for readiness;
+# Loopback-connect probe matching the one pz_serve_shiny() uses for readiness;
 # tests use it to observe stop/finalizer effects from the outside.
 app_port_reachable <- function(port, host = "127.0.0.1") {
   con <- suppressWarnings(tryCatch(

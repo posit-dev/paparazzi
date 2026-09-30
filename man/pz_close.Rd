@@ -16,7 +16,7 @@ The page, invisibly.
 }
 \description{
 Closes the page's browser session and, if the page started a Shiny app,
-stops that app. A page opened from a shared \code{\link[=pz_serve]{pz_serve()}} handle leaves the
+stops that app. A page opened from a shared \code{\link[=pz_serve_shiny]{pz_serve_shiny()}} handle leaves the
 app running. Idempotent; closing an already-closed page is a no-op.
 }
 \examples{

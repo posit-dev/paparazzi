@@ -1,5 +1,5 @@
 # Never starts listening within a test-sized budget: exercises the
-# startup-timeout path (and pz_serve()'s duty to kill the child on
+# startup-timeout path (and pz_serve_shiny()'s duty to kill the child on
 # startup failure).
 Sys.sleep(3600)
 

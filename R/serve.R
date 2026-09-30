@@ -14,14 +14,14 @@
 #' App stdout and stderr go to a temporary log file (never an undrained
 #' pipe), readable mid-run with `$logs()`.
 #'
-#' @param app_dir A path to a Shiny app directory or an app file
+#' @param app A path to a Shiny app directory or an app file
 #'   (anything [shiny::runApp()] accepts as a path).
 #' @param ... Reserved; must be empty.
 #' @param envvars Named character vector of environment variables set in
 #'   the app process, on top of the inherited environment. `NULL` adds no
 #'   environment overrides.
 #' @param shiny_options Additional options for [shiny::runApp()], e.g.
-#'   `list(test.mode = TRUE)`. `appDir` is reserved; use `app_dir` to select
+#'   `list(test.mode = TRUE)`. `appDir` is reserved; use `app` to select
 #'   the app. `host` and `port` are managed by paparazzi: `host` defaults
 #'   to `"127.0.0.1"`, and `port` (default `NULL`) picks a random free port.
 #'   If startup fails because the port was taken, a new port is tried.
@@ -32,7 +32,7 @@
 #'   and methods `stop()`, `logs()`, and `is_running()`.
 #'
 #' @examplesIf paparazzi:::examples_run("shiny")
-#' app <- pz_serve(pz_example("tasks-app"))
+#' app <- pz_serve_shiny(pz_example("tasks-app"))
 #' app
 #'
 #' # Pages opened on a handle share the app, here at two screen sizes
@@ -48,18 +48,18 @@
 #' app$stop()
 #'
 #' @export
-pz_serve <- function(
-  x,
+pz_serve_shiny <- function(
+  app,
   ...,
   envvars = NULL,
   shiny_options = list(),
   timeout = 10
 ) {
-  app_dir <- x
+  app_dir <- app
   check_dots_empty()
   if (!is_string(app_dir)) {
     cli::cli_abort(
-      "{.arg app_dir} must be a path to a Shiny app directory or app file, not {.obj_type_friendly {app_dir}}.",
+      "{.arg app} must be a path to a Shiny app directory or app file, not {.obj_type_friendly {app_dir}}.",
       class = "paparazzi_error_input"
     )
   }
@@ -71,7 +71,7 @@ pz_serve <- function(
     cli::cli_abort(
       c(
         "{.arg shiny_options} must not set {.arg appDir}.",
-        i = "Use {.arg app_dir} to select the app."
+        i = "Use {.arg app} to select the app."
       ),
       class = "paparazzi_error_input"
     )
@@ -86,7 +86,7 @@ pz_serve <- function(
   } else {
     cli::cli_abort(
       c(
-        "{.arg app_dir} must be a Shiny app directory or app file: {.val {app_dir}}",
+        "{.arg app} must be a Shiny app directory or app file: {.val {app_dir}}",
         i = "No such directory, or not an {.file .R} file."
       ),
       class = "paparazzi_error_input"

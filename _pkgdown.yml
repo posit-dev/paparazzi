@@ -20,7 +20,7 @@ reference:
       - pz_open
       - pz_close
       - pz_with_page
-      - pz_serve
+      - pz_serve_shiny
       - pz_nav_goto
       - pz_device
       - pz_example

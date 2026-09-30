@@ -10,7 +10,7 @@
 #'   * a Shiny app directory (including split `ui.R`/`server.R` apps) or
 #'     runnable app file (`app.R`, `app-*.R`, `*_app.R`, etc.), started by
 #'     this page and stopped when it closes;
-#'   * a [pz_serve()] handle, shared across pages (closing the page leaves
+#'   * a [pz_serve_shiny()] handle, shared across pages (closing the page leaves
 #'     the app running); `ui.R` and `server.R` passed alone open as files;
 #'   * an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
 #'
@@ -26,7 +26,7 @@
 #'   navigated, so only `"shiny"` waits there.
 #' @param timeout Session default timeout in seconds; defaults to 10.
 #'   Per-call `timeout = NULL` in waits and expectations uses this default.
-#' @param shiny_options,envvars Passed to [pz_serve()] when opening an app path.
+#' @param shiny_options,envvars Passed to [pz_serve_shiny()] when opening an app path.
 #'   `envvars = NULL` adds no process environment overrides.
 #'
 #' @return A `PaparazziPage` (the root context).
@@ -95,7 +95,7 @@ pz_open <- function(
   if (inherits(x, "PaparazziServe")) {
     url <- x$url
   } else if (is_app) {
-    owned_app <- pz_serve(
+    owned_app <- pz_serve_shiny(
       x,
       shiny_options = shiny_options,
       envvars = envvars,
@@ -161,7 +161,7 @@ pz_open <- function(
 #' Close a page
 #'
 #' Closes the page's browser session and, if the page started a Shiny app,
-#' stops that app. A page opened from a shared [pz_serve()] handle leaves the
+#' stops that app. A page opened from a shared [pz_serve_shiny()] handle leaves the
 #' app running. Idempotent; closing an already-closed page is a no-op.
 #'
 #' @param page A `PaparazziPage` from [pz_open()], or any context on it
