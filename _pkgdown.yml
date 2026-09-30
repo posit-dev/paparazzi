@@ -15,7 +15,8 @@ reference:
   - title: Pages, apps and navigation
     desc: >
       Open a page, a Shiny app, a Quarto document or a static site to start a
-      chain. Emulate a device and move between pages.
+      chain. Set the page's size and display settings, and move between
+      pages.
     contents:
       - pz_open
       - pz_close
