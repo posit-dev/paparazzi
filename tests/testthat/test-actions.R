@@ -1307,7 +1307,8 @@ test_that("pz_act_drag glides the cursor while holding a mouse drag when recordi
   pz_act_drag(page, "#dragbox", "#dropzone")
   recorded <- proc.time()[["elapsed"]] - t0
 
-  # The box follows the pointer while held, so it ends on the zone.
+  # The page sees one held move, sent as the cursor arrives, so the box
+  # jumps to the zone at the end of the glide.
   centers <- function(sel) {
     unlist(pz_js(
       page,
