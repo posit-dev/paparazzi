@@ -833,6 +833,12 @@ pz_act_scroll <- function(
 #' there), and the drop is delivered to the destination as trusted
 #' `dragenter`/`dragover`/`drop` events with that payload.
 #'
+#' While recording, the staging ([pz_stage()]) shows the press at the
+#' source and glides the cursor while holding from the source to the
+#' destination, so the drop lands as the cursor arrives. On the HTML5
+#' path the carry runs between the page's `dragstart` and the replayed
+#' `drop`, so `dragstart` styling stays visible through the carry.
+#'
 #' `to` names the element to drop onto; `by = c(x, y)` drops at that
 #' offset in pixels from the source's center. Supply exactly one.
 #'
@@ -1625,9 +1631,11 @@ draggable_js <- "function() {
     (el.tagName === 'A' && el.hasAttribute('href'));
 }"
 
-# The instant mouse drag: press at the source, one move to the
-# destination, release. The move is the seam where recording swaps in
-# the cursor glide; press and release stay. A dispatch error between
+# The mouse drag: press at the source, one move to the destination,
+# release. While recording with a visible cursor the press scale-down
+# plays at the source and the cursor glides while holding BEFORE the
+# move, so pointer-following pages react as the cursor arrives; without
+# a recording everything runs straight through. A dispatch error between
 # press and release leaves the button held, so the release is
 # re-attempted on exit until the normal path completes it.
 dispatch_mouse_drag <- function(
@@ -1638,6 +1646,7 @@ dispatch_mouse_drag <- function(
   to,
   call = caller_env()
 ) {
+  staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
   pressed <- FALSE
   withr::defer(
     if (pressed) {
@@ -1668,6 +1677,11 @@ dispatch_mouse_drag <- function(
     clickCount = 0,
     call = call
   )
+  if (staged) {
+    pump_loop(ctx$page$child_loop, 0.15)
+    cursor_press(ctx, TRUE)
+    pump_loop(ctx$page$child_loop, 0.16)
+  }
   dispatch_mouse(
     ctx,
     action,
@@ -1680,6 +1694,9 @@ dispatch_mouse_drag <- function(
     call = call
   )
   pressed <- TRUE
+  if (staged) {
+    cursor_show_at(ctx, to, pressed = TRUE)
+  }
   dispatch_mouse(
     ctx,
     action,
@@ -1703,6 +1720,10 @@ dispatch_mouse_drag <- function(
     call = call
   )
   pressed <- FALSE
+  if (staged) {
+    cursor_press(ctx, FALSE)
+    pump_loop(ctx$page$child_loop, 0.2)
+  }
 }
 
 # HTML5 drag-and-drop, intercept-then-replay. With interception on, the
@@ -1715,9 +1736,15 @@ dispatch_mouse_drag <- function(
 # with it still on cancels the drag and the replayed events never land --
 # then the captured data is replayed onto the destination as
 # dragEnter/dragOver/drop: trusted DnD events with the real payload.
+# While recording with a visible cursor, the carry is staged between the
+# intercepted dragstart and the replayed drop: the drag stays held
+# (interception still on, button still down, nothing dispatched) while
+# the cursor glides to the drop point, so the page's dragstart styling
+# shows through the carry and the drop lands as the cursor arrives.
 drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
+  staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
   data <- NULL
   dereg <- session$Input$dragIntercepted(
     callback_ = function(msg) data <<- msg$data
@@ -1770,6 +1797,11 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     clickCount = 0,
     call = call
   )
+  if (staged) {
+    pump_loop(ctx$page$child_loop, 0.15)
+    cursor_press(ctx, TRUE)
+    pump_loop(ctx$page$child_loop, 0.16)
+  }
   dispatch_mouse(
     ctx,
     "dragging",
@@ -1800,6 +1832,9 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     call = call
   )
 
+  if (staged) {
+    cursor_show_at(ctx, to, pressed = TRUE)
+  }
   action_cdp(
     ctx,
     "dragging",
@@ -1833,6 +1868,10 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
         timeout_ = timeout
       )
     )
+  }
+  if (staged) {
+    cursor_press(ctx, FALSE)
+    pump_loop(ctx$page$child_loop, 0.2)
   }
 }
 
