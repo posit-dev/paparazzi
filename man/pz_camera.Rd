@@ -4,41 +4,28 @@
 \alias{pz_camera}
 \title{Move the recording camera}
 \usage{
-pz_camera(
-  ctx,
-  target = NULL,
-  ...,
-  zoom = NULL,
-  pad = 24,
-  duration = NULL,
-  target_box = c("element", "annotated"),
-  wait = FALSE
-)
+pz_camera(ctx, frame, ..., duration = NULL, wait = FALSE)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs (a union matching any of them). \code{NULL} uses the current
-scope; at the root context a target is required.}
+\item{frame}{The shot's what-and-how: a \code{\link[=pz_frame]{pz_frame()}} spec or a bare
+locator promoted to one. Camera shots never inherit the staged
+frame: unset fields use the camera defaults (\code{pad = 24},
+\code{target_box = "element"}, everything else as in \code{\link[=pz_frame]{pz_frame()}}).
+\code{ratio} and \code{when} are ignored, with a warning when set. \code{zoom}
+is magnification relative to the recording frame: \code{NULL} fits the
+padded target, capped at the capture's pixel density; a number
+fixes the shot at the home frame divided by \code{zoom}. \code{anchor}
+places the padded target in the shot.}
 
 \item{...}{Checked empty; reserved for future use.}
-
-\item{zoom}{Magnification relative to the recording frame. \code{NULL} fits
-the target with padding, capped at the capture's pixel density.}
-
-\item{pad}{Padding in CSS pixels around the target; one number or
-\code{c(top, right, bottom, left)}. Defaults to 24 pixels.}
 
 \item{duration}{Movement duration in seconds. \code{NULL} chooses a duration
 based on the pan and zoom distance. When the move wouldn't change the
 view, \code{NULL} takes the new shot instantly, adding no video time, so the
 camera follows the new target if the page scrolls later. A number holds
 the camera still for that long.}
-
-\item{target_box}{\code{"element"} measures just the shot target; \code{"annotated"}
-also includes its attached annotations. Defaults to \code{"element"} even
-when \code{\link[=pz_stage_frame]{pz_stage_frame()}} stages an annotated frame for stills.}
 
 \item{wait}{Whether to wait for the move to finish before the next step.
 \code{FALSE} (the default) lets the next step run while the camera moves,
@@ -52,9 +39,14 @@ first.}
 \code{ctx}, invisibly.
 }
 \description{
-Moves an encode-time camera over a recording. The target is an element,
-locator, or list of targets; without a target, the current scope is used
-(at the root, a target is required). The camera does not change the live
-page or still screenshots. Outside a recording it does nothing, and each
-\code{\link[=pz_record_start]{pz_record_start()}} begins at the recording frame.
+Moves an encode-time camera over a recording. The shot comes from
+\code{frame}: a \code{\link[=pz_frame]{pz_frame()}} spec, or a bare locator (a CSS selector
+string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of either) promoted to one,
+whose union is the shot. In a scoped context \code{frame} may be omitted
+or \code{NULL} to shoot the scope's box; at the root it is required
+(\code{\link[=pz_camera_reset]{pz_camera_reset()}} returns to the home view). \code{frame = FALSE}
+shoots the scope's box, or the viewport at the root, unframed. The
+camera does not change the live page or still screenshots. Outside a
+recording it does nothing, and each \code{\link[=pz_record_start]{pz_record_start()}} begins at
+the recording frame.
 }

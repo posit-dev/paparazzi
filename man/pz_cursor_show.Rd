@@ -64,7 +64,7 @@ path <- file.path(tempdir(), "add-button.png")
 # Outside a recording the cursor appears at once, ready for a still
 page |>
   pz_cursor_show("#add-task", icon = "pointer") |>
-  pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 24))
+  pz_screenshot(path, frame = pz_frame("#new-task", pad = 24))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

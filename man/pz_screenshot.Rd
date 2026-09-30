@@ -4,7 +4,7 @@
 \alias{pz_screenshot}
 \title{Take a screenshot}
 \usage{
-pz_screenshot(ctx, path = NULL, ..., target = NULL, frame = NULL)
+pz_screenshot(ctx, path = NULL, ..., frame = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -19,16 +19,11 @@ intermediate screenshots a path to keep chaining.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{target}{What to capture: \code{NULL} for the viewport (root context)
-or the scope's box (scoped context), or a CSS selector string,
-\code{pz_loc()} spec, or list of either for the union of matched
-elements' bounding boxes.}
-
-\item{frame}{Framing to apply to the capture: \code{NULL} (the default)
-uses the page's default framing set with \code{pz_stage_frame()} if there
-is one, else captures unframed; a \code{\link[=pz_frame]{pz_frame()}} spec frames the
-capture, replacing any default entirely; \code{FALSE} disables framing
-for this capture.}
+\item{frame}{What to capture and how to frame it: a \code{\link[=pz_frame]{pz_frame()}}
+spec or a bare locator (a CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec,
+or a list of either) promoted to one; \code{NULL} (the default) uses
+the staged framing, if any; \code{FALSE} captures the scope's box or
+viewport unframed.}
 }
 \value{
 With an explicit path, \code{ctx}, invisibly. Without a path while
@@ -41,21 +36,27 @@ invisibly so screenshots slot into \verb{|>} chains. Without a path, the
 capture is a terminal step: a figure in a knitted document or a
 printable preview in an interactive session.
 
-The captured region depends on \code{target}:
+The captured region comes from \code{frame}:
 \itemize{
-\item \code{NULL} from the root context (from \code{\link[=pz_open]{pz_open()}}): the current
-viewport.
-\item \code{NULL} from a scoped context (from \verb{pz_find*()}): the scope's
-bounding box.
-\item A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of either: the
-union of the bounding boxes of all matched elements. A selector
-matching several elements is a union, not an error.
+\item \code{NULL} (the default): the page's staged framing set with
+\code{\link[=pz_stage_frame]{pz_stage_frame()}}, or, with none staged, the current scope's box
+(the viewport at the root), unframed.
+\item A \code{\link[=pz_frame]{pz_frame()}} spec, or a bare locator promoted to one: a CSS
+selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of either, framing
+the union of the matched elements' bounding boxes. A selector
+matching several elements is a union, not an error. Fields the
+spec leaves unset inherit the staged value, then the built-in
+default.
+\item \code{FALSE}: the scope's box or viewport, unframed.
 }
+
+What a frame without its own target measures resolves by precedence:
+the scope (scoped contexts), then the staged frame's target, then
+the viewport.
 
 Screenshots are captured at the page's current device pixel ratio: the
 PNG's pixel dimensions are the captured CSS size multiplied by the
-dpr. A \code{\link[=pz_frame]{pz_frame()}} can frame the capture; the page's default framing
-is set with \code{pz_stage_frame()}.
+dpr.
 
 A screen-space caption set with \code{\link[=pz_annotate_caption]{pz_annotate_caption()}} is composited
 onto the captured PNG after framing; captioned stills require \pkg{png}.
@@ -65,15 +66,15 @@ onto the captured PNG after framing; captioned stills require \pkg{png}.
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 
-# At the root, target = NULL captures the viewport
+# At the root, frame = NULL captures the viewport
 page |> pz_screenshot(path)
 
-# A target captures its box; a list captures the union of the boxes
-page |> pz_screenshot(path, target = ".task-list")
-page |> pz_screenshot(path, target = list("#new-task", ".filters"))
+# A locator captures its box; a list captures the union of the boxes
+page |> pz_screenshot(path, frame = ".task-list")
+page |> pz_screenshot(path, frame = list("#new-task", ".filters"))
 
 # Padding, aspect ratio and anchoring come from pz_frame()
-page |> pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 16))
+page |> pz_screenshot(path, frame = pz_frame("#new-task", pad = 16))
 file.exists(path)
 pz_close(page)
 \dontshow{\}) # examplesIf}
