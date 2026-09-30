@@ -40,6 +40,7 @@ Suggests:
     gifski,
     httpuv,
     knitr,
+    pkgdown,
     png,
     rmarkdown,
     shiny,
