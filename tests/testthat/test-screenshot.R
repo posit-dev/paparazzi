@@ -242,11 +242,6 @@ test_that("a Quarto screenshot figure resolves with its cross-reference", {
   dir <- withr::local_tempdir()
   input <- file.path(dir, "live-shot.qmd")
   package_root <- normalizePath(test_path("..", ".."))
-  load_package <- if (file.exists(file.path(package_root, "DESCRIPTION"))) {
-    sprintf("pkgload::load_all(%s, quiet = TRUE)", deparse(package_root))
-  } else {
-    "library(paparazzi)"
-  }
   fixture <- normalizePath(screenshot_fixture_file())
   writeLines(
     c(
@@ -258,7 +253,7 @@ test_that("a Quarto screenshot figure resolves with its cross-reference", {
       "",
       "```{r}",
       "#| echo: false",
-      load_package,
+      quarto_load_package(package_root),
       sprintf("page <- pz_open(%s)", deparse(fixture)),
       "```",
       "",

@@ -328,11 +328,6 @@ test_that("named video resolves from final Quarto HTML", {
   absolute <- file.path(dir, "outside.mp4")
   input <- file.path(dir, "record-video.qmd")
   package_root <- normalizePath(test_path("..", ".."))
-  load_package <- if (file.exists(file.path(package_root, "DESCRIPTION"))) {
-    sprintf("pkgload::load_all(%s, quiet = TRUE)", deparse(package_root))
-  } else {
-    "library(paparazzi)"
-  }
   fixture <- normalizePath(record_fixture_file())
   writeLines(
     c(
@@ -342,7 +337,7 @@ test_that("named video resolves from final Quarto HTML", {
       "",
       "```{r}",
       "#| echo: false",
-      load_package,
+      quarto_load_package(package_root),
       sprintf("page <- pz_open(%s)", deparse(fixture)),
       sprintf(
         'pz_record(page, %s, { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
