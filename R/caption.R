@@ -34,12 +34,7 @@ pz_annotate_caption <- function(
   side <- arg_match(side, c("bottom", "top"))
   check_string(color, allow_empty = FALSE)
   check_annotation_font_size(font_size)
-  style <- annotate_style(
-    ctx,
-    color,
-    font_family,
-    font_size
-  )
+  style <- annotate_style(ctx, color, font_family, font_size)
   rec <- page_recorder(ctx$page)
   if (!is.null(rec) && rec$active && rec$format == "gif") {
     rlang::check_installed(

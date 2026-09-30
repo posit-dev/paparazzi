@@ -187,15 +187,12 @@ annotate_style <- function(
   color,
   font_family,
   font_size,
-  defaults = list(),
   call = caller_env()
 ) {
   stage <- page_stage(ctx$page)
-  color <- color %||% defaults$color %||% stage$annotate_color
-  font_family <- font_family %||%
-    defaults$font_family %||%
-    stage$annotate_font_family
-  font_size <- font_size %||% defaults$font_size %||% stage$annotate_font_size
+  color <- color %||% stage$annotate_color
+  font_family <- font_family %||% stage$annotate_font_family
+  font_size <- font_size %||% stage$annotate_font_size
   check_string(color, allow_empty = FALSE, call = call)
   check_string(font_family, allow_empty = FALSE, call = call)
   check_annotation_font_size(font_size, call = call)

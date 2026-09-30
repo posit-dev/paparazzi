@@ -815,9 +815,8 @@ pz_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
-  # An explicit to = NULL is absent, not a target: it must not fall
-  # through to the resolver's document.body meaning.
-  to_dest <- !missing(to) && !is.null(to)
+  # NULL must not reach the resolver, where it means document.body.
+  to_dest <- !is.null(to)
   by_offset <- !is.null(by)
   if (!to_dest && !by_offset) {
     cli::cli_abort(
