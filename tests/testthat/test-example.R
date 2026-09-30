@@ -63,6 +63,78 @@ test_that("walkthrough keeps both high-priority task titles in view", {
   expect_true(all(unlist(redactions$aligned)))
 })
 
+test_that("task titles can be edited, committed, and reverted", {
+  page <- local_page(pz_example("tasks"))
+  task <- pz_find(page, pz_loc(".task", has_text = "Renew passport"))
+  task |>
+    pz_click(".task-edit") |>
+    pz_find(".task-title") |>
+    pz_select_text("passport") |>
+    pz_type("driving licence") |>
+    pz_press("Enter")
+  expect_identical(pz_get_text(task, ".task-title"), "Renew driving licence")
+  expect_identical(
+    pz_get_text(page, "#status"),
+    "Renamed to \u201cRenew driving licence\u201d."
+  )
+  task |>
+    pz_click(".task-edit") |>
+    pz_find(".task-title") |>
+    pz_select_text("driving licence") |>
+    pz_type("passport") |>
+    pz_press("Escape")
+  expect_identical(pz_get_text(task, ".task-title"), "Renew driving licence")
+  task |>
+    pz_click(".task-edit") |>
+    pz_find(".task-title") |>
+    pz_select_text("driving licence") |>
+    pz_type("passport")
+  page |> pz_click("h1")
+  expect_identical(pz_get_text(task, ".task-title"), "Renew passport")
+})
+
+test_that("new tasks carry attachments and support inline editing", {
+  page <- local_page(pz_example("tasks"))
+  file <- withr::local_tempfile(fileext = ".txt")
+  writeLines("Task attachment", file)
+  page |>
+    pz_set_files(file, target = "#attachment") |>
+    pz_type("Send documents", target = "#task-title") |>
+    pz_click("#add-task") |>
+    pz_expect_text(
+      "Send documents",
+      target = pz_loc(".task-title", which = "first")
+    )
+  task <- pz_find(page, pz_loc(".task", has_text = "Send documents"))
+  expect_match(pz_get_text(task), basename(file), fixed = TRUE)
+  expect_identical(pz_get_text(page, "#attachment-name"), "No file attached.")
+  expect_equal(
+    pz_js(page, "document.querySelector('#attachment').files.length"),
+    0
+  )
+  task |>
+    pz_click(".task-edit") |>
+    pz_find(".task-title") |>
+    pz_select_text("documents") |>
+    pz_type("forms") |>
+    pz_press("Enter")
+  expect_identical(pz_get_text(task, ".task-title"), "Send forms")
+})
+
+test_that("the tasks theme follows live color scheme changes", {
+  page <- local_page(pz_example("tasks"), color_scheme = "dark")
+  expect_identical(
+    pz_js(page, "document.documentElement.dataset.bsTheme"),
+    "dark"
+  )
+  pz_device(page, color_scheme = "light")
+  pz_wait_for_js(page, "document.documentElement.dataset.bsTheme === 'light'")
+  expect_identical(
+    pz_js(page, "document.documentElement.dataset.bsTheme"),
+    "light"
+  )
+})
+
 # Every help page's examples run here with the interactive guard forced on,
 # so an example that rots fails the suite instead of only a pkgdown build.
 example_rd_db <- function() {
