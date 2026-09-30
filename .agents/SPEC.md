@@ -65,6 +65,17 @@ pz_expect_attr(ctx, .target = NULL, ..., .match = c("exact", "contains", "regex"
 
 ### Actions
 
+Design rule: `pz_act_*` is for functions that send real user input
+(pointer, keyboard, wheel, focus, selection) and are staged while recording
+(cursor glide to pointer targets, paced typing, staged pause afterward).
+`pz_set_*` writes state directly, is not staged, and does not pause.
+`pz_cursor_*` (overlay only) and `pz_nav_*` (navigation) keep their names.
+Focus and blur use the browser's element methods, and text selection uses
+DOM selection methods. `pz_act_scroll()` uses wheel input while recording
+except with `duration = 0` or an instant-scroll fallback, and changes scroll
+position directly otherwise. Currently, root typing without a target is
+paced but skips the staged pause.
+
 Pointer and keyboard:
 
 - `pz_act_click()`, `pz_act_hover()`, `pz_act_type()` as above.
@@ -72,7 +83,7 @@ Pointer and keyboard:
 - `pz_act_focus(ctx, target = NULL, ...)` / `pz_act_blur(ctx, ...)`: e.g. focus to show an input's enabled look, blur to remove focus rings before a screenshot.
 - `pz_act_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)`: with a target, scroll it into view; with `by = c(x, y)` or `to = "bottom"` (direction vocabulary), scroll the current scope's container. While recording, scrolling is smooth, using real `mouseWheel` events with the cursor over the container; positive `duration` overrides the staged time per wheel scroll, while `duration = 0` uses the existing instant path (no queued wheels). Auto-scroll before other actions is animated the same way.
 - `pz_act_drag(ctx, target, to = NULL, ..., by = NULL)`: `to` is a target, or use an offset `by = c(x, y)`. Real mouse press/move/release; the cursor glides while holding when recording. HTML5 drag and drop (`dragstart`/`drop`) needs `Input.setInterceptDrags` + `Input.dispatchDragEvent`, chosen when the source is `draggable`.
-- `pz_act_select_text(ctx, text, ..., target = NULL)`: highlights an exact substring inside an element, as if dragging across it (TreeWalker over text nodes, DOM `Range`, window selection; works across inline tags). Typing afterwards replaces the selection. While recording, it's staged as a real mouse drag from the start of the text to the end.
+- `pz_act_select_text(ctx, text, ..., target = NULL)`: highlights an exact substring inside an element, as if dragging across it (TreeWalker over text nodes, DOM `Range`, window selection; works across inline tags). Typing afterwards replaces the selection. The selection is applied directly, including while recording; staging follows the target without a cursor glide and pauses afterward.
 
 Setting values:
 

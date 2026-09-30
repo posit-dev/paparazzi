@@ -45,6 +45,7 @@ reference:
       Click, type, set values, and take screenshots. Actions that interact
       with an element wait for it to be visible first.
     contents:
+      - paparazzi-actions
       - pz_act_click
       - pz_act_hover
       - pz_act_type

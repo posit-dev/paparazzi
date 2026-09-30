@@ -5,6 +5,41 @@
 # Value and file setting is DOM state, not pointer input: the native
 # prototype setters plus dispatched events (pz_set_value()), and
 # DOM.setFileInputFiles (pz_set_files()).
+#' Acting on the page
+#'
+#' @description
+#' The contract shared by the `pz_act_*()` functions.
+#'
+#' @section Acting on the page:
+#' The `pz_act_*()` functions interact with the page the way a person would.
+#' Each one uses real browser input (pointer moves and clicks, key presses,
+#' or wheel scrolls), the browser's focus methods, or a real text selection
+#' rather than setting a form value directly. [pz_act_scroll()] uses wheel
+#' input while recording, except with `duration = 0` or an instant-scroll
+#' fallback; without a recording, it changes scroll position directly.
+#'
+#' An action that takes a `target` finds it in the current scope, waiting for
+#' a DOM match, or acts on the scope itself when `target` is `NULL`, where
+#' supported. At the root, [pz_act_type()] without a target types into the
+#' focused element. [pz_act_press()] and [pz_act_blur()] take no target:
+#' key presses use the focused element, and blur removes focus from the
+#' scope's element or, at the root, the focused element. Scrolling with `by`
+#' or `to` acts on the scope's scroll container, or the page at the root.
+#' Actions with an explicit target scroll it into view when needed.
+#'
+#' While the page is recording, actions are staged: the visible cursor
+#' glides to pointer targets, typing is paced when `typing = "natural"`,
+#' and the page holds for the staged `pause` afterward, except for typing
+#' into the focused element at the root without a target. Without a recording,
+#' actions run straight to their final state. See [pz_stage()] for staging
+#' settings.
+#'
+#' To set a value directly instead (without action staging in a recording),
+#' use [pz_set_value()], [pz_set_files()], or [pz_set_shiny_input()].
+#'
+#' @name paparazzi-actions
+NULL
+
 #' Click an element
 #'
 #' Auto-waits for the element to be actionable -- visible with a
@@ -39,6 +74,8 @@
 #'   pz_act_click()
 #' pz_get_count(page, target = ".task.done")
 #' pz_close(page)
+#'
+#' @inheritSection paparazzi-actions Acting on the page
 #'
 #' @export
 pz_act_click <- function(ctx, target = NULL, ...) {
@@ -79,6 +116,8 @@ pz_act_click <- function(ctx, target = NULL, ...) {
 #' page |> pz_act_hover(passport)
 #' pz_get_style(page, "background-color", target = passport)
 #' pz_close(page)
+#'
+#' @inheritSection paparazzi-actions Acting on the page
 #'
 #' @export
 pz_act_hover <- function(ctx, target = NULL, ...) {
@@ -149,6 +188,8 @@ pz_act_hover <- function(ctx, target = NULL, ...) {
 #' page |> pz_act_type(" and eggs")
 #' pz_get_value(page, target = "#task-title")
 #' pz_close(page)
+#'
+#' @inheritSection paparazzi-actions Acting on the page
 #'
 #' @export
 pz_act_type <- function(ctx, text, ..., target = NULL) {
@@ -253,6 +294,8 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 #' pz_expect_focused(page, target = "#task-title")
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
 pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
   check_context(ctx)
@@ -337,6 +380,8 @@ pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
 #' pz_expect_focused(page, target = "#task-title")
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
 pz_act_focus <- function(ctx, target = NULL, ...) {
   check_context(ctx)
@@ -376,6 +421,8 @@ pz_act_focus <- function(ctx, target = NULL, ...) {
 #' page |> pz_act_blur()
 #' pz_expect_focused(page, target = "#task-title", not = TRUE)
 #' pz_close(page)
+#'
+#' @inheritSection paparazzi-actions Acting on the page
 #'
 #' @export
 pz_act_blur <- function(ctx, ...) {
@@ -587,6 +634,8 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 #'   pz_get_text()
 #' pz_close(page)
 #'
+#' @inheritSection paparazzi-actions Acting on the page
+#'
 #' @export
 pz_act_select_text <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
@@ -682,6 +731,8 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
 #' page |> pz_act_scroll(to = "top")
 #' pz_js(page, "window.scrollY")
 #' pz_close(page)
+#'
+#' @inheritSection paparazzi-actions Acting on the page
 #'
 #' @export
 pz_act_scroll <- function(
@@ -815,6 +866,8 @@ pz_act_scroll <- function(
 #'   )
 #' pz_get_text(page, target = ".task-title")
 #' pz_close(page)
+#'
+#' @inheritSection paparazzi-actions Acting on the page
 #'
 #' @export
 pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
