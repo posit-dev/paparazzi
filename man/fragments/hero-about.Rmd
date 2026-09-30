@@ -14,7 +14,7 @@ The first few lines set the scene. `pz_open()` opens the page at the size you wa
 
 Inside the block, each line is one step, and the steps fall into two groups:
 
-- **Using the page.** `pz_act_type()` clicks the title field and types into it, `pz_act_click()` presses a button, and `pz_act_drag()` drags one task onto another to reorder the list. `pz_find()` narrows the next steps to the new task, so `".task-done"` means that task's Done button.
+- **Using the page.** `pz_act_type()` clicks the title field and types into it, `pz_act_click()` presses a button, and `pz_act_drag()` moves the new task to a new place in the list. `pz_find()` narrows the next steps to the new task, so `".task-done"` means that task's Done button.
 - **Directing the viewer.** `pz_camera()` zooms in and `pz_camera_reset()` pulls back out. `pz_annotate()` outlines the new task, `pz_annotate_caption()` changes the caption, and `pz_record_hold()` gives viewers a moment to read. `pz_cursor_leave()` moves the cursor out of the shot at the end.
 
 `pz_expect_visible()` waits for the page to finish saving the task before the script outlines it, and `pz_expect_class()` waits for it to be marked done. Waits like this keep a scripted demo in step with a real page. The video keeps rolling while the script waits, so if a step takes longer than you'd like viewers to watch, `pz_record_pause()` and `pz_record_resume()` cut it out.
