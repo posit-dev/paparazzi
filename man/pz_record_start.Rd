@@ -113,6 +113,8 @@ to the layout at start. If the page navigates, a frame tied to the
 previous page falls back to the full viewport unless it was fixed at
 the start. MP4 dimensions are rounded down to multiples of 4 and
 WebM to even pixels; GIF keeps whole pixels.
+Set the viewport size before \code{pz_record_start()}; resizing during a
+framed or camera recording is not supported.
 
 WebVTT captions (when requested) are written as a \code{.vtt} file next to
 the MP4 or WebM. Cue times include the first/last holds and explicit
