@@ -82,7 +82,7 @@ NULL
 #' pz_frame(ratio = 16/9, pad = 24, anchor = "top")
 #' pz_frame(".task-list", ratio = 4/3, bounds = "main")
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tasks.png")
 #'
@@ -93,6 +93,7 @@ NULL
 #' page |>
 #'   pz_stage_frame(pad = 16) |>
 #'   pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9))
+#' pz_screenshot(page, frame = pz_frame("#new-task", ratio = 16/9))
 #' pz_close(page)
 #'
 #' @export
@@ -182,7 +183,7 @@ print.paparazzi_frame <- function(x, ...) {
 #'
 #' @seealso [pz_stage()], [pz_stage_annotate()], [pz_frame()], [pz_screenshot()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tasks.png")
 #'
@@ -196,6 +197,7 @@ print.paparazzi_frame <- function(x, ...) {
 #'   pz_screenshot(path, frame = FALSE) |>
 #'   # NULL clears the default
 #'   pz_stage_frame(NULL)
+#' pz_screenshot(page, frame = pz_frame("#new-task", pad = 24, ratio = 16/9))
 #' pz_close(page)
 #'
 #' @export

@@ -13,7 +13,7 @@
 #'
 #' @return The value produced by `expr` (converted to R), or `NULL`.
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' pz_js(page, "document.querySelectorAll('.task').length")
 #'
@@ -71,7 +71,7 @@ pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
 #'
 #' @return The `chromote::ChromoteSession` backing the page.
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' session <- pz_chromote(page)
 #'

@@ -72,7 +72,7 @@ with \code{\link[chromote:set_chrome_args]{chromote::set_chrome_args()}}. A defa
 }
 
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 # A local HTML file opens as a file:// URL
 page <- pz_open(pz_example("tasks"))
 pz_get_url(page)
@@ -81,6 +81,7 @@ pz_close(page)
 # Named arguments in `...` set up the device before the page loads
 phone <- pz_open(pz_example("tasks"), width = 390, height = 844, mobile = TRUE)
 pz_js(phone, "window.innerWidth")
+pz_screenshot(phone, frame = pz_frame("#new-task", pad = 16))
 pz_close(phone)
 \dontshow{\}) # examplesIf}
 \dontshow{if (paparazzi:::examples_run("shiny")) withAutoprint(\{ # examplesIf}

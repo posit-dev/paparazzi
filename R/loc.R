@@ -34,7 +34,7 @@
 #' pz_loc(".task", which = "last")
 #' pz_loc(".task-done", within = pz_loc(".task", has_text = "dentist"))
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Specs resolve each time they're used, so define them once and reuse them

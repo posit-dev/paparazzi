@@ -47,7 +47,7 @@ pz_loc(".task", has_text = "passport")
 pz_loc(".task", which = "last")
 pz_loc(".task-done", within = pz_loc(".task", has_text = "dentist"))
 
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 
 # Specs resolve each time they're used, so define them once and reuse them

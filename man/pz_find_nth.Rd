@@ -34,7 +34,7 @@ immediately -- the set was fixed at pin time, so there is nothing to
 wait for.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 
 # Mark the second task as done

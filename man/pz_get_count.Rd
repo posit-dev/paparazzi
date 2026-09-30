@@ -29,7 +29,7 @@ instead of returning \code{0}, because the pinned set promises a live set
 and is never silently re-queried.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 pz_get_count(page, target = ".task")
 

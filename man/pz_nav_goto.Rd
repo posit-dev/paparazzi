@@ -47,7 +47,7 @@ Session-level state (timeout, staging, and recording) is
 untouched.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 url <- pz_get_url(page)
 

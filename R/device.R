@@ -45,7 +45,7 @@
 #'
 #' @seealso [pz_open()] forwards its `...` here.
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Only the settings you supply change

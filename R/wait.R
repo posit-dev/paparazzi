@@ -158,7 +158,7 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
 #'
 #' @return `ctx`, invisibly.
 #' @seealso [pz_wait_for_stable()], [pz_wait_for_navigation()]
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_act_type("Buy milk", target = "#task-title") |>
@@ -219,7 +219,7 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
 #'
 #' @return `ctx`, invisibly.
 #' @seealso [pz_wait_for_js()], [pz_wait_for_navigation()]
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # The status line reads "Saving..." and then "Saved"; wait for it to settle
@@ -338,7 +338,7 @@ pz_wait_for_stable <- function(
 #'
 #' @return `ctx`, invisibly, with the scope reset to the root.
 #' @seealso [pz_find_reset()], [pz_wait_for_js()], [pz_wait_for_stable()]
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_act_click(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank")))
 #' pz_get_count(page, target = ".task.done")

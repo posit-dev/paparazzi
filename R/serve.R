@@ -110,7 +110,7 @@ pz_serve_shiny <- function(
 #'   share a server across pages. Closing those pages leaves it running.
 #'   `$stop()` is idempotent; use `withr::defer(server$stop())` for cleanup.
 #'   A finalizer stops the server as a last resort.
-#' @examplesIf paparazzi:::examples_run("httpuv")
+#' @examplesIf paparazzi:::examples_run("httpuv", site = TRUE)
 #' # Serve the example page over HTTP instead of opening it as file://
 #' server <- pz_serve_static(pz_example("tasks"))
 #' page <- pz_open(server)

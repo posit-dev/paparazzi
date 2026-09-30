@@ -41,7 +41,7 @@
 #'
 #' @seealso [pz_expect_style()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_style(page, c("font-size", "font_weight"), target = "h1")
 #'

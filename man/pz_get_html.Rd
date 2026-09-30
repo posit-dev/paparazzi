@@ -24,7 +24,7 @@ A character vector, one entry per match.
 \code{target}, one entry per match.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 pz_get_html(page, target = pz_loc(".task", which = "first"))
 pz_close(page)

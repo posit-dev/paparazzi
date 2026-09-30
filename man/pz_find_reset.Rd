@@ -19,7 +19,7 @@ still hold them -- and resetting never mutates the context it was
 called on. At the root it is a no-op returning \code{ctx} unchanged.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
   pz_find(".task-list") |>
@@ -28,7 +28,8 @@ page |>
   # The help toggle is outside the list, so start again from the root
   pz_find_reset() |>
   pz_act_click("#toggle-help") |>
-  pz_expect_visible(target = "#help")
+  pz_expect_visible(target = "#help") |>
+  pz_get_text(target = "#help")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

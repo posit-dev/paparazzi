@@ -38,7 +38,7 @@
 #'
 #' @seealso [pz_find_first()], [pz_find_pop()], [pz_find_reset()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Inside a scope, targets resolve among the scope's descendants
@@ -94,7 +94,7 @@ pz_find <- function(ctx, target, ..., from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_last()], [pz_find_nth()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_find_first(".task") |>
@@ -128,7 +128,7 @@ pz_find_first <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_nth()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_find_last(".task") |>
@@ -161,7 +161,7 @@ pz_find_last <- function(ctx, target = NULL, ..., from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_first()], [pz_find_last()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Mark the second task as done
@@ -193,7 +193,7 @@ pz_find_nth <- function(ctx, n, target = NULL, ..., from_root = FALSE) {
 #'
 #' @seealso [pz_find()], [pz_find_reset()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_find(".task-list") |>
@@ -201,7 +201,8 @@ pz_find_nth <- function(ctx, n, target = NULL, ..., from_root = FALSE) {
 #'   pz_act_click(".task-done") |>
 #'   # Back to the whole list, to check the result
 #'   pz_find_pop() |>
-#'   pz_expect_count(2, target = ".task.done")
+#'   pz_expect_count(2, target = ".task.done") |>
+#'   pz_get_count(target = ".task.done")
 #' pz_close(page)
 #'
 #' @export
@@ -226,7 +227,7 @@ pz_find_pop <- function(ctx) {
 #'
 #' @seealso [pz_find()], [pz_find_pop()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_find(".task-list") |>
@@ -235,7 +236,8 @@ pz_find_pop <- function(ctx) {
 #'   # The help toggle is outside the list, so start again from the root
 #'   pz_find_reset() |>
 #'   pz_act_click("#toggle-help") |>
-#'   pz_expect_visible(target = "#help")
+#'   pz_expect_visible(target = "#help") |>
+#'   pz_get_text(target = "#help")
 #' pz_close(page)
 #'
 #' @export

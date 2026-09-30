@@ -47,7 +47,7 @@
 #' with [chromote::set_chrome_args()]. A default set with
 #' [chromote::set_default_chromote_object()] is used as-is.
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' # A local HTML file opens as a file:// URL
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_url(page)
@@ -56,6 +56,7 @@
 #' # Named arguments in `...` set up the device before the page loads
 #' phone <- pz_open(pz_example("tasks"), width = 390, height = 844, mobile = TRUE)
 #' pz_js(phone, "window.innerWidth")
+#' pz_screenshot(phone, frame = pz_frame("#new-task", pad = 16))
 #' pz_close(phone)
 #'
 #' @examplesIf paparazzi:::examples_run("shiny")
@@ -214,7 +215,7 @@ pz_close <- function(page) {
 #' @return [pz_with_page()] returns the page invisibly; [pz_local_page()]
 #'   returns it visibly.
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' path <- file.path(tempdir(), "task-list.png")
 #'
 #' # The page closes when the function returns, even if it errors
