@@ -29,12 +29,13 @@ is the faithful implementation (Playwright does the same).
 
 The \verb{pz_act_*()} functions use the page the way a person would. They send
 real browser input, such as pointer moves, clicks and key presses, or use
-the browser's own focus and text-selection methods. They never set a value
-directly.
+the browser's own focus and text-selection methods. They never set a form
+value directly.
 
 An action with a \code{target} looks for it in the current scope and waits until
 it matches an element. Inside a scope, \code{target = NULL} acts on the scope's
-element. The action scrolls its target into view first when needed. A few
+element, and scrolling with \code{by} or \code{to} scrolls the scope's container. An
+explicit target is scrolled into view first when needed. A few
 actions, like \code{\link[=pz_act_press]{pz_act_press()}}, take no target and act on the focused
 element instead.
 
