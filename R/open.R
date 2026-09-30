@@ -1,17 +1,18 @@
 #' Open a page
 #'
-#' Opens a URL, local file, Shiny app, or existing
+#' Opens a URL, local file, local server, or existing
 #' [chromote::ChromoteSession] as a paparazzi page: the root context that
 #' starts every `|>` chain.
 #'
 #' @param x What to open:
 #'   * a URL string (any scheme, including `file://`, `about:`, `data:`);
-#'   * a path to an existing local file (opened as `file://`);
+#'   * a static directory or `.html` file, served over HTTP by this page;
+#'   * another existing local file (opened as `file://`);
 #'   * a Shiny app directory (including split `ui.R`/`server.R` apps) or
 #'     runnable app file (`app.R`, `app-*.R`, `*_app.R`, etc.), started by
 #'     this page and stopped when it closes;
-#'   * a [pz_serve_shiny()] handle, shared across pages (closing the page leaves
-#'     the app running); `ui.R` and `server.R` passed alone open as files;
+#'   * a [pz_serve_shiny()] or [pz_serve_static()] handle, shared across pages
+#'     (closing the page leaves the server running); `ui.R` and `server.R` passed alone open as files;
 #'   * an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
 #'
 #'   Shiny app **objects** are not supported -- run the app in another
@@ -40,7 +41,7 @@
 #' [chromote::set_default_chromote_object()] is used as-is.
 #'
 #' @examplesIf paparazzi:::examples_run()
-#' # A local HTML file opens as a file:// URL
+#' # A local HTML file is served over HTTP
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_url(page)
 #' pz_close(page)
@@ -88,19 +89,12 @@ pz_open <- function(
 
   owned_app <- NULL
   shared_app <- if (inherits(x, "PaparazziServe")) x else NULL
-  is_app <- inherits(x, "PaparazziServe") ||
-    (is_string(x) &&
-      file.exists(x) &&
-      (dir.exists(x) || is_shiny_app_file(basename(x))))
+  kind <- if (inherits(x, "PaparazziServe")) x$backend else serve_kind(x)
+  is_app <- identical(kind, "shiny")
   if (inherits(x, "PaparazziServe")) {
     url <- x$url
-  } else if (is_app) {
-    owned_app <- pz_serve_shiny(
-      x,
-      shiny_options = shiny_options,
-      envvars = envvars,
-      timeout = timeout
-    )
+  } else if (!is.null(kind)) {
+    owned_app <- serve_open(x, kind, shiny_options, envvars, timeout)
     withr::defer(if (!is.null(owned_app)) owned_app$stop())
     url <- owned_app$url
   } else {
@@ -160,9 +154,8 @@ pz_open <- function(
 
 #' Close a page
 #'
-#' Closes the page's browser session and, if the page started a Shiny app,
-#' stops that app. A page opened from a shared [pz_serve_shiny()] handle leaves the
-#' app running. Idempotent; closing an already-closed page is a no-op.
+#' Closes the page's browser session and any server it started. A page
+#' opened from a shared serving handle leaves the server running. Idempotent; closing an already-closed page is a no-op.
 #'
 #' @param page A `PaparazziPage` from [pz_open()], or any context on it
 #'   (such as the end of a chain). A chain from [pz_record_start()] whose
@@ -291,7 +284,7 @@ open_target_url <- function(x, call = caller_env()) {
     cli::cli_abort(
       c(
         "Shiny app objects can't be opened directly.",
-        i = "Run the app in another process (e.g. {.fn shiny::runApp}) and pass its URL to {.fn pz_open}."
+        i = "Use {.fn pz_serve_shiny} with an app directory or R file, or pass a running app's URL to {.fn pz_open}."
       ),
       class = "paparazzi_error_unsupported",
       call = call

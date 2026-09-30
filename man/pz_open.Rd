@@ -17,12 +17,13 @@ pz_open(
 \item{x}{What to open:
 \itemize{
 \item a URL string (any scheme, including \verb{file://}, \verb{about:}, \verb{data:});
-\item a path to an existing local file (opened as \verb{file://});
+\item a static directory or \code{.html} file, served over HTTP by this page;
+\item another existing local file (opened as \verb{file://});
 \item a Shiny app directory (including split \code{ui.R}/\code{server.R} apps) or
 runnable app file (\code{app.R}, \verb{app-*.R}, \verb{*_app.R}, etc.), started by
 this page and stopped when it closes;
-\item a \code{\link[=pz_serve_shiny]{pz_serve_shiny()}} handle, shared across pages (closing the page leaves
-the app running); \code{ui.R} and \code{server.R} passed alone open as files;
+\item a \code{\link[=pz_serve_shiny]{pz_serve_shiny()}} or \code{\link[=pz_serve_static]{pz_serve_static()}} handle, shared across pages
+(closing the page leaves the server running); \code{ui.R} and \code{server.R} passed alone open as files;
 \item an existing \code{ChromoteSession} (wrapped as-is; nothing is navigated).
 }
 
@@ -49,7 +50,7 @@ Per-call \code{timeout = NULL} in waits and expectations uses this default.}
 A \code{PaparazziPage} (the root context).
 }
 \description{
-Opens a URL, local file, Shiny app, or existing
+Opens a URL, local file, local server, or existing
 \link[chromote:ChromoteSession]{chromote::ChromoteSession} as a paparazzi page: the root context that
 starts every \verb{|>} chain.
 }
@@ -65,7 +66,7 @@ with \code{\link[chromote:set_chrome_args]{chromote::set_chrome_args()}}. A defa
 
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
-# A local HTML file opens as a file:// URL
+# A local HTML file is served over HTTP
 page <- pz_open(pz_example("tasks"))
 pz_get_url(page)
 pz_close(page)

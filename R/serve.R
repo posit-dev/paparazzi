@@ -96,6 +96,139 @@ pz_serve_shiny <- function(
   app_start(app_dir, envvars, shiny_options, timeout)
 }
 
+#' Serve static files over HTTP
+#'
+#' Serves a directory or a single HTML file on a free local port. For a
+#' file, its directory is served and the handle URL points to that file.
+#' Other files in that directory are also accessible over HTTP.
+#'
+#' @param path A path to a directory or an `.html` file.
+#' @param ... Reserved; must be empty.
+#' @return A `PaparazziServe` handle with `$url`, `$port`, `$stop()`,
+#'   `$is_running()`, and `$logs()`. Static servers have no captured logs:
+#'   `$logs()` returns `character()`. Pass the handle to [pz_open()] to
+#'   share a server across pages. Closing those pages leaves it running.
+#'   `$stop()` is idempotent; use `withr::defer(server$stop())` for cleanup.
+#'   A finalizer stops the server as a last resort.
+#' @export
+pz_serve_static <- function(path, ...) {
+  check_dots_empty()
+  check_string(path)
+  if (
+    !dir.exists(path) &&
+      !(file.exists(path) && grepl("[.]html$", path, ignore.case = TRUE))
+  ) {
+    cli::cli_abort(
+      "{.arg path} must be an existing directory or {.file .html} file.",
+      class = "paparazzi_error_input"
+    )
+  }
+  serve_static(normalizePath(path, winslash = "/", mustWork = TRUE))
+}
+
+serve_open <- function(x, kind, shiny_options, envvars, timeout) {
+  switch(
+    kind,
+    shiny = pz_serve_shiny(
+      x,
+      shiny_options = shiny_options,
+      envvars = envvars,
+      timeout = timeout
+    ),
+    static = pz_serve_static(x)
+  )
+}
+
+serve_kind <- function(x) {
+  if (!is_string(x) || !file.exists(x)) {
+    return(NULL)
+  }
+  if (dir.exists(x)) {
+    if (
+      file.exists(file.path(x, "app.R")) ||
+        all(file.exists(file.path(x, c("ui.R", "server.R"))))
+    ) {
+      return("shiny")
+    }
+    return("static")
+  }
+  if (is_file_app(x) && is_shiny_app_file(basename(x))) {
+    return("shiny")
+  }
+  if (grepl("[.]html$", x, ignore.case = TRUE)) {
+    return("static")
+  }
+  NULL
+}
+
+serve_static <- function(x) {
+  rlang::check_installed("httpuv", reason = "to serve static files.")
+  port <- random_port()
+  dir <- if (dir.exists(x)) x else dirname(x)
+  server <- httpuv::runStaticServer(
+    dir,
+    host = "127.0.0.1",
+    port = port,
+    background = TRUE,
+    browse = FALSE
+  )
+  url <- paste0("http://127.0.0.1:", port, "/")
+  if (!dir.exists(x)) {
+    url <- paste0(url, utils::URLencode(basename(x), reserved = TRUE))
+  }
+  ServedSite$new(
+    url,
+    port,
+    stop = function() httpuv::stopServer(server),
+    is_running = function() server$isRunning()
+  )
+}
+
+ServedSite <- R6::R6Class(
+  "PaparazziServe",
+  public = list(
+    url = NULL,
+    port = NULL,
+    backend = NULL,
+
+    initialize = function(url, port, stop, is_running, backend = "static") {
+      self$url <- url
+      self$port <- port
+      self$backend <- backend
+      private$stop_ <- stop
+      private$is_running_ <- is_running
+    },
+
+    stop = function() {
+      if (!private$stopped_) {
+        private$stop_()
+        private$stopped_ <- TRUE
+      }
+      invisible(self)
+    },
+
+    is_running = function() {
+      !private$stopped_ && private$is_running_()
+    },
+
+    logs = function() character(),
+
+    print = function(...) {
+      status <- if (self$is_running()) "running" else "stopped"
+      cli::cat_line("<paparazzi serve> ", self$url, " -- ", status)
+      invisible(self)
+    }
+  ),
+  private = list(
+    stop_ = NULL,
+    is_running_ = NULL,
+    stopped_ = FALSE,
+    finalize = function() {
+      try(self$stop(), silent = TRUE)
+    }
+  )
+)
+
 # A file path is an app only if shiny::runApp() would source it.
 is_file_app <- function(path) {
   grepl("[.]r$", tolower(path)) && file.exists(path) && !dir.exists(path)
@@ -241,7 +374,7 @@ random_port <- function(call = caller_env()) {
     }
   }
   cli::cli_abort(
-    "Could not find a free port for the Shiny app.",
+    "Could not find a free port for the server.",
     class = "paparazzi_error_app_startup",
     call = call
   )
@@ -298,6 +431,7 @@ PaparazziServe <- R6::R6Class(
   public = list(
     url = NULL,
     port = NULL,
+    backend = "shiny",
 
     initialize = function(process, log_file, port) {
       private$process_ <- process

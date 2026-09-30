@@ -186,7 +186,10 @@ test_that("preflight exhaustion reports no nonexistent child log", {
   local_mocked_bindings(random_port = function(...) taken_port)
 
   err <- expect_error(
-    pz_serve_shiny(shiny_app_fixture_dir(), shiny_options = list(port = taken_port)),
+    pz_serve_shiny(
+      shiny_app_fixture_dir(),
+      shiny_options = list(port = taken_port)
+    ),
     class = "paparazzi_error_app_startup",
     regexp = "could not bind a port"
   )
@@ -223,7 +226,10 @@ test_that("startup error only includes an escaped, bounded log tail", {
 test_that("app_dir is validated", {
   skip_if_no_shiny()
   expect_error(pz_serve_shiny(42), class = "paparazzi_error_input")
-  expect_error(pz_serve_shiny("does/not/exist"), class = "paparazzi_error_input")
+  expect_error(
+    pz_serve_shiny("does/not/exist"),
+    class = "paparazzi_error_input"
+  )
   expect_error(pz_serve_shiny(fixture_file()), class = "paparazzi_error_input")
 })
 
@@ -245,7 +251,10 @@ test_that("shiny_options, envvars, timeout, and dots are validated", {
     pz_serve_shiny(shiny_app_fixture_dir(), timeout = -1),
     "must be a number"
   )
-  expect_error(pz_serve_shiny(shiny_app_fixture_dir(), width = 390), "must be empty")
+  expect_error(
+    pz_serve_shiny(shiny_app_fixture_dir(), width = 390),
+    "must be empty"
+  )
 })
 
 test_that("an app that never listens times out and is cleaned up", {
@@ -261,5 +270,72 @@ test_that("an app that never listens times out and is cleaned up", {
 
 test_that("app timeout has a visible ten-second default and rejects NULL", {
   expect_equal(formals(pz_serve_shiny)$timeout, 10)
-  expect_error(pz_serve_shiny(shiny_app_fixture_dir(), timeout = NULL), "timeout")
+  expect_error(
+    pz_serve_shiny(shiny_app_fixture_dir(), timeout = NULL),
+    "timeout"
+  )
+})
+
+test_that("static directories and single HTML files share the handle contract", {
+  skip_if_no_chrome()
+  skip_if_not_installed("httpuv")
+  dir <- withr::local_tempdir()
+  html <- file.path(dir, "hello world.html")
+  writeLines('<html><body><h1>Static capture</h1></body></html>', html)
+  file.copy(html, file.path(dir, "index.html"))
+
+  for (path in c(dir, html)) {
+    server <- pz_serve_static(path)
+    withr::defer(server$stop())
+    expect_s3_class(server, "PaparazziServe")
+    expect_true(server$is_running())
+    expect_true(app_port_reachable(server$port))
+    expect_identical(server$logs(), character())
+    if (identical(path, html)) {
+      expect_match(server$url, "/hello%20world[.]html$")
+    }
+    page <- local_page(server)
+    expect_identical(pz_get_text(page, target = "h1"), "Static capture")
+    pz_close(page)
+    expect_true(server$is_running())
+    expect_invisible(server$stop())
+    expect_no_error(server$stop())
+    expect_false(server$is_running())
+    expect_false(app_port_reachable(server$port))
+
+    owned <- local_page(path)
+    port <- owned$.__enclos_env__$private$owned_app_$port
+    expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
+    pz_nav_reload(owned)
+    expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
+    pz_close(owned)
+    expect_false(app_port_reachable(port))
+  }
+})
+
+test_that("static handles stop on scope exit and finalization", {
+  skip_if_not_installed("httpuv")
+  port <- local({
+    server <- pz_serve_static(dirname(fixture_file()))
+    withr::defer(server$stop())
+    server$port
+  })
+  expect_false(app_port_reachable(port))
+  port <- pz_serve_static(fixture_file())$port
+  gc()
+  gc()
+  expect_false(app_port_reachable(port))
+})
+
+test_that("static inputs and reserved dots are validated", {
+  expect_error(pz_serve_static(42), "must be a string")
+  expect_error(
+    pz_serve_static("does/not/exist"),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_serve_static(shiny_app_fixture_file()),
+    class = "paparazzi_error_input"
+  )
+  expect_error(pz_serve_static(fixture_file(), port = 1234), "must be empty")
 })
