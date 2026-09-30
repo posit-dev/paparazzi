@@ -2,7 +2,7 @@
 
 A "Playwright-lite" R package over chromote: smooth, pipeable browser driving, plus screenshots and screen recordings.
 
-Status: implemented. The API index below records the shipped signatures; phase notes in `.agents/phases/` hold mechanism decisions.
+Status: implemented. The API index below records the shipped signatures; task-specific mechanism decisions are recorded in kata comments.
 
 ## Background
 
@@ -458,7 +458,7 @@ Robustness:
 
 ### Camera, annotations, and captions
 
-Video-editor features for recordings and annotated stills. Design discussion, rationale and probe notes are on kata `1a3m`; the full idea backlog is on `54b1`. Implemented; per-feature mechanism notes are in `.agents/phases/` (`40bm`, `7sq5`, `gdjm`, `m6kv`, `mkns`, `b0y7`, `3t7j`, `0rdt`, `aq35`, `51my`).
+Video-editor features for recordings and annotated stills. Design discussion, rationale and probe notes are on kata `1a3m`; the full idea backlog is on `54b1`. Implemented; per-feature mechanism decisions are in comments on the corresponding kata issues.
 
 There are two families, split by where the effect shows up, each paired with `pz_stage()` settings (like `pz_cursor_*()` with `pz_stage(cursor_*)`):
 
