@@ -209,6 +209,23 @@ test_that("show = screenshot writes a temp file and prints its path", {
   expect_match(path, "\\.png$")
 })
 
+test_that("inspect screenshots are sent directly to the configured viewer", {
+  path <- withr::local_tempfile(fileext = ".png", tmpdir = getwd())
+  writeBin(as.raw(1:4), path)
+  captured <- NULL
+  withr::local_options(viewer = function(x) captured <<- x)
+  local_mocked_bindings(inspect_interactive = function() TRUE)
+
+  got <- inspect_capture(function() inspect_show(path))
+
+  expect_true(file.exists(captured))
+  expect_match(captured, "\\.png$")
+  expect_false(identical(captured, path))
+  expect_identical(got$value, path)
+  expect_false(got$visible)
+  expect_match(got$msgs[[1]], "Annotated screenshot")
+})
+
 test_that("outlines drawn into the page never appear in pz_screenshot", {
   page <- local_inspect_page()
   # Draw outlines over #insp-plain and leave them, as show = "browser" does.
