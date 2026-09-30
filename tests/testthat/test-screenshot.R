@@ -454,3 +454,20 @@ test_that("pkgdown previews embed media and respect visibility", {
   missing <- structure("no-such-preview.png", class = "paparazzi_preview")
   expect_null(pkgdown::pkgdown_print(missing, visible = FALSE))
 })
+
+test_that("pkgdown media data URIs do not wrap long base64 payloads", {
+  skip_if_not_installed("pkgdown")
+  skip_if_not_installed("htmltools")
+  path <- withr::local_tempfile(fileext = ".png")
+  bytes <- as.raw(0:255)
+  writeBin(bytes, path)
+  tag <- pkgdown::pkgdown_print(structure(path, class = "paparazzi_preview"))
+
+  expect_false(grepl("[\r\n]", tag$attribs$src))
+  expect_false(grepl("%0A", tag$attribs$src, fixed = TRUE))
+  expect_false(grepl("%0A", htmltools::renderTags(tag)$html, fixed = TRUE))
+  expect_identical(
+    jsonlite::base64_dec(sub("^data:image/png;base64,", "", tag$attribs$src)),
+    bytes
+  )
+})

@@ -170,7 +170,8 @@ pkgdown_print.paparazzi_preview <- function(x, visible = TRUE) {
   )
   # Embed temporary captures so the reference page outlives the R session.
   data <- readBin(path, "raw", n = file.size(path))
-  src <- paste0("data:", mime, ";base64,", jsonlite::base64_enc(data))
+  encoded <- gsub("[\r\n]", "", jsonlite::base64_enc(data))
+  src <- paste0("data:", mime, ";base64,", encoded)
   if (ext %in% c("mp4", "webm")) {
     return(htmltools::tags$video(src = src, controls = NA))
   }
