@@ -48,11 +48,9 @@
 #'   `"instant"` inserts the whole string at once. Supply `NULL` to
 #'   restore the default.
 #' @param typing_speed Natural typing speed in characters per second.
-#'   The default is 16.
-#'   Supply `NULL` to restore the default.
+#'   The default is 16. Supply `NULL` to restore the default.
 #' @param pause Seconds to hold after each action while recording.
-#'   The default is 0.
-#'   Supply `NULL` to restore the default.
+#'   The default is 0. Supply `NULL` to restore the default.
 #' @param camera_follow Whether pointer and typing actions automatically pan
 #'   a zoomed recording camera to keep their target in view. Defaults to
 #'   `TRUE`; `FALSE` disables it and `NULL` restores the default.
@@ -237,6 +235,20 @@ pz_stage <- function(
 #'
 #' @return `ctx`, invisibly.
 #' @seealso [pz_stage()], [pz_stage_frame()], [pz_annotate()]
+#'
+#' @examplesIf paparazzi:::examples_run()
+#' page <- pz_open(pz_example("tasks"))
+#' path <- file.path(tempdir(), "tasks.png")
+#'
+#' page |>
+#'   # New annotations on this page use these styles
+#'   pz_stage_annotate(color = "#2563eb", font_size = 16) |>
+#'   pz_annotate("#add-task", label = TRUE) |>
+#'   pz_screenshot(path) |>
+#'   # NULL restores a default
+#'   pz_stage_annotate(color = NULL)
+#' pz_close(page)
+#'
 #' @export
 pz_stage_annotate <- function(
   ctx,

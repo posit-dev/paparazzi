@@ -29,6 +29,21 @@ recordings. An omitted argument leaves its setting alone, an explicit
 \code{NULL} restores its default, and a value sets it. Per-call annotation
 style arguments override these defaults.
 }
+\examples{
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+page <- pz_open(pz_example("tasks"))
+path <- file.path(tempdir(), "tasks.png")
+
+page |>
+  # New annotations on this page use these styles
+  pz_stage_annotate(color = "#2563eb", font_size = 16) |>
+  pz_annotate("#add-task", label = TRUE) |>
+  pz_screenshot(path) |>
+  # NULL restores a default
+  pz_stage_annotate(color = NULL)
+pz_close(page)
+\dontshow{\}) # examplesIf}
+}
 \seealso{
 \code{\link[=pz_stage]{pz_stage()}}, \code{\link[=pz_stage_frame]{pz_stage_frame()}}, \code{\link[=pz_annotate]{pz_annotate()}}
 }

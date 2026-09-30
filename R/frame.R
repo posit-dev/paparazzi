@@ -120,8 +120,9 @@ print.paparazzi_frame <- function(x, ...) {
 #' settings are never merged -- and `frame = FALSE` disables framing for
 #' a single call.
 #'
-#' Unlike [pz_stage()]'s animation settings,
-#' framing applies to screenshots as well as recordings. An annotated
+#' Unlike [pz_stage()]'s animation settings, framing (like
+#' [pz_stage_annotate()]'s styles) applies to screenshots as well as
+#' recordings. An annotated
 #' staged frame measures attached annotations in stills; recordings use
 #' only its element boxes for the home frame, and camera shots use their
 #' own `target_box` setting.

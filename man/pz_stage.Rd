@@ -54,12 +54,10 @@ default) inserts one character at a time with randomized delays;
 restore the default.}
 
 \item{typing_speed}{Natural typing speed in characters per second.
-The default is 16.
-Supply \code{NULL} to restore the default.}
+The default is 16. Supply \code{NULL} to restore the default.}
 
 \item{pause}{Seconds to hold after each action while recording.
-The default is 0.
-Supply \code{NULL} to restore the default.}
+The default is 0. Supply \code{NULL} to restore the default.}
 
 \item{camera_follow}{Whether pointer and typing actions automatically pan
 a zoomed recording camera to keep their target in view. Defaults to
