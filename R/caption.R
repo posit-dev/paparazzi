@@ -11,9 +11,9 @@
 #' @param ... Checked empty.
 #' @param side `"bottom"` (the default) or `"top"`.
 #' @param color Text color. `NULL` always uses white, not the
-#'   `annotate_color` mark accent in [pz_stage()].
+#'   `color` mark accent in [pz_stage_annotate()].
 #' @param font_family CSS font family. `NULL` uses the page's
-#'   `annotate_font_family` setting in [pz_stage()] (initially sans-serif).
+#'   `font_family` setting in [pz_stage_annotate()] (initially sans-serif).
 #' @param font_size Font size in CSS pixels. `NULL` uses 20, independent
 #'   of the annotation badge size. Captions scale with the output.
 #' @return `ctx`, invisibly.
@@ -173,7 +173,7 @@ key_callout_render <- function(
     "gap:(6*c.scale)+'px',fontFamily:'sans-serif',",
     "fontSize:(18*c.scale)+'px',color:'white'});",
     "c.groups.forEach((group,i)=>{",
-    "if(i){const arrow=document.createElement('span');arrow.textContent='→';",
+    "if(i){const arrow=document.createElement('span');arrow.textContent='\u2192';",
     "row.appendChild(arrow)}",
     "const chord=document.createElement('span');",
     "Object.assign(chord.style,{display:'inline-flex',flexWrap:'wrap',",
@@ -240,12 +240,12 @@ caption_windows <- function(rec, sampled) {
         function(event) event$vt <= vt + 1e-9,
         logical(1)
       ))
-      if (length(matches)) tail(matches, 1L) else 0L
+      if (length(matches)) utils::tail(matches, 1L) else 0L
     },
     integer(1)
   )
   runs <- rle(active)
-  starts <- cumsum(c(1L, head(runs$lengths, -1L)))
+  starts <- cumsum(c(1L, utils::head(runs$lengths, -1L)))
   windows <- lapply(which(runs$values > 0), function(i) {
     index <- runs$values[[i]]
     list(

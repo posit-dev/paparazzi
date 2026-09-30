@@ -59,7 +59,7 @@ NULL
 #' @seealso [pz_stage()] for cursor settings, [pz_cursor_hide()],
 #'   [pz_cursor_move()], [pz_cursor_leave()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "add-button.png")
 #'
@@ -126,7 +126,7 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL, icon = NULL) {
 #'
 #' @seealso [pz_cursor_show()], [pz_cursor_leave()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_cursor_show("#add-task") |>
@@ -173,7 +173,7 @@ pz_cursor_hide <- function(ctx, ...) {
 #'
 #' @seealso [pz_cursor_show()], [pz_cursor_leave()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' @examplesIf paparazzi:::examples_run("av")
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tour.mp4")
 #'
@@ -243,7 +243,7 @@ pz_cursor_move <- function(
 #'
 #' @seealso [pz_cursor_show()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' @examplesIf paparazzi:::examples_run("av")
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "help.mp4")
 #' page |>

@@ -42,7 +42,7 @@ there), and the drop is delivered to the destination as trusted
 offset in pixels from the source's center. Supply exactly one.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 pz_get_text(page, target = ".task-title")
 

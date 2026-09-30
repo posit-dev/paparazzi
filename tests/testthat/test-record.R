@@ -337,7 +337,7 @@ test_that("named video resolves from final Quarto HTML", {
       "",
       "```{r}",
       "#| echo: false",
-      sprintf("pkgload::load_all(%s, quiet = TRUE)", deparse(package_root)),
+      quarto_load_package(package_root),
       sprintf("page <- pz_open(%s)", deparse(fixture)),
       sprintf(
         'pz_record(page, %s, { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
@@ -1444,6 +1444,168 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
     expect_gt(length(resized), 0)
     expect_equal(png_dimensions(tail(resized, 1)), c(1600L, 1200L))
     pz_record_stop(page)
+  }
+})
+
+test_that("framed recordings reject viewport resizes and can record again", {
+  skip_if_no_av()
+  for (method in c("poll", "screencast")) {
+    page <- local_page(
+      record_fixture_file(),
+      width = 640,
+      height = 480,
+      scale = 2
+    )
+    out <- withr::local_tempfile(fileext = ".mp4")
+    pz_record_start(
+      page,
+      out,
+      method = method,
+      frame = pz_frame("#box", when = "stop"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+    defer_record_stop(page)
+    rec <- page_recorder(page)
+    pz_poll(
+      function() length(rec$files) >= 3L,
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "the initial recording frames"
+    )
+    density <- if (method == "poll") 2L else 1L
+    expect_equal(png_dimensions(rec$files[[1]]), c(640L, 480L) * density)
+
+    pz_device(page, width = 800, height = 600)
+    pz_poll(
+      function() {
+        identical(png_dimensions(tail(rec$files, 1)), c(800L, 600L) * density)
+      },
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a frame at the resized viewport"
+    )
+    expect_error(
+      pz_record_stop(page),
+      "Resizing the viewport.*not supported",
+      class = "paparazzi_error_record"
+    )
+    expect_false(rec$active)
+    expect_null(page_recorder(page))
+    expect_null(rec$deregister_screencast)
+    expect_false(dir.exists(rec$frames_dir))
+    expect_false(file.exists(out))
+
+    next_path <- withr::local_tempfile(fileext = ".mp4")
+    pz_record_start(
+      page,
+      next_path,
+      method = method,
+      frame = pz_frame("#box", when = "stop"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+    pz_wait(page, 0.3)
+    pz_record_stop(page)
+    expect_true(file.exists(next_path))
+    pz_close(page)
+  }
+})
+
+test_that("framed screencasts at a fractional DPR encode without a resize", {
+  skip_if_no_av()
+  page <- local_page(
+    record_fixture_file(),
+    width = 640,
+    height = 480,
+    scale = 1.5
+  )
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(
+    page,
+    out,
+    method = "screencast",
+    frame = pz_frame("#box", when = "stop"),
+    fps = 10,
+    hold = c(0, 0),
+    keep_frames = TRUE
+  )
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  pz_wait(page, 0.3)
+  pz_record_stop(page)
+
+  expect_true(file.exists(out))
+  sizes <- unique(lapply(rec$files, png_dimensions))
+  expect_length(sizes, 1L)
+})
+
+test_that("staged frames reject resizes and keep requested frames", {
+  skip_if_no_av()
+  page <- local_page(
+    record_fixture_file(),
+    width = 640,
+    height = 480,
+    scale = 2
+  )
+  pz_stage_frame(page, "#box")
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  pz_poll(
+    function() length(rec$files) >= 3L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "the initial recording frames"
+  )
+  pz_device(page, width = 800, height = 600)
+  expect_error(
+    pz_record_stop(page),
+    "Set the viewport size before",
+    class = "paparazzi_error_record"
+  )
+  expect_null(page_recorder(page))
+  expect_true(dir.exists(rec$frames_dir))
+  expect_true(all(file.exists(rec$files)))
+})
+
+test_that("encode checks even unsampled frames for width and height changes", {
+  skip_if_not_installed("png")
+  source <- withr::local_tempfile(fileext = ".png")
+  mixed <- withr::local_tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(48, 64, 3)), source)
+  for (dimensions in list(c(48, 80, 3), c(60, 64, 3))) {
+    png::writePNG(array(0.5, dimensions), mixed)
+    for (format in c("mp4", "webm", "gif")) {
+      for (crop_type in c("frame", "camera")) {
+        out <- withr::local_tempfile(fileext = paste0(".", format))
+        rec <- new_recorder(out, format, 1, NULL, c(1, 0), FALSE, NULL)
+        rec$files <- c(source, mixed, source)
+        rec$times <- c(0, 0.01, 0.02)
+        rec$vt_end <- 0.02
+        if (crop_type == "frame") {
+          rec$crop <- list(
+            x = 0,
+            y = 0,
+            width = 32,
+            height = 24,
+            viewport_width = 64
+          )
+        } else {
+          rec$camera <- list(list(start = 0, end = 0, box = c(0, 0, 32, 24)))
+        }
+        expect_identical(record_resample(rec)$files, source)
+        expect_error(
+          record_encode(rec),
+          "Set the viewport size before",
+          class = "paparazzi_error_record"
+        )
+        expect_false(file.exists(out))
+      }
+    }
   }
 })
 

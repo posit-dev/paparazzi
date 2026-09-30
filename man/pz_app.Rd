@@ -45,7 +45,7 @@ App stdout and stderr go to a temporary log file (never an undrained
 pipe), readable mid-run with \verb{$logs()}.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run("shiny")) withAutoprint(\{ # examplesIf}
 app <- pz_app(pz_example("tasks-app"))
 app
 

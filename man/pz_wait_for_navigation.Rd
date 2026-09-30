@@ -55,7 +55,7 @@ pinned scope object: contexts scoped before the navigation error on
 their next use instead of acting on a stale set.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_click(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank")))
 pz_get_count(page, target = ".task.done")

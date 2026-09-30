@@ -27,7 +27,7 @@
 #'
 #' @seealso [pz_find_reset()] for scope-only resets (no navigation).
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' url <- pz_get_url(page)
 #'

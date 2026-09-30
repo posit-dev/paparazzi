@@ -16,7 +16,7 @@
 #'
 #' @return An integer.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_count(page, target = ".task")
 #'
@@ -68,7 +68,7 @@ pz_get_count <- function(ctx, target = NULL, ...) {
 #'
 #' @return A character vector, one entry per match.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_text(page, target = "h1")
 #'
@@ -105,7 +105,7 @@ pz_get_text <- function(ctx, target = NULL, ..., raw = FALSE) {
 #'
 #' @return A character vector, one entry per match.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_type("Buy milk", target = "#task-title")
 #' pz_get_value(page, target = list("#task-title", "#task-priority"))
@@ -134,7 +134,7 @@ pz_get_value <- function(ctx, target = NULL, ...) {
 #'
 #' @return A character vector, one entry per match.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_attr(page, "data-priority", target = ".task")
 #'
@@ -174,7 +174,7 @@ pz_get_attr <- function(ctx, name, target = NULL, ...) {
 #'   to that one match, pinned at get time, so a chain can continue
 #'   from it: `rects$element[[2]] |> pz_hover()`.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' rects <- pz_get_rect(page, target = ".filters a")
 #' rects
@@ -212,7 +212,7 @@ pz_get_rect <- function(ctx, target = NULL, ...) {
 #'   per match, plus an `element` list-column of contexts scoped to
 #'   each match, pinned at get time (see [pz_get_rect()]).
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_elements(page, target = "#new-task > *")
 #' pz_close(page)
@@ -250,7 +250,7 @@ pz_get_elements <- function(ctx, target = NULL, ...) {
 #'
 #' @return A character vector, one entry per match.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_html(page, target = pz_loc(".task", which = "first"))
 #' pz_close(page)
@@ -274,7 +274,7 @@ pz_get_html <- function(ctx, target = NULL, ...) {
 #'
 #' @return A character vector of length one.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_click(pz_loc(".filters a", has_text = "Open"))
 #' basename(pz_get_url(page))
@@ -294,7 +294,7 @@ pz_get_url <- function(ctx) {
 #'
 #' @return A character vector of length one.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_title(page)
 #' pz_close(page)

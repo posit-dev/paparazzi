@@ -30,7 +30,7 @@
 #' @return A `PaparazziApp` handle with public fields `url` and `port`
 #'   and methods `stop()`, `logs()`, and `is_running()`.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")
+#' @examplesIf paparazzi:::examples_run("shiny")
 #' app <- pz_app(pz_example("tasks-app"))
 #' app
 #'

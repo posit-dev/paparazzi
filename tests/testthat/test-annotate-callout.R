@@ -150,10 +150,10 @@ test_that("multiple matches repeat text and number badges; ids share the registr
     "document.body.insertAdjacentHTML('beforeend','<div class=mark style=\"position:absolute;left:120px;top:300px;width:70px;height:40px\"></div><div class=mark style=\"position:absolute;left:300px;top:300px;width:70px;height:40px\"></div>')"
   )
   page |>
-    pz_stage(
-      annotate_color = "rgb(255, 0, 0)",
-      annotate_font_family = "monospace",
-      annotate_font_size = 19
+    pz_stage_annotate(
+      color = "rgb(255, 0, 0)",
+      font_family = "monospace",
+      font_size = 19
     )
   page |>
     pz_annotate_callout("Repeat", target = ".mark", label = TRUE, id = "shared")

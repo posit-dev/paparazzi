@@ -42,7 +42,6 @@ Suggests:
     knitr,
     png,
     rmarkdown,
-    rstudioapi,
     shiny,
     testthat (>= 3.2.0),
     xfun
@@ -86,6 +85,7 @@ Collate:
     'stage.R'
     'style.R'
     'utils-check.R'
+    'utils-examples.R'
     'utils.R'
     'wait.R'
 VignetteBuilder: knitr
