@@ -7,9 +7,9 @@ articles:
   - title: Guides
     navbar: ~
     contents:
-      - articles/shiny
       - articles/walkthrough
       - articles/annotations
+      - articles/shiny
 
 reference:
   - title: Pages, apps and navigation

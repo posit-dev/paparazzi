@@ -4,11 +4,11 @@
 \name{paparazzi-package}
 \alias{paparazzi}
 \alias{paparazzi-package}
-\title{paparazzi: Pipeable Browser Automation with 'chromote'}
+\title{paparazzi: Scripted Demo Videos, Screenshots, and Tests for Web Pages}
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Drive web pages from R with a pipeable interface built on 'chromote'. Find and interact with DOM elements, set input values, wait for page state, and assert on content and element state. Capture screenshots and record interactions as videos or GIFs, with optional cursor and typing animations for demos. Works with any page, including Shiny apps.
+Script polished demo videos and screenshots of anything that runs in a web browser, including 'Shiny' apps, 'Quarto' documents, and live websites. A pipeable interface built on 'chromote' clicks, types, and waits the way a person would. While recording, a cursor glides between elements, text is typed one character at a time, and a camera zooms and pans to the action. Annotations, callouts, spotlights, captions, and redactions follow their elements as the page changes. Frame captures to an element or aspect ratio, emulate phones, dark mode, and other devices, and write MP4, WebM, or GIF files. Without a recording, the same scripts run at full speed as browser tests with auto-waiting actions and retrying expectations that work with 'testthat'.
 }
 \seealso{
 Useful links:

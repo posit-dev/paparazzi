@@ -1,0 +1,76 @@
+```{r should-update}
+#| include: false
+
+# Recording is slow and the GIF churns on every render, so re-record
+# only when the image is missing or the source has changed since.
+should_update <- identical(Sys.getenv("IN_INDEX", ""), "true") && {
+  img <- knitr::fig_chunk("hero", "gif", 1)
+  !file.exists(img) || file.mtime("man/fragments/hero.Rmd") > file.mtime(img)
+}
+```
+
+```{r hero, eval = should_update}
+#| include: false
+
+library(paparazzi)
+
+page <- pz_open(
+  pz_example("tasks"),
+  width = 1000,
+  height = 720,
+  color_scheme = "light"
+)
+page |> pz_stage(enter = "bottom", pause = 0.3)
+
+new_task <- pz_loc(".task", has_text = "Prepare release notes")
+
+pz_record(
+  page,
+  frame = pz_frame(list("h1", ".task-list"), pad = 24, ratio = 16 / 9),
+  format = "gif",
+  scale = 800,
+  code = {
+    page |>
+      pz_annotate_caption("Add a task") |>
+      pz_camera("#new-task", wait = TRUE) |>
+      pz_type("Prepare release notes", target = "#task-title") |>
+      pz_click("#add-task") |>
+      pz_expect_visible(new_task) |>
+      pz_annotate(new_task, type = "box", pad = 4, id = "new") |>
+      pz_annotate_caption("New tasks go to the top of the list") |>
+      pz_record_hold(1.2) |>
+      pz_camera_reset() |>
+      pz_annotate_clear(id = "new") |>
+      pz_annotate_caption("Check it off when you're done") |>
+      pz_find(new_task) |>
+      pz_click(".task-done") |>
+      pz_expect_class("done") |>
+      pz_cursor_leave() |>
+      pz_record_hold(1)
+  }
+)
+
+pz_close(page)
+```
+
+```{r}
+#| echo: false
+#| results: asis
+
+path <- if (identical(Sys.getenv("IN_INDEX", ""), "true")) {
+  "images/readme-hero-1.gif"
+} else {
+  "https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-hero-1.gif"
+}
+
+cat(sprintf(
+  '<img src="%s" alt="%s" />',
+  path,
+  "A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Check it off when you&#39;re done, the cursor clicks the task&#39;s Done button and the task is crossed out."
+))
+```
+
+
+That video came from the short R script shown below. paparazzi opened the page in a headless Chrome browser and did what the script said. The cursor glides to each control, text is typed one character at a time, and the camera zooms in on the form and pulls back to show the result. Captions and highlights appear on cue. There's no screen recorder involved, and no timeline to edit afterward.
+
+Because the video is a script, you never have to record a second take. When the app changes, rerun the script and you get the same demo of the new version. paparazzi works with any page Chrome can open, including Shiny apps, Quarto documents and slides, pkgdown sites, and live websites.

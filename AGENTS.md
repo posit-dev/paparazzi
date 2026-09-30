@@ -33,6 +33,13 @@
    lock browser-free or isolated runs. Judge test results by reported
    FAIL/WARN, not exit code or variable PASS counts.
 
+## Rendered Docs
+
+README.md and pkgdown/index.md are rendered from man/fragments/*.Rmd —
+edit the fragments, then rebuild: `build_readme()` for the README,
+`pkgload::load_all(); rmarkdown::render("pkgdown/index.Rmd")` for
+pkgdown/index.md. Never edit the rendered files directly.
+
 ## Work Mechanics
 
 1. **One kata issue per work item**, parented appropriately; claim with
