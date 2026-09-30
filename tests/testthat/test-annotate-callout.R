@@ -36,10 +36,11 @@ callout_details <- function(page) {
       "return {target:rect(t), nodes:[...l.querySelectorAll('.pz-callout')].map(n=>{",
       "const b=n.querySelector('.pz-bubble'),s=n.querySelector('svg');",
       "const badge=n.querySelector('span'),deco=s?s.querySelector('.pz-deco-end'):null;",
+      "const bc=getComputedStyle(b),bs=badge?getComputedStyle(badge):null;",
       "const r=n.getBoundingClientRect(); return {rect:rect(r),bubble:rect(b.getBoundingClientRect()),",
       "label:badge?.textContent ?? null, text:b.textContent,",
-      "color:b.style.borderColor,fill:b.style.backgroundColor,textColor:b.style.color,",
-      "badgeFill:badge?.style.backgroundColor ?? null,badgeColor:badge?.style.color ?? null,",
+      "color:b.style.borderColor,fill:bc.backgroundColor,textColor:bc.color,",
+      "badgeFill:bs?.backgroundColor ?? null,badgeColor:bs?.color ?? null,",
       "font:b.style.fontFamily,fontSize:b.style.fontSize,",
       "leader:!!s, decos:s?[...s.children].map(c=>c.tagName):null,",
       "end:deco?.points?.length?[r.left+deco.points[0].x,r.top+deco.points[0].y]:null,",
@@ -632,6 +633,8 @@ test_that("leader heads have stroke-scaled proportions and shafts stop at the ba
 
 test_that("draw reveal draws the shaft, then shows decorations; clearing undraws", {
   page <- callout_page()
+  page |>
+    pz_annotate_callout("Arrow", target = "#target", side = "right", id = "tip")
   state <- pz_js(
     page,
     paste0(
@@ -664,6 +667,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
       "const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});",
       "anims.filter(a=>a.playState==='paused').forEach(a=>a.play());",
       "await Promise.all(anims.map(a=>a.finished.catch(()=>{})));",
+      "await new Promise(r=>setTimeout(r,100));",
       "return {shown:n.querySelector('.pz-deco-end').style.visibility,",
       "live:n.getAnimations({subtree:true}).length}; })()"
     )
@@ -694,6 +698,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
       "const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});",
       "anims.filter(a=>a.playState==='paused').forEach(a=>a.play());",
       "await Promise.all(anims.map(a=>a.finished.catch(()=>{})));",
+      "await new Promise(r=>setTimeout(r,100));",
       "return {gone:!l.querySelector('.pz-callout')}; })()"
     )
   )
@@ -776,16 +781,18 @@ test_that("leader decorations render per end and shafts stop at each base", {
       distance = 40,
       id = "tip"
     )
+  # side = "right" puts the bubble right of the target, so the shaft runs
+  # leftward from the bubble's left edge to the target's right edge.
   g <- leader_geometry()
-  expect_identical(g$decos, c("line", "circle-start", "line-end"))
+  expect_identical(unlist(g$decos), c("line", "circle-start", "line-end"))
   dot <- unlist(g$dot)
   expect_equal(dot[["r"]], 3, tolerance = 1e-4)
-  expect_equal(dot[["x"]], g$bubble[[3]], tolerance = 1)
-  expect_equal(g$shaft[[1]], dot[["x"]] + dot[["r"]], tolerance = 1e-4)
+  expect_equal(dot[["x"]], g$bubble[[1]], tolerance = 1)
+  expect_equal(g$shaft[[1]], dot[["x"]] - dot[["r"]], tolerance = 1e-4)
   bar <- unlist(g$bar)
-  expect_equal(mean(bar[c(1, 3)]), g$target[[1]], tolerance = 1)
+  expect_equal(mean(bar[c(1, 3)]), g$target[[3]], tolerance = 1)
   expect_equal(abs(bar[[4]] - bar[[2]]) / 2, 5, tolerance = 1e-4)
-  expect_equal(g$shaft[[3]], g$target[[1]] - 1, tolerance = 1e-4)
+  expect_equal(g$shaft[[3]], g$target[[3]] + 1, tolerance = 1e-4)
   expect_equal(g$shaft[[2]], g$shaft[[4]], tolerance = 1e-4)
 
   page |>
@@ -799,8 +806,8 @@ test_that("leader decorations render per end and shafts stop at each base", {
       id = "tip"
     )
   g <- leader_geometry()
-  expect_identical(g$decos, c("line", "polygon-end"))
-  expect_equal(g$shaft[[1]], g$bubble[[3]], tolerance = 1)
+  expect_identical(unlist(g$decos), c("line", "polygon-end"))
+  expect_equal(g$shaft[[1]], g$bubble[[1]], tolerance = 1)
 
   page |>
     pz_annotate_callout(
@@ -812,9 +819,9 @@ test_that("leader decorations render per end and shafts stop at each base", {
       id = "tip"
     )
   g <- leader_geometry()
-  expect_identical(g$decos, "line")
-  expect_equal(g$shaft[[1]], g$bubble[[3]], tolerance = 1)
-  expect_equal(g$shaft[[3]], g$target[[1]], tolerance = 1)
+  expect_identical(unlist(g$decos), "line")
+  expect_equal(g$shaft[[1]], g$bubble[[1]], tolerance = 1)
+  expect_equal(g$shaft[[3]], g$target[[3]], tolerance = 1)
 })
 
 test_that("short leaders clamp both decorations", {
@@ -991,7 +998,7 @@ test_that("callout style options resolve per-call, staged, then built-in", {
   defaults <- captured
   expect_identical(defaults$fill, "#171717")
   expect_identical(defaults$textColor, "white")
-  expect_identical(defaults$leader, c(start = "none", end = "arrow"))
+  expect_identical(defaults$leader, list(start = "none", end = "arrow"))
   expect_true(is.numeric(defaults$strokeWidth) && defaults$strokeWidth > 0)
   expect_true(is.numeric(defaults$distance) && defaults$distance > 0)
 
@@ -1030,5 +1037,5 @@ test_that("callout style options resolve per-call, staged, then built-in", {
     target = "#target",
     leader = c(start = "bar")
   )
-  expect_identical(captured$leader, c(start = "bar", end = "none"))
+  expect_identical(captured$leader, list(start = "bar", end = "none"))
 })

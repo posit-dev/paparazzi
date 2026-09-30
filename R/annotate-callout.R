@@ -81,11 +81,13 @@ pz_annotate_callout <- function(
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)
+  # as.list() keeps the start/end names through toJSON's auto_unbox,
+  # which drops them on atomic vectors.
   options <- list(
     id = id,
     text = text,
     side = side,
-    leader = leader,
+    leader = if (isFALSE(leader)) FALSE else as.list(leader),
     label = label,
     reveal = reveal,
     color = style$color,
