@@ -454,8 +454,8 @@ pz_record_hold <- function(ctx, seconds) {
 #' including on error, so a failed run still produces the video up to
 #' the failure. Returns what [pz_record_stop()] returns, never the block's
 #' value: `ctx` invisibly when a path was given outside knitting, media
-#' while knitting, or a viewer preview when the path is omitted in an
-#' interactive session. Write `pz_record(code = { ... })` to omit the
+#' while knitting, or a viewer preview when the path is `NULL` or omitted
+#' in an interactive session. Write `pz_record(code = { ... })` to omit the
 #' path.
 #'
 #' @inheritParams pz_record_start

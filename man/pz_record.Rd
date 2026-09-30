@@ -29,8 +29,8 @@ the embraced expression \code{code}, and stops and encodes on exit --
 including on error, so a failed run still produces the video up to
 the failure. Returns what \code{\link[=pz_record_stop]{pz_record_stop()}} returns, never the block's
 value: \code{ctx} invisibly when a path was given outside knitting, media
-while knitting, or a viewer preview when the path is omitted in an
-interactive session. Write \code{pz_record(code = { ... })} to omit the
+while knitting, or a viewer preview when the path is \code{NULL} or omitted
+in an interactive session. Write \code{pz_record(code = { ... })} to omit the
 path.
 }
 \examples{
