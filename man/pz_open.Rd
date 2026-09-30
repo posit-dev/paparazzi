@@ -20,8 +20,9 @@ pz_open(
 \item a Shiny app directory or runnable app file (\code{app.R}, \verb{app-*.R},
 \verb{*_app.R}, etc.);
 \item a \code{.qmd} or \code{.Rmd} file, or a Quarto project directory;
-\item a static directory or \code{.html} file;
-\item another existing local file (opened as \verb{file://});
+\item a directory of static files, served over HTTP;
+\item any other existing local file, including \code{.html} files, opened as
+\verb{file://} (use \code{\link[=pz_serve_static]{pz_serve_static()}} to serve a page over HTTP);
 \item a handle from \code{\link[=pz_serve_shiny]{pz_serve_shiny()}}, \code{\link[=pz_serve_quarto]{pz_serve_quarto()}}, or
 \code{\link[=pz_serve_static]{pz_serve_static()}}, shared across pages;
 \item an existing \code{ChromoteSession} (wrapped as-is; nothing is navigated).
@@ -29,8 +30,8 @@ pz_open(
 
 Path detection checks Shiny first (directories containing \code{app.R} or
 \code{server.R}, or named app files), then Quarto (\code{.qmd}, \code{.Rmd}, or a
-directory containing \verb{_quarto.yml}), then static directories and HTML
-files. \code{ui.R} and \code{server.R} passed alone open as files.
+directory containing \verb{_quarto.yml}), then other directories as static
+sites. \code{ui.R} and \code{server.R} passed alone open as files.
 A path starts a one-off server using the backend defaults; closing the
 page stops it. Closing a page opened from a handle leaves its server
 running. Shiny app \strong{objects} are not supported; supply an app path
@@ -72,7 +73,7 @@ with \code{\link[chromote:set_chrome_args]{chromote::set_chrome_args()}}. A defa
 
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
-# A local HTML file is served over HTTP
+# A local HTML file opens as a file:// URL
 page <- pz_open(pz_example("tasks"))
 pz_get_url(page)
 pz_close(page)

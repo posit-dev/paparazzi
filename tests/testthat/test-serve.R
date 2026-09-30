@@ -561,7 +561,8 @@ test_that("automatic serving detection prioritizes Shiny, then Quarto, then stat
   expect_null(serve_kind(file.path(dir, "ui.R")))
   expect_null(serve_kind(file.path(dir, "server.R")))
   expect_identical(serve_kind(shiny_app_fixture_file()), "shiny")
-  expect_identical(serve_kind(fixture_file()), "static")
+  # pz_open() opens .html files as file://; only directories are served.
+  expect_null(serve_kind(fixture_file()))
   doc <- file.path(dir, "document.Rmd")
   file.create(doc)
   expect_identical(serve_kind(doc), "quarto")
@@ -571,6 +572,34 @@ test_that("automatic serving detection prioritizes Shiny, then Quarto, then stat
   )
   expect_null(serve_kind(42))
   expect_null(serve_kind("does/not/exist"))
+})
+
+test_that("static servers retry when the port is taken", {
+  skip_if_not_installed("httpuv")
+  dir <- withr::local_tempdir()
+  writeLines("<p>hi</p>", file.path(dir, "index.html"))
+  calls <- 0
+  real <- httpuv::runStaticServer
+  local_mocked_bindings(
+    runStaticServer = function(...) {
+      calls <<- calls + 1
+      if (calls == 1) {
+        stop("Failed to create server")
+      }
+      real(...)
+    },
+    .package = "httpuv"
+  )
+  server <- pz_serve_static(dir)
+  withr::defer(server$stop())
+  expect_identical(calls, 2)
+  expect_true(server$is_running())
+
+  local_mocked_bindings(
+    runStaticServer = function(...) stop("Failed to create server"),
+    .package = "httpuv"
+  )
+  expect_error(pz_serve_static(dir), class = "paparazzi_error_app_startup")
 })
 
 test_that("static file URLs encode literal percent signs and reserved characters", {

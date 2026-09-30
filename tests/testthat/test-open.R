@@ -1,9 +1,9 @@
-test_that("pz_open serves a local HTML file over HTTP", {
+test_that("pz_open opens a local file as file://", {
   page <- local_page()
   expect_s3_class(page, "PaparazziPage")
   expect_s3_class(page, "PaparazziContext")
   expect_false(page$is_closed())
-  expect_match(pz_js(page, "location.protocol"), "http:")
+  expect_match(pz_js(page, "location.protocol"), "file:")
   expect_identical(pz_js(page, "document.title"), "paparazzi fixture")
 })
 
@@ -566,7 +566,7 @@ test_that("print() works on open and closed pages", {
   skip_if_no_chrome()
   page <- pz_open(fixture_file())
   expect_output(print(page), "── paparazzi page")
-  expect_output(print(page), "URL        http:")
+  expect_output(print(page), "URL        file:")
   pz_close(page)
   expect_output(print(page), "<paparazzi page> \\(closed\\)")
 })

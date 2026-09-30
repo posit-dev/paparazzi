@@ -24,3 +24,13 @@ Serves a directory or a single HTML file on a free local port. For a
 file, its directory is served and the handle URL points to that file.
 Other files in that directory are also accessible over HTTP.
 }
+\examples{
+\dontshow{if (paparazzi:::examples_run("httpuv")) withAutoprint(\{ # examplesIf}
+# Serve the example page over HTTP instead of opening it as file://
+server <- pz_serve_static(pz_example("tasks"))
+page <- pz_open(server)
+pz_get_url(page)
+pz_close(page)
+server$stop()
+\dontshow{\}) # examplesIf}
+}

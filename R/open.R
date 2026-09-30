@@ -9,16 +9,17 @@
 #'   * a Shiny app directory or runnable app file (`app.R`, `app-*.R`,
 #'     `*_app.R`, etc.);
 #'   * a `.qmd` or `.Rmd` file, or a Quarto project directory;
-#'   * a static directory or `.html` file;
-#'   * another existing local file (opened as `file://`);
+#'   * a directory of static files, served over HTTP;
+#'   * any other existing local file, including `.html` files, opened as
+#'     `file://` (use [pz_serve_static()] to serve a page over HTTP);
 #'   * a handle from [pz_serve_shiny()], [pz_serve_quarto()], or
 #'     [pz_serve_static()], shared across pages;
 #'   * an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
 #'
 #'   Path detection checks Shiny first (directories containing `app.R` or
 #'   `server.R`, or named app files), then Quarto (`.qmd`, `.Rmd`, or a
-#'   directory containing `_quarto.yml`), then static directories and HTML
-#'   files. `ui.R` and `server.R` passed alone open as files.
+#'   directory containing `_quarto.yml`), then other directories as static
+#'   sites. `ui.R` and `server.R` passed alone open as files.
 #'   A path starts a one-off server using the backend defaults; closing the
 #'   page stops it. Closing a page opened from a handle leaves its server
 #'   running. Shiny app **objects** are not supported; supply an app path
@@ -47,7 +48,7 @@
 #' [chromote::set_default_chromote_object()] is used as-is.
 #'
 #' @examplesIf paparazzi:::examples_run()
-#' # A local HTML file is served over HTTP
+#' # A local HTML file opens as a file:// URL
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_url(page)
 #' pz_close(page)

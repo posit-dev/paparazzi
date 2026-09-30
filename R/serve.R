@@ -110,6 +110,13 @@ pz_serve_shiny <- function(
 #'   share a server across pages. Closing those pages leaves it running.
 #'   `$stop()` is idempotent; use `withr::defer(server$stop())` for cleanup.
 #'   A finalizer stops the server as a last resort.
+#' @examplesIf paparazzi:::examples_run("httpuv")
+#' # Serve the example page over HTTP instead of opening it as file://
+#' server <- pz_serve_static(pz_example("tasks"))
+#' page <- pz_open(server)
+#' pz_get_url(page)
+#' pz_close(page)
+#' server$stop()
 #' @export
 pz_serve_static <- function(path, ...) {
   check_dots_empty()
@@ -205,23 +212,38 @@ serve_kind <- function(x) {
   if (grepl("[.](qmd|rmd)$", x, ignore.case = TRUE)) {
     return("quarto")
   }
-  if (grepl("[.]html$", x, ignore.case = TRUE)) {
-    return("static")
-  }
   NULL
 }
 
-serve_static <- function(x) {
+serve_static <- function(x, call = caller_env()) {
   rlang::check_installed("httpuv", reason = "to serve static files.")
-  port <- random_port()
   dir <- if (dir.exists(x)) x else dirname(x)
-  server <- suppressMessages(httpuv::runStaticServer(
-    dir,
-    host = "127.0.0.1",
-    port = port,
-    background = TRUE,
-    browse = FALSE
-  ))
+  for (attempt in seq_len(5)) {
+    port <- random_port()
+    server <- tryCatch(
+      suppressMessages(httpuv::runStaticServer(
+        dir,
+        host = "127.0.0.1",
+        port = port,
+        background = TRUE,
+        browse = FALSE
+      )),
+      error = function(e) e
+    )
+    if (!inherits(server, "error")) {
+      break
+    }
+    if (attempt == 5) {
+      cli::cli_abort(
+        c(
+          "Couldn't start a static server for {.path {x}}.",
+          x = conditionMessage(server)
+        ),
+        class = "paparazzi_error_app_startup",
+        call = call
+      )
+    }
+  }
   url <- paste0("http://127.0.0.1:", port, "/")
   if (!dir.exists(x)) {
     url <- paste0(
@@ -266,13 +288,9 @@ quarto_start <- function(path, render, cli, timeout = 60, call = caller_env()) {
       app_wait_ready(preview, timeout)
     }
     if (is.null(failure)) {
-      logs <- gsub("\033\\[[0-9;]*m", "", preview$logs())
-      logs <- logs[grepl("Browse at ", logs, fixed = TRUE)]
-      url <- regmatches(logs, regexpr("http://[^[:space:]]+", logs))
-      url <- sub("http://localhost:", "http://127.0.0.1:", url, fixed = TRUE)
-      url <- url[startsWith(url, paste0("http://127.0.0.1:", port, "/"))]
+      url <- quarto_browse_url(preview, port)
       if (length(url)) {
-        preview$url <- url[[1]]
+        preview$url <- url
       }
       return(preview)
     }
@@ -283,6 +301,26 @@ quarto_start <- function(path, render, cli, timeout = 60, call = caller_env()) {
       next
     }
     app_startup_error(failure, path, timeout, call, engine = "Quarto preview")
+  }
+}
+
+# Quarto can accept connections before it logs the document URL; wait
+# briefly for that line before falling back to the server root.
+quarto_browse_url <- function(preview, port, wait = 2) {
+  deadline <- Sys.time() + wait
+  repeat {
+    logs <- gsub("\033\\[[0-9;]*m", "", preview$logs())
+    logs <- logs[grepl("Browse at ", logs, fixed = TRUE)]
+    url <- regmatches(logs, regexpr("http://[^[:space:]]+", logs))
+    url <- sub("http://localhost:", "http://127.0.0.1:", url, fixed = TRUE)
+    url <- url[startsWith(url, paste0("http://127.0.0.1:", port, "/"))]
+    if (length(url)) {
+      return(url[[1]])
+    }
+    if (Sys.time() >= deadline) {
+      return(NULL)
+    }
+    Sys.sleep(0.05)
   }
 }
 
