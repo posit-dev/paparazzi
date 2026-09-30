@@ -6,7 +6,7 @@
 # prototype setters plus dispatched events (pz_set_value()), and
 # DOM.setFileInputFiles (pz_set_files()).
 
-#' Acting on the page
+#' How actions work
 #'
 #' @description
 #' The contract shared by the `pz_act_*()` functions.

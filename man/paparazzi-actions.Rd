@@ -2,7 +2,7 @@
 % Please edit documentation in R/actions.R
 \name{paparazzi-actions}
 \alias{paparazzi-actions}
-\title{Acting on the page}
+\title{How actions work}
 \description{
 The contract shared by the \verb{pz_act_*()} functions.
 }
