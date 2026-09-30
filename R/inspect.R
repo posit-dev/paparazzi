@@ -578,23 +578,11 @@ inspect_annotated_capture <- function(ctx, scope_rects, target_rects, path) {
   invisible(path)
 }
 
-# The annotated PNG opens in the IDE viewer when rstudioapi is available;
-# the path is always reported, since the default capture is a tempfile.
+# Stage external images for viewers that only serve files in tempdir().
 inspect_show <- function(path) {
-  if (
-    interactive() &&
-      rlang::is_installed("rstudioapi") &&
-      rstudioapi::isAvailable()
-  ) {
-    html <- tempfile(fileext = ".html")
-    writeLines(
-      sprintf(
-        '<body style="margin:0"><img src="file://%s" style="max-width:100%%"></body>',
-        path
-      ),
-      html
-    )
-    try(rstudioapi::viewer(html), silent = TRUE)
+  viewer <- getOption("viewer")
+  if (rlang::is_interactive() && is.function(viewer)) {
+    try(viewer(preview_stage(path)), silent = TRUE)
   }
   cli::cli_inform("Annotated screenshot: {.file {path}}")
   invisible(path)

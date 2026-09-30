@@ -42,7 +42,6 @@ Suggests:
     knitr,
     png,
     rmarkdown,
-    rstudioapi,
     shiny,
     testthat (>= 3.2.0),
     xfun
