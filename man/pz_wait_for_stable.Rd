@@ -54,7 +54,7 @@ There is deliberately no element-state wait: \code{\link[=pz_expect_visible]{pz_
 retry, so they wait.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 
 # The status line reads "Saving..." and then "Saved"; wait for it to settle

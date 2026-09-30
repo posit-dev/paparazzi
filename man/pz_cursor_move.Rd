@@ -53,7 +53,7 @@ recording the move is a glide whose duration scales with distance
 recording the cursor jumps.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run("av")) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tour.mp4")
 

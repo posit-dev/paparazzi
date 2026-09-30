@@ -22,7 +22,7 @@ and the video clock stops, so the pause leaves no trace in the
 output.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run("av")) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "add-task.mp4")
 page |>

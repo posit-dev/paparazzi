@@ -86,6 +86,7 @@ Collate:
     'stage.R'
     'style.R'
     'utils-check.R'
+    'utils-examples.R'
     'utils.R'
     'wait.R'
 VignetteBuilder: knitr

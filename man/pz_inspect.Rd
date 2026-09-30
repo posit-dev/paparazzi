@@ -51,7 +51,7 @@ via the page's \verb{$view()}. \code{show = "auto"} picks \code{"screenshot"} in
 interactive sessions and \code{"none"} otherwise.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_inspect()
 
