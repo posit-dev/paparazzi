@@ -35,17 +35,18 @@ NULL
 #' @return `ctx`, invisibly, so it can be dropped anywhere in a chain.
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_inspect()
+#' page |> pz_inspect(show = "none")
 #'
 #' # With a target: its matches, resolved inside the current scope
 #' page |>
 #'   pz_find(".task-list") |>
 #'   pz_inspect(".task.done", show = "none")
 #'
-#' # An annotated screenshot outlines the scope and the numbered matches
+#' # Get the matches' boxes as a table, without opening a viewer
 #' page |>
 #'   pz_find(".task-list") |>
-#'   pz_inspect(".task-done", show = "screenshot", path = file.path(tempdir(), "inspect.png"))
+#'   pz_inspect(".task-done", show = "none") |>
+#'   pz_get_rect(target = ".task-done")
 #' pz_close(page)
 #'
 #' @export

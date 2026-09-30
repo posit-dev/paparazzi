@@ -19,7 +19,7 @@ pop may still hold it -- and popping never mutates the context it
 was called on. At the root it is a no-op returning \code{ctx} unchanged.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
   pz_find(".task-list") |>
@@ -27,7 +27,8 @@ page |>
   pz_act_click(".task-done") |>
   # Back to the whole list, to check the result
   pz_find_pop() |>
-  pz_expect_count(2, target = ".task.done")
+  pz_expect_count(2, target = ".task.done") |>
+  pz_get_count(target = ".task.done")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }
