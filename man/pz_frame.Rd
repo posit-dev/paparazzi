@@ -8,26 +8,26 @@ pz_frame(
   target = NULL,
   ...,
   ratio = NULL,
-  pad = 0,
-  offset = c(0, 0),
-  anchor = "center",
+  pad = NULL,
+  offset = NULL,
+  anchor = NULL,
   bounds = NULL,
-  when = c("stop", "start"),
-  target_box = c("element", "annotated")
+  when = NULL,
+  target_box = NULL,
+  zoom = NULL
 )
 }
 \arguments{
-\item{target}{The element(s) the frame is computed from. \code{NULL} (the
-default) uses the target of the function the frame is passed to.
-Otherwise a CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-either: the frame is the union of the matched elements' bounding
-boxes.}
+\item{target}{The element(s) the frame is computed from: a CSS
+selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of either (the frame
+is the union of the matched elements' bounding boxes). \code{NULL}
+frames the current scope's box, or the viewport at the root.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{ratio}{Width/height ratio to grow the region to, e.g. \code{16/9}.
-\code{NULL} disables aspect-ratio expansion, keeping the region tight to its
-content.}
+\item{ratio}{Width/height ratio for the region, e.g. \code{16/9}. \code{NULL}
+disables aspect-ratio expansion, keeping the region tight to its
+content. Ignored (with a warning) by camera shots.}
 
 \item{pad}{Padding in CSS pixels: one number for all sides, or
 \code{c(top, right, bottom, left)}. Negative values crop inside the
@@ -36,11 +36,11 @@ content box.}
 \item{offset}{Nudge the region by \code{c(x, y)} pixels, applied after
 \code{pad}.}
 
-\item{anchor}{Where the content sits while \code{ratio} grows the region:
-\code{"center"}, a side (\code{"top"}, \code{"bottom"}, \code{"left"}, \code{"right"}), or
-a corner (\code{"top left"}, \code{"top right"}, \code{"bottom left"},
-\code{"bottom right"}). Case-insensitive; \code{"top right"}, \code{"right top"},
-and \code{"top-right"} are equivalent.}
+\item{anchor}{Where the content sits while the region grows around
+it: \code{"center"}, a side (\code{"top"}, \code{"bottom"}, \code{"left"},
+\code{"right"}), or a corner (\code{"top left"}, \code{"top right"},
+\code{"bottom left"}, \code{"bottom right"}). Case-insensitive;
+\code{"top right"}, \code{"right top"}, and \code{"top-right"} are equivalent.}
 
 \item{bounds}{A target (a CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or
 a list of either) whose union box the region is clamped within.
@@ -49,13 +49,22 @@ region.}
 
 \item{when}{When a recording measures the frame: \code{"stop"} (the
 default) measures against the final layout; \code{"start"} clips at
-capture start. Screenshots ignore this.}
+capture start. Screenshots ignore this; camera shots warn.}
 
 \item{target_box}{\code{"element"} (the default) measures only matched
 elements. \code{"annotated"} also includes painted marks, callouts, and
 spotlight cutouts attached to those elements or their descendants;
 redactions and annotations on unrelated elements are excluded.
-Applies to stills, not the recording's home frame.}
+Applies to stills and camera shots, not the recording's home frame.}
+
+\item{zoom}{Magnification relative to the full view (the viewport
+for stills and recordings, the recording's home frame for camera
+shots). \code{NULL} fits the region to the target plus \code{pad}, grown to
+\code{ratio}. A number fixes the region size at the view divided by
+\code{zoom}; \code{anchor} places the padded target inside it. Stills crop
+only, never upscale: a zoomed still is a smaller PNG at the page's
+pixel ratio. The camera caps a fitted shot at the capture's pixel
+density; an explicit \code{zoom} past it warns at encode time.}
 }
 \value{
 An S3 object of class \code{paparazzi_frame}.
@@ -63,17 +72,33 @@ An S3 object of class \code{paparazzi_frame}.
 \description{
 \code{\link[=pz_frame]{pz_frame()}} builds a lazy framing spec for a capture: the region is
 computed at capture time, then padded, nudged, grown to an aspect
-ratio, and clamped. Screenshots take it through
+ratio, and clamped. Every capture takes one: screenshots through
 \code{pz_screenshot(frame =)}, recordings through
-\code{pz_record_start(frame =)}.
+\code{pz_record_start(frame =)}, and camera shots through
+\code{pz_camera(frame =)}. Wherever a frame is accepted, a bare locator
+(a CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of either) is
+promoted to \verb{pz_frame(<locator>)}.
+
+Every field defaults to \code{NULL}, meaning "inherit": at capture time
+an unset field takes the \code{\link[=pz_stage_frame]{pz_stage_frame()}} value if one is staged,
+else the built-in default. The built-in defaults are \code{pad = 0},
+\code{offset = c(0, 0)}, \code{anchor = "center"}, \code{when = "stop"}, and
+\code{target_box = "element"}, with \code{ratio}, \code{bounds}, \code{zoom}, and
+\code{target} unset. Camera shots never inherit the staged frame; their
+built-in defaults are \code{pad = 24} and \code{target_box = "element"}.
 
 The framed region is computed in this order:
 \enumerate{
 \item Union the bounding boxes of the target's matched elements. With
 \code{target_box = "annotated"}, include their attached annotations.
-\item Expand by \code{pad}, then shift by \code{offset}.
-\item If \code{ratio} is set, grow the shorter side to reach it (never
-shrink), placing the content by \code{anchor}.
+\item Expand by \code{pad}.
+\item With \code{zoom = NULL}, shift by \code{offset}, then grow the shorter side
+to reach \code{ratio} (never shrink), placing the content by \code{anchor}.
+With a numeric \code{zoom}, the region is the view divided by \code{zoom}
+(the viewport for stills and recordings, the recording's home
+frame for camera shots), with \code{ratio} setting its aspect if
+given; the padded target is placed inside it by \code{anchor}, then
+shifted by \code{offset}.
 \item Clamp to \code{bounds} and to the page's rendered area.
 \item Round to whole pixels.
 }
@@ -88,11 +113,13 @@ pz_frame(".task-list", ratio = 4/3, bounds = "main")
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 
-# With no target of its own, the frame uses the screenshot's target
-page |> pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 16))
-
-# A frame target overrides it; a list frames the union of the boxes
+# A locator target frames the union of its boxes
 page |> pz_screenshot(path, frame = pz_frame(list("h1", ".filters"), pad = 16))
+
+# Unset fields inherit the staged framing
+page |>
+  pz_stage_frame(pad = 16) |>
+  pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

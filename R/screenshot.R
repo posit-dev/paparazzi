@@ -9,19 +9,25 @@ NULL
 #' capture is a terminal step: a figure in a knitted document or a
 #' printable preview in an interactive session.
 #'
-#' The captured region depends on `target`:
-#' * `NULL` from the root context (from [pz_open()]): the current
-#'   viewport.
-#' * `NULL` from a scoped context (from `pz_find*()`): the scope's
-#'   bounding box.
-#' * A CSS selector string, a [pz_loc()] spec, or a list of either: the
-#'   union of the bounding boxes of all matched elements. A selector
-#'   matching several elements is a union, not an error.
+#' The captured region comes from `frame`:
+#' * `NULL` (the default): the page's staged framing set with
+#'   [pz_stage_frame()], or, with none staged, the current scope's box
+#'   (the viewport at the root), unframed.
+#' * A [pz_frame()] spec, or a bare locator promoted to one: a CSS
+#'   selector string, a [pz_loc()] spec, or a list of either, framing
+#'   the union of the matched elements' bounding boxes. A selector
+#'   matching several elements is a union, not an error. Fields the
+#'   spec leaves unset inherit the staged value, then the built-in
+#'   default.
+#' * `FALSE`: the scope's box or viewport, unframed.
+#'
+#' What a frame without its own target measures resolves by precedence:
+#' the scope (scoped contexts), then the staged frame's target, then
+#' the viewport.
 #'
 #' Screenshots are captured at the page's current device pixel ratio: the
 #' PNG's pixel dimensions are the captured CSS size multiplied by the
-#' dpr. A [pz_frame()] can frame the capture; the page's default framing
-#' is set with `pz_stage_frame()`.
+#' dpr.
 #'
 #' A screen-space caption set with [pz_annotate_caption()] is composited
 #' onto the captured PNG after framing; captioned stills require \pkg{png}.
@@ -34,15 +40,11 @@ NULL
 #'   printed. A path is required otherwise.
 #'   In a document, end the pipe with `pz_screenshot()` to include it; give
 #'   intermediate screenshots a path to keep chaining.
-#' @param target What to capture: `NULL` for the viewport (root context)
-#'   or the scope's box (scoped context), or a CSS selector string,
-#'   `pz_loc()` spec, or list of either for the union of matched
-#'   elements' bounding boxes.
-#' @param frame Framing to apply to the capture: `NULL` (the default)
-#'   uses the page's default framing set with `pz_stage_frame()` if there
-#'   is one, else captures unframed; a [pz_frame()] spec frames the
-#'   capture, replacing any default entirely; `FALSE` disables framing
-#'   for this capture.
+#' @param frame What to capture and how to frame it: a [pz_frame()]
+#'   spec or a bare locator (a CSS selector string, a [pz_loc()] spec,
+#'   or a list of either) promoted to one; `NULL` (the default) uses
+#'   the staged framing, if any; `FALSE` captures the scope's box or
+#'   viewport unframed.
 #'
 #' @seealso [pz_frame()], [pz_stage_frame()]
 #'
@@ -54,20 +56,20 @@ NULL
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tasks.png")
 #'
-#' # At the root, target = NULL captures the viewport
+#' # At the root, frame = NULL captures the viewport
 #' page |> pz_screenshot(path)
 #'
-#' # A target captures its box; a list captures the union of the boxes
-#' page |> pz_screenshot(path, target = ".task-list")
-#' page |> pz_screenshot(path, target = list("#new-task", ".filters"))
+#' # A locator captures its box; a list captures the union of the boxes
+#' page |> pz_screenshot(path, frame = ".task-list")
+#' page |> pz_screenshot(path, frame = list("#new-task", ".filters"))
 #'
 #' # Padding, aspect ratio and anchoring come from pz_frame()
-#' page |> pz_screenshot(path, target = "#new-task", frame = pz_frame(pad = 16))
+#' page |> pz_screenshot(path, frame = pz_frame("#new-task", pad = 16))
 #' file.exists(path)
 #' pz_close(page)
 #'
 #' @export
-pz_screenshot <- function(ctx, path = NULL, ..., target = NULL, frame = NULL) {
+pz_screenshot <- function(ctx, path = NULL, ..., frame = NULL) {
   check_context(ctx)
   check_dots_empty()
   implicit <- is.null(path)
@@ -79,15 +81,15 @@ pz_screenshot <- function(ctx, path = NULL, ..., target = NULL, frame = NULL) {
   }
   check_string(path)
 
-  # NULL means the page default (pz_stage_frame()) if one is set; FALSE
-  # opts out for one call; a pz_frame() spec replaces the default.
+  # NULL means the staged framing (pz_stage_frame()) if one is set;
+  # FALSE opts out for one call; a bare locator promotes to a spec.
   frame <- frame_effective(ctx, frame)
 
   clip <- if (inherits(frame, "paparazzi_frame")) {
-    frame_clip(ctx, target, frame)
-  } else if (is.null(target) && length(ctx$scope) == 0) {
+    frame_clip(ctx, frame)
+  } else if (length(ctx$scope) == 0) {
     clip_viewport(ctx)
-  } else if (is.null(target)) {
+  } else {
     # The clip is the union of the boxes of the current scope's pinned
     # set, detach-checked once per call (one use, one check): a scope
     # that left the page raises the classed error instead of clipping
@@ -95,10 +97,6 @@ pz_screenshot <- function(ctx, path = NULL, ..., target = NULL, frame = NULL) {
     # intersect-instead-of-union.
     scoped <- scope_root(ctx)
     clip_rects_union(ctx, el_rects(scoped))
-  } else {
-    els <- loc_resolve(ctx, target, multiple = "all")
-    withr::defer(release_elements(els))
-    clip_rects_union(ctx, el_rects(els))
   }
 
   # Hide only inspect outlines for the capture; annotations and the

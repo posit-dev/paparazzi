@@ -84,7 +84,7 @@
 #' page |>
 #'   pz_stage(cursor = TRUE) |>
 #'   pz_act_hover("#task-title") |>
-#'   pz_screenshot(file.path(tempdir(), "cursor.png"), target = "#new-task")
+#'   pz_screenshot(file.path(tempdir(), "cursor.png"), frame = "#new-task")
 #' pz_close(page)
 #'
 #' @export

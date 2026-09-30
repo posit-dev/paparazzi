@@ -394,7 +394,7 @@ test_that("spotlight dims a below-fold target-framed still without scrolling", {
   expect_equal(pz_js(page, "window.scrollY"), 0)
   page |> pz_annotate_spotlight("#one", reveal = "none")
   path <- withr::local_tempfile(fileext = ".png")
-  page |> pz_screenshot(path, target = "#far")
+  page |> pz_screenshot(path, frame = "#far")
   expect_equal(pz_js(page, "window.scrollY"), 0)
   img <- png::readPNG(path)
   expect_equal(mean(img[,, 1:3]), 0.4, tolerance = 0.04)

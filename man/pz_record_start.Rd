@@ -34,12 +34,15 @@ viewer when recording stops. A path is required otherwise.}
 higher-resolution captures, or \code{"screencast"} for captures driven
 by visual changes. See \emph{Choosing a capture method} for tradeoffs.}
 
-\item{frame}{Area to show in the finished recording: \code{NULL} uses
-the page default set with \code{\link[=pz_stage_frame]{pz_stage_frame()}}, if any, or shows the
-full viewport; a \code{\link[=pz_frame]{pz_frame()}} spec replaces that default;
-\code{FALSE} ignores it. An explicit frame with
-\code{target_box = "annotated"} is invalid for the home frame. A staged
-annotated frame silently measures element boxes only for recording.}
+\item{frame}{Area to show in the finished recording: a \code{\link[=pz_frame]{pz_frame()}}
+spec, or a bare locator (a CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec,
+or a list of either) promoted to one; \code{NULL} uses the page default
+set with \code{\link[=pz_stage_frame]{pz_stage_frame()}}, if any, or shows the full viewport;
+\code{FALSE} ignores the default. Unset fields inherit the staged
+value, then the built-in default. A frame with
+\code{target_box = "annotated"} set explicitly is invalid for the home
+frame; an annotated box inherited from the staged frame silently
+measures element boxes only for recording.}
 
 \item{fps}{Frames per second in the finished recording. Poll aims
 to capture at this rate; screencast capture depends on visual

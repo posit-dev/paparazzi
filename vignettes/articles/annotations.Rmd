@@ -48,10 +48,10 @@ page |>
     type = "highlight",
     label = "highlight"
   )
-page |> pz_screenshot(target = "main", frame = pz_frame(pad = 16))
+page |> pz_screenshot(frame = pz_frame("main", pad = 16))
 ```
 
-Here and below, each screenshot passes a `target` and a [`pz_frame()`](../reference/pz_frame.html) so the still is cropped to what it discusses. Marks stay on the page after they're drawn, so clear them between examples:
+Here and below, each screenshot passes a [`pz_frame()`](../reference/pz_frame.html) so the still is cropped to what it discusses. Marks stay on the page after they're drawn, so clear them between examples:
 
 ```{r}
 page |> pz_annotate_clear()
@@ -65,8 +65,7 @@ page |> pz_annotate_clear()
 page |> pz_annotate(".filters a", label = TRUE)
 page |>
   pz_screenshot(
-    target = ".filters",
-    frame = pz_frame(pad = 16, target_box = "annotated")
+    frame = pz_frame(".filters", pad = 16, target_box = "annotated")
   )
 ```
 
@@ -91,7 +90,7 @@ page |>
     font_family = "monospace",
     font_size = 16
   )
-page |> pz_screenshot(target = "#new-task", frame = pz_frame(pad = 24))
+page |> pz_screenshot(frame = pz_frame("#new-task", pad = 24))
 page |> pz_annotate_clear()
 ```
 
@@ -117,8 +116,7 @@ page |>
   )
 page |>
   pz_screenshot(
-    target = "#new-task",
-    frame = pz_frame(pad = 12, target_box = "annotated")
+    frame = pz_frame("#new-task", pad = 12, target_box = "annotated")
   )
 page |> pz_annotate_clear()
 ```
@@ -136,7 +134,7 @@ page |>
     pad = 8,
     dim = 0.75
   )
-page |> pz_screenshot(target = "main", frame = pz_frame(pad = 24))
+page |> pz_screenshot(frame = pz_frame("main", pad = 24))
 ```
 
 There is only one spotlight per page: drawing a new one replaces the old. Clear it by its reserved id or by clearing everything:
@@ -153,8 +151,7 @@ page |> pz_annotate_clear(id = "spotlight")
 page |> pz_annotate_redact('[data-priority="high"] .task-title', method = "fill")
 page |>
   pz_screenshot(
-    target = '[data-priority="high"] .task-title',
-    frame = pz_frame(pad = 24, target_box = "annotated")
+    frame = pz_frame('[data-priority="high"] .task-title', pad = 24, target_box = "annotated")
   )
 page |> pz_annotate_clear()
 ```
@@ -165,8 +162,7 @@ page |> pz_annotate_clear()
 page |> pz_annotate_redact('[data-priority="high"] .task-title', method = "blur")
 page |>
   pz_screenshot(
-    target = '[data-priority="high"] .task-title',
-    frame = pz_frame(pad = 24, target_box = "annotated")
+    frame = pz_frame('[data-priority="high"] .task-title', pad = 24, target_box = "annotated")
   )
 page |> pz_annotate_clear()
 ```
@@ -197,7 +193,7 @@ page |> pz_annotate_clear(id = "caption")
 ```{r replace, fig.alt = "The new-task form with only a circle around the Add button; the box that was around the title field is gone."}
 page |> pz_annotate("#task-title", id = "mark")
 page |> pz_annotate("#add-task", type = "circle", id = "mark")
-page |> pz_screenshot(target = "#new-task", frame = pz_frame(pad = 16))
+page |> pz_screenshot(frame = pz_frame("#new-task", pad = 16))
 page |> pz_annotate_clear()
 ```
 
@@ -217,8 +213,7 @@ page |>
   pz_annotate("#add-task", label = "A")
 page |>
   pz_screenshot(
-    target = "#new-task",
-    frame = pz_frame(pad = 8, target_box = "annotated")
+    frame = pz_frame("#new-task", pad = 8, target_box = "annotated")
   )
 ```
 
@@ -243,14 +238,13 @@ page |> pz_annotate_callout("The list so far", target = "h1", side = "right")
 ```
 
 ```{r frame-element, fig.alt = "A tight crop of the Tasks heading alone; the callout next to it is cut off."}
-page |> pz_screenshot(target = "h1", frame = pz_frame(pad = 16))
+page |> pz_screenshot(frame = pz_frame("h1", pad = 16))
 ```
 
 ```{r frame-annotated, fig.alt = "A crop of the Tasks heading that includes the full callout bubble to its right."}
 page |>
   pz_screenshot(
-    target = "h1",
-    frame = pz_frame(pad = 16, target_box = "annotated")
+    frame = pz_frame("h1", pad = 16, target_box = "annotated")
   )
 ```
 
