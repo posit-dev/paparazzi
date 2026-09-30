@@ -53,18 +53,17 @@ interactive sessions and \code{"none"} otherwise.
 \examples{
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_inspect(show = "none")
+page |> pz_inspect()
 
 # With a target: its matches, resolved inside the current scope
 page |>
   pz_find(".task-list") |>
   pz_inspect(".task.done", show = "none")
 
-# Get the matches' boxes as a table, without opening a viewer
+# An annotated screenshot outlines the scope and the numbered matches
 page |>
   pz_find(".task-list") |>
-  pz_inspect(".task-done", show = "none") |>
-  pz_get_rect(target = ".task-done")
+  pz_inspect(".task-done", show = "screenshot", path = file.path(tempdir(), "inspect.png"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }
