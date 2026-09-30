@@ -41,7 +41,7 @@
 #'
 #' @seealso [pz_open()] forwards its `...` here.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Only the settings you supply change

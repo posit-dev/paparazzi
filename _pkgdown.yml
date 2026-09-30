@@ -103,6 +103,7 @@ reference:
       the page.
     contents:
       - pz_stage
+      - pz_stage_annotate
       - pz_cursor_show
       - pz_cursor_hide
       - pz_cursor_move

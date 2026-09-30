@@ -41,6 +41,8 @@
 #' previous page falls back to the full viewport unless it was fixed at
 #' the start. MP4 dimensions are rounded down to multiples of 4 and
 #' WebM to even pixels; GIF keeps whole pixels.
+#' Set the viewport size before `pz_record_start()`; resizing during a
+#' framed or camera recording is not supported.
 #'
 #' WebVTT captions (when requested) are written as a `.vtt` file next to
 #' the MP4 or WebM. Cue times include the first/last holds and explicit
@@ -51,8 +53,8 @@
 #' \pkg{gifski}. Simple GIFs need only gifski, but two features call in
 #' extra packages: framed GIFs require \pkg{png}, and GIFs with camera
 #' movement or burned-in captions require \pkg{av}.
-#' Packages are checked at `pz_record_start()` or when a caption is
-#' added to an active GIF recording.
+#' Packages are checked at `pz_record_start()`, or during a GIF
+#' recording at the first camera move or caption.
 #'
 #' @inheritParams pz_click
 #' @param path Output file path; the extension (`.mp4`, `.webm`, or
@@ -107,7 +109,7 @@
 #' @seealso [pz_record()], [pz_record_hold()], [pz_frame()],
 #'   [pz_stage_frame()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' @examplesIf paparazzi:::examples_run("av")
 #' page <- pz_open(pz_example("tasks"), width = 800, height = 600)
 #' path <- file.path(tempdir(), "help.mp4")
 #'
@@ -252,7 +254,7 @@ pz_record_start <- function(
 #'   returns a preview that shows the recording in the viewer when
 #'   printed.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' @examplesIf paparazzi:::examples_run("av")
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "done.gif")
 #' page |>
@@ -358,7 +360,7 @@ pz_record_stop <- function(ctx) {
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' @examplesIf paparazzi:::examples_run("av")
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "add-task.mp4")
 #' page |>
@@ -420,7 +422,7 @@ pz_record_resume <- function(ctx) {
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' @examplesIf paparazzi:::examples_run("av")
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Without a recording, pz_record_hold() returns straight away
@@ -465,7 +467,7 @@ pz_record_hold <- function(ctx, seconds) {
 #'
 #' @return `ctx`, invisibly, or printable media; see [pz_record_stop()].
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")
+#' @examplesIf paparazzi:::examples_run("av")
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "add-task.mp4")
 #'
@@ -1214,8 +1216,22 @@ record_resample <- function(rec) {
 }
 
 record_encode <- function(rec, page = NULL, call = caller_env()) {
-  resampled <- record_resample(rec)
   png_size <- png_read_size(rec$files[[1]], call = call)
+  if (!is.null(rec$crop) || length(rec$camera)) {
+    for (path in rec$files[-1L]) {
+      if (!identical(png_read_size(path, call = call), png_size)) {
+        cli::cli_abort(
+          c(
+            "Resizing the viewport during a framed or camera recording is not supported.",
+            i = "Set the viewport size before {.fn pz_record_start}."
+          ),
+          class = "paparazzi_error_record",
+          call = call
+        )
+      }
+    }
+  }
+  resampled <- record_resample(rec)
   out <- record_output_spec(rec, png_size, call = call)
   if (length(rec$camera)) {
     out$vfilter <- camera_filter(rec, resampled, out, png_size, call = call)

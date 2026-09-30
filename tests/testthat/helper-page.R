@@ -88,3 +88,13 @@ scopes_fixture_file <- function() {
 local_scopes_page <- function(.env = parent.frame()) {
   local_page(scopes_fixture_file(), .env = .env)
 }
+
+# Quarto renders in a fresh R process: load the source tree when the tests
+# run from a checkout, or the installed package under R CMD check.
+quarto_load_package <- function(package_root) {
+  if (file.exists(file.path(package_root, "DESCRIPTION"))) {
+    sprintf("pkgload::load_all(%s, quiet = TRUE)", deparse(package_root))
+  } else {
+    "library(paparazzi)"
+  }
+}

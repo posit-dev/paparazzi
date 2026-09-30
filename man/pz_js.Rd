@@ -28,7 +28,7 @@ and an escape hatch for one-off scripts. Unlike most \verb{pz_*()} functions it
 \strong{ends the chain}: it returns the value, not the context.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 pz_js(page, "document.querySelectorAll('.task').length")
 

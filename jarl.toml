@@ -6,3 +6,6 @@ ignore = ["implicit_assignment"]
 # map2 is vendored in R/utils-purrr.R only because it backs imap.
 [lint.per-file-ignores]
 "R/utils-purrr.R" = ["unused_function"]
+
+# The chunk only pulls in the hero chunk's code via ref.label.
+"man/fragments/hero-about.Rmd" = ["empty_file"]

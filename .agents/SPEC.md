@@ -2,7 +2,7 @@
 
 A "Playwright-lite" R package over chromote: smooth, pipeable browser driving, plus screenshots and screen recordings.
 
-Status: implemented. The API index below records the shipped signatures; phase notes in `.agents/phases/` hold mechanism decisions.
+Status: implemented. The API index below records the shipped signatures; task-specific mechanism decisions are recorded in kata comments.
 
 ## Background
 
@@ -395,11 +395,11 @@ page |>
 ```
 
 - An explicit `frame =` replaces the default entirely (no field merging). `frame = FALSE` disables framing for one call. `pz_stage_frame(NULL)` clears the default.
-- Unlike `pz_stage()`'s animation settings, framing applies to screenshots as well as recordings, which is why it has its own function.
+- `pz_stage_frame()`, `pz_stage()` and `pz_stage_annotate()` set persistent page defaults. Framing and annotation styles apply to screenshots as well as recordings; `pz_stage()` primarily controls recording animation, with cursor visibility and scale also applying to stills.
 
 ### Cursor and staging
 
-Staging settings live on the page, set with `pz_stage()` at any point in a chain, and persist across recordings. `pz_record_start()` does not repeat them.
+Staging settings live on the page, set with `pz_stage()` at any point in a chain, and persist across recordings. `pz_record_start()` does not repeat them. In `pz_stage()` and `pz_stage_annotate()`, every setting has `= NULL` in the signature: omitted arguments leave settings alone, explicit `NULL` restores the default, and a value sets an override.
 
 ```r
 pz_stage(
@@ -408,9 +408,11 @@ pz_stage(
   cursor_speed = NULL,    # px per second during glides and staged scrolls; default 500
   cursor_scale = NULL,    # overlay cursor size multiplier; default 1.75
   enter = NULL,           # where a hidden cursor first appears: NULL (at target) or a side
-  typing = NULL,          # "natural" / "instant"
-  typing_speed = NULL,    # characters per second
-  pause = NULL            # seconds to hold after each action
+  typing = NULL,          # "natural" (default) / "instant"
+  typing_speed = NULL,    # characters per second; default 16
+  pause = NULL,           # seconds to hold after each action; default 0
+  camera_follow = NULL,  # follow targets while zoomed; default TRUE
+  show_keys = NULL       # keystroke callouts; default "none"
 )
 ```
 
@@ -458,9 +460,9 @@ Robustness:
 
 ### Camera, annotations, and captions
 
-Video-editor features for recordings and annotated stills. Design discussion, rationale and probe notes are on kata `1a3m`; the full idea backlog is on `54b1`. Implemented; per-feature mechanism notes are in `.agents/phases/` (`40bm`, `7sq5`, `gdjm`, `m6kv`, `mkns`, `b0y7`, `3t7j`, `0rdt`, `aq35`, `51my`).
+Video-editor features for recordings and annotated stills. Design discussion, rationale and probe notes are on kata `1a3m`; the full idea backlog is on `54b1`. Implemented; per-feature mechanism decisions are in kata comments on `40bm`, `7sq5`, `gdjm`, `m6kv`, `mkns`, `b0y7`, `3t7j`, `0rdt`, `aq35`, and `51my`.
 
-There are two families, split by where the effect shows up, each paired with `pz_stage()` settings (like `pz_cursor_*()` with `pz_stage(cursor_*)`):
+There are two families, split by where the effect shows up, paired with persistent page defaults in `pz_stage()` or `pz_stage_annotate()` (like `pz_cursor_*()` with `pz_stage(cursor_*)`):
 
 - `pz_camera*()`: moves the view. Recording-only.
 - `pz_annotate*()`: marks up the page. Appears in recordings and stills.
@@ -515,13 +517,13 @@ pz_annotate_clear(ctx, id = NULL, ...)
   - `arrow = FALSE`: a tooltip-style bubble next to the target.
   - `dim`: the spotlight's overlay opacity.
   - `method`: the redaction style, a solid `"fill"` (the safe choice) or `"blur"` (`backdrop-filter`, with a generous default radius). There is no pixelation: `backdrop-filter: url()` does nothing in Chrome, and filtering the element itself would restyle the page.
-  - Style arguments (`color`, `font_family`, `font_size`) come after the dots and default to `NULL`, meaning the `pz_stage()` default (`annotate_color`, `annotate_font_family`, `annotate_font_size`) or the built-in fallback. On marks, the font arguments style the label badges. `font_size` is CSS px; screen-space captions scale by the output's scale factor.
+  - Style arguments (`color`, `font_family`, `font_size`) come after the dots and default to `NULL`, meaning the `pz_stage_annotate()` default (`color`, `font_family`, `font_size`) or the built-in fallback. On marks, the font arguments style the label badges. `font_size` is CSS px; screen-space captions scale by the output's scale factor.
 - **Stills:** page annotations appear in `pz_screenshot()`; `pz_inspect()` outlines stay hidden. The current caption is composited onto stills.
 - **Frames:** by default a frame measures element geometry only, which can clip an annotation's label or arrow. `pz_frame(target_box = "annotated")` makes each target contribute its box plus its own attached annotations (spotlight counts as its cutout, redaction adds nothing). This applies to stills and camera shots, but never to the recording's home frame, which is measured once while annotations come and go.
 
 #### Captions and keystroke callouts
 
-- **Captions:** screen-space. At encode (or still) time, a separate Chrome target renders each caption as a transparent PNG at output resolution, styled with CSS. Page webfonts don't carry over, so the font family is passed explicitly. The encoder composites it over its time window: one av filtergraph after the camera for MP4, WebM and GIF (GIF renders PNG ticks through it before gifski), and an R alpha blend for stills. The caption is a declarative page-level slot that persists across navigation and recordings. A caption still active at recording stop remains fully visible through the last frame in MP4, WebM, and GIF; an explicit clear or replacement retains its fade-out. The default look is a translucent dark pill with white text, centered, at most about 80% of the output width, wrapping. Style defaults are caption-specific: `color = NULL` is white (not `annotate_color`), `font_size = NULL` is a caption built-in default, and `font_family = NULL` follows `annotate_font_family`. `pz_record_start(captions = c("burn", "vtt", "both"))` defaults to `"burn"`; `"vtt"` and `"both"` write `<name>.vtt` next to the video, which knitr can wire up as a `<track>` (kata ks7r), and are an error for GIF.
+- **Captions:** screen-space. At encode (or still) time, a separate Chrome target renders each caption as a transparent PNG at output resolution, styled with CSS. Page webfonts don't carry over, so the font family is passed explicitly. The encoder composites it over its time window: one av filtergraph after the camera for MP4, WebM and GIF (GIF renders PNG ticks through it before gifski), and an R alpha blend for stills. The caption is a declarative page-level slot that persists across navigation and recordings. A caption still active at recording stop remains fully visible through the last frame in MP4, WebM, and GIF; an explicit clear or replacement retains its fade-out. The default look is a translucent dark pill with white text, centered, at most about 80% of the output width, wrapping. Style defaults are caption-specific: `color = NULL` is white (not the annotation `color` default), `font_size = NULL` is a caption built-in default, and `font_family = NULL` follows the `pz_stage_annotate()` font family. `pz_record_start(captions = c("burn", "vtt", "both"))` defaults to `"burn"`; `"vtt"` and `"both"` write `<name>.vtt` next to the video, which knitr can wire up as a `<track>` (kata ks7r), and are an error for GIF.
 - **Keystroke callouts:** `pz_press(show_keys = NULL)`, with the page default `pz_stage(show_keys = "none")`. Values are `c("none", "words", "mac", "both")`: `"words"` shows Ctrl, Shift, Alt and Meta keycaps; `"mac"` shows ⌃ ⌥ ⇧ ⌘; `"both"` renders `Mod` as "Ctrl / ⌘". They're screen-space, shown bottom-center and stacked above any caption. A callout appears at the press, holds about 1 s after the last key, then fades over 0.25 s, all computed at encode. They're recording-only, and `pz_type()` has no `show_keys` argument.
 - **`Mod` modifier:** `pz_press("Mod+K")` presses Meta when the browser reports a Mac platform, and Control otherwise.
 
@@ -796,13 +798,14 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_stage()` | `(ctx, ..., cursor, cursor_speed, cursor_scale, enter, typing, typing_speed, pause)` | confirmed |
+| `pz_stage()` | `(ctx, ..., cursor = NULL, cursor_speed = NULL, cursor_scale = NULL, enter = NULL, typing = NULL, typing_speed = NULL, pause = NULL, camera_follow = NULL, show_keys = NULL)` | confirmed |
+| `pz_stage_annotate()` | `(ctx, ..., color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_cursor_show()` | `(ctx, target = NULL, ..., from = NULL, icon = NULL)` | confirmed |
 | `pz_cursor_hide()` | `(ctx, ...)` | confirmed |
 | `pz_cursor_move()` | `(ctx, target, ..., duration = NULL, icon = NULL, offset = NULL)` | confirmed |
 | `pz_cursor_leave()` | `(ctx, side = "right", icon = NULL)` | confirmed |
 
-Arguments: `cursor_speed`, `cursor_scale`, `typing_speed` and `pause` are confirmed. Discussed additions: `camera_follow`, `show_keys`, `annotate_color`, `annotate_font_family` and `annotate_font_size`.
+Annotation style defaults are set separately with `pz_stage_annotate(ctx, ..., color = NULL, font_family = NULL, font_size = NULL)`: the defaults are `"#e11d48"`, `"sans-serif"` and 14 CSS pixels. They persist on the page and apply to new annotations in stills and recordings.
 
 ### Camera and annotations
 
@@ -819,7 +822,7 @@ Implemented (kata `1a3m`).
 | `pz_annotate_caption()` | `(ctx, text, ..., side = "bottom", color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_annotate_clear()` | `(ctx, id = NULL, ...)` | confirmed |
 
-Arguments added to existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))` and `pz_stage_frame(target_box =)`, `pz_press(show_keys = NULL)`, and `pz_stage(camera_follow, show_keys, annotate_color, annotate_font_family, annotate_font_size)`.
+Arguments added to existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))` and `pz_stage_frame(target_box =)`, `pz_press(show_keys = NULL)`, and `pz_stage(camera_follow = NULL, show_keys = NULL)`. Annotation style defaults are set with `pz_stage_annotate()`.
 
 ### Escape hatches and debugging
 

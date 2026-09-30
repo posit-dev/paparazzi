@@ -205,14 +205,14 @@ Only the circle remains: the second `id = "mark"` call replaced the box. During 
 
 ## Styling defaults
 
-Every annotation defaults to the page's staged color, font family, and badge size. Change them for all later annotations with [`pz_stage()`](../reference/pz_stage.html), and pass `NULL` to restore a default (crimson `#e11d48`, sans-serif, 14 CSS pixels):
+Every annotation defaults to the page's staged color, font family, and badge size. Change them for all later annotations with [`pz_stage_annotate()`](../reference/pz_stage_annotate.html), and pass `NULL` to restore a default (crimson `#e11d48`, sans-serif, 14 CSS pixels):
 
 ```{r stage-style, fig.alt = "The Add button boxed in blue with a large monospace A badge."}
 page |>
-  pz_stage(
-    annotate_color = "#2563eb",
-    annotate_font_family = "monospace",
-    annotate_font_size = 18
+  pz_stage_annotate(
+    color = "#2563eb",
+    font_family = "monospace",
+    font_size = 18
   ) |>
   pz_annotate("#add-task", label = "A")
 page |>
@@ -225,10 +225,10 @@ page |>
 ```{r}
 page |> pz_annotate_clear()
 page |>
-  pz_stage(
-    annotate_color = NULL,
-    annotate_font_family = NULL,
-    annotate_font_size = NULL
+  pz_stage_annotate(
+    color = NULL,
+    font_family = NULL,
+    font_size = NULL
   )
 ```
 

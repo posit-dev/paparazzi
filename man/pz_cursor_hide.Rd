@@ -25,7 +25,7 @@ setting brings it back. That is what distinguishes
 visible and glides back in on the next action.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
   pz_cursor_show("#add-task") |>

@@ -113,17 +113,20 @@ to the layout at start. If the page navigates, a frame tied to the
 previous page falls back to the full viewport unless it was fixed at
 the start. MP4 dimensions are rounded down to multiples of 4 and
 WebM to even pixels; GIF keeps whole pixels.
+Set the viewport size before \code{pz_record_start()}; resizing during a
+framed or camera recording is not supported.
 
 WebVTT captions (when requested) are written as a \code{.vtt} file next to
 the MP4 or WebM. Cue times include the first/last holds and explicit
 \code{\link[=pz_record_hold]{pz_record_hold()}} intervals but exclude pauses. Caption burn and VTT
 use the current caption set by \code{\link[=pz_annotate_caption]{pz_annotate_caption()}}.
 
-\code{.mp4} and \code{.webm} recordings require \pkg{av}. All \code{.gif} recordings
-require \pkg{gifski}; framed GIFs also require \pkg{png}, and GIFs
-burning captions require \pkg{av}.
-Packages are checked at \code{pz_record_start()} or when a caption is
-added to an active GIF recording.
+MP4 and WebM recordings require \pkg{av}; GIF recordings require
+\pkg{gifski}. Simple GIFs need only gifski, but two features call in
+extra packages: framed GIFs require \pkg{png}, and GIFs with camera
+movement or burned-in captions require \pkg{av}.
+Packages are checked at \code{pz_record_start()}, or during a GIF
+recording at the first camera move or caption.
 }
 
 \section{Recording chains}{
@@ -141,7 +144,7 @@ keep returning invisibly and never stop a recording.
 }
 
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run("av")) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"), width = 800, height = 600)
 path <- file.path(tempdir(), "help.mp4")
 

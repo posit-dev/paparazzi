@@ -62,7 +62,8 @@ pz_close(phone)
 
 ```{r}
 #| echo: false
-#| results: asis
+#| out.width: 300px
+#| fig.alt: "The task tracker on a narrow phone screen in dark mode. A red-bordered callout under the first task's Done button reads Tap Done to finish a task."
 
 path <- if (identical(Sys.getenv("IN_INDEX", ""), "true")) {
   "images/readme-phone-1.png"
@@ -70,11 +71,7 @@ path <- if (identical(Sys.getenv("IN_INDEX", ""), "true")) {
   "https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-phone-1.png"
 }
 
-cat(sprintf(
-  '<img src="%s" alt="%s" />',
-  path,
-  "The task tracker on a narrow phone screen in dark mode. A red-bordered callout under the first task's Done button reads Tap Done to finish a task."
-))
+knitr::include_graphics(path, error = FALSE)
 ```
 
 Like the recording, a screenshot at the end of a knitted chunk becomes a figure in the document.

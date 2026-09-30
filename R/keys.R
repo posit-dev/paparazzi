@@ -363,13 +363,18 @@ key_callout_labels <- function(spec, parsed, style) {
     Meta = "Meta",
     Shift = "Shift"
   )
-  names_mac <- c(Alt = "⌥", Control = "⌃", Meta = "⌘", Shift = "⇧")
+  names_mac <- c(
+    Alt = "\u2325",
+    Control = "\u2303",
+    Meta = "\u2318",
+    Shift = "\u21e7"
+  )
   labels <- if (style == "mac") names_mac else names_words
   prefix <- vapply(
     seq_along(modifiers),
     function(i) {
       if (style == "both" && tolower(modifiers[[i]]) == "mod") {
-        "Ctrl / ⌘"
+        "Ctrl / \u2318"
       } else {
         unname(labels[[resolved[[i]]]])
       }

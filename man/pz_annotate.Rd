@@ -44,7 +44,7 @@ reverses the reveal. Wipe sweeps clockwise from 12 o'clock.}
 \code{"spotlight"} and \code{"caption"} are reserved for other types.}
 
 \item{color}{CSS color for the outline and badge, or \code{NULL} for the
-page default from \code{\link[=pz_stage]{pz_stage()}}.}
+page default from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}.}
 
 \item{font_family}{CSS font family for the badge, or \code{NULL} for the
 page default.}
@@ -62,5 +62,5 @@ in screenshots and recordings until cleared with \code{\link[=pz_annotate_clear]
 Annotations belong to the current document; navigating away removes them.
 }
 \seealso{
-\code{\link[=pz_annotate_clear]{pz_annotate_clear()}}, \code{\link[=pz_stage]{pz_stage()}}
+\code{\link[=pz_annotate_clear]{pz_annotate_clear()}}, \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}
 }

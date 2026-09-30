@@ -50,7 +50,7 @@ best-effort: if the page swallows the events, the instant scroll
 still guarantees the final position.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"), height = 600)
 
 # With a target, scroll it into view

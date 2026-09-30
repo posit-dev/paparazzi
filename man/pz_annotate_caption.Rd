@@ -24,10 +24,10 @@ pz_annotate_caption(
 \item{side}{\code{"bottom"} (the default) or \code{"top"}.}
 
 \item{color}{Text color. \code{NULL} always uses white, not the
-\code{annotate_color} mark accent in \code{\link[=pz_stage]{pz_stage()}}.}
+\code{color} mark accent in \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}.}
 
 \item{font_family}{CSS font family. \code{NULL} uses the page's
-\code{annotate_font_family} setting in \code{\link[=pz_stage]{pz_stage()}} (initially sans-serif).}
+\code{font_family} setting in \code{\link[=pz_stage_annotate]{pz_stage_annotate()}} (initially sans-serif).}
 
 \item{font_size}{Font size in CSS pixels. \code{NULL} uses 20, independent
 of the annotation badge size. Captions scale with the output.}
