@@ -6,9 +6,10 @@
 #'
 #' * `"tasks"`: a static task tracker page (an HTML file) with a form, a
 #'   scrollable list of draggable tasks, filter links that change the URL
-#'   fragment, inline title editing, an attachment input for new tasks, a help
-#'   panel that starts hidden, and a "Start over" link that loads the page again. Adding a task
-#'   shows "Saving..." for 400ms before the task appears.
+#'   fragment, inline title editing, an attachment input for new tasks, a
+#'   help panel that starts hidden, and a "Start over" link that loads the
+#'   page again. Adding a task shows "Saving..." for 400ms before the task
+#'   appears.
 #' * `"tasks-app"`: a Shiny app directory with a text input, a selectize
 #'   priority input, an Add button, and a task list whose output takes half
 #'   a second to render. Running it requires the shiny package.
@@ -33,6 +34,10 @@ pz_example <- function(name = NULL) {
   check_string(name, allow_null = TRUE)
   dir <- system.file("examples", package = "paparazzi", mustWork = TRUE)
   files <- list.files(dir)
+  # Examples are pages (.html) or app directories; other files are assets.
+  files <- files[
+    tools::file_ext(files) == "html" | dir.exists(file.path(dir, files))
+  ]
   names <- tools::file_path_sans_ext(files)
   if (is.null(name)) {
     return(sort(names))
