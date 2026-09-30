@@ -57,7 +57,7 @@ size is 1.75 times the original artwork; set \code{cursor_scale} with
 \code{\link[=pz_stage]{pz_stage()}} to change the size in videos and stills.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "add-button.png")
 
@@ -65,6 +65,7 @@ path <- file.path(tempdir(), "add-button.png")
 page |>
   pz_cursor_show("#add-task", icon = "pointer") |>
   pz_screenshot(path, frame = pz_frame("#new-task", pad = 24))
+pz_screenshot(page, frame = pz_frame("#new-task", pad = 24))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

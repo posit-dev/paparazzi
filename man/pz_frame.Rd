@@ -109,7 +109,7 @@ pz_frame(pad = 32)
 pz_frame(ratio = 16/9, pad = 24, anchor = "top")
 pz_frame(".task-list", ratio = 4/3, bounds = "main")
 
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 
@@ -120,6 +120,7 @@ page |> pz_screenshot(path, frame = pz_frame(list("h1", ".filters"), pad = 16))
 page |>
   pz_stage_frame(pad = 16) |>
   pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9))
+pz_screenshot(page, frame = pz_frame("#new-task", ratio = 16/9))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

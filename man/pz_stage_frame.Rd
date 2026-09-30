@@ -46,7 +46,7 @@ staged frame measures attached annotations in stills; recordings use
 only its element boxes for the home frame.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 
@@ -60,6 +60,7 @@ page |>
   pz_screenshot(path, frame = FALSE) |>
   # NULL clears the default
   pz_stage_frame(NULL)
+pz_screenshot(page, frame = pz_frame("#new-task", pad = 24, ratio = 16/9))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

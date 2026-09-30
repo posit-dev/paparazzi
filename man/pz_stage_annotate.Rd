@@ -61,7 +61,7 @@ names (\code{fill}/\code{text_color}), and the staged fill and text color style
 callout chrome only, not mark badges.
 }
 \examples{
-\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 
@@ -72,6 +72,7 @@ page |>
   pz_screenshot(path) |>
   # NULL restores a default
   pz_stage_annotate(color = NULL)
+pz_screenshot(page, frame = pz_frame("#add-task", pad = 24, target_box = "annotated"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

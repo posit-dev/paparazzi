@@ -78,6 +78,7 @@ page |> pz_screenshot(path, frame = list("#new-task", ".filters"))
 # Padding, aspect ratio and anchoring come from pz_frame()
 page |> pz_screenshot(path, frame = pz_frame("#new-task", pad = 16))
 file.exists(path)
+pz_screenshot(page, frame = pz_frame("#new-task", pad = 16))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

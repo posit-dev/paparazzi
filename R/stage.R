@@ -253,7 +253,7 @@ pz_stage <- function(
 #' @return `ctx`, invisibly.
 #' @seealso [pz_stage()], [pz_stage_frame()], [pz_annotate()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tasks.png")
 #'
@@ -264,6 +264,7 @@ pz_stage <- function(
 #'   pz_screenshot(path) |>
 #'   # NULL restores a default
 #'   pz_stage_annotate(color = NULL)
+#' pz_screenshot(page, frame = pz_frame("#add-task", pad = 24, target_box = "annotated"))
 #' pz_close(page)
 #'
 #' @export

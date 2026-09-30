@@ -59,7 +59,7 @@ NULL
 #' @seealso [pz_stage()] for cursor settings, [pz_cursor_hide()],
 #'   [pz_cursor_move()], [pz_cursor_leave()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "add-button.png")
 #'
@@ -67,6 +67,7 @@ NULL
 #' page |>
 #'   pz_cursor_show("#add-task", icon = "pointer") |>
 #'   pz_screenshot(path, frame = pz_frame("#new-task", pad = 24))
+#' pz_screenshot(page, frame = pz_frame("#new-task", pad = 24))
 #' pz_close(page)
 #'
 #' @export
@@ -126,12 +127,13 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL, icon = NULL) {
 #'
 #' @seealso [pz_cursor_show()], [pz_cursor_leave()]
 #'
-#' @examplesIf paparazzi:::examples_run()
+#' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
 #'   pz_cursor_show("#add-task") |>
 #'   pz_cursor_hide() |>
 #'   pz_screenshot(file.path(tempdir(), "no-cursor.png"))
+#' pz_screenshot(page, frame = pz_frame("#new-task", pad = 24))
 #' pz_close(page)
 #'
 #' @export
