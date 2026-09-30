@@ -408,3 +408,49 @@ test_that("the removed target argument errors", {
   expect_error(pz_screenshot(page, path, target = "#shot-a"), "empty")
   expect_false(file.exists(path))
 })
+
+test_that("pathless screenshots produce previews during pkgdown examples", {
+  skip_if_not_installed("pkgdown")
+  rlang::local_interactive(FALSE)
+  local_mocked_bindings(in_pkgdown = function() TRUE, .package = "pkgdown")
+  page <- local_screenshot_page()
+  preview <- pz_screenshot(page, frame = "#shot-a")
+  withr::defer(unlink(unclass(preview)))
+
+  expect_s3_class(preview, "paparazzi_preview")
+  expect_true(file.exists(unclass(preview)))
+  expect_true(startsWith(unclass(preview), tempdir()))
+  expect_identical(
+    png_dimensions(unclass(preview)),
+    as.integer(c(100, 60) * page_dpr(page))
+  )
+})
+
+test_that("pkgdown previews embed media and respect visibility", {
+  skip_if_not_installed("pkgdown")
+  skip_if_not_installed("htmltools")
+  for (ext in c("png", "gif", "mp4", "webm")) {
+    path <- withr::local_tempfile(fileext = paste0(".", ext))
+    bytes <- as.raw(c(0, 1, 2, 255))
+    writeBin(bytes, path)
+    preview <- structure(path, class = "paparazzi_preview")
+    tag <- pkgdown::pkgdown_print(preview)
+    video <- ext %in% c("mp4", "webm")
+
+    expect_s3_class(tag, "shiny.tag")
+    expect_identical(tag$name, if (video) "video" else "img")
+    mime <- paste0(if (video) "video/" else "image/", ext)
+    expect_identical(
+      tag$attribs$src,
+      paste0("data:", mime, ";base64,AAEC/w==")
+    )
+    if (!video) {
+      expect_true(nzchar(tag$attribs$alt))
+    }
+    expect_invisible(pkgdown::pkgdown_print(preview, visible = FALSE))
+    expect_null(pkgdown::pkgdown_print(preview, visible = FALSE))
+  }
+
+  missing <- structure("no-such-preview.png", class = "paparazzi_preview")
+  expect_null(pkgdown::pkgdown_print(missing, visible = FALSE))
+})

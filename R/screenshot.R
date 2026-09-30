@@ -37,7 +37,8 @@ NULL
 #'   overwritten. With `NULL` (the default) while knitting, a numbered file
 #'   in the chunk's figure directory is used and included in the document;
 #'   in an interactive session, a temporary PNG is shown when the result is
-#'   printed. A path is required otherwise.
+#'   printed. In pkgdown examples, the temporary PNG is embedded in the
+#'   reference page. A path is required otherwise.
 #'   In a document, end the pipe with `pz_screenshot()` to include it; give
 #'   intermediate screenshots a path to keep chaining.
 #' @param frame What to capture and how to frame it: a [pz_frame()]
@@ -49,8 +50,9 @@ NULL
 #' @seealso [pz_frame()], [pz_stage_frame()]
 #'
 #' @return With an explicit path, `ctx`, invisibly. Without a path while
-#'   knitting, a knitr image; without a path in an interactive session,
-#'   an image preview. These image results are terminal, not contexts.
+#'   knitting, a knitr image; without a path in an interactive session or in
+#'   pkgdown examples, an image preview. These image results are terminal,
+#'   not contexts.
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
@@ -76,7 +78,7 @@ pz_screenshot <- function(ctx, path = NULL, ..., frame = NULL) {
   knitting <- isTRUE(getOption("knitr.in.progress"))
   if (implicit && knitting) {
     path <- knit_capture_path("png")
-  } else if (implicit && rlang::is_interactive()) {
+  } else if (implicit && (rlang::is_interactive() || in_pkgdown())) {
     path <- tempfile("paparazzi-", fileext = ".png")
   }
   check_string(path)
@@ -148,6 +150,30 @@ print.paparazzi_preview <- function(x, ...) {
     utils::browseURL(path)
   }
   invisible(x)
+}
+
+#' @exportS3Method pkgdown::pkgdown_print
+#' @noRd
+pkgdown_print.paparazzi_preview <- function(x, visible = TRUE) {
+  if (!visible) {
+    return(invisible(NULL))
+  }
+  path <- unclass(x)
+  ext <- tolower(tools::file_ext(path))
+  mime <- switch(
+    ext,
+    png = "image/png",
+    gif = "image/gif",
+    mp4 = "video/mp4",
+    webm = "video/webm"
+  )
+  # Embed temporary captures so the reference page outlives the R session.
+  data <- readBin(path, "raw", n = file.size(path))
+  src <- paste0("data:", mime, ";base64,", jsonlite::base64_enc(data))
+  if (ext %in% c("mp4", "webm")) {
+    return(htmltools::tags$video(src = src, controls = NA))
+  }
+  htmltools::tags$img(src = src, alt = "Screenshot captured by paparazzi")
 }
 
 # The RStudio viewer only serves files under the session temp directory,

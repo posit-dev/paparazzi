@@ -2,6 +2,7 @@
 
 S3method(knitr::knit_print,PaparazziContext)
 S3method(pillar_shaft,PaparazziContext)
+S3method(pkgdown::pkgdown_print,paparazzi_preview)
 S3method(print,paparazzi_frame)
 S3method(print,paparazzi_loc)
 S3method(print,paparazzi_preview)

@@ -38,6 +38,7 @@ Imports:
 Suggests:
     av,
     gifski,
+    htmltools,
     httpuv,
     knitr,
     pkgdown,

@@ -13,7 +13,8 @@ pz_screenshot(ctx, path = NULL, ..., frame = NULL)
 overwritten. With \code{NULL} (the default) while knitting, a numbered file
 in the chunk's figure directory is used and included in the document;
 in an interactive session, a temporary PNG is shown when the result is
-printed. A path is required otherwise.
+printed. In pkgdown examples, the temporary PNG is embedded in the
+reference page. A path is required otherwise.
 In a document, end the pipe with \code{pz_screenshot()} to include it; give
 intermediate screenshots a path to keep chaining.}
 
@@ -27,8 +28,9 @@ viewport unframed.}
 }
 \value{
 With an explicit path, \code{ctx}, invisibly. Without a path while
-knitting, a knitr image; without a path in an interactive session,
-an image preview. These image results are terminal, not contexts.
+knitting, a knitr image; without a path in an interactive session or in
+pkgdown examples, an image preview. These image results are terminal,
+not contexts.
 }
 \description{
 Captures a PNG of the page. With an explicit \code{path}, returns the context
