@@ -72,7 +72,7 @@ page |>
   pz_screenshot(path) |>
   # NULL restores a default
   pz_stage_annotate(color = NULL)
-pz_screenshot(page, frame = pz_frame("#add-task", pad = 24, target_box = "annotated"))
+pz_screenshot(page, frame = pz_frame("#new-task", pad = 16, target_box = "annotated"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }
