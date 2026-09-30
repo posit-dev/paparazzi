@@ -48,8 +48,10 @@
 #'   `"instant"` inserts the whole string at once. Supply `NULL` to
 #'   restore the default.
 #' @param typing_speed Natural typing speed in characters per second.
+#'   The default is 16.
 #'   Supply `NULL` to restore the default.
 #' @param pause Seconds to hold after each action while recording.
+#'   The default is 0.
 #'   Supply `NULL` to restore the default.
 #' @param camera_follow Whether pointer and typing actions automatically pan
 #'   a zoomed recording camera to keep their target in view. Defaults to
@@ -91,15 +93,15 @@
 pz_stage <- function(
   ctx,
   ...,
-  cursor,
-  cursor_speed,
-  cursor_scale,
-  enter,
-  typing,
-  typing_speed,
-  pause,
-  camera_follow,
-  show_keys
+  cursor = NULL,
+  cursor_speed = NULL,
+  cursor_scale = NULL,
+  enter = NULL,
+  typing = NULL,
+  typing_speed = NULL,
+  pause = NULL,
+  camera_follow = NULL,
+  show_keys = NULL
 ) {
   check_context(ctx)
   check_dots_empty()

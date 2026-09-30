@@ -399,7 +399,7 @@ page |>
 
 ### Cursor and staging
 
-Staging settings live on the page, set with `pz_stage()` at any point in a chain, and persist across recordings. `pz_record_start()` does not repeat them. In `pz_stage()` and `pz_stage_annotate()`, omitted arguments leave settings alone, explicit `NULL` restores the default, and a value sets an override.
+Staging settings live on the page, set with `pz_stage()` at any point in a chain, and persist across recordings. `pz_record_start()` does not repeat them. In `pz_stage()` and `pz_stage_annotate()`, every setting has `= NULL` in the signature: omitted arguments leave settings alone, explicit `NULL` restores the default, and a value sets an override.
 
 ```r
 pz_stage(
@@ -798,7 +798,7 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_stage()` | `(ctx, ..., cursor, cursor_speed, cursor_scale, enter, typing, typing_speed, pause, camera_follow, show_keys)` | confirmed |
+| `pz_stage()` | `(ctx, ..., cursor = NULL, cursor_speed = NULL, cursor_scale = NULL, enter = NULL, typing = NULL, typing_speed = NULL, pause = NULL, camera_follow = NULL, show_keys = NULL)` | confirmed |
 | `pz_stage_annotate()` | `(ctx, ..., color = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_cursor_show()` | `(ctx, target = NULL, ..., from = NULL, icon = NULL)` | confirmed |
 | `pz_cursor_hide()` | `(ctx, ...)` | confirmed |
