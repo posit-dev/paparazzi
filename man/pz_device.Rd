@@ -2,7 +2,7 @@
 % Please edit documentation in R/device.R
 \name{pz_device}
 \alias{pz_device}
-\title{Emulate a device}
+\title{Set the page's size and display settings}
 \usage{
 pz_device(
   ctx,
@@ -27,8 +27,11 @@ pz_device(
 \item{width, height}{Viewport size in CSS pixels. Only the supplied
 one changes; the other keeps its current value.}
 
-\item{scale}{Device scale factor. \code{NULL} retains the stored value, or
-uses 2 when applying the first override.}
+\item{scale}{Device scale factor: how many screen pixels each CSS pixel
+covers. \code{NULL} keeps the current value. Until you set it, the page
+renders at the browser's own scale (1), but once you set \code{width},
+\code{height}, \code{mobile}, or \code{zoom} (with the default \code{zoom_method}), it
+switches to 2 for sharp, retina-quality captures.}
 
 \item{mobile}{Emulate a mobile device (touch input, mobile viewport
 semantics)? \code{NULL} retains the stored value, or uses \code{FALSE} when unset.}
@@ -57,8 +60,7 @@ Configures device emulation for the page: viewport size, device scale
 factor, mobile-ness, zoom, color scheme, reduced motion, locale and
 time zone. Only \strong{supplied} arguments change state: \code{NULL} (the
 default) means "leave this setting alone", so \code{zoom = 1}, not
-\code{zoom = NULL}, disables an active zoom. Whenever a viewport override
-is applied, \code{scale} defaults to 2 (retina).
+\code{zoom = NULL}, disables an active zoom.
 }
 \details{
 The two zoom methods trade off differently:
