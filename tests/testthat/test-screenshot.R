@@ -453,6 +453,14 @@ test_that("pkgdown previews embed media and respect visibility", {
 
   missing <- structure("no-such-preview.png", class = "paparazzi_preview")
   expect_null(pkgdown::pkgdown_print(missing, visible = FALSE))
+  expect_error(pkgdown::pkgdown_print(missing), "no longer exists")
+
+  jpeg <- withr::local_tempfile(fileext = ".jpg")
+  writeBin(as.raw(0:3), jpeg)
+  expect_error(
+    pkgdown::pkgdown_print(structure(jpeg, class = "paparazzi_preview")),
+    "Can't embed"
+  )
 })
 
 test_that("pkgdown media data URIs do not wrap long base64 payloads", {

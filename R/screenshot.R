@@ -166,8 +166,12 @@ pkgdown_print.paparazzi_preview <- function(x, visible = TRUE) {
     png = "image/png",
     gif = "image/gif",
     mp4 = "video/mp4",
-    webm = "video/webm"
+    webm = "video/webm",
+    cli::cli_abort("Can't embed a {.val {ext}} preview: {.path {path}}.")
   )
+  if (!file.exists(path)) {
+    cli::cli_abort("The captured preview {.path {path}} no longer exists.")
+  }
   # Embed temporary captures so the reference page outlives the R session.
   data <- readBin(path, "raw", n = file.size(path))
   encoded <- gsub("[\r\n]", "", jsonlite::base64_enc(data))
