@@ -28,9 +28,9 @@ NULL
 #'
 #' @inheritParams pz_click
 #' @param path File path the PNG is written to; an existing file is
-#'   overwritten. If omitted while knitting, a numbered file in the
+#'   overwritten. If `NULL` or omitted while knitting, a numbered file in the
 #'   chunk's figure directory is used and the screenshot is included in
-#'   the document. If omitted in an interactive session, a temporary PNG
+#'   the document. If `NULL` or omitted in an interactive session, a temporary PNG
 #'   is shown when the result is printed. A path is required otherwise.
 #'   In a document, end the pipe with `pz_screenshot()` to include it; give
 #'   intermediate screenshots a path to keep chaining.
@@ -67,10 +67,10 @@ NULL
 #' pz_close(page)
 #'
 #' @export
-pz_screenshot <- function(ctx, path, ..., target = NULL, frame = NULL) {
+pz_screenshot <- function(ctx, path = NULL, ..., target = NULL, frame = NULL) {
   check_context(ctx)
   check_dots_empty()
-  implicit <- missing(path)
+  implicit <- is.null(path)
   knitting <- isTRUE(getOption("knitr.in.progress"))
   if (implicit && knitting) {
     path <- knit_capture_path("png")

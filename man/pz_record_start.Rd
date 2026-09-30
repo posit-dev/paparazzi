@@ -6,7 +6,7 @@
 \usage{
 pz_record_start(
   ctx,
-  path,
+  path = NULL,
   ...,
   method = c("poll", "screencast"),
   frame = NULL,
@@ -23,11 +23,10 @@ pz_record_start(
 
 \item{path}{Output file path; the extension (\code{.mp4}, \code{.webm}, or
 \code{.gif}) selects the format. An existing file is overwritten. If
-omitted while knitting, a numbered file in the chunk's figure
-directory is used and the recording appears in the document. If
-omitted in an interactive session, a temporary file is used and the
-recording is shown in the viewer when it stops. Otherwise a path is
-required.}
+\code{NULL} or omitted while knitting, a numbered file in the chunk's
+figure directory is used and the recording appears in the document.
+If \code{NULL} or omitted interactively, a temporary file is used and shown
+in the viewer when recording stops. Otherwise a path is required.}
 
 \item{...}{Checked empty; reserved for future use.}
 
@@ -46,8 +45,8 @@ annotated frame silently measures element boxes only for recording.}
 to capture at this rate; screencast capture depends on visual
 changes.}
 
-\item{scale}{Output size: \code{NULL} (the default) keeps the captured
-size; a number up to 4 is a scale factor; a larger number is the
+\item{scale}{Output size: \code{NULL} (the default) disables resizing, keeping
+the captured size; a number up to 4 is a scale factor; a larger number is the
 output width in pixels (height scales proportionally).}
 
 \item{hold}{Seconds to hold the first and last frame,
@@ -61,7 +60,7 @@ written to a temporary directory and deleted after encoding.}
 \code{"vtt"} writes a WebVTT sidecar without drawing captions; \code{"both"}
 does both. WebVTT needs an MP4 or WebM recording, not a GIF.}
 
-\item{format}{The format when \code{path} is omitted: \code{"auto"} (the
+\item{format}{The format when \code{path} is \code{NULL} or omitted: \code{"auto"} (the
 default) records MP4, or GIF when knitting to a non-HTML format,
 where video can only be linked. With a \code{path}, the extension decides
 and \code{format} must be \code{"auto"}.}

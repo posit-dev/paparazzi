@@ -384,6 +384,10 @@ test_that("knitted recordings return media only at completion", {
     'pz_wait(page, 0.2)',
     'pz_record_stop(page)',
     'pz_record(page, code = { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0), format="gif")',
+    'start <- pz_record_start(page, path=NULL, fps=5, hold=c(0, 0), format="gif")',
+    'pz_wait(page, 0.2)',
+    'pz_record_stop(start)',
+    'pz_record(page, path=NULL, code = { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0), format="gif")',
     'pz_record(page, "named.gif", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
     'pz_record(page, "named.mp4", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
     'page |> pz_record_start("split.webm", fps=5, hold=c(0, 0))',
@@ -400,10 +404,12 @@ test_that("knitted recordings return media only at completion", {
     recursive = TRUE,
     full.names = TRUE
   )
-  expect_length(gifs, 2L)
+  expect_length(gifs, 4L)
   expect_true(all(file.exists(gifs)))
   expect_match(markdown, "demo-1.gif", fixed = TRUE)
   expect_match(markdown, "demo-2.gif", fixed = TRUE)
+  expect_match(markdown, "demo-3.gif", fixed = TRUE)
+  expect_match(markdown, "demo-4.gif", fixed = TRUE)
   expect_true(file.exists("named.gif"))
   expect_match(markdown, "named.gif", fixed = TRUE)
   expect_true(file.exists("named.mp4"))
@@ -1941,4 +1947,37 @@ test_that("recording input and lifecycle errors are classed", {
   pz_wait(page, 0.2)
   page |> pz_record_stop()
   expect_error(pz_record_stop(page), class = "paparazzi_error_record")
+})
+
+test_that("NULL and omitted paths both preview start and block recordings", {
+  page <- local_record_page()
+  skip_if_no_av()
+  rlang::local_interactive()
+  chain <- pz_record_start(page, fps = 5, hold = c(0, 0))
+  defer_record_stop(page)
+  pz_wait(chain, 0.1)
+  omitted <- pz_record_stop(chain)
+  chain <- pz_record_start(page, path = NULL, fps = 5, hold = c(0, 0))
+  pz_wait(chain, 0.1)
+  explicit <- pz_record_stop(chain)
+  block_omitted <- pz_record(
+    page,
+    code = pz_wait(page, 0.1),
+    fps = 5,
+    hold = c(0, 0)
+  )
+  block_explicit <- pz_record(
+    page,
+    path = NULL,
+    code = pz_wait(page, 0.1),
+    fps = 5,
+    hold = c(0, 0)
+  )
+  previews <- list(omitted, explicit, block_omitted, block_explicit)
+  withr::defer(unlink(vapply(previews, unclass, character(1))))
+  for (preview in previews) {
+    expect_s3_class(preview, "paparazzi_preview")
+    expect_true(file.exists(preview))
+    expect_equal(tools::file_ext(preview), "mp4")
+  }
 })

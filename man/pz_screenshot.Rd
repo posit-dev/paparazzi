@@ -4,15 +4,15 @@
 \alias{pz_screenshot}
 \title{Take a screenshot}
 \usage{
-pz_screenshot(ctx, path, ..., target = NULL, frame = NULL)
+pz_screenshot(ctx, path = NULL, ..., target = NULL, frame = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
 \item{path}{File path the PNG is written to; an existing file is
-overwritten. If omitted while knitting, a numbered file in the
+overwritten. If \code{NULL} or omitted while knitting, a numbered file in the
 chunk's figure directory is used and the screenshot is included in
-the document. If omitted in an interactive session, a temporary PNG
+the document. If \code{NULL} or omitted in an interactive session, a temporary PNG
 is shown when the result is printed. A path is required otherwise.
 In a document, end the pipe with \code{pz_screenshot()} to include it; give
 intermediate screenshots a path to keep chaining.}

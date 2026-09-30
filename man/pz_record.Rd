@@ -4,18 +4,17 @@
 \alias{pz_record}
 \title{Record a block of code}
 \usage{
-pz_record(ctx, path, code, ...)
+pz_record(ctx, path = NULL, code, ...)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
 \item{path}{Output file path; the extension (\code{.mp4}, \code{.webm}, or
 \code{.gif}) selects the format. An existing file is overwritten. If
-omitted while knitting, a numbered file in the chunk's figure
-directory is used and the recording appears in the document. If
-omitted in an interactive session, a temporary file is used and the
-recording is shown in the viewer when it stops. Otherwise a path is
-required.}
+\code{NULL} or omitted while knitting, a numbered file in the chunk's
+figure directory is used and the recording appears in the document.
+If \code{NULL} or omitted interactively, a temporary file is used and shown
+in the viewer when recording stops. Otherwise a path is required.}
 
 \item{code}{An expression to evaluate while recording.}
 
