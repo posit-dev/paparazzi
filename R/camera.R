@@ -472,7 +472,7 @@ camera_expression <- function(values) {
   if (length(runs$values) == 1L) {
     return(runs$values[[1]])
   }
-  starts <- cumsum(c(1L, head(runs$lengths, -1L)))
+  starts <- cumsum(c(1L, utils::head(runs$lengths, -1L)))
   build <- function(lo, hi) {
     if (lo == hi) {
       return(runs$values[[lo]])

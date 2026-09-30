@@ -253,7 +253,7 @@ test_that("a Quarto screenshot figure resolves with its cross-reference", {
       "",
       "```{r}",
       "#| echo: false",
-      sprintf("pkgload::load_all(%s, quiet = TRUE)", deparse(package_root)),
+      quarto_load_package(package_root),
       sprintf("page <- pz_open(%s)", deparse(fixture)),
       "```",
       "",
