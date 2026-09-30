@@ -13,7 +13,7 @@
 #'
 #' @inheritParams pz_annotate
 #' @param dim Opacity of the black overlay outside the cutouts, from 0
-#'   (transparent) to 1 (black). `NULL` uses 0.6.
+#'   (transparent) to 1 (black). Defaults to 0.6.
 #' @param reveal `"fade"` (default) or `"none"`. A fade plays only during an
 #'   active, unpaused recording, and reverses on clear. Otherwise drawing and
 #'   clearing are instant.
@@ -24,18 +24,15 @@ pz_annotate_spotlight <- function(
   ctx,
   target = NULL,
   ...,
-  pad = NULL,
-  dim = NULL,
-  reveal = NULL
+  pad = 0,
+  dim = 0.6,
+  reveal = c("fade", "none")
 ) {
   check_context(ctx)
   check_dots_empty()
-  pad <- check_pad(pad %||% 0, arg = "pad")
-  dim <- dim %||% 0.6
+  pad <- check_pad(pad, arg = "pad")
   check_number_decimal(dim, min = 0, max = 1, allow_infinite = FALSE)
-  reveal <- reveal %||% "fade"
-  check_string(reveal)
-  reveal <- rlang::arg_match0(reveal, c("fade", "none"))
+  reveal <- rlang::arg_match(reveal)
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)

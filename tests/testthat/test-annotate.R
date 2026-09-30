@@ -1208,3 +1208,31 @@ test_that("overlay function sources parse in Chrome", {
   ))
   expect_error(parse_js("function( {"))
 })
+
+test_that("mark and redact padding rejects NULL", {
+  page <- annotation_page()
+  expect_error(pz_annotate(page, "#box", pad = NULL), "pad.*NULL")
+  expect_error(pz_annotate_redact(page, "#box", pad = NULL), "pad.*NULL")
+  expect_error(pz_annotate(page, "#box", reveal = NULL), "reveal")
+})
+
+test_that("auto reveals preserve the type defaults and zero padding", {
+  page <- annotation_page()
+  local_mocked_bindings(annotate_call = function(ctx, els, fn, options, what) {
+    captured <<- options
+  })
+  captured <- NULL
+  for (type in c("box", "circle", "underline", "highlight")) {
+    pz_annotate(page, "#box", type = type)
+    omitted <- captured
+    pz_annotate(page, "#box", type = type, reveal = "auto", pad = 0)
+    expect_identical(captured, omitted)
+    expect_equal(captured$pad, rep(0, 4))
+    expect_identical(captured$reveal, if (type == "box") "fade" else "draw")
+  }
+  pz_annotate_redact(page, "#box")
+  omitted <- captured
+  pz_annotate_redact(page, "#box", pad = 0)
+  expect_identical(captured, omitted)
+  expect_equal(captured$pad, rep(0, 4))
+})

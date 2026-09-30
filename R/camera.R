@@ -33,7 +33,7 @@ pz_camera <- function(
   target = NULL,
   ...,
   zoom = NULL,
-  pad = NULL,
+  pad = 24,
   duration = NULL,
   target_box = c("element", "annotated"),
   wait = FALSE
@@ -57,7 +57,7 @@ pz_camera <- function(
     allow_infinite = FALSE,
     allow_null = TRUE
   )
-  pad <- check_pad(if (is.null(pad)) 24 else pad)
+  pad <- check_pad(pad)
   if (is.null(target) && is.null(scope_top(ctx))) {
     cli::cli_abort("Supply a {.arg target} or use a scoped context.")
   }

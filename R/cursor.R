@@ -165,7 +165,7 @@ pz_cursor_hide <- function(ctx, ...) {
 #'   the distance and the `cursor_speed` staging setting.
 #' @param offset Landing offset in viewport CSS pixels, `c(x, y)` with
 #'   positive x to the right and positive y downward. A single number is
-#'   recycled to both axes; `NULL` (the default) means no offset. It applies
+#'   recycled to both axes; the default `c(0, 0)` adds no offset. It applies
 #'   only to this call and only to the drawn overlay, not to page pointer
 #'   events. The cursor may land outside the viewport without clamping.
 #'
@@ -194,10 +194,10 @@ pz_cursor_move <- function(
   ...,
   duration = NULL,
   icon = NULL,
-  offset = NULL
+  offset = c(0, 0)
 ) {
   icon <- cursor_check_icon(icon)
-  offset <- if (is.null(offset)) c(0, 0) else check_offset(offset)
+  offset <- check_offset(offset)
   check_context(ctx)
   check_dots_empty()
   check_number_decimal(

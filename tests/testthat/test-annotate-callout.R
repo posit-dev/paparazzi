@@ -210,7 +210,7 @@ test_that("callouts validate inputs and clamp long wrapped text", {
       page,
       "x",
       target = "#target",
-      reveal = c("fade", "draw", "pop", "slide", "wipe", "none")
+      reveal = c("fade", "invalid")
     ),
     "reveal"
   )
@@ -525,4 +525,21 @@ test_that("long badges stay within the measured bubble and viewport", {
   expect_lte(geometry$badge[[2]], geometry$bubble[[2]])
   expect_lte(geometry$badge[[2]], geometry$viewport - 8)
   expect_identical(geometry$overflow, "ellipsis")
+})
+
+test_that("callout reveal defaults to pop and rejects NULL", {
+  page <- callout_page()
+  expect_error(
+    pz_annotate_callout(page, "Note", target = "#target", reveal = NULL),
+    "reveal"
+  )
+  captured <- NULL
+  local_mocked_bindings(annotate_call = function(ctx, els, fn, options, what) {
+    captured <<- options
+  })
+  pz_annotate_callout(page, "Note", target = "#target")
+  omitted <- captured
+  pz_annotate_callout(page, "Note", target = "#target", reveal = "pop")
+  expect_identical(captured, omitted)
+  expect_identical(captured$reveal, "pop")
 })

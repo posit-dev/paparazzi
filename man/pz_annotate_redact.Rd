@@ -9,7 +9,7 @@ pz_annotate_redact(
   target = NULL,
   ...,
   method = c("fill", "blur"),
-  pad = NULL,
+  pad = 0,
   id = NULL,
   color = NULL
 )
@@ -24,14 +24,15 @@ pz_annotate_redact(
 
 \item{method}{\code{"fill"} (default) or \code{"blur"} (32 CSS px backdrop blur).}
 
-\item{pad}{Extra CSS pixels around each element; \code{NULL} uses zero.}
+\item{pad}{Extra CSS pixels around each element; defaults to zero.}
 
 \item{id}{Optional nonempty id; reusing it replaces the old annotation.
+\code{NULL} generates a unique id, so calls accumulate annotations.
 \code{"spotlight"} and \code{"caption"} are reserved.}
 
 \item{color}{CSS color for fill; \code{NULL} uses near-black (\verb{#171717}), not
 the staged mark color. A near-black opaque base stays underneath even
-when a custom color is translucent or invalid. Cannot be set for blur.}
+when a custom color is translucent or invalid. For blur, only \code{NULL} is allowed.}
 }
 \value{
 \code{ctx}, invisibly.

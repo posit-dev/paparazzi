@@ -1117,3 +1117,13 @@ test_that("recorded typing rests the cursor until the next move", {
   expect_match(line(page), "on · cursor hidden")
   pz_record_stop(page)
 })
+
+test_that("cursor move offset defaults to zero and rejects NULL", {
+  page <- local_cursor_page()
+  expect_error(pz_cursor_move(page, "#btn", offset = NULL), "offset.*NULL")
+  pz_cursor_move(page, "#btn")
+  omitted <- cursor_overlay_state(page)
+  pz_cursor_move(page, "#btn", offset = c(0, 0))
+  expect_equal(cursor_overlay_state(page), omitted)
+  expect_equal(omitted[2:3], c(660, 322))
+})

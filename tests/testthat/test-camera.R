@@ -928,3 +928,11 @@ test_that("a repeated reset after a page scroll records its new anchor", {
   expect_equal(tail(rec$camera, 1)[[1]]$end, tail(rec$camera, 1)[[1]]$start)
   suppressWarnings(pz_record_stop(page))
 })
+
+test_that("camera padding rejects NULL even without a recording", {
+  page <- local_page()
+  expect_error(pz_camera(page, "body", pad = NULL), "pad.*NULL")
+  expect_invisible(pz_camera(page, "body"))
+  expect_invisible(pz_camera(page, "body", pad = 24))
+  expect_equal(formals(pz_camera)$pad, 24)
+})

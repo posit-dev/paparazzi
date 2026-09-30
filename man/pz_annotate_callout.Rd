@@ -12,7 +12,7 @@ pz_annotate_callout(
   side = NULL,
   arrow = TRUE,
   label = NULL,
-  reveal = NULL,
+  reveal = c("pop", "fade", "draw", "slide", "wipe", "none"),
   id = NULL,
   color = NULL,
   font_family = NULL,
@@ -37,13 +37,14 @@ side with the most room when drawn. The chosen side stays fixed.}
 leaves a tooltip-style bubble.}
 
 \item{label}{Optional badge; \code{TRUE} numbers the matches, while one string
-or number repeats for each match.}
+or number repeats for each match. \code{NULL} omits the badge.}
 
-\item{reveal}{\code{"fade"}, \code{"draw"}, \code{"pop"}, \code{"slide"}, \code{"wipe"}, or
-\code{"none"}. \code{NULL} uses \code{"pop"}. Animates only during an active,
+\item{reveal}{\code{"pop"} (the default), \code{"fade"}, \code{"draw"}, \code{"slide"},
+\code{"wipe"}, or \code{"none"}. Animates only during an active,
 unpaused recording; clearing plays the reverse.}
 
 \item{id}{Optional nonempty id. Reusing it replaces its annotations;
+\code{NULL} generates a unique id, so calls accumulate annotations.
 \code{"spotlight"} and \code{"caption"} are reserved for other types.}
 
 \item{color}{Accent border and arrow color; \code{NULL} uses the staged

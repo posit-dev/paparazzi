@@ -24,9 +24,10 @@
 #'   for Shiny to connect and become idle; non-Shiny pages error. `"none"`
 #'   returns without waiting. An existing `ChromoteSession` isn't
 #'   navigated, so only `"shiny"` waits there.
-#' @param timeout Session default timeout in seconds; `NULL` uses the package
-#'   default (10 s). Per-call `timeout = NULL` means "session default".
+#' @param timeout Session default timeout in seconds; defaults to 10.
+#'   Per-call `timeout = NULL` in waits and expectations uses this default.
 #' @param shiny_options,envvars Passed to [pz_app()] when opening an app path.
+#'   `envvars = NULL` adds no process environment overrides.
 #'
 #' @return A `PaparazziPage` (the root context).
 #'
@@ -61,12 +62,12 @@ pz_open <- function(
   x,
   ...,
   wait = c("auto", "load", "shiny", "none"),
-  timeout = NULL,
+  timeout = 10,
   shiny_options = list(),
   envvars = NULL
 ) {
   device_dots <- device_check_dots(list2(...))
-  check_number_decimal(timeout, min = 0, allow_null = TRUE)
+  check_number_decimal(timeout, min = 0)
   wait <- arg_match(wait)
   if (!is.list(shiny_options)) {
     stop_input_type(shiny_options, "a list")
@@ -76,7 +77,7 @@ pz_open <- function(
   }
 
   if (inherits(x, "ChromoteSession")) {
-    page <- PaparazziPage$new(session = x, timeout = timeout %||% 10)
+    page <- PaparazziPage$new(session = x, timeout = timeout)
     # Device settings apply before anything else touches the page.
     device_open(page, device_dots)
     if (identical(wait, "shiny")) {
@@ -110,7 +111,7 @@ pz_open <- function(
   session <- chromote::ChromoteSession$new()
   page <- PaparazziPage$new(
     session = session,
-    timeout = timeout %||% 10,
+    timeout = timeout,
     owned_app = owned_app,
     shared_app = shared_app
   )

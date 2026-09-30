@@ -8,9 +8,9 @@ pz_annotate_spotlight(
   ctx,
   target = NULL,
   ...,
-  pad = NULL,
-  dim = NULL,
-  reveal = NULL
+  pad = 0,
+  dim = 0.6,
+  reveal = c("fade", "none")
 )
 }
 \arguments{
@@ -22,10 +22,10 @@ pz_annotate_spotlight(
 \item{...}{Checked empty; reserved for future use.}
 
 \item{pad}{Extra CSS pixels around each element: one number or
-\code{c(top, right, bottom, left)}. \code{NULL} uses zero.}
+\code{c(top, right, bottom, left)}. Defaults to zero.}
 
 \item{dim}{Opacity of the black overlay outside the cutouts, from 0
-(transparent) to 1 (black). \code{NULL} uses 0.6.}
+(transparent) to 1 (black). Defaults to 0.6.}
 
 \item{reveal}{\code{"fade"} (default) or \code{"none"}. A fade plays only during an
 active, unpaused recording, and reverses on clear. Otherwise drawing and

@@ -16,9 +16,9 @@
 #' @param arrow Whether to draw an arrow ending at the target box. `FALSE`
 #'   leaves a tooltip-style bubble.
 #' @param label Optional badge; `TRUE` numbers the matches, while one string
-#'   or number repeats for each match.
-#' @param reveal `"fade"`, `"draw"`, `"pop"`, `"slide"`, `"wipe"`, or
-#'   `"none"`. `NULL` uses `"pop"`. Animates only during an active,
+#'   or number repeats for each match. `NULL` omits the badge.
+#' @param reveal `"pop"` (the default), `"fade"`, `"draw"`, `"slide"`,
+#'   `"wipe"`, or `"none"`. Animates only during an active,
 #'   unpaused recording; clearing plays the reverse.
 #' @param color Accent border and arrow color; `NULL` uses the staged
 #'   annotation color. The bubble remains dark with white text.
@@ -35,7 +35,7 @@ pz_annotate_callout <- function(
   side = NULL,
   arrow = TRUE,
   label = NULL,
-  reveal = NULL,
+  reveal = c("pop", "fade", "draw", "slide", "wipe", "none"),
   id = NULL,
   color = NULL,
   font_family = NULL,
@@ -49,12 +49,7 @@ pz_annotate_callout <- function(
   }
   check_bool(arrow)
   label <- check_annotation_label(label)
-  reveal <- reveal %||% "pop"
-  check_string(reveal)
-  reveal <- rlang::arg_match0(
-    reveal,
-    c("fade", "draw", "pop", "slide", "wipe", "none")
-  )
+  reveal <- rlang::arg_match(reveal)
   check_annotation_id(id)
   style <- annotate_style(ctx, color, font_family, font_size)
   els <- annotate_elements(ctx, target)

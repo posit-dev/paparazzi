@@ -249,7 +249,7 @@ test_that("spotlight validates its options and dim endpoints", {
     )
   }
   expect_error(
-    pz_annotate_spotlight(page, "#one", reveal = c("fade", "none")),
+    pz_annotate_spotlight(page, "#one", reveal = c("fade", "invalid")),
     "reveal"
   )
   expect_error(pz_annotate_spotlight(page, "#one", pad = c(1, 2)))
@@ -486,4 +486,22 @@ test_that("callouts paint above the spotlight scrim", {
   img <- spotlight_image(page, path)
   magenta <- img[,, 1] > 0.9 & img[,, 2] < 0.2 & img[,, 3] > 0.9
   expect_true(any(magenta))
+})
+
+test_that("spotlight literal defaults preserve the effect and reject NULL", {
+  page <- spotlight_page()
+  expect_error(pz_annotate_spotlight(page, "#one", pad = NULL), "pad.*NULL")
+  expect_error(pz_annotate_spotlight(page, "#one", dim = NULL), "dim")
+  expect_error(pz_annotate_spotlight(page, "#one", reveal = NULL), "reveal")
+  captured <- NULL
+  local_mocked_bindings(annotate_call = function(ctx, els, fn, options, what) {
+    captured <<- options
+  })
+  pz_annotate_spotlight(page, "#one")
+  omitted <- captured
+  pz_annotate_spotlight(page, "#one", pad = 0, dim = 0.6, reveal = "fade")
+  expect_identical(captured, omitted)
+  expect_equal(captured$pad, rep(0, 4))
+  expect_equal(captured$dim, 0.6)
+  expect_identical(captured$reveal, "fade")
 })

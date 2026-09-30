@@ -661,3 +661,9 @@ test_that("pz_local_page forwards ... to pz_open", {
   expect_equal(page$default_timeout, 7)
   expect_true(page$is_closed())
 })
+
+test_that("open timeout defaults to ten seconds and rejects NULL", {
+  expect_error(pz_open("about:blank", timeout = NULL), "timeout")
+  page <- pz_local_page("about:blank")
+  expect_equal(page$default_timeout, 10)
+})

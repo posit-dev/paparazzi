@@ -258,3 +258,8 @@ test_that("an app that never listens times out and is cleaned up", {
   expect_match(conditionMessage(err), "within 0.5 seconds", fixed = TRUE)
   expect_false(grepl("{.val", conditionMessage(err), fixed = TRUE))
 })
+
+test_that("app timeout has a visible ten-second default and rejects NULL", {
+  expect_equal(formals(pz_app)$timeout, 10)
+  expect_error(pz_app(shiny_app_fixture_dir(), timeout = NULL), "timeout")
+})

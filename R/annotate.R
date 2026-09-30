@@ -15,14 +15,16 @@ NULL
 #' @param type `"box"` (outline), `"circle"` (ellipse), `"underline"` (bottom
 #'   stroke), or `"highlight"` (translucent fill blended over the page).
 #' @param label Optional badge. `TRUE` numbers the matches 1, 2, ...;
-#'   one string or number repeats on each match.
+#'   one string or number repeats on each match. `NULL` omits the badge.
 #' @param pad Extra CSS pixels around each element: one number or
-#'   `c(top, right, bottom, left)`. `NULL` uses zero.
-#' @param reveal `"fade"`, `"draw"`, `"pop"`, `"slide"`, `"wipe"`, or
-#'   `"none"`. `NULL` uses fade for boxes and draw for the other types.
+#'   `c(top, right, bottom, left)`. Defaults to zero.
+#' @param reveal `"auto"` (the default) uses `"fade"` for boxes and `"draw"`
+#'   for other types. Other choices are `"fade"`, `"draw"`, `"pop"`, `"slide"`,
+#'   `"wipe"`, or `"none"`.
 #'   Reveals animate only during an active, unpaused recording; clearing
 #'   reverses the reveal. Wipe sweeps clockwise from 12 o'clock.
 #' @param id Optional nonempty id. Reusing it replaces its annotations;
+#'   `NULL` generates a unique id, so calls accumulate annotations.
 #'   `"spotlight"` and `"caption"` are reserved for other types.
 #' @param color CSS color for the outline and badge, or `NULL` for the
 #'   page default from [pz_stage_annotate()].
@@ -40,8 +42,8 @@ pz_annotate <- function(
   ...,
   type = "box",
   label = NULL,
-  pad = NULL,
-  reveal = NULL,
+  pad = 0,
+  reveal = c("auto", "fade", "draw", "pop", "slide", "wipe", "none"),
   id = NULL,
   color = NULL,
   font_family = NULL,
@@ -51,15 +53,13 @@ pz_annotate <- function(
   check_dots_empty()
   check_string(type)
   type <- rlang::arg_match0(type, c("box", "circle", "underline", "highlight"))
-  reveal <- reveal %||% if (identical(type, "box")) "fade" else "draw"
-  check_string(reveal)
-  reveal <- rlang::arg_match0(
-    reveal,
-    c("fade", "draw", "pop", "slide", "wipe", "none")
-  )
+  reveal <- rlang::arg_match(reveal)
+  if (reveal == "auto") {
+    reveal <- if (type == "box") "fade" else "draw"
+  }
   check_annotation_id(id)
   label <- check_annotation_label(label)
-  pad <- check_pad(pad %||% 0, arg = "pad")
+  pad <- check_pad(pad, arg = "pad")
   style <- annotate_style(ctx, color, font_family, font_size)
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
@@ -95,12 +95,13 @@ pz_annotate <- function(
 #'
 #' @inheritParams pz_annotate
 #' @param method `"fill"` (default) or `"blur"` (32 CSS px backdrop blur).
-#' @param pad Extra CSS pixels around each element; `NULL` uses zero.
+#' @param pad Extra CSS pixels around each element; defaults to zero.
 #' @param id Optional nonempty id; reusing it replaces the old annotation.
+#'   `NULL` generates a unique id, so calls accumulate annotations.
 #'   `"spotlight"` and `"caption"` are reserved.
 #' @param color CSS color for fill; `NULL` uses near-black (`#171717`), not
 #'   the staged mark color. A near-black opaque base stays underneath even
-#'   when a custom color is translucent or invalid. Cannot be set for blur.
+#'   when a custom color is translucent or invalid. For blur, only `NULL` is allowed.
 #' @return `ctx`, invisibly.
 #' @seealso [pz_annotate()], [pz_annotate_clear()]
 #' @export
@@ -109,7 +110,7 @@ pz_annotate_redact <- function(
   target = NULL,
   ...,
   method = c("fill", "blur"),
-  pad = NULL,
+  pad = 0,
   id = NULL,
   color = NULL
 ) {
@@ -125,7 +126,7 @@ pz_annotate_redact <- function(
       )
     }
   }
-  pad <- check_pad(pad %||% 0, arg = "pad")
+  pad <- check_pad(pad, arg = "pad")
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   options <- list(id = id, method = method, pad = unname(pad), color = color)

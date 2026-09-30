@@ -844,3 +844,16 @@ test_that("a keycap row narrower than 80% of the output stays on one line", {
   single <- key_callout_render(page, list("K"), 720, 480, 1, 24, path)
   expect_lt(wide, single * 1.5)
 })
+
+test_that("caption literal styles ignore staged accent and size and reject NULL", {
+  page <- local_page()
+  pz_stage_annotate(page, color = "red", font_size = 32)
+  pz_annotate_caption(page, "Note")
+  omitted <- page_caption(page)
+  pz_annotate_caption(page, "Note", color = "white", font_size = 20)
+  expect_identical(page_caption(page), omitted)
+  expect_identical(omitted$color, "white")
+  expect_equal(omitted$font_size, 20)
+  expect_error(pz_annotate_caption(page, "Note", color = NULL), "color")
+  expect_error(pz_annotate_caption(page, "Note", font_size = NULL), "font_size")
+})
