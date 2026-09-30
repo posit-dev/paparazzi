@@ -75,7 +75,7 @@ test_that("task titles can be edited, committed, and reverted", {
   expect_identical(pz_get_text(task, ".task-title"), "Renew driving licence")
   expect_identical(
     pz_get_text(page, "#status"),
-    "Renamed to “Renew driving licence”."
+    "Renamed to \u201cRenew driving licence\u201d."
   )
   task |>
     pz_click(".task-edit") |>
