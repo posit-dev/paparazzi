@@ -578,12 +578,10 @@ inspect_annotated_capture <- function(ctx, scope_rects, target_rects, path) {
   invisible(path)
 }
 
-inspect_interactive <- function() rlang::is_interactive()
-
 # Stage external images for viewers that only serve files in tempdir().
 inspect_show <- function(path) {
   viewer <- getOption("viewer")
-  if (inspect_interactive() && is.function(viewer)) {
+  if (rlang::is_interactive() && is.function(viewer)) {
     try(viewer(preview_stage(path)), silent = TRUE)
   }
   cli::cli_inform("Annotated screenshot: {.file {path}}")

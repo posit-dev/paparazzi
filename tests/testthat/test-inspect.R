@@ -214,7 +214,7 @@ test_that("inspect screenshots are sent directly to the configured viewer", {
   writeBin(as.raw(1:4), path)
   captured <- NULL
   withr::local_options(viewer = function(x) captured <<- x)
-  local_mocked_bindings(inspect_interactive = function() TRUE)
+  rlang::local_interactive(TRUE)
 
   got <- inspect_capture(function() inspect_show(path))
 
