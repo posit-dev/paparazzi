@@ -4,7 +4,7 @@
 \alias{pz_app}
 \title{Run a Shiny app in a background process}
 \usage{
-pz_app(app_dir, ..., envvars = NULL, shiny_options = list(), timeout = NULL)
+pz_app(app_dir, ..., envvars = NULL, shiny_options = list(), timeout = 10)
 }
 \arguments{
 \item{app_dir}{A path to a Shiny app directory or an app file
@@ -13,7 +13,8 @@ pz_app(app_dir, ..., envvars = NULL, shiny_options = list(), timeout = NULL)
 \item{...}{Reserved; must be empty.}
 
 \item{envvars}{Named character vector of environment variables set in
-the app process, on top of the inherited environment.}
+the app process, on top of the inherited environment. \code{NULL} adds no
+environment overrides.}
 
 \item{shiny_options}{Additional options for \code{\link[shiny:runApp]{shiny::runApp()}}, e.g.
 \code{list(test.mode = TRUE)}. \code{appDir} is reserved; use \code{app_dir} to select
@@ -22,7 +23,7 @@ to \code{"127.0.0.1"}, and \code{port} (default \code{NULL}) picks a random free
 If startup fails because the port was taken, a new port is tried.}
 
 \item{timeout}{Seconds to wait for the app to start listening;
-\code{NULL} allows 10 seconds.}
+defaults to 10.}
 }
 \value{
 A \code{PaparazziApp} handle with public fields \code{url} and \code{port}

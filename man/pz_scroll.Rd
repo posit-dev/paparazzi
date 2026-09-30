@@ -10,15 +10,16 @@ pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)
 \item{ctx}{A paparazzi context.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs (a union matching any of them). Scrolled into view.}
+specs (a union matching any of them). Scrolled into view. \code{NULL}
+disables the element-target mode; use \code{by} or \code{to} instead.}
 
 \item{...}{Checked empty; reserved for future use.}
 
 \item{by}{Offset in pixels, \code{c(x, y)} (or a single number for both
-axes).}
+axes). \code{NULL} disables the offset mode.}
 
 \item{to}{A direction string: the sides, the four corners, or
-\code{"center"}.}
+\code{"center"}. \code{NULL} disables the direction mode.}
 
 \item{duration}{Seconds per staged wheel scroll; \code{NULL} computes the
 time from the scroll distance and \code{cursor_speed} in \code{\link[=pz_stage]{pz_stage()}}.

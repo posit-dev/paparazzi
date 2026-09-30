@@ -8,7 +8,7 @@ pz_open(
   x,
   ...,
   wait = c("auto", "load", "shiny", "none"),
-  timeout = NULL,
+  timeout = 10,
   shiny_options = list(),
   envvars = NULL
 )
@@ -39,10 +39,11 @@ for Shiny to connect and become idle; non-Shiny pages error. \code{"none"}
 returns without waiting. An existing \code{ChromoteSession} isn't
 navigated, so only \code{"shiny"} waits there.}
 
-\item{timeout}{Session default timeout in seconds; \code{NULL} uses the package
-default (10 s). Per-call \code{timeout = NULL} means "session default".}
+\item{timeout}{Session default timeout in seconds; defaults to 10.
+Per-call \code{timeout = NULL} in waits and expectations uses this default.}
 
-\item{shiny_options, envvars}{Passed to \code{\link[=pz_app]{pz_app()}} when opening an app path.}
+\item{shiny_options, envvars}{Passed to \code{\link[=pz_app]{pz_app()}} when opening an app path.
+\code{envvars = NULL} adds no process environment overrides.}
 }
 \value{
 A \code{PaparazziPage} (the root context).

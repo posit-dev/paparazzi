@@ -149,7 +149,7 @@ test_that("pathless screenshots are numbered knitr figures", {
   text <- paste(
     '```{r fig-shot, echo=FALSE, fig.path="figures/", fig.cap="The page", fig.alt="Red box", out.width="50%"}',
     'page |> pz_screenshot(target = "#shot-a")',
-    'page |> pz_screenshot(target = "#shot-b")',
+    'page |> pz_screenshot(path = NULL, target = "#shot-b")',
     '```',
     sep = "\n"
   )
@@ -335,6 +335,7 @@ test_that("a missing screenshot path still errors in noninteractive scripts", {
   page <- local_screenshot_page()
   rlang::local_interactive(FALSE)
   expect_error(pz_screenshot(page), "path")
+  expect_error(pz_screenshot(page, path = NULL), "path")
 })
 
 test_that("pz_screenshot validates its inputs", {
@@ -367,4 +368,18 @@ test_that("pz_screenshot raises on a detached scope", {
   ctx <- pz_find(page, "#shot-b")
   pz_js(page, "document.getElementById('shot-b').remove()")
   expect_error(pz_screenshot(ctx, path), class = "paparazzi_error_detached")
+})
+
+test_that("NULL and omitted screenshot paths both produce implicit output", {
+  page <- local_screenshot_page()
+  rlang::local_interactive()
+  omitted <- pz_screenshot(page, target = "#shot-a")
+  explicit <- pz_screenshot(page, path = NULL, target = "#shot-a")
+  withr::defer(unlink(c(unclass(omitted), unclass(explicit))))
+  expect_s3_class(omitted, "paparazzi_preview")
+  expect_s3_class(explicit, "paparazzi_preview")
+  expect_identical(
+    readBin(omitted, "raw", file.info(omitted)$size),
+    readBin(explicit, "raw", file.info(explicit)$size)
+  )
 })

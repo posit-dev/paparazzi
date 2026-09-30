@@ -27,16 +27,17 @@ pz_device(
 \item{width, height}{Viewport size in CSS pixels. Only the supplied
 one changes; the other keeps its current value.}
 
-\item{scale}{Device scale factor. Defaults to 2 when an override is
-applied and no \code{scale} was supplied.}
+\item{scale}{Device scale factor. \code{NULL} retains the stored value, or
+uses 2 when applying the first override.}
 
 \item{mobile}{Emulate a mobile device (touch input, mobile viewport
-semantics)?}
+semantics)? \code{NULL} retains the stored value, or uses \code{FALSE} when unset.}
 
 \item{zoom}{Zoom factor; \code{1} disables zoom.}
 
-\item{zoom_method}{\code{"viewport"} (default) or \code{"css"}; see above. Used
-when a \code{zoom} is (or later becomes) active.}
+\item{zoom_method}{\code{"viewport"} or \code{"css"}; see above. \code{NULL} retains the
+stored method, or uses \code{"viewport"} when unset. Used when a \code{zoom} is
+(or later becomes) active.}
 
 \item{color_scheme}{\code{"light"} or \code{"dark"} for
 \code{prefers-color-scheme}.}

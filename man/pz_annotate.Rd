@@ -10,8 +10,8 @@ pz_annotate(
   ...,
   type = "box",
   label = NULL,
-  pad = NULL,
-  reveal = NULL,
+  pad = 0,
+  reveal = c("auto", "fade", "draw", "pop", "slide", "wipe", "none"),
   id = NULL,
   color = NULL,
   font_family = NULL,
@@ -30,17 +30,19 @@ pz_annotate(
 stroke), or \code{"highlight"} (translucent fill blended over the page).}
 
 \item{label}{Optional badge. \code{TRUE} numbers the matches 1, 2, ...;
-one string or number repeats on each match.}
+one string or number repeats on each match. \code{NULL} omits the badge.}
 
 \item{pad}{Extra CSS pixels around each element: one number or
-\code{c(top, right, bottom, left)}. \code{NULL} uses zero.}
+\code{c(top, right, bottom, left)}. Defaults to zero.}
 
-\item{reveal}{\code{"fade"}, \code{"draw"}, \code{"pop"}, \code{"slide"}, \code{"wipe"}, or
-\code{"none"}. \code{NULL} uses fade for boxes and draw for the other types.
+\item{reveal}{\code{"auto"} (the default) uses \code{"fade"} for boxes and \code{"draw"}
+for other types. Other choices are \code{"fade"}, \code{"draw"}, \code{"pop"}, \code{"slide"},
+\code{"wipe"}, or \code{"none"}.
 Reveals animate only during an active, unpaused recording; clearing
 reverses the reveal. Wipe sweeps clockwise from 12 o'clock.}
 
 \item{id}{Optional nonempty id. Reusing it replaces its annotations;
+\code{NULL} generates a unique id, so calls accumulate annotations.
 \code{"spotlight"} and \code{"caption"} are reserved for other types.}
 
 \item{color}{CSS color for the outline and badge, or \code{NULL} for the

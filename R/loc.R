@@ -14,14 +14,17 @@
 #' @param css A CSS selector string.
 #' @inheritParams pz_click
 #' @param has_text Substring the element's text content must contain.
-#'   Case-sensitive; whitespace collapses on both sides, so
+#'   `NULL` omits text filtering. Case-sensitive; whitespace collapses on
+#'   both sides, so
 #'   `has_text = "Save now"` matches text reading "Save   now".
 #' @param which Pick one match by position: `"first"`, `"last"`, or a
 #'   1-based positive integer. Applied after `css` and `has_text`
 #'   filtering; an out-of-range position means *no* match, not an error.
+#'   `NULL` keeps all matches.
 #' @param within Only match descendants of elements matching this spec
 #'   (a string or [pz_loc()], itself fully qualified). If `within`
-#'   matches nothing, the whole spec matches nothing.
+#'   matches nothing, the whole spec matches nothing. `NULL` omits the
+#'   ancestor qualifier.
 #'
 #' @return An S3 object of class `paparazzi_loc`.
 #' @examples

@@ -4,7 +4,14 @@
 \alias{pz_cursor_move}
 \title{Move the overlay cursor to an element}
 \usage{
-pz_cursor_move(ctx, target, ..., duration = NULL, icon = NULL, offset = NULL)
+pz_cursor_move(
+  ctx,
+  target,
+  ...,
+  duration = NULL,
+  icon = NULL,
+  offset = c(0, 0)
+)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -39,7 +46,7 @@ last icon.}
 
 \item{offset}{Landing offset in viewport CSS pixels, \code{c(x, y)} with
 positive x to the right and positive y downward. A single number is
-recycled to both axes; \code{NULL} (the default) means no offset. It applies
+recycled to both axes; the default \code{c(0, 0)} adds no offset. It applies
 only to this call and only to the drawn overlay, not to page pointer
 events. The cursor may land outside the viewport without clamping.}
 }

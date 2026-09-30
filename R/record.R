@@ -58,13 +58,12 @@
 #'
 #' @inheritParams pz_click
 #' @param path Output file path; the extension (`.mp4`, `.webm`, or
-#'   `.gif`) selects the format. An existing file is overwritten. If
-#'   omitted while knitting, a numbered file in the chunk's figure
-#'   directory is used and the recording appears in the document. If
-#'   omitted in an interactive session, a temporary file is used and the
-#'   recording is shown in the viewer when it stops. Otherwise a path is
-#'   required.
-#' @param format The format when `path` is omitted: `"auto"` (the
+#'   `.gif`) selects the format. An existing file is overwritten. With
+#'   `NULL` (the default) while knitting, a numbered file in the chunk's
+#'   figure directory is used and the recording appears in the document;
+#'   in an interactive session, a temporary file is used and shown in the
+#'   viewer when recording stops. A path is required otherwise.
+#' @param format The format when `path` is `NULL`: `"auto"` (the
 #'   default) records MP4, or GIF when knitting to a non-HTML format,
 #'   where video can only be linked. With a `path`, the extension decides
 #'   and `format` must be `"auto"`.
@@ -80,8 +79,8 @@
 #' @param fps Frames per second in the finished recording. Poll aims
 #'   to capture at this rate; screencast capture depends on visual
 #'   changes.
-#' @param scale Output size: `NULL` (the default) keeps the captured
-#'   size; a number up to 4 is a scale factor; a larger number is the
+#' @param scale Output size: `NULL` (the default) disables resizing, keeping
+#'   the captured size; a number up to 4 is a scale factor; a larger number is the
 #'   output width in pixels (height scales proportionally).
 #' @param hold Seconds to hold the first and last frame,
 #'   `c(first, last)`.
@@ -125,7 +124,7 @@
 #' @export
 pz_record_start <- function(
   ctx,
-  path,
+  path = NULL,
   ...,
   method = c("poll", "screencast"),
   frame = NULL,
@@ -139,12 +138,12 @@ pz_record_start <- function(
   check_context(ctx)
   check_dots_empty()
   format <- arg_match(format)
-  implicit <- missing(path)
+  implicit <- is.null(path)
   if (implicit) {
     path <- record_implicit_path(format)
   } else if (format != "auto") {
     cli::cli_abort(
-      "Supply {.arg format} only when {.arg path} is omitted; the extension of {.arg path} sets the format.",
+      "Supply {.arg format} only when {.arg path} is {.val NULL}; the extension of {.arg path} sets the format.",
       class = "paparazzi_error_input"
     )
   }
@@ -457,7 +456,7 @@ pz_record_hold <- function(ctx, seconds) {
 #' including on error, so a failed run still produces the video up to
 #' the failure. Returns what [pz_record_stop()] returns, never the block's
 #' value: `ctx` invisibly when a path was given outside knitting, media
-#' while knitting, or a viewer preview when the path is omitted in an
+#' while knitting, or a viewer preview when the path is `NULL` in an
 #' interactive session. Write `pz_record(code = { ... })` to omit the
 #' path.
 #'
@@ -484,7 +483,7 @@ pz_record_hold <- function(ctx, seconds) {
 #' pz_close(page)
 #'
 #' @export
-pz_record <- function(ctx, path, code, ...) {
+pz_record <- function(ctx, path = NULL, code, ...) {
   check_context(ctx)
   expr <- substitute(code)
   env <- parent.frame()

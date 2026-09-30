@@ -10,11 +10,11 @@
 #' @param text Nonempty caption text. Newlines are preserved.
 #' @param ... Checked empty.
 #' @param side `"bottom"` (the default) or `"top"`.
-#' @param color Text color. `NULL` always uses white, not the
-#'   `color` mark accent in [pz_stage_annotate()].
+#' @param color Text color; defaults to `"white"`, independent of the
+#'   staged annotation accent.
 #' @param font_family CSS font family. `NULL` uses the page's
 #'   `font_family` setting in [pz_stage_annotate()] (initially sans-serif).
-#' @param font_size Font size in CSS pixels. `NULL` uses 20, independent
+#' @param font_size Font size in CSS pixels; defaults to 20, independent
 #'   of the annotation badge size. Captions scale with the output.
 #' @return `ctx`, invisibly.
 #' @seealso [pz_annotate_clear()], [pz_record_start()], [pz_screenshot()]
@@ -24,21 +24,17 @@ pz_annotate_caption <- function(
   text,
   ...,
   side = "bottom",
-  color = NULL,
+  color = "white",
   font_family = NULL,
-  font_size = NULL
+  font_size = 20
 ) {
   check_context(ctx)
   check_dots_empty()
   check_string(text, allow_empty = FALSE)
   side <- arg_match(side, c("bottom", "top"))
-  style <- annotate_style(
-    ctx,
-    color,
-    font_family,
-    font_size,
-    defaults = list(color = "white", font_size = 20)
-  )
+  check_string(color, allow_empty = FALSE)
+  check_annotation_font_size(font_size)
+  style <- annotate_style(ctx, color, font_family, font_size)
   rec <- page_recorder(ctx$page)
   if (!is.null(rec) && rec$active && rec$format == "gif") {
     rlang::check_installed(

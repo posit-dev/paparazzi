@@ -18,14 +18,15 @@
 #'   (anything [shiny::runApp()] accepts as a path).
 #' @param ... Reserved; must be empty.
 #' @param envvars Named character vector of environment variables set in
-#'   the app process, on top of the inherited environment.
+#'   the app process, on top of the inherited environment. `NULL` adds no
+#'   environment overrides.
 #' @param shiny_options Additional options for [shiny::runApp()], e.g.
 #'   `list(test.mode = TRUE)`. `appDir` is reserved; use `app_dir` to select
 #'   the app. `host` and `port` are managed by paparazzi: `host` defaults
 #'   to `"127.0.0.1"`, and `port` (default `NULL`) picks a random free port.
 #'   If startup fails because the port was taken, a new port is tried.
 #' @param timeout Seconds to wait for the app to start listening;
-#'   `NULL` allows 10 seconds.
+#'   defaults to 10.
 #'
 #' @return A `PaparazziApp` handle with public fields `url` and `port`
 #'   and methods `stop()`, `logs()`, and `is_running()`.
@@ -52,7 +53,7 @@ pz_app <- function(
   ...,
   envvars = NULL,
   shiny_options = list(),
-  timeout = NULL
+  timeout = 10
 ) {
   check_dots_empty()
   if (!is_string(app_dir)) {
@@ -74,8 +75,7 @@ pz_app <- function(
       class = "paparazzi_error_input"
     )
   }
-  check_number_decimal(timeout, min = 0, allow_null = TRUE)
-  timeout <- timeout %||% 10
+  check_number_decimal(timeout, min = 0)
   rlang::check_installed("shiny", reason = "to run a Shiny app.")
 
   if (is_file_app(app_dir)) {

@@ -9,7 +9,7 @@ pz_camera(
   target = NULL,
   ...,
   zoom = NULL,
-  pad = NULL,
+  pad = 24,
   duration = NULL,
   target_box = c("element", "annotated"),
   wait = FALSE

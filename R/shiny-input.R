@@ -11,7 +11,7 @@
 #' @param value Value accepted by the binding's `setValue()`. Date ranges
 #'   accept `c(start, end)` or `list(start = ..., end = ...)`, with ISO date
 #'   strings. Date-valued sliders accept ISO date strings, converted to
-#'   JavaScript timestamps.
+#'   JavaScript timestamps. Top-level `NULL` and atomic `NA` are rejected.
 #' @param wait If `TRUE`, call [pz_wait_for_shiny_idle()] after the change.
 #'   If `FALSE`, return immediately after dispatching the change.
 #' @return `ctx`, invisibly.
