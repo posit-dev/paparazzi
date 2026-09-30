@@ -226,6 +226,19 @@ test_that("inspect screenshots are sent directly to the configured viewer", {
   expect_match(got$msgs[[1]], "Annotated screenshot")
 })
 
+test_that("inspect screenshots skip the viewer outside interactive sessions", {
+  path <- withr::local_tempfile(fileext = ".png", tmpdir = getwd())
+  writeBin(as.raw(1:4), path)
+  called <- FALSE
+  withr::local_options(viewer = function(x) called <<- TRUE)
+  rlang::local_interactive(FALSE)
+
+  got <- inspect_capture(function() inspect_show(path))
+
+  expect_false(called)
+  expect_match(got$msgs[[1]], "Annotated screenshot")
+})
+
 test_that("outlines drawn into the page never appear in pz_screenshot", {
   page <- local_inspect_page()
   # Draw outlines over #insp-plain and leave them, as show = "browser" does.
