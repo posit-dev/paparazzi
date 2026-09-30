@@ -25,8 +25,9 @@
 #' @param scale Device scale factor: how many screen pixels each CSS pixel
 #'   covers. `NULL` keeps the current value. Until you set it, the page
 #'   renders at the browser's own scale (1), but once you set `width`,
-#'   `height`, `mobile`, or `zoom` (with the default `zoom_method`), it
-#'   switches to 2 for sharp, retina-quality captures.
+#'   `height`, or `mobile`, it switches to 2 for sharp, retina-quality
+#'   captures. Zooming with the default `zoom_method` multiplies the scale
+#'   by `zoom`.
 #' @param mobile Emulate a mobile device (touch input, mobile viewport
 #'   semantics)? `NULL` retains the stored value, or uses `FALSE` when unset.
 #' @param zoom Zoom factor; `1` disables zoom.

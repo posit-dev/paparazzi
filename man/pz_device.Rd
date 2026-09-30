@@ -30,8 +30,9 @@ one changes; the other keeps its current value.}
 \item{scale}{Device scale factor: how many screen pixels each CSS pixel
 covers. \code{NULL} keeps the current value. Until you set it, the page
 renders at the browser's own scale (1), but once you set \code{width},
-\code{height}, \code{mobile}, or \code{zoom} (with the default \code{zoom_method}), it
-switches to 2 for sharp, retina-quality captures.}
+\code{height}, or \code{mobile}, it switches to 2 for sharp, retina-quality
+captures. Zooming with the default \code{zoom_method} multiplies the scale
+by \code{zoom}.}
 
 \item{mobile}{Emulate a mobile device (touch input, mobile viewport
 semantics)? \code{NULL} retains the stored value, or uses \code{FALSE} when unset.}
