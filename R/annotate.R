@@ -26,8 +26,14 @@ NULL
 #' @param id Optional nonempty id. Reusing it replaces its annotations;
 #'   `NULL` generates a unique id, so calls accumulate annotations.
 #'   `"spotlight"` and `"caption"` are reserved for other types.
-#' @param color CSS color for the outline and badge, or `NULL` for the
+#' @param color CSS accent color for the mark outline, or `NULL` for the
 #'   page default from [pz_stage_annotate()].
+#' @param label_fill,label_text_color CSS colors for the badge background
+#'   and text. `NULL` (the default) fills the badge with the mark's `color`
+#'   and uses white text. The `fill` and `text_color` set by
+#'   [pz_stage_annotate()] style callouts, not mark badges.
+#' @param stroke_width Mark stroke width in CSS pixels, or `NULL` for the
+#'   staged `stroke_width` from [pz_stage_annotate()].
 #' @param font_family CSS font family for the badge, or `NULL` for the
 #'   page default.
 #' @param font_size Badge font size in CSS pixels, or `NULL` for the page
@@ -46,6 +52,9 @@ pz_annotate <- function(
   reveal = c("auto", "fade", "draw", "pop", "slide", "wipe", "none"),
   id = NULL,
   color = NULL,
+  label_fill = NULL,
+  label_text_color = NULL,
+  stroke_width = NULL,
   font_family = NULL,
   font_size = NULL
 ) {
@@ -61,6 +70,13 @@ pz_annotate <- function(
   label <- check_annotation_label(label)
   pad <- check_pad(pad, arg = "pad")
   style <- annotate_style(ctx, color, font_family, font_size)
+  if (!is.null(label_fill)) {
+    check_string(label_fill, allow_empty = FALSE)
+  }
+  if (!is.null(label_text_color)) {
+    check_string(label_text_color, allow_empty = FALSE)
+  }
+  stroke_width <- annotate_stroke_width(ctx, stroke_width)
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)
@@ -70,6 +86,9 @@ pz_annotate <- function(
     pad = unname(pad),
     label = label,
     color = style$color,
+    labelFill = label_fill %||% style$color,
+    labelTextColor = label_text_color %||% "white",
+    strokeWidth = stroke_width,
     fontFamily = style$font_family,
     fontSize = style$font_size,
     reveal = reveal,
@@ -197,6 +216,51 @@ annotate_style <- function(
   check_string(font_family, allow_empty = FALSE, call = call)
   check_annotation_font_size(font_size, call = call)
   list(color = color, font_family = font_family, font_size = font_size)
+}
+
+# Bubble and badge surfaces: per-call fill/text_color win, then the staged
+# defaults, then the built-ins in STAGE_DEFAULTS.
+annotate_fill_style <- function(
+  ctx,
+  fill,
+  text_color,
+  fill_arg = "fill",
+  text_color_arg = "text_color",
+  call = caller_env()
+) {
+  stage <- page_stage(ctx$page)
+  fill <- fill %||% stage$annotate_fill
+  text_color <- text_color %||% stage$annotate_text_color
+  check_string(fill, allow_empty = FALSE, arg = fill_arg, call = call)
+  check_string(
+    text_color,
+    allow_empty = FALSE,
+    arg = text_color_arg,
+    call = call
+  )
+  list(fill = fill, text_color = text_color)
+}
+
+annotate_stroke_width <- function(ctx, stroke_width, call = caller_env()) {
+  stroke_width <- stroke_width %||% page_stage(ctx$page)$annotate_stroke_width
+  check_positive_css_px(stroke_width, arg = "stroke_width", call = call)
+  stroke_width
+}
+
+# Unset, a callout with a leader stands off far enough for the line to
+# read as an arrow; a leaderless tooltip hugs its target.
+annotate_distance <- function(ctx, distance, leader, call = caller_env()) {
+  distance <- distance %||%
+    page_stage(ctx$page)$annotate_distance %||%
+    if (isFALSE(leader)) 8 else 24
+  check_number_decimal(
+    distance,
+    min = 0,
+    allow_infinite = FALSE,
+    arg = "distance",
+    call = call
+  )
+  distance
 }
 
 # Calls a layer entry point with the resolved elements as `this`, booting

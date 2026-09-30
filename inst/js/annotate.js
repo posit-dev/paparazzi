@@ -11,7 +11,6 @@ function(root) {
   let next = 0;
   const durations = {none:0, fade:250, draw:350, pop:250, slide:300, wipe:400};
   const svgNS = 'http://www.w3.org/2000/svg';
-  const calloutStrokeWidth = 2;
   const keys = (reveal, path) => {
     switch (reveal) {
       case 'fade': return [{opacity:0},{opacity:1}];
@@ -28,7 +27,36 @@ function(root) {
     }
     return [];
   };
+  // Draw reveal for a callout with a leader: the bubble fades in while the
+  // shaft draws via dashoffset, then the decorations appear. Clearing
+  // reverses: decorations hide at once, the shaft undraws, the node leaves.
+  const startLeaderDraw = (node, entering) => {
+    const svg = node.querySelector('svg');
+    const shaft = svg.querySelector('.pz-shaft');
+    const decos = svg.querySelectorAll('.pz-deco-start, .pz-deco-end');
+    const bubble = node.querySelector('.pz-bubble');
+    decos.forEach(d => d.style.visibility = 'hidden');
+    const fade = bubble.animate(
+      entering ? [{opacity:0},{opacity:1}] : [{opacity:1},{opacity:0}],
+      {duration:durations.fade, fill:'forwards', easing:'linear'}
+    );
+    const draw = shaft.animate(
+      entering ? [{strokeDashoffset:1},{strokeDashoffset:0}] :
+        [{strokeDashoffset:0},{strokeDashoffset:1}],
+      {duration:durations.draw, fill:'forwards', easing:'linear'}
+    );
+    if (entering) draw.onfinish = () => {
+      decos.forEach(d => d.style.visibility = '');
+      fade.cancel();
+      draw.cancel();
+    };
+    else draw.onfinish = () => node.remove();
+  };
   const start = (node, reveal, entering, shape) => {
+    if (reveal === 'draw' && node.classList.contains('pz-callout') &&
+        node.querySelector('svg')) {
+      return startLeaderDraw(node, entering);
+    }
     const target = reveal === 'draw' ? (shape.tagName === 'svg' ? shape.firstChild : shape) :
       reveal === 'wipe' ? shape : node;
     const anim = target.animate(keys(reveal, target instanceof SVGGeometryElement), {
@@ -41,31 +69,64 @@ function(root) {
     };
     else anim.onfinish = () => node.remove();
   };
-  const stroke = kind => {
+  const stroke = (kind, sw) => {
     const svg = document.createElementNS(svgNS, 'svg');
     svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;overflow:visible;';
     const path = document.createElementNS(svgNS, kind);
     path.setAttribute('pathLength', '1');
-    path.style.cssText = 'fill:none;stroke:currentColor;stroke-width:3;vector-effect:non-scaling-stroke;stroke-dasharray:1;';
+    path.style.cssText = `fill:none;stroke:currentColor;stroke-width:${sw};vector-effect:non-scaling-stroke;stroke-dasharray:1;`;
     svg.appendChild(path);
     return svg;
   };
   const clamp = (x, lo, hi) => Math.min(Math.max(x, lo), hi);
+  // Lays out one leader decoration at anchor (px,py), pointing along the
+  // unit vector (dx,dy) from the shaft toward the anchor, and returns how
+  // much shaft length it consumes (the shaft stops at the decoration's
+  // base). avail caps the decoration's size on short leaders.
+  const layoutDecoration = (el, kind, px, py, dx, dy, sw, avail) => {
+    if (kind === 'arrow') {
+      const length = Math.min(5 * sw, avail);
+      const halfWidth = length / 2;
+      el.setAttribute('points', [
+        [px, py],
+        [px - dx * length - dy * halfWidth,
+         py - dy * length + dx * halfWidth],
+        [px - dx * length + dy * halfWidth,
+         py - dy * length - dx * halfWidth]
+      ].map(p => p.join(',')).join(' '));
+      return length;
+    }
+    if (kind === 'dot') {
+      const r = Math.min(1.5 * sw, avail);
+      el.setAttribute('cx', px);
+      el.setAttribute('cy', py);
+      el.setAttribute('r', r);
+      return r;
+    }
+    // bar: a perpendicular tick centered on the anchor
+    const halfLength = Math.min(2.5 * sw, avail);
+    el.setAttribute('x1', px - dy * halfLength);
+    el.setAttribute('y1', py + dx * halfLength);
+    el.setAttribute('x2', px + dy * halfLength);
+    el.setAttribute('y2', py - dx * halfLength);
+    return Math.min(sw / 2, avail);
+  };
   const positionCallout = (entry, i, r) => {
     const box = entry.nodes[i];
     const {width:w, height:h, side} = entry.places[i];
-    const gap = 8;
+    const gap = entry.distance;
     const x = side.includes('left') ? r.left - w - gap :
       side.includes('right') ? r.right + gap : r.left + (r.width - w) / 2;
     const y = side.includes('top') ? r.top - h - gap :
       side.includes('bottom') ? r.bottom + gap : r.top + (r.height - h) / 2;
-    const insetX = Math.min(gap, innerWidth / 2);
-    const insetY = Math.min(gap, innerHeight / 2);
+    // The viewport clamp keeps its fixed 8px inset, independent of distance.
+    const insetX = Math.min(8, innerWidth / 2);
+    const insetY = Math.min(8, innerHeight / 2);
     const left = clamp(x, insetX, Math.max(insetX, innerWidth - insetX - w));
     const top = clamp(y, insetY, Math.max(insetY, innerHeight - insetY - h));
     box.style.left = left + 'px';
     box.style.top = top + 'px';
-    if (!entry.arrow) return;
+    if (entry.leader === false) return;
     const svg = box.querySelector('svg');
     if (left < r.right && left + w > r.left && top < r.bottom && top + h > r.top) {
       svg.style.display = 'none';
@@ -83,20 +144,23 @@ function(root) {
     const dx = tx - bx, dy = ty - by;
     const length = Math.hypot(dx, dy) || 1;
     const ux = dx / length, uy = dy / length;
-    const headLength = Math.min(5 * calloutStrokeWidth, length * 0.9);
-    const headWidth = headLength / 2;
-    const line = svg.firstChild;
-    line.setAttribute('x1', bx - left);
-    line.setAttribute('y1', by - top);
-    line.setAttribute('x2', tx - left - ux * headLength);
-    line.setAttribute('y2', ty - top - uy * headLength);
-    svg.lastChild.setAttribute('points', [
-      [tx - left, ty - top],
-      [tx - left - ux * headLength - uy * headWidth,
-       ty - top - uy * headLength + ux * headWidth],
-      [tx - left - ux * headLength + uy * headWidth,
-       ty - top - uy * headLength - ux * headWidth]
-    ].map(p => p.join(',')).join(' '));
+    const sw = entry.strokeWidth;
+    const both = entry.leader.start !== 'none' && entry.leader.end !== 'none';
+    const avail = length * (both ? 0.45 : 0.9);
+    const shaft = svg.children[0];
+    let consumedStart = 0, consumedEnd = 0, k = 1;
+    if (entry.leader.start !== 'none') {
+      consumedStart = layoutDecoration(svg.children[k++], entry.leader.start,
+        bx - left, by - top, -ux, -uy, sw, avail);
+    }
+    if (entry.leader.end !== 'none') {
+      consumedEnd = layoutDecoration(svg.children[k], entry.leader.end,
+        tx - left, ty - top, ux, uy, sw, avail);
+    }
+    shaft.setAttribute('x1', bx - left + ux * consumedStart);
+    shaft.setAttribute('y1', by - top + uy * consumedStart);
+    shaft.setAttribute('x2', tx - left - ux * consumedEnd);
+    shaft.setAttribute('y2', ty - top - uy * consumedEnd);
   };
   const sync = () => {
     if (!entries.size) return;
@@ -218,19 +282,20 @@ function(root) {
         if (entry.kind === 'circle' || (entry.kind === 'box' && entry.reveal === 'draw')) {
           const svg = box.querySelector('svg');
           const path = svg.firstChild;
+          const sw = entry.strokeWidth;
           svg.setAttribute('viewBox', `0 0 ${Math.max(w, 1)} ${Math.max(h, 1)}`);
           if (entry.kind === 'circle') {
             path.setAttribute('cx', w / 2);
             path.setAttribute('cy', h / 2);
-            path.setAttribute('rx', Math.max(0, (w - 3) / 2));
-            path.setAttribute('ry', Math.max(0, (h - 3) / 2));
+            path.setAttribute('rx', Math.max(0, (w - sw) / 2));
+            path.setAttribute('ry', Math.max(0, (h - sw) / 2));
           } else {
-            path.setAttribute('x', 1.5);
-            path.setAttribute('y', 1.5);
+            path.setAttribute('x', sw / 2);
+            path.setAttribute('y', sw / 2);
             path.setAttribute('rx', 3.5);
             path.setAttribute('ry', 3.5);
-            path.setAttribute('width', Math.max(0, w - 3));
-            path.setAttribute('height', Math.max(0, h - 3));
+            path.setAttribute('width', Math.max(0, w - sw));
+            path.setAttribute('height', Math.max(0, h - sw));
           }
         }
       });
@@ -284,7 +349,7 @@ function(root) {
         const r = entry.elements[i].getBoundingClientRect();
         const room = [r.top, innerWidth - r.right, innerHeight - r.bottom, r.left];
         const need = [height, width, height, width];
-        const fits = room.map((n, j) => n >= need[j] + 8);
+        const fits = room.map((n, j) => n >= need[j] + opts.distance);
         const indices = fits.some(Boolean) ? [0, 1, 2, 3].filter(j => fits[j]) : [0, 1, 2, 3];
         const best = indices.reduce((a, b) => room[b] > room[a] ? b : a);
         side = [['top'], ['right'], ['bottom'], ['left']][best];
@@ -333,14 +398,15 @@ function(root) {
             include(node.querySelector('.pz-bubble').getBoundingClientRect());
             const svg = node.querySelector('svg');
             if (svg && svg.style.display !== 'none') {
-              const line = svg.firstChild;
-              include(line.getBoundingClientRect(), calloutStrokeWidth / 2);
-              include(svg.lastChild.getBoundingClientRect());
+              for (const child of svg.children) {
+                include(child.getBoundingClientRect(), entry.strokeWidth / 2);
+              }
             }
           } else {
             const shape = node.querySelector('.pz-shape');
             const svg = shape.tagName.toLowerCase() === 'svg';
-            include((svg ? shape.firstChild : shape).getBoundingClientRect(), svg ? 1.5 : 0);
+            include((svg ? shape.firstChild : shape).getBoundingClientRect(),
+              svg ? entry.strokeWidth / 2 : 0);
           }
           const badge = node.querySelector('span');
           if (badge) include(badge.getBoundingClientRect());
@@ -397,18 +463,18 @@ function(root) {
         let shape = box;
         if (opts.type === 'box') {
           if (opts.reveal === 'draw') {
-            shape = stroke('rect');
+            shape = stroke('rect', opts.strokeWidth);
             shape.classList.add('pz-shape');
             box.appendChild(shape);
           } else {
             shape = document.createElement('div');
             shape.className = 'pz-shape';
-            shape.style.cssText = 'position:absolute;inset:0;box-sizing:border-box;border:3px solid;border-radius:5px;';
+            shape.style.cssText = `position:absolute;inset:0;box-sizing:border-box;border:${opts.strokeWidth}px solid;border-radius:5px;`;
             shape.style.borderColor = opts.color;
             box.appendChild(shape);
           }
         } else if (opts.type === 'circle') {
-          shape = stroke('ellipse');
+          shape = stroke('ellipse', opts.strokeWidth);
           shape.classList.add('pz-shape');
           box.appendChild(shape);
         } else {
@@ -416,7 +482,7 @@ function(root) {
           shape.className = 'pz-shape';
           shape.style.cssText = 'position:absolute;left:0;width:100%;transform-origin:left center;';
           if (opts.type === 'underline') {
-            shape.style.cssText += 'height:3px;bottom:2px;background:currentColor;';
+            shape.style.cssText += `height:${opts.strokeWidth}px;bottom:2px;background:currentColor;`;
           } else {
             shape.style.cssText += 'top:0;height:100%;background:currentColor;opacity:.35;mix-blend-mode:multiply;';
           }
@@ -425,8 +491,9 @@ function(root) {
         if (opts.label !== null) {
           const badge = document.createElement('span');
           badge.textContent = opts.label === true ? String(i + 1) : String(opts.label);
-          badge.style.cssText = 'position:absolute;left:0;top:0;transform:translateY(-100%);padding:2px 5px;color:white;border-radius:3px;line-height:1.2;';
-          badge.style.backgroundColor = opts.color;
+          badge.style.cssText = 'position:absolute;left:0;top:0;transform:translateY(-100%);padding:2px 5px;border-radius:3px;line-height:1.2;';
+          badge.style.backgroundColor = opts.labelFill;
+          badge.style.color = opts.labelTextColor;
           badge.style.fontFamily = opts.fontFamily;
           badge.style.fontSize = opts.fontSize + 'px';
           box.appendChild(badge);
@@ -434,7 +501,8 @@ function(root) {
         return box;
       });
       return register(opts.id, {elements:[...elements], pad:opts.pad,
-        reveal:opts.reveal, kind:opts.type}, nodes, opts).duration;
+        reveal:opts.reveal, kind:opts.type, strokeWidth:opts.strokeWidth},
+        nodes, opts).duration;
     },
     callout: (elements, opts) => {
       const nodes = elements.map((el, i) => {
@@ -447,7 +515,9 @@ function(root) {
         const bubble = document.createElement('div');
         bubble.className = 'pz-bubble';
         bubble.textContent = opts.text;
-        bubble.style.cssText = 'box-sizing:border-box;width:max-content;white-space:normal;overflow-wrap:anywhere;overflow:hidden;background:#171717;color:white;border:2px solid;border-radius:8px;line-height:1.35;padding:8px 12px;';
+        bubble.style.cssText = 'box-sizing:border-box;width:max-content;white-space:normal;overflow-wrap:anywhere;overflow:hidden;border:2px solid;border-radius:8px;line-height:1.35;padding:8px 12px;';
+        bubble.style.backgroundColor = opts.fill;
+        bubble.style.color = opts.textColor;
         bubble.style.borderColor = opts.color;
         bubble.style.fontFamily = opts.fontFamily;
         bubble.style.fontSize = opts.fontSize + 'px';
@@ -455,22 +525,35 @@ function(root) {
         bubble.style.maxHeight = Math.max(1, innerHeight - 16) + 'px';
         if (opts.label !== null) bubble.style.paddingTop = (opts.fontSize * 1.2 + 14) + 'px';
         shape.appendChild(bubble);
-        if (opts.arrow) {
+        if (opts.leader !== false) {
           const svg = document.createElementNS(svgNS, 'svg');
           svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;overflow:visible;color:inherit;';
-          const line = document.createElementNS(svgNS, 'line');
-          line.style.cssText = `stroke:currentColor;stroke-width:${calloutStrokeWidth};stroke-linecap:butt;`;
-          const head = document.createElementNS(svgNS, 'polygon');
-          head.style.cssText = 'fill:currentColor;';
           svg.style.color = opts.color;
-          svg.append(line, head);
+          const shaft = document.createElementNS(svgNS, 'line');
+          shaft.classList.add('pz-shaft');
+          shaft.setAttribute('pathLength', '1');
+          shaft.style.cssText = `stroke:currentColor;stroke-width:${opts.strokeWidth};stroke-linecap:butt;stroke-dasharray:1;`;
+          svg.appendChild(shaft);
+          for (const end of ['start', 'end']) {
+            const kind = opts.leader[end];
+            if (kind === 'none') continue;
+            const deco = document.createElementNS(svgNS,
+              kind === 'arrow' ? 'polygon' : kind === 'dot' ? 'circle' : 'line');
+            deco.classList.add('pz-deco-' + end);
+            deco.style.cssText = kind === 'bar' ?
+              `stroke:currentColor;stroke-width:${opts.strokeWidth};fill:none;` :
+              'fill:currentColor;';
+            svg.appendChild(deco);
+          }
           shape.appendChild(svg);
         }
         box.appendChild(shape);
         if (opts.label !== null) {
           const badge = document.createElement('span');
           badge.textContent = opts.label === true ? String(i + 1) : String(opts.label);
-          badge.style.cssText = 'position:absolute;top:5px;left:6px;box-sizing:border-box;max-width:calc(100% - 8px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 5px;background:#171717;color:white;border:1px solid;border-radius:4px;line-height:1.2;';
+          badge.style.cssText = 'position:absolute;top:5px;left:6px;box-sizing:border-box;max-width:calc(100% - 8px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 5px;border:1px solid;border-radius:4px;line-height:1.2;';
+          badge.style.backgroundColor = opts.fill;
+          badge.style.color = opts.textColor;
           badge.style.borderColor = opts.color;
           badge.style.fontFamily = opts.fontFamily;
           badge.style.fontSize = opts.fontSize + 'px';
@@ -479,7 +562,8 @@ function(root) {
         return box;
       });
       return register(opts.id, {elements:[...elements], kind:'callout',
-        arrow:opts.arrow, reveal:opts.reveal}, nodes, opts).duration;
+        leader:opts.leader, strokeWidth:opts.strokeWidth, distance:opts.distance,
+        reveal:opts.reveal}, nodes, opts).duration;
     },
     redact: (elements, opts) => {
       for (const el of elements) {

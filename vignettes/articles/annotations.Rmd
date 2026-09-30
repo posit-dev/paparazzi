@@ -77,7 +77,7 @@ page |> pz_annotate_clear()
 
 ### Padding, color, and fonts
 
-`pad` grows the mark beyond the element's box: one number for all sides, or `c(top, right, bottom, left)`. `color` accepts any CSS color for the outline and badge, and `font_family` and `font_size` style the badge text. All three default to the page's staged settings, which [Styling defaults] covers below.
+`pad` grows the mark beyond the element's box: one number for all sides, or `c(top, right, bottom, left)`. `color` accepts any CSS color for the outline and badge, `stroke_width` sets the outline's thickness in CSS pixels, and `font_family` and `font_size` style the badge text. The badge is filled with the mark's color and has white text; `label_fill` and `label_text_color` change that for one call. Color, stroke width, and fonts default to the page's staged settings, which [Styling defaults] covers below.
 
 ```{r pad-color, fig.alt = "The new-task form with a loose amber highlight around the title field and a blue box with a monospace A badge around the priority dropdown."}
 page |>
@@ -96,9 +96,9 @@ page |> pz_annotate_clear()
 
 ## Callouts
 
-[`pz_annotate_callout()`](../reference/pz_annotate_callout.html) draws a dark bubble with white text next to each matching element, repeating the same `text` for every match. `side` picks where the bubble goes: a cardinal side (`"top"`, `"right"`, `"bottom"`, `"left"`) or a diagonal like `"top right"`. The default, `NULL`, chooses the cardinal side with the most room. A bubble is kept inside the viewport even if that moves it off the requested side.
+[`pz_annotate_callout()`](../reference/pz_annotate_callout.html) draws a bubble next to each matching element, repeating the same `text` for every match. `side` picks where the bubble goes: a cardinal side (`"top"`, `"right"`, `"bottom"`, `"left"`) or a diagonal like `"top right"`. The default, `NULL`, chooses the cardinal side with the most room. A bubble is kept inside the viewport even if that moves it off the requested side.
 
-`arrow = FALSE` drops the arrow for a tooltip-style bubble, and `label` adds a badge just like on marks.
+A leader line runs from the bubble to the element, with an arrow at the element's end. `leader = FALSE` drops the line for a tooltip-style bubble, and `label` adds a badge just like on marks.
 
 ```{r callouts, fig.alt = "The new-task form with a numbered callout above the title field pointing down at it, and a tooltip-style callout without an arrow below the priority dropdown."}
 page |>
@@ -112,7 +112,7 @@ page |>
     "Priority is optional",
     target = "#task-priority",
     side = "bottom",
-    arrow = FALSE
+    leader = FALSE
   )
 page |>
   pz_screenshot(
@@ -122,6 +122,30 @@ page |> pz_annotate_clear()
 ```
 
 The frame's `target_box = "annotated"` keeps the crop wide enough to include the bubbles; [Framing stills] explains what that does.
+
+### Leaders and bubble colors
+
+`leader` also takes a decoration for each end of the line: `start` is the bubble's end and `end` is the element's. Each can be `"none"`, `"arrow"`, `"dot"`, or `"bar"`, and an end you leave out gets `"none"`. `distance` sets the gap between the bubble and the element in CSS pixels (24 by default, or 8 for a bubble without a line), and `stroke_width` sets the line's thickness, which also sizes the decorations.
+
+The bubble is dark with white text unless you say otherwise. `fill` and `text_color` change the bubble's background and text, while `color` still sets its border and the line:
+
+```{r callout-styles, fig.alt = "The new-task form with a pale yellow callout below the Add button, joined to it by a long line with a dot at the bubble and an arrow at the button."}
+page |>
+  pz_annotate_callout(
+    "Add it to the list",
+    target = "#add-task",
+    side = "bottom",
+    leader = c(start = "dot", end = "arrow"),
+    distance = 40,
+    fill = "#fef3c7",
+    text_color = "#171717"
+  )
+page |>
+  pz_screenshot(
+    frame = pz_frame("#new-task", pad = 12, target_box = "annotated")
+  )
+page |> pz_annotate_clear()
+```
 
 ## Spotlight
 
@@ -201,7 +225,7 @@ Only the circle remains: the second `id = "mark"` call replaced the box. During 
 
 ## Styling defaults
 
-Every annotation defaults to the page's staged color, font family, and badge size. Change them for all later annotations with [`pz_stage_annotate()`](../reference/pz_stage_annotate.html), and pass `NULL` to restore a default (crimson `#e11d48`, sans-serif, 14 CSS pixels):
+Every annotation defaults to the page's staged color, stroke width, font family, and badge size, and every callout to the staged bubble colors and distance. Change them for all later annotations with [`pz_stage_annotate()`](../reference/pz_stage_annotate.html), and pass `NULL` to restore a default (crimson `#e11d48`, 3 pixel lines, sans-serif, 14 pixel text, and callouts with white text on `#171717`, 24 pixels away or 8 without a line):
 
 ```{r stage-style, fig.alt = "The Add button boxed in blue with a large monospace A badge."}
 page |>
@@ -227,7 +251,7 @@ page |>
   )
 ```
 
-Per-call `color`, `font_family`, and `font_size` override the staged values for that call.
+Per-call arguments with the same names override the staged values for that call. Mark badges are the exception: they ignore the staged `fill` and `text_color` and follow the mark's color unless you pass `label_fill` or `label_text_color`.
 
 ## Framing stills
 

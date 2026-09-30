@@ -14,6 +14,9 @@ pz_annotate(
   reveal = c("auto", "fade", "draw", "pop", "slide", "wipe", "none"),
   id = NULL,
   color = NULL,
+  label_fill = NULL,
+  label_text_color = NULL,
+  stroke_width = NULL,
   font_family = NULL,
   font_size = NULL
 )
@@ -45,8 +48,16 @@ reverses the reveal. Wipe sweeps clockwise from 12 o'clock.}
 \code{NULL} generates a unique id, so calls accumulate annotations.
 \code{"spotlight"} and \code{"caption"} are reserved for other types.}
 
-\item{color}{CSS color for the outline and badge, or \code{NULL} for the
+\item{color}{CSS accent color for the mark outline, or \code{NULL} for the
 page default from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}.}
+
+\item{label_fill, label_text_color}{CSS colors for the badge background
+and text. \code{NULL} (the default) fills the badge with the mark's \code{color}
+and uses white text. The \code{fill} and \code{text_color} set by
+\code{\link[=pz_stage_annotate]{pz_stage_annotate()}} style callouts, not mark badges.}
+
+\item{stroke_width}{Mark stroke width in CSS pixels, or \code{NULL} for the
+staged \code{stroke_width} from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}.}
 
 \item{font_family}{CSS font family for the badge, or \code{NULL} for the
 page default.}
