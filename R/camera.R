@@ -388,16 +388,6 @@ camera_at <- function(moves, time, home, density) {
 
 camera_filter <- function(rec, sampled, out, png_size, call = caller_env()) {
   density <- png_size$width / rec$camera_viewport_width
-  sizes <- lapply(unique(sampled$files), png_read_size, call = call)
-  if (
-    any(vapply(sizes, function(size) !identical(size, png_size), logical(1)))
-  ) {
-    cli::cli_abort(
-      "Camera recordings with a resized viewport are not yet supported.",
-      class = "paparazzi_error_record",
-      call = call
-    )
-  }
   if (
     any(vapply(
       rec$camera,
@@ -472,7 +462,7 @@ camera_expression <- function(values) {
   if (length(runs$values) == 1L) {
     return(runs$values[[1]])
   }
-  starts <- cumsum(c(1L, head(runs$lengths, -1L)))
+  starts <- cumsum(c(1L, utils::head(runs$lengths, -1L)))
   build <- function(lo, hi) {
     if (lo == hi) {
       return(runs$values[[lo]])

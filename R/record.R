@@ -41,6 +41,8 @@
 #' previous page falls back to the full viewport unless it was fixed at
 #' the start. MP4 dimensions are rounded down to multiples of 4 and
 #' WebM to even pixels; GIF keeps whole pixels.
+#' Set the viewport size before `pz_record_start()`; resizing during a
+#' framed or camera recording is not supported.
 #'
 #' WebVTT captions (when requested) are written as a `.vtt` file next to
 #' the MP4 or WebM. Cue times include the first/last holds and explicit
@@ -1213,8 +1215,22 @@ record_resample <- function(rec) {
 }
 
 record_encode <- function(rec, page = NULL, call = caller_env()) {
-  resampled <- record_resample(rec)
   png_size <- png_read_size(rec$files[[1]], call = call)
+  if (!is.null(rec$crop) || length(rec$camera)) {
+    for (path in rec$files[-1L]) {
+      if (!identical(png_read_size(path, call = call), png_size)) {
+        cli::cli_abort(
+          c(
+            "Resizing the viewport during a framed or camera recording is not supported.",
+            i = "Set the viewport size before {.fn pz_record_start}."
+          ),
+          class = "paparazzi_error_record",
+          call = call
+        )
+      }
+    }
+  }
+  resampled <- record_resample(rec)
   out <- record_output_spec(rec, png_size, call = call)
   if (length(rec$camera)) {
     out$vfilter <- camera_filter(rec, resampled, out, png_size, call = call)

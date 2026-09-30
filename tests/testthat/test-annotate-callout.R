@@ -34,11 +34,11 @@ callout_details <- function(page) {
       "const t=document.querySelector('#target').getBoundingClientRect();",
       "const rect=r=>[r.left,r.top,r.right,r.bottom,r.width,r.height];",
       "return {target:rect(t), nodes:[...l.querySelectorAll('.pz-callout')].map(n=>{",
-      "const b=n.querySelector('.pz-bubble'),s=n.querySelector('svg'),line=s?.firstChild;",
+      "const b=n.querySelector('.pz-bubble'),s=n.querySelector('svg');",
       "const r=n.getBoundingClientRect(); return {rect:rect(r),bubble:rect(b.getBoundingClientRect()),",
       "label:n.querySelector('span')?.textContent ?? null, text:b.textContent,",
       "color:b.style.borderColor,font:b.style.fontFamily,fontSize:b.style.fontSize,",
-      "arrow:!!s, end:line?[r.left+Number(line.getAttribute('x2')),r.top+Number(line.getAttribute('y2'))]:null,",
+      "arrow:!!s, end:s?.lastChild.points.length?[r.left+s.lastChild.points[0].x,r.top+s.lastChild.points[0].y]:null,",
       "head:s?.lastChild.getAttribute('points') ?? null,visible:n.style.display!=='none'}; })}; })()"
     )
   )
@@ -496,11 +496,14 @@ test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping o
     page,
     "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); const l=n.querySelector('line'); return [n.getBoundingClientRect().left+Number(l.getAttribute('x1')), n.getBoundingClientRect().left+Number(l.getAttribute('x2'))]; })()"
   )
-  expect_equal(unlist(endpoints), c(bubble[3], target[1]), tolerance = 1)
+  expect_equal(endpoints[[1]], bubble[3], tolerance = 1)
+  expect_lt(endpoints[[2]], target[1])
+  expect_gte(endpoints[[2]], bubble[3])
   head <- pz_js(
     page,
     "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); return n.querySelector('polygon').getAttribute('points').split(' ').map(p=>n.getBoundingClientRect().left+Number(p.split(',')[0])); })()"
   )
+  expect_equal(head[[1]], target[1], tolerance = 1)
   expect_true(all(unlist(head) >= bubble[3]))
 })
 
@@ -542,4 +545,122 @@ test_that("callout reveal defaults to pop and rejects NULL", {
   pz_annotate_callout(page, "Note", target = "#target", reveal = "pop")
   expect_identical(captured, omitted)
   expect_identical(captured$reveal, "pop")
+})
+
+test_that("leader heads have stroke-scaled proportions and shafts stop at the base", {
+  page <- callout_page()
+  for (side in c(
+    "top",
+    "bottom",
+    "left",
+    "right",
+    "top right",
+    "short",
+    "touching"
+  )) {
+    pz_js(page, "document.querySelector('#target').style.left='220px'")
+    page |>
+      pz_annotate_callout(
+        "Arrow",
+        target = "#target",
+        side = if (side %in% c("short", "touching")) "right" else side,
+        id = "tip",
+        reveal = "draw"
+      )
+    if (side %in% c("short", "touching")) {
+      gap <- if (side == "short") 3 else 0
+      pz_js(
+        page,
+        paste0(
+          "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+          "const n=l.querySelector('.pz-callout'),t=document.querySelector('#target');",
+          "t.style.left=(innerWidth-8-n.offsetWidth-t.offsetWidth-",
+          gap,
+          ")+'px'; l.pz.sync(); })()"
+        )
+      )
+    }
+    geometry <- pz_js(
+      page,
+      paste0(
+        "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout');",
+        "const l=n.querySelector('line'),p=n.querySelector('polygon').points;",
+        "const start=[+l.getAttribute('x1'),+l.getAttribute('y1')],end=[+l.getAttribute('x2'),+l.getAttribute('y2')];",
+        "const base=[(p[1].x+p[2].x)/2,(p[1].y+p[2].y)/2];",
+        "return {stroke:parseFloat(getComputedStyle(l).strokeWidth),cap:getComputedStyle(l).strokeLinecap,",
+        "leader:Math.hypot(p[0].x-start[0],p[0].y-start[1]),",
+        "length:Math.hypot(p[0].x-base[0],p[0].y-base[1]),",
+        "halfWidth:Math.hypot(p[1].x-p[2].x,p[1].y-p[2].y)/2,",
+        "baseError:Math.hypot(end[0]-base[0],end[1]-base[1]),",
+        "shaft:Math.hypot(end[0]-start[0],end[1]-start[1]),",
+        "display:n.querySelector('svg').style.display}; })()"
+      )
+    )
+    expected_length <- switch(
+      side,
+      "top right" = 10,
+      short = 2.7,
+      touching = 0,
+      7.2
+    )
+    expect_equal(geometry$stroke, 2)
+    expect_equal(geometry$length, expected_length, tolerance = 1e-4)
+    expect_equal(geometry$halfWidth, expected_length / 2, tolerance = 1e-4)
+    expect_equal(geometry$baseError, 0, tolerance = 1e-4)
+    expect_equal(
+      geometry$shaft + geometry$length,
+      geometry$leader,
+      tolerance = 1e-4
+    )
+    expect_identical(geometry$cap, "butt")
+    expect_false(identical(geometry$display, "none"))
+    if (side %in% c("top", "bottom", "left", "right")) {
+      expect_gte(geometry$halfWidth, 1.8 * geometry$stroke - 1e-4)
+    }
+    if (side == "short") {
+      expect_equal(geometry$leader, 3)
+    }
+    if (side == "touching") expect_equal(geometry$leader, 0)
+  }
+})
+
+test_that("draw reveal keeps the arrow head and shaft together entering and leaving", {
+  page <- callout_page()
+  page |>
+    pz_annotate_callout("Arrow", target = "#target", side = "right", id = "tip")
+  state <- pz_js(
+    page,
+    paste0(
+      "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+      "l.pz.callout([document.querySelector('#target')], {id:'tip',text:'Arrow',side:['right'],arrow:true,",
+      "label:null,reveal:'draw',color:'red',fontFamily:'sans-serif',fontSize:16,animate:true});",
+      "const n=l.querySelector('.pz-callout'),a=n.getAnimations({subtree:true})[0];",
+      "a.pause(); a.currentTime=a.effect.getTiming().duration/2;",
+      "return {head:a.effect.target.contains(n.querySelector('polygon')),",
+      "shaft:a.effect.target.contains(n.querySelector('line')),",
+      "scale:new DOMMatrix(getComputedStyle(a.effect.target).transform).a,",
+      "direction:a.effect.getTiming().direction}; })()"
+    )
+  )
+  expect_true(state$head)
+  expect_true(state$shaft)
+  expect_equal(state$scale, 0.5)
+  expect_identical(state$direction, "normal")
+  leaving <- pz_js(
+    page,
+    paste0(
+      "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+      "l.pz.clear({id:'tip',animate:true});",
+      "const n=l.querySelector('.pz-callout'),a=n.getAnimations({subtree:true})[0];",
+      "a.pause(); a.currentTime=a.effect.getTiming().duration/2;",
+      "return {head:a.effect.target.contains(n.querySelector('polygon')),",
+      "shaft:a.effect.target.contains(n.querySelector('line')),",
+      "scale:new DOMMatrix(getComputedStyle(a.effect.target).transform).a,",
+      "direction:a.effect.getTiming().direction}; })()"
+    )
+  )
+  expect_true(leaving$head)
+  expect_true(leaving$shaft)
+  expect_equal(leaving$scale, 0.5)
+  expect_identical(leaving$direction, "reverse")
 })

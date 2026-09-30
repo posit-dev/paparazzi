@@ -11,6 +11,7 @@ function(root) {
   let next = 0;
   const durations = {none:0, fade:250, draw:350, pop:250, slide:300, wipe:400};
   const svgNS = 'http://www.w3.org/2000/svg';
+  const calloutStrokeWidth = 2;
   const keys = (reveal, path) => {
     switch (reveal) {
       case 'fade': return [{opacity:0},{opacity:1}];
@@ -82,13 +83,13 @@ function(root) {
     const dx = tx - bx, dy = ty - by;
     const length = Math.hypot(dx, dy) || 1;
     const ux = dx / length, uy = dy / length;
-    const headLength = Math.min(9, length * 0.7);
-    const headWidth = Math.min(4, length * 0.3);
+    const headLength = Math.min(5 * calloutStrokeWidth, length * 0.9);
+    const headWidth = headLength / 2;
     const line = svg.firstChild;
     line.setAttribute('x1', bx - left);
     line.setAttribute('y1', by - top);
-    line.setAttribute('x2', tx - left);
-    line.setAttribute('y2', ty - top);
+    line.setAttribute('x2', tx - left - ux * headLength);
+    line.setAttribute('y2', ty - top - uy * headLength);
     svg.lastChild.setAttribute('points', [
       [tx - left, ty - top],
       [tx - left - ux * headLength - uy * headWidth,
@@ -333,7 +334,7 @@ function(root) {
             const svg = node.querySelector('svg');
             if (svg && svg.style.display !== 'none') {
               const line = svg.firstChild;
-              include(line.getBoundingClientRect(), 1);
+              include(line.getBoundingClientRect(), calloutStrokeWidth / 2);
               include(svg.lastChild.getBoundingClientRect());
             }
           } else {
@@ -458,7 +459,7 @@ function(root) {
           const svg = document.createElementNS(svgNS, 'svg');
           svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;overflow:visible;color:inherit;';
           const line = document.createElementNS(svgNS, 'line');
-          line.style.cssText = 'stroke:currentColor;stroke-width:2;';
+          line.style.cssText = `stroke:currentColor;stroke-width:${calloutStrokeWidth};stroke-linecap:butt;`;
           const head = document.createElementNS(svgNS, 'polygon');
           head.style.cssText = 'fill:currentColor;';
           svg.style.color = opts.color;
