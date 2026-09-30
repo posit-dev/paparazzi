@@ -1512,6 +1512,35 @@ test_that("framed recordings reject viewport resizes and can record again", {
   }
 })
 
+test_that("framed screencasts at a fractional DPR encode without a resize", {
+  skip_if_no_av()
+  page <- local_page(
+    record_fixture_file(),
+    width = 640,
+    height = 480,
+    scale = 1.5
+  )
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(
+    page,
+    out,
+    method = "screencast",
+    frame = pz_frame("#box", when = "stop"),
+    fps = 10,
+    hold = c(0, 0),
+    keep_frames = TRUE
+  )
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  pz_wait(page, 0.3)
+  pz_record_stop(page)
+
+  expect_true(file.exists(out))
+  sizes <- unique(lapply(rec$files, png_dimensions))
+  expect_length(sizes, 1L)
+})
+
 test_that("staged frames reject resizes and keep requested frames", {
   skip_if_no_av()
   page <- local_page(
