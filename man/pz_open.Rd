@@ -21,7 +21,7 @@ pz_open(
 \item a Shiny app directory (including split \code{ui.R}/\code{server.R} apps) or
 runnable app file (\code{app.R}, \verb{app-*.R}, \verb{*_app.R}, etc.), started by
 this page and stopped when it closes;
-\item a \code{\link[=pz_app]{pz_app()}} handle, shared across pages (closing the page leaves
+\item a \code{\link[=pz_serve]{pz_serve()}} handle, shared across pages (closing the page leaves
 the app running); \code{ui.R} and \code{server.R} passed alone open as files;
 \item an existing \code{ChromoteSession} (wrapped as-is; nothing is navigated).
 }
@@ -42,7 +42,7 @@ navigated, so only \code{"shiny"} waits there.}
 \item{timeout}{Session default timeout in seconds; defaults to 10.
 Per-call \code{timeout = NULL} in waits and expectations uses this default.}
 
-\item{shiny_options, envvars}{Passed to \code{\link[=pz_app]{pz_app()}} when opening an app path.
+\item{shiny_options, envvars}{Passed to \code{\link[=pz_serve]{pz_serve()}} when opening an app path.
 \code{envvars = NULL} adds no process environment overrides.}
 }
 \value{

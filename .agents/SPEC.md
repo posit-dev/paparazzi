@@ -541,7 +541,7 @@ pz_open(
 )
 ```
 
-- `x` can be a URL, a local file (opened as `file://`), a Shiny app directory or `app.R` (run in a background process), a `pz_app()`, or an existing `ChromoteSession`.
+- `x` can be a URL, a local file (opened as `file://`), a Shiny app directory or `app.R` (run in a background process), a `pz_serve()`, or an existing `ChromoteSession`.
 - Shiny app objects are not supported; they error with advice to run the app in another process and pass its URL. No serialization, no process inversion.
 - `wait = "auto"` uses `"shiny"` (connected and idle) for Shiny apps and `"load"` otherwise.
 - Other servers (Python Shiny, `quarto preview`, …) are started by the user and opened by URL.
@@ -549,16 +549,16 @@ pz_open(
 Apps:
 
 ```r
-app <- pz_app("apps/complete-app", envvars = c(MOCK = "1"), shiny_options = list())
+app <- pz_serve("apps/complete-app", envvars = c(MOCK = "1"), shiny_options = list())
 desktop <- pz_open(app, width = 1440)
 mobile <- pz_open(app, width = 390, mobile = TRUE)
 app$logs()
 app$stop()
 ```
 
-`pz_app()` returns a handle with `$stop()` and `$logs()` methods and a `print()` method (URL, port, status). This is the one place the API relies on methods rather than `pz_*()` functions. Cleanup works with withr: `withr::defer(app$stop())`.
+`pz_serve()` returns a handle with `$stop()` and `$logs()` methods and a `print()` method (URL, port, status). This is the one place the API relies on methods rather than `pz_*()` functions. Cleanup works with withr: `withr::defer(app$stop())`.
 
-- `pz_open(dir)` starts and owns an app, and closing the page stops it. `pz_app()` shares one app across pages.
+- `pz_open(dir)` starts and owns an app, and closing the page stops it. `pz_serve()` shares one app across pages.
 - App stdout/stderr go to a temp log file (no undrained pipes), readable with `app$logs()`.
 - Shutdown: interrupt, wait, kill. Runs on close, on error in block forms, and from a finalizer as a last resort.
 - Ports come from a base-R picker using `serverSocket()` (R >= 4.0), not httpuv. If the app dies because the port was taken, retry with a new port.
@@ -572,7 +572,7 @@ pz_with_page(x, code, ...)     # withr-style block, closes on exit
 pz_local_page(x, ..., .env)    # closes when the calling frame (e.g. a test) exits
 ```
 
-`pz_with_page()` and `pz_local_page()` accept an open page or anything `pz_open()` accepts (including a `pz_app()`), and call `pz_close()` on scope exit. Given an app, they open a page on it and close only the page.
+`pz_with_page()` and `pz_local_page()` accept an open page or anything `pz_open()` accepts (including a `pz_serve()`), and call `pz_close()` on scope exit. Given an app, they open a page on it and close only the page.
 
 Navigation (resets scope to root; staging and recorder carry over):
 
@@ -686,7 +686,7 @@ Every function takes `ctx` first and returns it invisibly unless noted. The `pz_
 | `pz_close()` | `(page)` | confirmed |
 | `pz_with_page()` | `(x, code, ...)` | confirmed |
 | `pz_local_page()` | `(x, ..., .env = parent.frame())` → page | confirmed |
-| `pz_app()` | `(app_dir, ..., envvars = NULL, shiny_options = list(), timeout = 10)` → app handle with `$stop()`, `$logs()` | confirmed |
+| `pz_serve()` | `(app_dir, ..., envvars = NULL, shiny_options = list(), timeout = 10)` → app handle with `$stop()`, `$logs()` | confirmed |
 | `pz_nav_goto()` | `(ctx, url, ..., wait = "auto")` | confirmed |
 | `pz_nav_reload()` | `(ctx, ..., wait = "auto")` | confirmed |
 | `pz_nav_back()` | `(ctx, ...)` | confirmed |

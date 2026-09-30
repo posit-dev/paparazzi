@@ -1,14 +1,14 @@
-test_that("pz_app starts an app from a directory", {
+test_that("pz_serve starts an app from a directory", {
   app <- local_shiny_app(shiny_app_fixture_dir())
 
-  expect_s3_class(app, "PaparazziApp")
+  expect_s3_class(app, "PaparazziServe")
   expect_true(app$is_running())
   expect_match(app$url, "^http://127[.]0[.]0[.]1:[0-9]+/$")
   expect_equal(sub(".*:([0-9]+)/$", "\\1", app$url), as.character(app$port))
   expect_true(app_port_reachable(app$port))
 })
 
-test_that("pz_app starts an app from an app file", {
+test_that("pz_serve starts an app from an app file", {
   app <- local_shiny_app(shiny_app_fixture_file())
 
   expect_true(app$is_running())
@@ -79,7 +79,7 @@ test_that("appDir in shiny_options is rejected before an app process can start",
   })
 
   err <- expect_error(
-    pz_app(app_dir, shiny_options = list(appDir = options_app)),
+    pz_serve(app_dir, shiny_options = list(appDir = options_app)),
     class = "paparazzi_error_input"
   )
   expect_match(conditionMessage(err), "appDir", fixed = TRUE)
@@ -101,7 +101,7 @@ test_that("print shows URL, port, and status", {
 
 test_that("stop shuts the app down and is idempotent", {
   skip_if_no_shiny()
-  app <- pz_app(shiny_app_fixture_dir())
+  app <- pz_serve(shiny_app_fixture_dir())
   port <- app$port
 
   expect_invisible(app$stop())
@@ -112,7 +112,7 @@ test_that("stop shuts the app down and is idempotent", {
 
 test_that("logs stay readable after stop", {
   skip_if_no_shiny()
-  app <- pz_app(shiny_app_fixture_dir())
+  app <- pz_serve(shiny_app_fixture_dir())
   app$stop()
 
   expect_true(any(grepl("PAPARAZZI_FIXTURE_APP", app$logs(), fixed = TRUE)))
@@ -121,7 +121,7 @@ test_that("logs stay readable after stop", {
 test_that("withr::defer(app$stop()) cleans up on scope exit", {
   skip_if_no_shiny()
   port <- local({
-    app <- pz_app(shiny_app_fixture_dir())
+    app <- pz_serve(shiny_app_fixture_dir())
     withr::defer(app$stop())
     app$port
   })
@@ -130,7 +130,7 @@ test_that("withr::defer(app$stop()) cleans up on scope exit", {
 
 test_that("the finalizer stops the app as a last resort", {
   skip_if_no_shiny()
-  port <- pz_app(shiny_app_fixture_dir())$port
+  port <- pz_serve(shiny_app_fixture_dir())$port
   # Two passes: the first marks the handle unreachable, the second
   # guarantees its finalizer has actually run.
   gc()
@@ -141,7 +141,7 @@ test_that("the finalizer stops the app as a last resort", {
 test_that("a broken app fails loudly with its log output", {
   skip_if_no_shiny()
   err <- expect_error(
-    pz_app(shiny_app_fixture_broken()),
+    pz_serve(shiny_app_fixture_broken()),
     class = "paparazzi_error_app_startup"
   )
   expect_match(
@@ -153,7 +153,7 @@ test_that("a broken app fails loudly with its log output", {
 
 test_that("a taken port triggers a retry on a new port", {
   skip_if_no_shiny()
-  # Occupy the port with a live listener. pz_app() must notice the port
+  # Occupy the port with a live listener. pz_serve() must notice the port
   # already answers and start on a new one -- relying on the child's
   # bind failing is not portable (see app-port-taken's comment).
   taken_port <- free_port()
@@ -171,7 +171,7 @@ test_that("a taken port triggers a retry on a new port", {
 test_that("a child that dies from a taken port exhausts its retries", {
   skip_if_no_shiny()
   err <- expect_error(
-    pz_app(shiny_app_fixture_port_taken(), timeout = 5),
+    pz_serve(shiny_app_fixture_port_taken(), timeout = 5),
     class = "paparazzi_error_app_startup",
     regexp = "could not bind a port"
   )
@@ -186,7 +186,7 @@ test_that("preflight exhaustion reports no nonexistent child log", {
   local_mocked_bindings(random_port = function(...) taken_port)
 
   err <- expect_error(
-    pz_app(shiny_app_fixture_dir(), shiny_options = list(port = taken_port)),
+    pz_serve(shiny_app_fixture_dir(), shiny_options = list(port = taken_port)),
     class = "paparazzi_error_app_startup",
     regexp = "could not bind a port"
   )
@@ -222,36 +222,36 @@ test_that("startup error only includes an escaped, bounded log tail", {
 
 test_that("app_dir is validated", {
   skip_if_no_shiny()
-  expect_error(pz_app(42), class = "paparazzi_error_input")
-  expect_error(pz_app("does/not/exist"), class = "paparazzi_error_input")
-  expect_error(pz_app(fixture_file()), class = "paparazzi_error_input")
+  expect_error(pz_serve(42), class = "paparazzi_error_input")
+  expect_error(pz_serve("does/not/exist"), class = "paparazzi_error_input")
+  expect_error(pz_serve(fixture_file()), class = "paparazzi_error_input")
 })
 
 test_that("shiny_options, envvars, timeout, and dots are validated", {
   skip_if_no_shiny()
   expect_error(
-    pz_app(shiny_app_fixture_dir(), shiny_options = "quiet"),
+    pz_serve(shiny_app_fixture_dir(), shiny_options = "quiet"),
     "must be a list"
   )
   expect_error(
-    pz_app(shiny_app_fixture_dir(), envvars = "MOCK=1"),
+    pz_serve(shiny_app_fixture_dir(), envvars = "MOCK=1"),
     class = "paparazzi_error_input"
   )
   expect_error(
-    pz_app(shiny_app_fixture_dir(), envvars = c("1")),
+    pz_serve(shiny_app_fixture_dir(), envvars = c("1")),
     class = "paparazzi_error_input"
   )
   expect_error(
-    pz_app(shiny_app_fixture_dir(), timeout = -1),
+    pz_serve(shiny_app_fixture_dir(), timeout = -1),
     "must be a number"
   )
-  expect_error(pz_app(shiny_app_fixture_dir(), width = 390), "must be empty")
+  expect_error(pz_serve(shiny_app_fixture_dir(), width = 390), "must be empty")
 })
 
 test_that("an app that never listens times out and is cleaned up", {
   skip_if_no_shiny()
   err <- expect_error(
-    pz_app(shiny_app_fixture_slow(), timeout = 0.5),
+    pz_serve(shiny_app_fixture_slow(), timeout = 0.5),
     class = "paparazzi_error_app_startup",
     regexp = "did not start"
   )
@@ -260,6 +260,6 @@ test_that("an app that never listens times out and is cleaned up", {
 })
 
 test_that("app timeout has a visible ten-second default and rejects NULL", {
-  expect_equal(formals(pz_app)$timeout, 10)
-  expect_error(pz_app(shiny_app_fixture_dir(), timeout = NULL), "timeout")
+  expect_equal(formals(pz_serve)$timeout, 10)
+  expect_error(pz_serve(shiny_app_fixture_dir(), timeout = NULL), "timeout")
 })

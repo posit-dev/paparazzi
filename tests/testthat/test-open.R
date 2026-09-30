@@ -236,7 +236,7 @@ test_that("a page opened on a handle does not own the app", {
 test_that("a temporary app handle survives GC while its page is open", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  page <- pz_open(pz_app(shiny_app_fixture_dir()))
+  page <- pz_open(pz_serve(shiny_app_fixture_dir()))
   withr::defer({
     pz_close(page)
     page$.__enclos_env__$private$shared_app_$stop()

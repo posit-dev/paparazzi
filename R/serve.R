@@ -28,11 +28,11 @@
 #' @param timeout Seconds to wait for the app to start listening;
 #'   defaults to 10.
 #'
-#' @return A `PaparazziApp` handle with public fields `url` and `port`
+#' @return A `PaparazziServe` handle with public fields `url` and `port`
 #'   and methods `stop()`, `logs()`, and `is_running()`.
 #'
 #' @examplesIf paparazzi:::examples_run("shiny")
-#' app <- pz_app(pz_example("tasks-app"))
+#' app <- pz_serve(pz_example("tasks-app"))
 #' app
 #'
 #' # Pages opened on a handle share the app, here at two screen sizes
@@ -48,13 +48,14 @@
 #' app$stop()
 #'
 #' @export
-pz_app <- function(
-  app_dir,
+pz_serve <- function(
+  x,
   ...,
   envvars = NULL,
   shiny_options = list(),
   timeout = 10
 ) {
+  app_dir <- x
   check_dots_empty()
   if (!is_string(app_dir)) {
     cli::cli_abort(
@@ -289,11 +290,11 @@ new_app <- function(config, port, envvars) {
     cleanup = TRUE,
     cleanup_tree = TRUE
   )
-  PaparazziApp$new(process, log_file, port)
+  PaparazziServe$new(process, log_file, port)
 }
 
-PaparazziApp <- R6::R6Class(
-  "PaparazziApp",
+PaparazziServe <- R6::R6Class(
+  "PaparazziServe",
   public = list(
     url = NULL,
     port = NULL,

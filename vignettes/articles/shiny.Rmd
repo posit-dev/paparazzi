@@ -72,10 +72,10 @@ page |>
 
 ## Share one app across pages
 
-Starting an app takes time. To open several pages on the same app, start it once with `pz_app()` and pass the handle to `pz_open()`. For example, to compare the desktop and phone layouts side by side:
+Starting an app takes time. To open several pages on the same app, start it once with `pz_serve()` and pass the handle to `pz_open()`. For example, to compare the desktop and phone layouts side by side:
 
 ```{r}
-app <- pz_app(pz_example("tasks-app"))
+app <- pz_serve(pz_example("tasks-app"))
 app
 
 desktop <- pz_open(app, width = 1024, height = 640)
@@ -109,7 +109,7 @@ test_that("adding a task updates the summary", {
 })
 ```
 
-For your own app, point `pz_local_page()` at the app's directory. To share one running app between tests, start it with `pz_app()` and pass the handle instead; you then stop the app yourself, for example with `withr::defer(app$stop(), testthat::teardown_env())` in a setup file.
+For your own app, point `pz_local_page()` at the app's directory. To share one running app between tests, start it with `pz_serve()` and pass the handle instead; you then stop the app yourself, for example with `withr::defer(app$stop(), testthat::teardown_env())` in a setup file.
 
 [shinytest2](https://rstudio.github.io/shinytest2/) is also built for testing Shiny apps, and it works differently. shinytest2 records an app's input and output values and compares them against saved snapshots, which suits regression tests of an app's reactive logic. paparazzi finds elements with CSS selectors and interacts with the page as a person would, which suits testing what a user sees and does. The two can live in the same test suite.
 

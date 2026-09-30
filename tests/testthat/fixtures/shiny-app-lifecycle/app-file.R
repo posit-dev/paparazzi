@@ -1,5 +1,5 @@
 # Single-file form of the minimal app, for the app.R-path branch of
-# pz_app(). Kept beside (not inside) app-dir/ so the two forms stay
+# pz_serve(). Kept beside (not inside) app-dir/ so the two forms stay
 # independent.
 # message() (stderr), not cat(): see app-dir/app.R for why.
 message("PAPARAZZI_FIXTURE_APP_FILE")
