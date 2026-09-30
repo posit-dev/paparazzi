@@ -3,13 +3,16 @@ test_that("examples_run is false when not interactive", {
   expect_false(examples_run())
 })
 
-test_that("examples_run is false for an uninstalled package when interactive", {
+test_that("examples_run requires Chrome and every named package", {
   rlang::local_interactive(TRUE)
-  expect_false(examples_run("paparazzi_package_that_does_not_exist"))
-})
-
-test_that("examples_run is true when interactive and Chrome is available", {
-  skip_if(is.null(suppressMessages(chromote::find_chrome())))
-  rlang::local_interactive(TRUE)
+  local_mocked_bindings(
+    find_chrome = function() "/path/to/chrome",
+    .package = "chromote"
+  )
   expect_true(examples_run())
+  expect_true(examples_run("rlang"))
+  expect_false(examples_run("rlang", "paparazzi_package_that_does_not_exist"))
+
+  local_mocked_bindings(find_chrome = function() NULL, .package = "chromote")
+  expect_false(examples_run())
 })
