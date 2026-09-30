@@ -222,11 +222,27 @@ pz_stage <- function(
 #' Sets persistent page defaults for new annotations in screenshots and
 #' recordings. An omitted argument leaves its setting alone, an explicit
 #' `NULL` restores its default, and a value sets it. Per-call annotation
-#' style arguments override these defaults.
+#' style arguments override these defaults; note the per-call names on
+#' [pz_annotate()] differ (`label_fill`/`label_text_color`) from the staged
+#' names (`fill`/`text_color`), and the staged fill and text color style
+#' callout chrome only, not mark badges.
 #'
 #' @inheritParams pz_act_click
 #' @param ... Checked empty; reserved for future use.
-#' @param color CSS color for new annotations. The default is `"#e11d48"`.
+#' @param color CSS accent color for new annotations: mark outlines, callout
+#'   bubble borders, leader lines and decorations. The default is `"#e11d48"`.
+#'   Supply `NULL` to restore the default.
+#' @param fill CSS background color for new callout bubbles and their
+#'   badges. The default is `"#171717"`. Supply `NULL` to restore the
+#'   default. Callout chrome only: [pz_annotate()] mark badges follow their
+#'   mark's `color` unless overridden per call with `label_fill`.
+#' @param text_color CSS text color for new callout bubbles and their
+#'   badges. The default is `"white"`. Supply `NULL` to restore the
+#'   default. Callout chrome only, like `fill`.
+#' @param stroke_width Stroke width in CSS pixels for new annotation marks
+#'   and callout leader lines; decoration sizes scale with it. Supply `NULL`
+#'   to restore the default.
+#' @param distance Bubble-to-target gap in CSS pixels for new callouts.
 #'   Supply `NULL` to restore the default.
 #' @param font_family CSS font family for new annotation badges. The default
 #'   is `"sans-serif"`. Supply `NULL` to restore the default.
@@ -254,6 +270,10 @@ pz_stage_annotate <- function(
   ctx,
   ...,
   color = NULL,
+  fill = NULL,
+  text_color = NULL,
+  stroke_width = NULL,
+  distance = NULL,
   font_family = NULL,
   font_size = NULL
 ) {
@@ -275,6 +295,38 @@ pz_stage_annotate <- function(
     } else {
       check_string(font_family, allow_empty = FALSE)
       overrides$annotate_font_family <- font_family
+    }
+  }
+  if (!missing(fill)) {
+    if (is.null(fill)) {
+      overrides[["annotate_fill"]] <- NULL
+    } else {
+      check_string(fill, allow_empty = FALSE)
+      overrides$annotate_fill <- fill
+    }
+  }
+  if (!missing(text_color)) {
+    if (is.null(text_color)) {
+      overrides[["annotate_text_color"]] <- NULL
+    } else {
+      check_string(text_color, allow_empty = FALSE)
+      overrides$annotate_text_color <- text_color
+    }
+  }
+  if (!missing(stroke_width)) {
+    if (is.null(stroke_width)) {
+      overrides[["annotate_stroke_width"]] <- NULL
+    } else {
+      check_positive_css_px(stroke_width, arg = "stroke_width")
+      overrides$annotate_stroke_width <- stroke_width
+    }
+  }
+  if (!missing(distance)) {
+    if (is.null(distance)) {
+      overrides[["annotate_distance"]] <- NULL
+    } else {
+      check_number_decimal(distance, min = 0, allow_infinite = FALSE)
+      overrides$annotate_distance <- distance
     }
   }
   if (!missing(font_size)) {
@@ -303,6 +355,10 @@ STAGE_DEFAULTS <- list(
   camera_follow = TRUE,
   show_keys = "none",
   annotate_color = "#e11d48",
+  annotate_fill = "#171717",
+  annotate_text_color = "white",
+  annotate_stroke_width = 2.5,
+  annotate_distance = 24,
   annotate_font_family = "sans-serif",
   annotate_font_size = 14
 )

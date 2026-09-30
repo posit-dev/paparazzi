@@ -14,6 +14,9 @@ pz_annotate(
   reveal = c("auto", "fade", "draw", "pop", "slide", "wipe", "none"),
   id = NULL,
   color = NULL,
+  label_fill = NULL,
+  label_text_color = NULL,
+  stroke_width = NULL,
   font_family = NULL,
   font_size = NULL
 )
@@ -45,8 +48,19 @@ reverses the reveal. Wipe sweeps clockwise from 12 o'clock.}
 \code{NULL} generates a unique id, so calls accumulate annotations.
 \code{"spotlight"} and \code{"caption"} are reserved for other types.}
 
-\item{color}{CSS color for the outline and badge, or \code{NULL} for the
+\item{color}{CSS accent color for the mark outline, or \code{NULL} for the
 page default from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}.}
+
+\item{label_fill, label_text_color}{CSS colors for the label badge's
+background and text. The badge follows its mark: by default it is
+filled with the mark's resolved \code{color} with white text, and these
+per-call arguments override that. The staged \code{fill}/\code{text_color} from
+\code{\link[=pz_stage_annotate]{pz_stage_annotate()}} do not apply to marks; they style callout
+chrome only. (The per-call names differ from the staged names, so a
+badge style isn't read as filling a \code{"box"} or \code{"highlight"} mark.)}
+
+\item{stroke_width}{Mark stroke width in CSS pixels, or \code{NULL} for the
+staged \code{stroke_width} from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}.}
 
 \item{font_family}{CSS font family for the badge, or \code{NULL} for the
 page default.}

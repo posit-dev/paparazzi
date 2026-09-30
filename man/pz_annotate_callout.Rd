@@ -10,11 +10,15 @@ pz_annotate_callout(
   ...,
   target = NULL,
   side = NULL,
-  arrow = TRUE,
+  leader = TRUE,
   label = NULL,
   reveal = c("pop", "fade", "draw", "slide", "wipe", "none"),
   id = NULL,
   color = NULL,
+  fill = NULL,
+  text_color = NULL,
+  stroke_width = NULL,
+  distance = NULL,
   font_family = NULL,
   font_size = NULL
 )
@@ -33,22 +37,44 @@ pz_annotate_callout(
 diagonal corner such as \code{"top right"}. \code{NULL} chooses the cardinal
 side with the most room when drawn. The chosen side stays fixed.}
 
-\item{arrow}{Whether to draw an arrow ending at the target box. \code{FALSE}
-leaves a tooltip-style bubble.}
+\item{leader}{The line between the bubble and the target. \code{TRUE} (the
+default) draws a line with an arrow at the target, equal to
+\code{c(start = "none", end = "arrow")}; \code{FALSE} draws no line, leaving a
+tooltip-style bubble. A named character vector sets a decoration for
+each end: \code{start} is the bubble side, \code{end} is the target side, and an
+omitted name defaults to \code{"none"}. Decoration values are \code{"none"},
+\code{"arrow"} (a filled triangle), \code{"dot"}, or \code{"bar"} (a perpendicular
+tick). The shaft stops at each decoration's base, and short leaders
+shrink the decorations.}
 
 \item{label}{Optional badge; \code{TRUE} numbers the matches, while one string
 or number repeats for each match. \code{NULL} omits the badge.}
 
 \item{reveal}{\code{"pop"} (the default), \code{"fade"}, \code{"draw"}, \code{"slide"},
 \code{"wipe"}, or \code{"none"}. Animates only during an active,
-unpaused recording; clearing plays the reverse.}
+unpaused recording; clearing plays the reverse. \code{"draw"} draws the
+leader's shaft, then shows its decorations.}
 
 \item{id}{Optional nonempty id. Reusing it replaces its annotations;
 \code{NULL} generates a unique id, so calls accumulate annotations.
 \code{"spotlight"} and \code{"caption"} are reserved for other types.}
 
-\item{color}{Accent border and arrow color; \code{NULL} uses the staged
-annotation color. The bubble remains dark with white text.}
+\item{color}{Accent color for the bubble border, leader line and
+decorations; \code{NULL} uses the staged annotation color.}
+
+\item{fill, text_color}{CSS colors for the bubble background and text
+(and the callout's badge); \code{NULL} uses the staged \code{fill}/\code{text_color}
+from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}, falling back to \code{"#171717"} on \code{"white"}.
+\code{\link[=pz_annotate]{pz_annotate()}} mark badges do not use these; they follow their mark's
+\code{color} unless overridden per call with \code{label_fill}/\code{label_text_color}.}
+
+\item{stroke_width}{Leader line width in CSS pixels, or \code{NULL} for the
+staged \code{stroke_width} from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}. Decoration sizes
+scale with it. Shared with \code{\link[=pz_annotate]{pz_annotate()}} marks.}
+
+\item{distance}{Bubble-to-target gap in CSS pixels, or \code{NULL} for the
+staged \code{distance} from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}. Applies with or without
+a leader.}
 
 \item{font_family}{CSS font family; \code{NULL} uses the staged default.}
 

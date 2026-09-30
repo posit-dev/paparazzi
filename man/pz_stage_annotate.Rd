@@ -4,14 +4,41 @@
 \alias{pz_stage_annotate}
 \title{Set the page's annotation style defaults}
 \usage{
-pz_stage_annotate(ctx, ..., color = NULL, font_family = NULL, font_size = NULL)
+pz_stage_annotate(
+  ctx,
+  ...,
+  color = NULL,
+  fill = NULL,
+  text_color = NULL,
+  stroke_width = NULL,
+  distance = NULL,
+  font_family = NULL,
+  font_size = NULL
+)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{color}{CSS color for new annotations. The default is \code{"#e11d48"}.
+\item{color}{CSS accent color for new annotations: mark outlines, callout
+bubble borders, leader lines and decorations. The default is \code{"#e11d48"}.
+Supply \code{NULL} to restore the default.}
+
+\item{fill}{CSS background color for new callout bubbles and their
+badges. The default is \code{"#171717"}. Supply \code{NULL} to restore the
+default. Callout chrome only: \code{\link[=pz_annotate]{pz_annotate()}} mark badges follow their
+mark's \code{color} unless overridden per call with \code{label_fill}.}
+
+\item{text_color}{CSS text color for new callout bubbles and their
+badges. The default is \code{"white"}. Supply \code{NULL} to restore the
+default. Callout chrome only, like \code{fill}.}
+
+\item{stroke_width}{Stroke width in CSS pixels for new annotation marks
+and callout leader lines; decoration sizes scale with it. Supply \code{NULL}
+to restore the default.}
+
+\item{distance}{Bubble-to-target gap in CSS pixels for new callouts.
 Supply \code{NULL} to restore the default.}
 
 \item{font_family}{CSS font family for new annotation badges. The default
@@ -27,7 +54,10 @@ Supply \code{NULL} to restore the default.}
 Sets persistent page defaults for new annotations in screenshots and
 recordings. An omitted argument leaves its setting alone, an explicit
 \code{NULL} restores its default, and a value sets it. Per-call annotation
-style arguments override these defaults.
+style arguments override these defaults; note the per-call names on
+\code{\link[=pz_annotate]{pz_annotate()}} differ (\code{label_fill}/\code{label_text_color}) from the staged
+names (\code{fill}/\code{text_color}), and the staged fill and text color style
+callout chrome only, not mark badges.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
