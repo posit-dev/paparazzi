@@ -155,7 +155,7 @@ test_that("navigation resets scope and releases pinned objects", {
   root <- pz_nav_goto(scoped, nav_fixture_url("b"))
   expect_equal(length(root$scope), 0L)
   expect_no_error(pz_find(root, "#scope-target"))
-  expect_error(pz_click(scoped), class = "paparazzi_error_detached")
+  expect_error(pz_act_click(scoped), class = "paparazzi_error_detached")
   expect_error(pz_find_first(scoped), class = "paparazzi_error_detached")
 })
 
@@ -165,13 +165,13 @@ test_that("pz_nav_reload and back/forward also reset scope", {
 
   root <- pz_nav_reload(scoped)
   expect_equal(length(root$scope), 0L)
-  expect_error(pz_click(scoped), class = "paparazzi_error_detached")
+  expect_error(pz_act_click(scoped), class = "paparazzi_error_detached")
 
   scoped2 <- pz_find(root, "#scope-target")
   expect_equal(length(scoped2$scope), 1L)
   root2 <- pz_nav_back(scoped2)
   expect_equal(length(root2$scope), 0L)
-  expect_error(pz_click(scoped2), class = "paparazzi_error_detached")
+  expect_error(pz_act_click(scoped2), class = "paparazzi_error_detached")
 
   expect_identical(pz_nav_forward(root2), root2)
 })

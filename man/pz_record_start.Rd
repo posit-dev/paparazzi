@@ -138,7 +138,7 @@ needs no \code{\link[=pz_record_stop]{pz_record_stop()}} when it is printed: at 
 knitted chunk expression the recording appears in the document, and
 in the console it is shown in the viewer. Assign the chain or call
 \code{pz_record_stop()} to record across several statements. Chains that
-don't come from \code{pz_record_start()}, such as \code{page |> pz_click()},
+don't come from \code{pz_record_start()}, such as \code{page |> pz_act_click()},
 keep returning invisibly and never stop a recording.
 }
 
@@ -150,7 +150,7 @@ path <- file.path(tempdir(), "help.mp4")
 # Record the help panel opening, cropped to the page's card
 page |>
   pz_record_start(path, frame = pz_frame("main")) |>
-  pz_click("#toggle-help") |>
+  pz_act_click("#toggle-help") |>
   pz_expect_visible(target = "#help") |>
   pz_record_stop()
 file.exists(path)

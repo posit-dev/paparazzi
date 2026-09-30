@@ -26,7 +26,7 @@ NULL
 #' A screen-space caption set with [pz_annotate_caption()] is composited
 #' onto the captured PNG after framing; captioned stills require \pkg{png}.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param path File path the PNG is written to; an existing file is
 #'   overwritten. With `NULL` (the default) while knitting, a numbered file
 #'   in the chunk's figure directory is used and included in the document;

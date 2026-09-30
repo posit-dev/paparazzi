@@ -47,7 +47,7 @@ page <- pz_open(pz_example("tasks"))
 page |> pz_expect_url("tasks.html")
 
 page |>
-  pz_click(pz_loc(".filters a", has_text = "Done")) |>
+  pz_act_click(pz_loc(".filters a", has_text = "Done")) |>
   pz_expect_url("#done$", match = "regex")
 pz_close(page)
 \dontshow{\}) # examplesIf}

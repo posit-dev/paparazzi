@@ -130,7 +130,7 @@ print.paparazzi_frame <- function(x, ...) {
 #' only its element boxes for the home frame, and camera shots use their
 #' own `target_box` setting.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param ... The default frame's target: a CSS selector string, a
 #'   [pz_loc()] spec, or a list of either. Several unnamed arguments are
 #'   unioned. With no target, the default frames each call's own target.

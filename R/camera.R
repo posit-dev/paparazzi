@@ -6,7 +6,7 @@
 #' page or still screenshots. Outside a recording it does nothing, and each
 #' [pz_record_start()] begins at the recording frame.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param zoom Magnification relative to the recording frame. `NULL` fits
 #'   the target with padding, capped at the capture's pixel density.
 #' @param pad Padding in CSS pixels around the target; one number or

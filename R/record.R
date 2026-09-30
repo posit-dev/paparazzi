@@ -56,7 +56,7 @@
 #' Packages are checked at `pz_record_start()`, or during a GIF
 #' recording at the first camera move or caption.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param path Output file path; the extension (`.mp4`, `.webm`, or
 #'   `.gif`) selects the format. An existing file is overwritten. With
 #'   `NULL` (the default) while knitting, a numbered file in the chunk's
@@ -100,7 +100,7 @@
 #' knitted chunk expression the recording appears in the document, and
 #' in the console it is shown in the viewer. Assign the chain or call
 #' `pz_record_stop()` to record across several statements. Chains that
-#' don't come from `pz_record_start()`, such as `page |> pz_click()`,
+#' don't come from `pz_record_start()`, such as `page |> pz_act_click()`,
 #' keep returning invisibly and never stop a recording.
 #'
 #' @return A context in the recording chain, invisibly.
@@ -115,7 +115,7 @@
 #' # Record the help panel opening, cropped to the page's card
 #' page |>
 #'   pz_record_start(path, frame = pz_frame("main")) |>
-#'   pz_click("#toggle-help") |>
+#'   pz_act_click("#toggle-help") |>
 #'   pz_expect_visible(target = "#help") |>
 #'   pz_record_stop()
 #' file.exists(path)
@@ -244,7 +244,7 @@ pz_record_start <- function(
 #' Ends the recording started with [pz_record_start()], encodes the
 #' captured frames, and writes the file given to `pz_record_start()`.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return `ctx`, invisibly, when the path was supplied outside knitting.
 #'   While knitting, returns a printable image for GIF, HTML video for
@@ -258,7 +258,7 @@ pz_record_start <- function(
 #' path <- file.path(tempdir(), "done.gif")
 #' page |>
 #'   pz_record_start(path, frame = pz_frame(".task-list", pad = 8)) |>
-#'   pz_click(pz_loc(".task-done", which = "first")) |>
+#'   pz_act_click(pz_loc(".task-done", which = "first")) |>
 #'   pz_record_stop()
 #' file.exists(path)
 #' pz_close(page)
@@ -355,7 +355,7 @@ pz_record_stop <- function(ctx) {
 #' and the video clock stops, so the pause leaves no trace in the
 #' output.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -364,13 +364,13 @@ pz_record_stop <- function(ctx) {
 #' path <- file.path(tempdir(), "add-task.mp4")
 #' page |>
 #'   pz_record_start(path) |>
-#'   pz_click("#task-title") |>
+#'   pz_act_click("#task-title") |>
 #'   pz_record_pause() |>
 #'   # Filling in the form is cut from the video
 #'   pz_set_value("Buy milk", target = "#task-title") |>
 #'   pz_set_value("high", target = "#task-priority") |>
 #'   pz_record_resume() |>
-#'   pz_click("#add-task") |>
+#'   pz_act_click("#add-task") |>
 #'   pz_expect_count(8, target = ".task") |>
 #'   pz_record_stop()
 #' pz_close(page)
@@ -416,7 +416,7 @@ pz_record_resume <- function(ctx) {
 #' out doesn't pay for video-only pauses. A camera move still in
 #' progress (see [pz_camera()]) finishes before the hold begins.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param seconds Seconds to hold the frame in the output.
 #'
 #' @return `ctx`, invisibly.
@@ -430,7 +430,7 @@ pz_record_resume <- function(ctx) {
 #' path <- file.path(tempdir(), "help.mp4")
 #' page |>
 #'   pz_record_start(path) |>
-#'   pz_click("#toggle-help") |>
+#'   pz_act_click("#toggle-help") |>
 #'   # Give viewers a second to read the help text
 #'   pz_record_hold(1) |>
 #'   pz_record_stop()
@@ -474,8 +474,8 @@ pz_record_hold <- function(ctx, seconds) {
 #' page |>
 #'   pz_record(path, {
 #'     page |>
-#'       pz_type("Buy milk", target = "#task-title") |>
-#'       pz_click("#add-task") |>
+#'       pz_act_type("Buy milk", target = "#task-title") |>
+#'       pz_act_click("#add-task") |>
 #'       pz_expect_count(8, target = ".task")
 #'   }) |>
 #'   pz_screenshot(file.path(tempdir(), "after.png"))

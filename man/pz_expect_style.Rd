@@ -80,7 +80,7 @@ page |> pz_expect_style("h1", font_size = "1.5rem")
 page |> pz_expect_style("#help", display = "none")
 
 page |>
-  pz_click("#toggle-help") |>
+  pz_act_click("#toggle-help") |>
   pz_expect_style("#help", display = "none", .not = TRUE)
 pz_close(page)
 \dontshow{\}) # examplesIf}

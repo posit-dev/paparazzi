@@ -49,7 +49,7 @@ page <- pz_open(pz_example("tasks"))
 # Inside a scope, targets resolve among the scope's descendants
 page |>
   pz_find(pz_loc(".task", has_text = "dentist")) |>
-  pz_click(".task-done")
+  pz_act_click(".task-done")
 pz_get_attr(page, "class", target = pz_loc(".task", has_text = "dentist"))
 
 # Assign a scoped context to start more than one chain from it
@@ -60,7 +60,7 @@ pz_get_count(task_list, target = ".task.done")
 # from_root looks outside the current scope, but still pushes a new scope
 task_list |>
   pz_find("#new-task", from_root = TRUE) |>
-  pz_type("Buy milk", target = "#task-title")
+  pz_act_type("Buy milk", target = "#task-title")
 pz_get_value(page, target = "#task-title")
 pz_close(page)
 \dontshow{\}) # examplesIf}

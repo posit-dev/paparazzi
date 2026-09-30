@@ -23,7 +23,7 @@ NULL
 #' via the page's `$view()`. `show = "auto"` picks `"screenshot"` in
 #' interactive sessions and `"none"` otherwise.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` (default)
 #'   omits the target section.

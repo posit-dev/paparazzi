@@ -8,7 +8,7 @@ NULL
 #' in screenshots and recordings until cleared with [pz_annotate_clear()].
 #' Annotations belong to the current document; navigating away removes them.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A selector, [pz_loc()] spec, or list of targets.
 #'   `NULL` uses the current scope, or `document.body` at the root.
 #' @param ... Checked empty; reserved for future use.

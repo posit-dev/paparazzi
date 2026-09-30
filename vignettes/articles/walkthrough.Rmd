@@ -31,15 +31,15 @@ card <- pz_frame("main", pad = 12, when = "start")
 
 ## Part 1: Add a task
 
-We want the viewer to see both the form and the result. `pz_record_start()` begins a recording, and the chain that follows it is what gets recorded. There's no need to stop it: when the chain ends, the recording stops and the video appears below the chunk. The camera can move *inside* that frame while recording, without scrolling or zooming the live page. Here it zooms in on the title field while the cursor glides over to click it, since `pz_type()` clicks its target before typing.
+We want the viewer to see both the form and the result. `pz_record_start()` begins a recording, and the chain that follows it is what gets recorded. There's no need to stop it: when the chain ends, the recording stops and the video appears below the chunk. The camera can move *inside* that frame while recording, without scrolling or zooming the live page. Here it zooms in on the title field while the cursor glides over to click it, since `pz_act_type()` clicks its target before typing.
 
 ```{r part-add}
 page |>
   pz_record_start(frame = card, fps = 8, scale = 0.6) |>
   pz_annotate_caption("Add a task for the release") |>
   pz_camera("#task-title") |>
-  pz_type("Prepare release notes", target = "#task-title") |>
-  pz_click("#add-task") |>
+  pz_act_type("Prepare release notes", target = "#task-title") |>
+  pz_act_click("#add-task") |>
   pz_expect_text(
     "Prepare release notes",
     target = pz_loc(".task-title", which = "first")
@@ -74,9 +74,9 @@ page |>
   pz_record_hold(0.9) |>
   pz_annotate_clear(id = "new-task") |>
   pz_find(pz_loc(".task", has_text = "Prepare release notes")) |>
-  pz_click(".task-done") |>
+  pz_act_click(".task-done") |>
   pz_find_reset() |>
-  pz_click(".filters a[href='#done']") |>
+  pz_act_click(".filters a[href='#done']") |>
   pz_expect_visible(pz_loc(".task", has_text = "Prepare release notes")) |>
   pz_camera_reset() |>
   pz_record_hold(0.6)
@@ -94,9 +94,9 @@ Two high-priority tasks sit near the top of the list. We'll treat their titles a
 
 ```{r}
 page |>
-  pz_click(".filters a[href='#all']") |>
+  pz_act_click(".filters a[href='#all']") |>
   pz_expect_visible(pz_loc(".task", has_text = "File tax return")) |>
-  pz_scroll("#toggle-help") |>
+  pz_act_scroll("#toggle-help") |>
   pz_annotate_redact(
     "[data-priority=\"high\"] .task-title",
     method = "fill",
@@ -113,7 +113,7 @@ page |>
     "Open help without showing high-priority tasks",
     side = "top"
   ) |>
-  pz_click("#toggle-help") |>
+  pz_act_click("#toggle-help") |>
   pz_expect_visible(target = "#help") |>
   pz_record_hold(1)
 ```
@@ -125,4 +125,4 @@ page |> pz_annotate_clear()
 pz_close(page)
 ```
 
-Each part has its own MP4, named after its chunk, but shares the task tracker's state with the next part. Camera shots reset at the start of each recording; annotations and captions do not, so clear or replace them deliberately. To record across several statements, assign the chain or end it with `pz_record_stop()`; [`pz_record()`](../reference/pz_record.html) records a block of code. For other ways to direct attention, see [`pz_annotate()`](../reference/pz_annotate.html) for marks and reveals and [`pz_annotate_spotlight()`](../reference/pz_annotate_spotlight.html) for a dimmed page. [`pz_press(show_keys = ...)`](../reference/pz_press.html) can display a shortcut during a recording; [`pz_record_start(captions = "both")`](../reference/pz_record_start.html) can write a WebVTT file alongside an MP4. For a tour of the bundled Shiny app, start with the [Shiny apps article](shiny.html).
+Each part has its own MP4, named after its chunk, but shares the task tracker's state with the next part. Camera shots reset at the start of each recording; annotations and captions do not, so clear or replace them deliberately. To record across several statements, assign the chain or end it with `pz_record_stop()`; [`pz_record()`](../reference/pz_record.html) records a block of code. For other ways to direct attention, see [`pz_annotate()`](../reference/pz_annotate.html) for marks and reveals and [`pz_annotate_spotlight()`](../reference/pz_annotate_spotlight.html) for a dimmed page. [`pz_act_press(show_keys = ...)`](../reference/pz_act_press.html) can display a shortcut during a recording; [`pz_record_start(captions = "both")`](../reference/pz_record_start.html) can write a WebVTT file alongside an MP4. For a tour of the bundled Shiny app, start with the [Shiny apps article](shiny.html).

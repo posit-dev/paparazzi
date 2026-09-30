@@ -306,7 +306,7 @@ test_that("explicit paths stay chainable while knitting", {
   withr::local_dir(dir)
   text <- paste(
     '```{r fig-manual, echo=FALSE}',
-    'page |> pz_screenshot("manual.png", target = "#shot-a") |> pz_click("#shot-a")',
+    'page |> pz_screenshot("manual.png", target = "#shot-a") |> pz_act_click("#shot-a")',
     '```',
     sep = "\n"
   )

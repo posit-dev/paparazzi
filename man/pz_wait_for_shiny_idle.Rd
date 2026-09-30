@@ -31,7 +31,7 @@ page <- pz_open(pz_example("tasks-app"))
 # Clicking Add makes the server re-render the task list, which takes a moment
 page |>
   pz_set_value("Buy milk", target = "#title") |>
-  pz_click("#add") |>
+  pz_act_click("#add") |>
   pz_wait_for_shiny_idle()
 pz_get_text(page, target = "#summary")
 pz_close(page)

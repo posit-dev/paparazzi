@@ -24,7 +24,7 @@ page <- pz_open(pz_example("tasks"))
 page |>
   pz_find(".task-list") |>
   pz_find_last(".task") |>
-  pz_click(".task-done") |>
+  pz_act_click(".task-done") |>
   # Back to the whole list, to check the result
   pz_find_pop() |>
   pz_expect_count(2, target = ".task.done")

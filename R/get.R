@@ -8,7 +8,7 @@
 #' instead of returning `0`, because the pinned set promises a live set
 #' and is never silently re-queried.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, whose count
@@ -107,7 +107,7 @@ pz_get_text <- function(ctx, target = NULL, ..., raw = FALSE) {
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_type("Buy milk", target = "#task-title")
+#' page |> pz_act_type("Buy milk", target = "#task-title")
 #' pz_get_value(page, target = list("#task-title", "#task-priority"))
 #' pz_close(page)
 #'
@@ -172,7 +172,7 @@ pz_get_attr <- function(ctx, name, target = NULL, ...) {
 #'   CSS pixels, viewport-relative), one row per match, plus an
 #'   `element` list-column. Each `element` entry is a context scoped
 #'   to that one match, pinned at get time, so a chain can continue
-#'   from it: `rects$element[[2]] |> pz_hover()`.
+#'   from it: `rects$element[[2]] |> pz_act_hover()`.
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
@@ -181,7 +181,7 @@ pz_get_attr <- function(ctx, name, target = NULL, ...) {
 #'
 #' # Each row's element column is a context scoped to that match
 #' rects$element[[3]] |>
-#'   pz_click() |>
+#'   pz_act_click() |>
 #'   pz_expect_url("#done")
 #' pz_close(page)
 #'
@@ -270,13 +270,13 @@ pz_get_html <- function(ctx, target = NULL, ...) {
 #'
 #' [pz_get_url()] returns the page's current URL.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return A character vector of length one.
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_click(pz_loc(".filters a", has_text = "Open"))
+#' page |> pz_act_click(pz_loc(".filters a", has_text = "Open"))
 #' basename(pz_get_url(page))
 #' pz_close(page)
 #'
@@ -290,7 +290,7 @@ pz_get_url <- function(ctx) {
 #'
 #' [pz_get_title()] returns the page's current title.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #'
 #' @return A character vector of length one.
 #'

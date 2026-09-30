@@ -28,7 +28,7 @@ test_that("cursor functions draw, hide, move, and leave the overlay cursor", {
 
   # The next action brings the cursor back to the pointer (not
   # recording, so it jumps) and the click still lands.
-  page |> pz_click("#btn")
+  page |> pz_act_click("#btn")
   expect_equal(pz_js(page, "window.__log.clicks"), 1)
   expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
 })
@@ -161,7 +161,7 @@ test_that("recorded click frames keep pointing cursor ink at the target", {
   page <- local_cursor_page()
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
-  page |> pz_click("#btn")
+  page |> pz_act_click("#btn")
   page |> pz_record_stop()
 
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
@@ -302,7 +302,7 @@ test_that("CSS zoom keeps the cursor aligned with the pointer", {
   st <- cursor_overlay_state(page)
   expect_equal(st[2:3], rect)
   # The real pointer still hits the button through the zoom.
-  page |> pz_click("#btn")
+  page |> pz_act_click("#btn")
   expect_equal(pz_js(page, "window.__log.clicks"), 1)
 })
 
@@ -774,7 +774,7 @@ test_that("off-frame entrances and staged actions use destination entry", {
     "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.classList[1])"
   ))
   expect_setequal(animations, c("pz-icon-default", "pz-icon-pointer"))
-  page |> pz_hover("#plain")
+  page |> pz_act_hover("#plain")
   expect_identical(page_cursor(page)$icon, "default")
   expect_match(
     pz_js(
@@ -837,7 +837,7 @@ test_that("pointer actions switch at the resolved target's edge", {
   out <- withr::local_tempfile(fileext = ".mp4")
   rec |> pz_record_start(out, fps = 10, hold = c(0, 0))
   rec |> pz_cursor_move("#plain")
-  rec |> pz_hover("#nested")
+  rec |> pz_act_hover("#nested")
   keyframes <- pz_js(
     rec,
     "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
@@ -906,7 +906,7 @@ test_that("offset does not dispatch real pointer events", {
     )),
     c(0, 0, 0)
   )
-  page |> pz_hover("#btn")
+  page |> pz_act_hover("#btn")
   events <- unlist(pz_js(
     page,
     "[window.__log.enters, window.__log.moves, window.__log.clicks]"
@@ -1034,7 +1034,7 @@ test_that("an explicitly hidden cursor stays hidden during recorded typing", {
     )
   defer_record_stop(page)
 
-  page |> pz_click("#task-title")
+  page |> pz_act_click("#task-title")
   pz_js(
     page,
     paste0(
@@ -1048,7 +1048,7 @@ test_that("an explicitly hidden cursor stays hidden during recorded typing", {
   )
   page |>
     pz_cursor_hide() |>
-    pz_type("abc", target = "#task-title")
+    pz_act_type("abc", target = "#task-title")
 
   opacities <- unlist(pz_js(page, "window.__cursorInputOpacity"))
   expect_length(opacities, 3)
@@ -1071,13 +1071,13 @@ test_that("recorded typing rests the cursor until the next move", {
   }
 
   # Not recording: typing leaves a shown cursor alone.
-  page |> pz_cursor_show() |> pz_type("a", target = "#name")
+  page |> pz_cursor_show() |> pz_act_type("a", target = "#name")
   expect_equal(cursor_overlay_state(page)[[1]], 1)
   expect_false(page_cursor(page)$resting)
 
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
-  page |> pz_type("b", target = "#name")
+  page |> pz_act_type("b", target = "#name")
   st <- cursor_overlay_state(page)
   expect_equal(st[[1]], 0)
   expect_true(page_cursor(page)$resting)
@@ -1086,7 +1086,7 @@ test_that("recorded typing rests the cursor until the next move", {
   # The next pointer action glides from where it rested, fading in.
   commands <- list()
   testthat::with_mocked_bindings(
-    page |> pz_click("#btn"),
+    page |> pz_act_click("#btn"),
     cursor_command = function(ctx, state) {
       if (!isTRUE(state$resolveOnly)) {
         commands[[length(commands) + 1L]] <<- state
@@ -1102,7 +1102,7 @@ test_that("recorded typing rests the cursor until the next move", {
   expect_false(page_cursor(page)$resting)
 
   # A shown cursor resting at stop is drawn again for stills.
-  page |> pz_cursor_show() |> pz_type("d", target = "#name")
+  page |> pz_cursor_show() |> pz_act_type("d", target = "#name")
   expect_true(page_cursor(page)$resting)
   pz_record_stop(page)
   expect_false(page_cursor(page)$resting)
@@ -1112,7 +1112,7 @@ test_that("recorded typing rests the cursor until the next move", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
 
   # An explicit hide is not a rest, and typing doesn't bring it back.
-  page |> pz_cursor_hide() |> pz_type("c", target = "#name")
+  page |> pz_cursor_hide() |> pz_act_type("c", target = "#name")
   expect_false(page_cursor(page)$resting)
   expect_match(line(page), "on · cursor hidden")
   pz_record_stop(page)

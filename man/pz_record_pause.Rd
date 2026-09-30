@@ -27,13 +27,13 @@ page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "add-task.mp4")
 page |>
   pz_record_start(path) |>
-  pz_click("#task-title") |>
+  pz_act_click("#task-title") |>
   pz_record_pause() |>
   # Filling in the form is cut from the video
   pz_set_value("Buy milk", target = "#task-title") |>
   pz_set_value("high", target = "#task-priority") |>
   pz_record_resume() |>
-  pz_click("#add-task") |>
+  pz_act_click("#add-task") |>
   pz_expect_count(8, target = ".task") |>
   pz_record_stop()
 pz_close(page)

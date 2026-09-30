@@ -27,7 +27,7 @@ page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "done.gif")
 page |>
   pz_record_start(path, frame = pz_frame(".task-list", pad = 8)) |>
-  pz_click(pz_loc(".task-done", which = "first")) |>
+  pz_act_click(pz_loc(".task-done", which = "first")) |>
   pz_record_stop()
 file.exists(path)
 pz_close(page)

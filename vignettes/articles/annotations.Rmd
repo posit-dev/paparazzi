@@ -288,7 +288,7 @@ The recording stops when the chain ends, and with no path it's written into the 
 
 ## Keystroke callouts
 
-One more callout exists only in recordings: [`pz_press(show_keys = ...)`](../reference/pz_press.html) shows the keys being pressed as keycaps. `"words"` spells out modifier names, `"mac"` uses Mac symbols, and `"both"` shows `Mod` as `Ctrl / ⌘`. The default is `"none"`; set [`pz_stage(show_keys = ...)`](../reference/pz_stage.html) to change it for a whole page.
+One more callout exists only in recordings: [`pz_act_press(show_keys = ...)`](../reference/pz_act_press.html) shows the keys being pressed as keycaps. `"words"` spells out modifier names, `"mac"` uses Mac symbols, and `"both"` shows `Mod` as `Ctrl / ⌘`. The default is `"none"`; set [`pz_stage(show_keys = ...)`](../reference/pz_stage.html) to change it for a whole page.
 
 ```{r show-keys}
 page |>
@@ -296,16 +296,16 @@ page |>
     frame = pz_frame("#new-task", pad = 24, when = "start"),
     scale = 0.6
   ) |>
-  pz_click("#task-title") |>
-  pz_type("Water the dog", target = "#task-title") |>
-  pz_press("Enter", show_keys = "mac") |>
+  pz_act_click("#task-title") |>
+  pz_act_type("Water the dog", target = "#task-title") |>
+  pz_act_press("Enter", show_keys = "mac") |>
   pz_expect_text(
     "Water the dog",
     target = pz_loc(".task-title", which = "first")
   )
 ```
 
-Keystroke callouts appear only in recordings, never in stills, and each `pz_press()` call replaces the previous callout.
+Keystroke callouts appear only in recordings, never in stills, and each `pz_act_press()` call replaces the previous callout.
 
 Finally, close the page to shut down the browser:
 

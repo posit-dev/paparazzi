@@ -51,7 +51,7 @@ page <- pz_open(pz_example("tasks"))
 page |> pz_expect_hidden(target = "#help")
 
 page |>
-  pz_click("#toggle-help") |>
+  pz_act_click("#toggle-help") |>
   pz_expect_visible(target = "#help")
 
 # Every match must pass, so check one task or narrow the target

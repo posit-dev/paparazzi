@@ -10,7 +10,7 @@ The cursor glides between elements, changes shape over text fields and links, an
 
 ### Tell the story
 
-Captions sit at the top or bottom of the video and change as you go. You can burn them into the video or, for MP4 and WebM, write them to a WebVTT subtitle file alongside it. Keyboard shortcuts pressed with `pz_press()` can appear on screen as keystrokes. `pz_record_hold()` gives viewers time to read, and `pz_record_pause()` cuts out anything they don't need to see.
+Captions sit at the top or bottom of the video and change as you go. You can burn them into the video or, for MP4 and WebM, write them to a WebVTT subtitle file alongside it. Keyboard shortcuts pressed with `pz_act_press()` can appear on screen as keystrokes. `pz_record_hold()` gives viewers time to read, and `pz_record_pause()` cuts out anything they don't need to see.
 
 ### Frame it for wherever it's going
 

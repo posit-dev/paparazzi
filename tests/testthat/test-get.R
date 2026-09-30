@@ -383,7 +383,7 @@ test_that("the element column continues the chain from one match", {
   # The acceptance criterion: the pinned match drives a real action.
   second <- rects$element[[2]]
   expect_identical(pz_get_text(second), "A2")
-  expect_invisible(pz_hover(second))
+  expect_invisible(pz_act_hover(second))
   expect_identical(
     pz_js(
       page,
@@ -410,7 +410,7 @@ test_that("a detached element-column context names its row", {
 
   # Drop the row's element; the pinned match is stale, never re-queried.
   pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[2].remove()")
-  err <- expect_error(pz_click(ctx), class = "paparazzi_error_detached")
+  err <- expect_error(pz_act_click(ctx), class = "paparazzi_error_detached")
   msg <- paste(conditionMessage(err), collapse = " ")
   expect_match(msg, "Scope: `#scope-a \\.sc-item` \\(which: 3\\)")
 })
@@ -427,7 +427,7 @@ test_that("a which-loc's element entry names its original match when detached", 
   # selection instead of being re-labeled match 1; a later detach
   # names the real match, not the first one.
   pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[5].remove()")
-  err <- expect_error(pz_click(ctx), class = "paparazzi_error_detached")
+  err <- expect_error(pz_act_click(ctx), class = "paparazzi_error_detached")
   msg <- paste(conditionMessage(err), collapse = " ")
   expect_match(msg, "Scope: `#scope-a \\.sc-item` \\(which: last\\)")
 })

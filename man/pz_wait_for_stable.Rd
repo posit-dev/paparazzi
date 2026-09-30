@@ -59,8 +59,8 @@ page <- pz_open(pz_example("tasks"))
 
 # The status line reads "Saving..." and then "Saved"; wait for it to settle
 page |>
-  pz_type("Buy milk", target = "#task-title") |>
-  pz_click("#add-task") |>
+  pz_act_type("Buy milk", target = "#task-title") |>
+  pz_act_click("#add-task") |>
   pz_wait_for_stable(target = "#status", for_ms = 500)
 pz_get_text(page, target = "#status")
 pz_close(page)

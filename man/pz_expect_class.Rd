@@ -46,7 +46,7 @@ page |> pz_expect_class("done", target = water, not = TRUE)
 
 page |>
   pz_find(water) |>
-  pz_click(".task-done") |>
+  pz_act_click(".task-done") |>
   pz_expect_class("done")
 pz_close(page)
 \dontshow{\}) # examplesIf}

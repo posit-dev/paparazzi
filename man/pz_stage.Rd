@@ -63,7 +63,7 @@ The default is 0. Supply \code{NULL} to restore the default.}
 a zoomed recording camera to keep their target in view. Defaults to
 \code{TRUE}; \code{FALSE} disables it and \code{NULL} restores the default.}
 
-\item{show_keys}{Keystroke callouts for \code{\link[=pz_press]{pz_press()}}: \code{"none"} (default),
+\item{show_keys}{Keystroke callouts for \code{\link[=pz_act_press]{pz_act_press()}}: \code{"none"} (default),
 \code{"words"}, \code{"mac"}, or \code{"both"}. Supply \code{NULL} to restore the default.
 Callouts appear only in recordings.}
 }
@@ -91,8 +91,8 @@ path <- file.path(tempdir(), "add-task.mp4")
 page |>
   pz_record(path, {
     page |>
-      pz_type("Buy milk", target = "#task-title") |>
-      pz_click("#add-task")
+      pz_act_type("Buy milk", target = "#task-title") |>
+      pz_act_click("#add-task")
   })
 
 # NULL restores a setting's default
@@ -101,7 +101,7 @@ page |> pz_stage(pause = NULL)
 # cursor = TRUE shows the cursor in screenshots too
 page |>
   pz_stage(cursor = TRUE) |>
-  pz_hover("#task-title") |>
+  pz_act_hover("#task-title") |>
   pz_screenshot(file.path(tempdir(), "cursor.png"), target = "#new-task")
 pz_close(page)
 \dontshow{\}) # examplesIf}

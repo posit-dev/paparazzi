@@ -45,15 +45,15 @@ reference:
       Click, type, set values, and take screenshots. Actions that interact
       with an element wait for it to be visible first.
     contents:
-      - pz_click
-      - pz_hover
-      - pz_type
-      - pz_press
-      - pz_focus
-      - pz_blur
-      - pz_scroll
-      - pz_drag
-      - pz_select_text
+      - pz_act_click
+      - pz_act_hover
+      - pz_act_type
+      - pz_act_press
+      - pz_act_focus
+      - pz_act_blur
+      - pz_act_scroll
+      - pz_act_drag
+      - pz_act_select_text
       - pz_set_value
       - pz_set_shiny_input
       - pz_set_files

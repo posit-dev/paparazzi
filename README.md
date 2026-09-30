@@ -76,8 +76,8 @@ pz_record(
     page |>
       pz_annotate_caption("Add a task") |>
       pz_camera("#new-task", wait = TRUE) |>
-      pz_type("Prepare release notes", target = "#task-title") |>
-      pz_click("#add-task") |>
+      pz_act_type("Prepare release notes", target = "#task-title") |>
+      pz_act_click("#add-task") |>
       pz_expect_visible(new_task) |>
       pz_annotate(new_task, type = "box", pad = 4, id = "new") |>
       pz_annotate_caption("New tasks go to the top of the list") |>
@@ -86,7 +86,7 @@ pz_record(
       pz_annotate_clear(id = "new") |>
       pz_annotate_caption("Check it off when you're done") |>
       pz_find(new_task) |>
-      pz_click(".task-done") |>
+      pz_act_click(".task-done") |>
       pz_expect_class("done") |>
       pz_cursor_leave() |>
       pz_record_hold(1)
@@ -110,10 +110,10 @@ make the result an 800-pixel-wide GIF, small enough for a README.
 Inside the block, each line is one step, and the steps fall into two
 groups:
 
-- **Using the page.** `pz_type()` clicks the title field and types into
-  it, and `pz_click()` presses a button. `pz_find()` narrows the next
-  steps to the new task, so `".task-done"` means that task’s Done
-  button.
+- **Using the page.** `pz_act_type()` clicks the title field and types
+  into it, and `pz_act_click()` presses a button. `pz_find()` narrows
+  the next steps to the new task, so `".task-done"` means that task’s
+  Done button.
 - **Directing the viewer.** `pz_camera()` zooms in and
   `pz_camera_reset()` pulls back out. `pz_annotate()` outlines the new
   task, `pz_annotate_caption()` changes the caption, and
@@ -158,7 +158,7 @@ the typing speed, and the pause after each step.
 Captions sit at the top or bottom of the video and change as you go. You
 can burn them into the video or, for MP4 and WebM, write them to a
 WebVTT subtitle file alongside it. Keyboard shortcuts pressed with
-`pz_press()` can appear on screen as keystrokes. `pz_record_hold()`
+`pz_act_press()` can appear on screen as keystrokes. `pz_record_hold()`
 gives viewers time to read, and `pz_record_pause()` cuts out anything
 they don’t need to see.
 
@@ -198,7 +198,7 @@ app <- pz_open(pz_example("tasks-app"))
 app |>
   pz_set_shiny_input("priority", "high") |>
   pz_set_value("Buy milk", target = "#title") |>
-  pz_click("#add") |>
+  pz_act_click("#add") |>
   pz_expect_text("3 tasks", target = "#summary")
 
 pz_close(app)
@@ -213,7 +213,7 @@ The cursor animation and typing only happen while recording. Take away
 hidden, text goes in without the typing animation, and camera moves and
 holds do nothing. That makes a demo script a browser test too.
 
-The steps behave well in a test. Actions like `pz_click()` wait for
+The steps behave well in a test. Actions like `pz_act_click()` wait for
 their element to be ready before acting. Expectations like
 `pz_expect_text()` retry until the page shows what they expect, or time
 out with an error that says what they last saw. Inside a testthat test,
@@ -226,7 +226,7 @@ test_that("adding a task updates the summary", {
 
   page |>
     pz_set_value("Buy milk", target = "#title") |>
-    pz_click("#add") |>
+    pz_act_click("#add") |>
     pz_expect_text("3 tasks", target = "#summary")
 })
 ```

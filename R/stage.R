@@ -20,7 +20,7 @@
 #' is skipped and the chain runs straight to its final state -- except
 #' `cursor = TRUE`, which shows a static cursor in screenshots too.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param ... Checked empty; reserved for future use.
 #' @param cursor Cursor visibility: `NULL` (the default) shows the
 #'   cursor only while recording, `TRUE` shows it always (stills too),
@@ -54,7 +54,7 @@
 #' @param camera_follow Whether pointer and typing actions automatically pan
 #'   a zoomed recording camera to keep their target in view. Defaults to
 #'   `TRUE`; `FALSE` disables it and `NULL` restores the default.
-#' @param show_keys Keystroke callouts for [pz_press()]: `"none"` (default),
+#' @param show_keys Keystroke callouts for [pz_act_press()]: `"none"` (default),
 #'   `"words"`, `"mac"`, or `"both"`. Supply `NULL` to restore the default.
 #'   Callouts appear only in recordings.
 #'
@@ -73,8 +73,8 @@
 #' page |>
 #'   pz_record(path, {
 #'     page |>
-#'       pz_type("Buy milk", target = "#task-title") |>
-#'       pz_click("#add-task")
+#'       pz_act_type("Buy milk", target = "#task-title") |>
+#'       pz_act_click("#add-task")
 #'   })
 #'
 #' # NULL restores a setting's default
@@ -83,7 +83,7 @@
 #' # cursor = TRUE shows the cursor in screenshots too
 #' page |>
 #'   pz_stage(cursor = TRUE) |>
-#'   pz_hover("#task-title") |>
+#'   pz_act_hover("#task-title") |>
 #'   pz_screenshot(file.path(tempdir(), "cursor.png"), target = "#new-task")
 #' pz_close(page)
 #'
@@ -224,7 +224,7 @@ pz_stage <- function(
 #' `NULL` restores its default, and a value sets it. Per-call annotation
 #' style arguments override these defaults.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param ... Checked empty; reserved for future use.
 #' @param color CSS color for new annotations. The default is `"#e11d48"`.
 #'   Supply `NULL` to restore the default.
@@ -492,7 +492,7 @@ stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
   invisible(TRUE)
 }
 
-# The staged pz_scroll(by =)/pz_scroll(to =): wheel the scope's
+# The staged pz_act_scroll(by =)/pz_act_scroll(to =): wheel the scope's
 # container (or the document) to the target scroll position with the
 # cursor over it, then verify and repair. The wheel point is hit-tested
 # for the container first -- a nested scroller covering it would

@@ -45,7 +45,7 @@ page <- pz_open(pz_example("tasks"), height = 500)
 last_task <- pz_loc(".task", which = "last")
 page |> pz_expect_in_viewport(target = last_task, not = TRUE)
 page |>
-  pz_scroll(last_task) |>
+  pz_act_scroll(last_task) |>
   pz_expect_in_viewport(target = last_task)
 pz_close(page)
 \dontshow{\}) # examplesIf}

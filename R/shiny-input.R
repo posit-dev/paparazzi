@@ -6,7 +6,7 @@
 #' current scope, including the scope element itself. This does not set
 #' unbound inputs, action buttons, or file inputs.
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param id Full DOM ID of a bound Shiny input.
 #' @param value Value accepted by the binding's `setValue()`. Date ranges
 #'   accept `c(start, end)` or `list(start = ..., end = ...)`, with ISO date
@@ -22,7 +22,7 @@
 #' page |>
 #'   pz_set_shiny_input("title", "Buy milk") |>
 #'   pz_set_shiny_input("priority", "high") |>
-#'   pz_click("#add") |>
+#'   pz_act_click("#add") |>
 #'   pz_expect_text("3 tasks", target = "#summary")
 #' pz_get_attr(page, "data-priority", target = ".task")
 #' pz_close(page)

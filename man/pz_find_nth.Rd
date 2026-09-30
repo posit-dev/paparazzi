@@ -40,7 +40,7 @@ page <- pz_open(pz_example("tasks"))
 # Mark the second task as done
 page |>
   pz_find_nth(2, target = ".task") |>
-  pz_click(".task-done")
+  pz_act_click(".task-done")
 pz_get_text(page, target = pz_loc(".task.done .task-title"))
 pz_close(page)
 \dontshow{\}) # examplesIf}

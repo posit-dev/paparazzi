@@ -18,7 +18,7 @@ A character vector of length one.
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_click(pz_loc(".filters a", has_text = "Open"))
+page |> pz_act_click(pz_loc(".filters a", has_text = "Open"))
 basename(pz_get_url(page))
 pz_close(page)
 \dontshow{\}) # examplesIf}

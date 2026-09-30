@@ -42,8 +42,8 @@ path <- file.path(tempdir(), "add-task.mp4")
 page |>
   pz_record(path, {
     page |>
-      pz_type("Buy milk", target = "#task-title") |>
-      pz_click("#add-task") |>
+      pz_act_type("Buy milk", target = "#task-title") |>
+      pz_act_click("#add-task") |>
       pz_expect_count(8, target = ".task")
   }) |>
   pz_screenshot(file.path(tempdir(), "after.png"))

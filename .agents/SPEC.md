@@ -34,7 +34,7 @@ Known bugs to fix while porting:
 - Actions take a **context** as their first argument and normally return it invisibly, so whole scripts can be one `|>` chain. Knitted media captures are terminal exceptions: pathless screenshots and completed recordings return printable results. Knitr includes a result when it is the visible last call of a top-level chunk expression. An interactive pathless screenshot also returns a printable preview. Explicit-path screenshots and recordings outside knitting still return the context invisibly. Recording chains are the other exception (see Recording lifecycle): the context `pz_record_start()` returns, and contexts derived from it, come back visibly while that recording runs, and printing one stops the recording.
 - The exception is the `pz_find*()` family (`pz_find()`, `pz_find_first()`, `pz_find_last()`, `pz_find_nth()`, `pz_find_pop()`, `pz_find_reset()`), which returns its context visibly. Scope lives only in the returned context, so a scoped context that is neither assigned nor piped onward prints at the console instead of disappearing silently.
 - A context is either the page (root) or a scoped context created by `pz_find*()`.
-- Page-level functions (`pz_press()`, recording, cursor, navigation) work from any context. Recording start remains chainable; during knitting, recording stop and the completed block form return media rather than a context.
+- Page-level functions (`pz_act_press()`, recording, cursor, navigation) work from any context. Recording start remains chainable; during knitting, recording stop and the completed block form return media rather than a context.
 
 ### Argument order
 
@@ -50,14 +50,14 @@ Known bugs to fix while porting:
   | Root | error: needs a target | the focused element | viewport |
 
 ```r
-pz_click(ctx, target = NULL, ...)
-pz_type(ctx, text, ..., target = NULL)
+pz_act_click(ctx, target = NULL, ...)
+pz_act_type(ctx, text, ..., target = NULL)
 pz_screenshot(ctx, path = NULL, ..., target = NULL, frame = NULL)
 # path may be omitted while knitting (numbered PNG in the chunk's figure directory)
 # or at an interactive console (temporary PNG preview); otherwise it is required.
 pz_set_files(ctx, files, ..., target = NULL)
-pz_select_text(ctx, text, ..., target = NULL)
-pz_press(ctx, key, ...)
+pz_act_select_text(ctx, text, ..., target = NULL)
+pz_act_press(ctx, key, ...)
 pz_expect_text(ctx, text, target = NULL, ..., match = "contains", not = FALSE, timeout = NULL)
 pz_get_attr(ctx, name, target = NULL, ...)
 pz_expect_attr(ctx, .target = NULL, ..., .match = c("exact", "contains", "regex"), .not = FALSE, .timeout = NULL)
@@ -67,20 +67,20 @@ pz_expect_attr(ctx, .target = NULL, ..., .match = c("exact", "contains", "regex"
 
 Pointer and keyboard:
 
-- `pz_click()`, `pz_hover()`, `pz_type()` as above.
-- `pz_press(ctx, key, ...)`: Playwright-style key syntax, e.g. `"Enter"`, `"Control+A"`, `"Meta+Enter"`, `"Shift+Tab"`. A vector presses keys in sequence: `pz_press(c("ArrowDown", "Enter"))`. Discussed: a `Mod` modifier and a `show_keys` option (see Camera, annotations, and captions).
-- `pz_focus(ctx, target = NULL, ...)` / `pz_blur(ctx, ...)`: e.g. focus to show an input's enabled look, blur to remove focus rings before a screenshot.
-- `pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)`: with a target, scroll it into view; with `by = c(x, y)` or `to = "bottom"` (direction vocabulary), scroll the current scope's container. While recording, scrolling is smooth, using real `mouseWheel` events with the cursor over the container; positive `duration` overrides the staged time per wheel scroll, while `duration = 0` uses the existing instant path (no queued wheels). Auto-scroll before other actions is animated the same way.
-- `pz_drag(ctx, target, to = NULL, ..., by = NULL)`: `to` is a target, or use an offset `by = c(x, y)`. Real mouse press/move/release; the cursor glides while holding when recording. HTML5 drag and drop (`dragstart`/`drop`) needs `Input.setInterceptDrags` + `Input.dispatchDragEvent`, chosen when the source is `draggable`.
-- `pz_select_text(ctx, text, ..., target = NULL)`: highlights an exact substring inside an element, as if dragging across it (TreeWalker over text nodes, DOM `Range`, window selection; works across inline tags). Typing afterwards replaces the selection. While recording, it's staged as a real mouse drag from the start of the text to the end.
+- `pz_act_click()`, `pz_act_hover()`, `pz_act_type()` as above.
+- `pz_act_press(ctx, key, ...)`: Playwright-style key syntax, e.g. `"Enter"`, `"Control+A"`, `"Meta+Enter"`, `"Shift+Tab"`. A vector presses keys in sequence: `pz_act_press(c("ArrowDown", "Enter"))`. Discussed: a `Mod` modifier and a `show_keys` option (see Camera, annotations, and captions).
+- `pz_act_focus(ctx, target = NULL, ...)` / `pz_act_blur(ctx, ...)`: e.g. focus to show an input's enabled look, blur to remove focus rings before a screenshot.
+- `pz_act_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)`: with a target, scroll it into view; with `by = c(x, y)` or `to = "bottom"` (direction vocabulary), scroll the current scope's container. While recording, scrolling is smooth, using real `mouseWheel` events with the cursor over the container; positive `duration` overrides the staged time per wheel scroll, while `duration = 0` uses the existing instant path (no queued wheels). Auto-scroll before other actions is animated the same way.
+- `pz_act_drag(ctx, target, to = NULL, ..., by = NULL)`: `to` is a target, or use an offset `by = c(x, y)`. Real mouse press/move/release; the cursor glides while holding when recording. HTML5 drag and drop (`dragstart`/`drop`) needs `Input.setInterceptDrags` + `Input.dispatchDragEvent`, chosen when the source is `draggable`.
+- `pz_act_select_text(ctx, text, ..., target = NULL)`: highlights an exact substring inside an element, as if dragging across it (TreeWalker over text nodes, DOM `Range`, window selection; works across inline tags). Typing afterwards replaces the selection. While recording, it's staged as a real mouse drag from the start of the text to the end.
 
 Setting values:
 
-- `pz_set_value(ctx, value, ..., target = NULL)`: generic DOM setter, like Playwright's `fill()`. Sets the value and dispatches `input` and `change`. Covers text inputs, textareas, native `<select>` (by value), checkboxes/radios (`TRUE`/`FALSE`), range and date inputs. Uses the native prototype setter so framework-controlled inputs notice. Contenteditable/ProseMirror falls back to select-all + `Input.insertText`. Instant even while recording; use `pz_type()` or clicks for the animated version. Clearing is `pz_set_value("")`, so there's no `pz_clear()`; replacing text on camera is `pz_set_value("") |> pz_type("new text")`.
+- `pz_set_value(ctx, value, ..., target = NULL)`: generic DOM setter, like Playwright's `fill()`. Sets the value and dispatches `input` and `change`. Covers text inputs, textareas, native `<select>` (by value), checkboxes/radios (`TRUE`/`FALSE`), range and date inputs. Uses the native prototype setter so framework-controlled inputs notice. Contenteditable/ProseMirror falls back to select-all + `Input.insertText`. Instant even while recording; use `pz_act_type()` or clicks for the animated version. Clearing is `pz_set_value("")`, so there's no `pz_clear()`; replacing text on camera is `pz_set_value("") |> pz_act_type("new text")`.
 - `pz_set_shiny_input(ctx, id, value, ..., wait = TRUE)`: sets a Shiny input through its input binding (as shinytest2's `set_inputs()` does), so the UI updates visibly and the server sees a real change. Handles selectize, sliders, date ranges, and any widget with a binding. Resolves `id` within the current scope (modules). `wait = TRUE` waits for Shiny idle. A missing binding is a clear error. It's the only Shiny-specific action.
 - `pz_set_files(ctx, files, ..., target = NULL)`: file inputs, via `DOM.setFileInputFiles`.
 
-Skipped in favor of primitives: select option (`pz_set_value()` for native selects, `pz_set_shiny_input()` for selectize), check/uncheck (`pz_set_value(TRUE)` or `pz_click()`), and clear (`pz_set_value("")`).
+Skipped in favor of primitives: select option (`pz_set_value()` for native selects, `pz_set_shiny_input()` for selectize), check/uncheck (`pz_set_value(TRUE)` or `pz_act_click()`), and clear (`pz_set_value("")`).
 
 Navigation triggered by actions (clicking a link, submitting a form, JS redirects) isn't detected automatically. Call `pz_wait_for_navigation()` explicitly, which makes expected navigations obvious in the code and marks where scope resets to root.
 
@@ -233,7 +233,7 @@ Getters return values, so they end the chain. They're named `pz_get_*()`, parall
 - Same argument rule as everything else: `pz_get_text(ctx, target = NULL, ...)`, `pz_get_attr(ctx, name, target = NULL, ...)`. `target = NULL` means the current scope.
 - Getters auto-wait for at least one match, then return all matches, and error after the timeout. `pz_get_count()` returns immediately, since 0 is a valid answer.
 - `pz_get_text()` collapses whitespace like `pz_expect_text()`; `raw = TRUE` turns that off.
-- Tibble getters include an `element` list-column. Each entry is a context scoped to that one match, pinned at get time (see Scoping), so you can continue from it: `rects$element[[2]] |> pz_hover() |> pz_screenshot("second.png")`. The column gets a short pillar type label (e.g. `<pz_ctx>`) and a compact print format. tibble is in Imports.
+- Tibble getters include an `element` list-column. Each entry is a context scoped to that one match, pinned at get time (see Scoping), so you can continue from it: `rects$element[[2]] |> pz_act_hover() |> pz_screenshot("second.png")`. The column gets a short pillar type label (e.g. `<pz_ctx>`) and a compact print format. tibble is in Imports.
 - No peek/tee helper. To grab a value mid-chain, split the chain by assigning the scoped context:
 
   ```r
@@ -244,8 +244,8 @@ Getters return values, so they end the chain. They're named `pz_get_*()`, parall
   title <- pz_get_text(item, ".history-title")
 
   item |>
-    pz_hover() |>
-    pz_click(".actions-btn")
+    pz_act_hover() |>
+    pz_act_click(".actions-btn")
   ```
 
 ### Styles
@@ -299,7 +299,7 @@ Lifecycle:
 
 - Recorder state lives on the page, so recording happens inside a single chain.
 - `pz_record_start(ctx, path = NULL, ..., format = c("auto", "mp4", "webm", "gif"))`: `path` is the main input. If `NULL` or omitted while knitting, a numbered path in the chunk's figure directory is used; if `NULL` or omitted interactively, a temp file, previewed in the viewer at stop. Otherwise `path` is required. `format` applies only without a path (an error alongside one): `"auto"` is MP4, or GIF when knitting to non-HTML output, where video can only be linked.
-- **Recording chains:** start returns, invisibly, a new context carrying its recorder; `ctx_derive()` keeps it through `pz_find*()` and navigation resets. Chainable functions return through `ctx_return()`, which is visible only while that context's recorder is the page's active one. Printing such a context (`print()` or `knit_print()`) calls `pz_record_stop()` and shows the media: knitr media while knitting, a viewer preview interactively (video previews get an HTML wrapper page in a temp dir). So `page |> pz_record_start() |> ... ` needs no stop at the end of an expression; assign it or call `pz_record_stop()` to span statements. Chains not from start (`page |> pz_click()`) never stop a recording. Considered and rejected: making every chain visible, which would print page summaries after every action in knitted docs and consoles and cost CDP round trips per print.
+- **Recording chains:** start returns, invisibly, a new context carrying its recorder; `ctx_derive()` keeps it through `pz_find*()` and navigation resets. Chainable functions return through `ctx_return()`, which is visible only while that context's recorder is the page's active one. Printing such a context (`print()` or `knit_print()`) calls `pz_record_stop()` and shows the media: knitr media while knitting, a viewer preview interactively (video previews get an HTML wrapper page in a temp dir). So `page |> pz_record_start() |> ... ` needs no stop at the end of an expression; assign it or call `pz_record_stop()` to span statements. Chains not from start (`page |> pz_act_click()`) never stop a recording. Considered and rejected: making every chain visible, which would print page summaries after every action in knitted docs and consoles and cost CDP round trips per print.
 - `pz_record_stop(ctx)`: encodes and writes the file. During knitting, the completed recording is returned as printable media, including when the path was explicit; outside knitting it returns the context.
 - `pz_record_pause()` / `pz_record_resume()`: cut stretches out of the recording. There's no cancel.
 - `pz_record_hold(ctx, seconds)`: hold the frame while recording; no-op otherwise. Unlike `pz_wait()`, which always waits, debugging runs without recording don't pay for video-only pauses.
@@ -309,8 +309,8 @@ Lifecycle:
   page |>
     pz_record("demo.mp4", {
       page |>
-        pz_type("Show me penguins", target = chat$input) |>
-        pz_click(chat$send) |>
+        pz_act_type("Show me penguins", target = chat$input) |>
+        pz_act_click(chat$send) |>
         pz_wait_for_stable(target = chat$last_reply)
     }) |>
     pz_screenshot("after.png")
@@ -434,7 +434,7 @@ pz_cursor_show(ctx, target = NULL, ..., from = NULL, icon = NULL)
 pz_cursor_hide(ctx, ...)
 pz_cursor_move(ctx, target, ..., duration = NULL, icon = NULL, offset = c(0, 0))
 pz_cursor_leave(ctx, side = "right", icon = NULL)
-pz_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)
+pz_act_scroll(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)
 ```
 
 Pointer actions while recording:
@@ -442,11 +442,11 @@ Pointer actions while recording:
 1. Cursor visible: glide from its position to the target, pause briefly, act.
 2. Cursor never shown: fade in on the target with a slightly longer pause (default), or with `enter = <side>` start off-frame on that side and glide in.
 3. After `pz_cursor_leave()` the cursor is still visible but off-frame; the next action glides back in from there.
-4. After a recorded `pz_type()` with a target, the cursor **rests**: it fades out in place so it doesn't cover the typed text, but it isn't hidden the way `pz_cursor_hide()` hides it. The next move glides from the resting point and fades in as it starts. Only a move ends a rest; presses and staging redraws leave it undrawn, and a navigation re-injects it undrawn. `pz_inspect()` reports `cursor resting`.
+4. After a recorded `pz_act_type()` with a target, the cursor **rests**: it fades out in place so it doesn't cover the typed text, but it isn't hidden the way `pz_cursor_hide()` hides it. The next move glides from the resting point and fades in as it starts. Only a move ends a rest; presses and staging redraws leave it undrawn, and a navigation re-injects it undrawn. `pz_inspect()` reports `cursor resting`.
 
 Movement and look:
 
-- Glide duration scales with distance (roughly `clamp(0.25 + distance / cursor_speed, 0.5, 2)` seconds), cubic ease-in-out, short pauses before (~0.15s) and after (~0.2s) clicks. The 500 px/s default is deliberately slower than natural pointing so viewers can follow it; 400-600 px/s is a useful range. Staged scrolling uses the same duration bounds; `pz_scroll(duration > 0)` overrides the per-wheel-scroll duration and `duration = 0` scrolls instantly.
+- Glide duration scales with distance (roughly `clamp(0.25 + distance / cursor_speed, 0.5, 2)` seconds), cubic ease-in-out, short pauses before (~0.15s) and after (~0.2s) clicks. The 500 px/s default is deliberately slower than natural pointing so viewers can follow it; 400-600 px/s is a useful range. Staged scrolling uses the same duration bounds; `pz_act_scroll(duration > 0)` overrides the per-wheel-scroll duration and `duration = 0` scrolls instantly.
 - Press animation scales the 1.75x default cursor down relative to its base size; `cursor_scale = 1` restores the original 20px artwork.
 - The cursor icon follows the element under its landing point. `icon` names cover the CSS cursor keywords with bundled, per-keyword artwork (`auto` explicitly shows the default arrow; `none` draws no glyph while retaining overlay position). A computed `cursor: url(...)` with a supported fallback keyword uses the fallback; URL image contents are not drawn, and a bare URL falls back to `default`. An explicit `icon` on a cursor call overrides inference for that call only: it holds through the call's landing and does not persist, and the next automatic move starts with the icon left visible. A first off-frame entrance uses `default` unless the call sets `icon`. While recording, an automatic glide keeps the icon visible at its start and switches it once, when the eased glide enters the intended destination; elements merely crossed on the path are ignored. `pz_cursor_move(offset = c(x, y))` shifts the landing point in viewport CSS pixels (positive right and down, scalar recycled, per-call) and moves only the drawn overlay — no pointer events are dispatched. Landings may fall outside the viewport without clamping; the resting icon is inferred at the actual landing point, flipping a second time at landing when an offset leaves the target for a differently-cursored element. Ripple comes later.
 - CSS zoom and device pixel ratio are handled internally.
@@ -467,7 +467,7 @@ There are two families, split by where the effect shows up, paired with persiste
 - `pz_camera*()`: moves the view. Recording-only.
 - `pz_annotate*()`: marks up the page. Appears in recordings and stills.
 
-Keystroke callouts are a `pz_press()` option, not functions of their own.
+Keystroke callouts are a `pz_act_press()` option, not functions of their own.
 
 There are three layers:
 
@@ -486,7 +486,7 @@ pz_camera_reset(ctx, ..., wait = FALSE)
 
 - The camera is an **encode-time crop**. Capture stays full-viewport. Each camera call records a keyframe (video time, shot rect in page CSS px, easing), and at stop every output frame gets an interpolated crop, scaled back to the output size. It works for both capture methods, and camera motion runs at the output fps. Sharpness is capped by the capture DPR (2 by default). The per-frame scroll position is logged so page-coordinate shots map into viewport frames.
 - **Home shot:** the recording's frame (`pz_record_start(frame =)` or `pz_stage_frame()`), falling back to the full viewport. It defines the output size. Every shot grows to home's aspect ratio (centered) and is clamped inside home, so the camera never shows anything outside the recording's frame. `pz_camera_reset()` returns home, from any context.
-- **Shot:** `target` takes element targets only (selector, `pz_loc()`, or a list whose union is the shot); coordinates may come later. Multiple matches are unioned. At the root, `target = NULL` is an error, as for `pz_click()`. `pad` uses `pz_frame()` semantics, but `NULL` means 24 CSS px. `zoom = NULL` fits `target` + `pad`, capped at the capture DPR (so a scale-1 page never zooms on a fit); a number is magnification relative to home. Beyond the DPR, a softness warning is given once per recording. A shot is measured when its call runs.
+- **Shot:** `target` takes element targets only (selector, `pz_loc()`, or a list whose union is the shot); coordinates may come later. Multiple matches are unioned. At the root, `target = NULL` is an error, as for `pz_act_click()`. `pad` uses `pz_frame()` semantics, but `NULL` means 24 CSS px. `zoom = NULL` fits `target` + `pad`, capped at the capture DPR (so a scale-1 page never zooms on a fit); a number is magnification relative to home. Beyond the DPR, a softness warning is given once per recording. A shot is measured when its call runs.
 - **Duration:** `duration = NULL` is distance-based, `clamp(0.66 + 2 * d, 0.66, 2)` seconds, with `d = |Δcenter| / home_diagonal + 0.5 * |log2(zoom_to / zoom_from)|` (constants to be tuned against a prototype). Easing is the cursor's cubic ease-in-out. While recording, the call pumps for the move's duration so the move plays out in the video.
 - **Concurrency:** `wait = FALSE` (the default) records the keyframe and returns at once, so the next step (typically a cursor glide) runs during the move; `wait = TRUE` pumps the loop for the move's duration. Manual camera calls settle first: a second `pz_camera()` waits for the previous move to land, then starts from there, so `pz_camera(x) |> ...steps... |> pz_camera(x)` moves toward `x` during the steps and then settles on it. A call whose shot is where the camera already is records a zero-length keyframe without a `duration`: it updates the target/scroll/reset anchor but adds no video time. With an explicit duration, it's a still keyframe (with `wait = TRUE`, the same as `pz_wait(duration)`). Follow moves win: they may interrupt an in-flight manual move, and since they end when their action lands, a later camera call never waits on one. `pz_record_hold()`, `pz_record_pause()` and `pz_record_stop()` let an in-flight move land first, because holds and pauses freeze video time (camera included) and stop ends it. A numeric lead delay is deferred: `pz_camera() |> pz_wait(n)` covers it.
 - **Follow the action:** `pz_stage(camera_follow = TRUE)` is the default. While zoomed in, a pointer or typing action whose resolved target falls outside the shot plus a margin triggers a minimal pan at the current zoom, zooming out only as far as needed to fit the target. The move is keyframed to the cursor glide, so it lands when the cursor does; with the cursor off, it gets its own short staged pause. Expectations, getters and waits never move the camera, and it never triggers at home. With a non-waiting move in flight, follow leaves it alone when its destination frames the target (a zoom toward it, or a reset); otherwise containment is tested at the moment the action lands. Accepted tradeoff: an action that lands before such a move arrives can briefly land off-shot; `wait = TRUE` is the remedy, rather than coordinating action timing with the camera.
@@ -524,8 +524,8 @@ pz_annotate_clear(ctx, id = NULL, ...)
 #### Captions and keystroke callouts
 
 - **Captions:** screen-space. At encode (or still) time, a separate Chrome target renders each caption as a transparent PNG at output resolution, styled with CSS. Page webfonts don't carry over, so the font family is passed explicitly. The encoder composites it over its time window: one av filtergraph after the camera for MP4, WebM and GIF (GIF renders PNG ticks through it before gifski), and an R alpha blend for stills. The caption is a declarative page-level slot that persists across navigation and recordings. A caption still active at recording stop remains fully visible through the last frame in MP4, WebM, and GIF; an explicit clear or replacement retains its fade-out. The default look is a translucent dark pill with white text, centered, at most about 80% of the output width, wrapping. Style defaults are caption-specific: `color = "white"` is independent of the annotation accent, `font_size = 20` is a caption built-in default, and `font_family = NULL` follows the `pz_stage_annotate()` font family. `pz_record_start(captions = c("burn", "vtt", "both"))` defaults to `"burn"`; `"vtt"` and `"both"` write `<name>.vtt` next to the video, which knitr can wire up as a `<track>` (kata ks7r), and are an error for GIF.
-- **Keystroke callouts:** `pz_press(show_keys = NULL)`, with the page default `pz_stage(show_keys = "none")`. Values are `c("none", "words", "mac", "both")`: `"words"` shows Ctrl, Shift, Alt and Meta keycaps; `"mac"` shows ⌃ ⌥ ⇧ ⌘; `"both"` renders `Mod` as "Ctrl / ⌘". They're screen-space, shown bottom-center and stacked above any caption. A callout appears at the press, holds about 1 s after the last key, then fades over 0.25 s, all computed at encode. They're recording-only, and `pz_type()` has no `show_keys` argument.
-- **`Mod` modifier:** `pz_press("Mod+K")` presses Meta when the browser reports a Mac platform, and Control otherwise.
+- **Keystroke callouts:** `pz_act_press(show_keys = NULL)`, with the page default `pz_stage(show_keys = "none")`. Values are `c("none", "words", "mac", "both")`: `"words"` shows Ctrl, Shift, Alt and Meta keycaps; `"mac"` shows ⌃ ⌥ ⇧ ⌘; `"both"` renders `Mod` as "Ctrl / ⌘". They're screen-space, shown bottom-center and stacked above any caption. A callout appears at the press, holds about 1 s after the last key, then fades over 0.25 s, all computed at encode. They're recording-only, and `pz_act_type()` has no `show_keys` argument.
+- **`Mod` modifier:** `pz_act_press("Mod+K")` presses Meta when the browser reports a Mac platform, and Control otherwise.
 
 ### Sessions and apps
 
@@ -643,7 +643,7 @@ Relationship to shinytest2: shinytest2 is Shiny-only, input/output-oriented, and
 
 ### Directions
 
-One vocabulary for `pz_cursor_leave(side =)`, `pz_stage(enter =)`, `pz_cursor_show(from =)`, `pz_frame(anchor =)` and `pz_scroll(to =)`:
+One vocabulary for `pz_cursor_leave(side =)`, `pz_stage(enter =)`, `pz_cursor_show(from =)`, `pz_frame(anchor =)` and `pz_act_scroll(to =)`:
 
 - `"top"`, `"bottom"`, `"left"`, `"right"`, the four corners, and `"center"` where it makes sense.
 - Input is normalized: lowercase, split on spaces or hyphens, sorted. `"top right"`, `"right top"`, `"top-right"` and `"right-top"` are equivalent.
@@ -656,19 +656,19 @@ last_user <- pz_loc(".shiny-chat-user-message", which = "last")
 
 page |>
   pz_find(last_user) |>
-  pz_hover() |>
-  pz_click(".shiny-chat-edit-btn") |>
+  pz_act_hover() |>
+  pz_act_click(".shiny-chat-edit-btn") |>
   pz_find(".shiny-chat-edit-box .ProseMirror", from_root = TRUE) |>
-  pz_select_text("penguins") |>
-  pz_type("otters") |>
-  pz_press("Enter") |>
+  pz_act_select_text("penguins") |>
+  pz_act_type("otters") |>
+  pz_act_press("Enter") |>
   pz_find_reset() |>
   pz_wait_for_stable(target = pz_loc(".shiny-chat-assistant-message", which = "last")) |>
   pz_expect_text("otters", pz_loc(".shiny-chat-assistant-message", which = "last"))
 
 page |>
   pz_find(pz_loc(".shiny-tool-request", has_text = "get_weather")) |>
-  pz_click(".tool-header") |>
+  pz_act_click(".tool-header") |>
   pz_expect_visible(".tool-body") |>
   pz_screenshot("tool-expanded.png", frame = pz_frame(pad = 32))
 ```
@@ -720,21 +720,21 @@ Arguments: `target` and `from_root` are confirmed. `pz_find_nth()` takes `n` as 
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_click()` | `(ctx, target = NULL, ...)` | confirmed |
-| `pz_hover()` | `(ctx, target = NULL, ...)` | confirmed |
-| `pz_type()` | `(ctx, text, ..., target = NULL)` | confirmed |
-| `pz_press()` | `(ctx, key, ...)` | confirmed |
-| `pz_focus()` | `(ctx, target = NULL, ...)` | confirmed |
-| `pz_blur()` | `(ctx, ...)` | confirmed |
-| `pz_scroll()` | `(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)` | confirmed |
-| `pz_drag()` | `(ctx, target, to = NULL, ..., by = NULL)` | confirmed |
-| `pz_select_text()` | `(ctx, text, ..., target = NULL)` | confirmed |
+| `pz_act_click()` | `(ctx, target = NULL, ...)` | confirmed |
+| `pz_act_hover()` | `(ctx, target = NULL, ...)` | confirmed |
+| `pz_act_type()` | `(ctx, text, ..., target = NULL)` | confirmed |
+| `pz_act_press()` | `(ctx, key, ...)` | confirmed |
+| `pz_act_focus()` | `(ctx, target = NULL, ...)` | confirmed |
+| `pz_act_blur()` | `(ctx, ...)` | confirmed |
+| `pz_act_scroll()` | `(ctx, target = NULL, ..., by = NULL, to = NULL, duration = NULL)` | confirmed |
+| `pz_act_drag()` | `(ctx, target, to = NULL, ..., by = NULL)` | confirmed |
+| `pz_act_select_text()` | `(ctx, text, ..., target = NULL)` | confirmed |
 | `pz_set_value()` | `(ctx, value, ..., target = NULL)` | confirmed |
 | `pz_set_shiny_input()` | `(ctx, id, value, ..., wait = TRUE)` | confirmed |
 | `pz_set_files()` | `(ctx, files, ..., target = NULL)` | confirmed |
 | `pz_screenshot()` | `(ctx, path = NULL, ..., target = NULL, frame = NULL)` | confirmed |
 
-Arguments: the `pz_press()` key syntax is confirmed. Discussed additions: a `Mod` modifier and `show_keys = NULL`.
+Arguments: the `pz_act_press()` key syntax is confirmed. Discussed additions: a `Mod` modifier and `show_keys = NULL`.
 
 Skipped: select option, check/uncheck, clear (covered by `pz_set_value()` / `pz_set_shiny_input()`).
 
@@ -829,7 +829,7 @@ Implemented (kata `1a3m`).
 | `pz_annotate_caption()` | `(ctx, text, ..., side = "bottom", color = "white", font_family = NULL, font_size = 20)` | confirmed |
 | `pz_annotate_clear()` | `(ctx, id = NULL, ...)` | confirmed |
 
-Arguments added to existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))` and `pz_stage_frame(target_box =)`, `pz_press(show_keys = NULL)`, and `pz_stage(camera_follow = NULL, show_keys = NULL)`. Annotation style defaults are set with `pz_stage_annotate()`.
+Arguments added to existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))` and `pz_stage_frame(target_box =)`, `pz_act_press(show_keys = NULL)`, and `pz_stage(camera_follow = NULL, show_keys = NULL)`. Annotation style defaults are set with `pz_stage_annotate()`.
 
 ### Escape hatches and debugging
 

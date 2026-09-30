@@ -122,7 +122,7 @@ pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
 #' errors immediately as invalid CSS, without retrying (only detected
 #' with `.normalize = TRUE`).
 #'
-#' @inheritParams pz_click
+#' @inheritParams pz_act_click
 #' @param .target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
 #'   current context: the pinned set at a scoped context, or the page
@@ -145,7 +145,7 @@ pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
 #' page |> pz_expect_style("#help", display = "none")
 #'
 #' page |>
-#'   pz_click("#toggle-help") |>
+#'   pz_act_click("#toggle-help") |>
 #'   pz_expect_style("#help", display = "none", .not = TRUE)
 #' pz_close(page)
 #'
