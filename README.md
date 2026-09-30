@@ -10,7 +10,7 @@
 **Polished demo videos and screenshots of anything that runs in a
 browser, written as R scripts.**
 
-<img src="https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-hero-1.gif" alt="A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Check it off when you're done, the cursor clicks the task's Done button and the task is crossed out."  />
+<img src="https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-hero-1.gif" alt="A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Drag to reorder, the cursor drags the new task down the list and drops it just below the two high-priority tasks. Under the caption Check it off when you're done, the cursor clicks the task's Done button and the task is crossed out."  />
 
 That video came from the short R script shown below. paparazzi opened
 the page in a headless Chrome browser and did what the script said. The
@@ -84,6 +84,12 @@ pz_record(
       pz_record_hold(1.2) |>
       pz_camera_reset() |>
       pz_annotate_clear(id = "new") |>
+      pz_annotate_caption("Drag to reorder") |>
+      pz_act_drag(
+        new_task,
+        to = pz_loc(".task", has_text = "Book dentist appointment")
+      ) |>
+      pz_record_hold(1) |>
       pz_annotate_caption("Check it off when you're done") |>
       pz_find(new_task) |>
       pz_act_click(".task-done") |>
@@ -111,9 +117,10 @@ Inside the block, each line is one step, and the steps fall into two
 groups:
 
 - **Using the page.** `pz_act_type()` clicks the title field and types
-  into it, and `pz_act_click()` presses a button. `pz_find()` narrows
-  the next steps to the new task, so `".task-done"` means that task’s
-  Done button.
+  into it, `pz_act_click()` presses a button, and `pz_act_drag()` moves
+  the new task to a new place in the list. `pz_find()` narrows the next
+  steps to the new task, so `".task-done"` means that task’s Done
+  button.
 - **Directing the viewer.** `pz_camera()` zooms in and
   `pz_camera_reset()` pulls back out. `pz_annotate()` outlines the new
   task, `pz_annotate_caption()` changes the caption, and
