@@ -508,9 +508,12 @@ pz_camera_reset(ctx, ..., wait = FALSE)
 ```r
 pz_annotate(ctx, target = NULL, ..., type = "box",
             label = NULL, pad = 0, reveal = c("auto", "fade", "draw", "pop", "slide", "wipe", "none"), id = NULL,
-            color = NULL, font_family = NULL, font_size = NULL)
-pz_annotate_callout(ctx, text, ..., target = NULL, side = NULL, arrow = TRUE, label = NULL,
-                    reveal = c("pop", "fade", "draw", "slide", "wipe", "none"), id = NULL, color = NULL, font_family = NULL, font_size = NULL)
+            color = NULL, label_fill = NULL, label_text_color = NULL, stroke_width = NULL,
+            font_family = NULL, font_size = NULL)
+pz_annotate_callout(ctx, text, ..., target = NULL, side = NULL, leader = TRUE, label = NULL,
+                    reveal = c("pop", "fade", "draw", "slide", "wipe", "none"), id = NULL,
+                    color = NULL, fill = NULL, text_color = NULL, stroke_width = NULL, distance = NULL,
+                    font_family = NULL, font_size = NULL)
 pz_annotate_spotlight(ctx, target = NULL, ..., pad = 0, dim = 0.6, reveal = c("fade", "none"))
 pz_annotate_redact(ctx, target = NULL, ..., method = c("fill", "blur"), pad = 0, id = NULL, color = NULL)
 pz_annotate_caption(ctx, text, ..., side = "bottom", color = "white", font_family = NULL, font_size = 20)
@@ -524,10 +527,11 @@ pz_annotate_clear(ctx, id = NULL, ...)
 - **Options:**
   - `label`: a badge (`1`, `"A"`); `TRUE` numbers the matches 1..n, as `pz_inspect()` does.
   - `side`: the direction vocabulary. For a callout, `NULL` picks the side with the most room.
-  - `arrow = FALSE`: a tooltip-style bubble next to the target.
+  - `leader`: the callout's line to its target. `TRUE` (default) draws a shaft with an arrow at the target; `FALSE` leaves a tooltip-style bubble; a named vector `c(start = , end = )` sets a decoration per end (start is the bubble side; an omitted end is `"none"`). The vocabulary is `"none"`, `"arrow"` (filled triangle), `"dot"` and `"bar"` (perpendicular tick). The shaft stops at each decoration's base, short leaders shrink decorations, and decorations hide with the shaft when a viewport-clamped bubble overlaps its target. With `reveal = "draw"`, the shaft draws, then the decorations appear.
+  - `distance`: the callout's bubble-to-target gap in CSS px (default 24), with or without a leader. Viewport clamping is unaffected.
   - `dim`: the spotlight's overlay opacity.
   - `method`: the redaction style, a solid `"fill"` (the safe choice) or `"blur"` (`backdrop-filter`, with a generous default radius). There is no pixelation: `backdrop-filter: url()` does nothing in Chrome, and filtering the element itself would restyle the page.
-  - Style arguments (`color`, `font_family`, `font_size`) come after the dots and default to `NULL`, meaning the `pz_stage_annotate()` default (`color`, `font_family`, `font_size`) or the built-in fallback. On marks, the font arguments style the label badges. `font_size` is CSS px; screen-space captions scale by the output's scale factor.
+  - Style arguments come after the dots and default to `NULL`, meaning the `pz_stage_annotate()` default or the built-in fallback. `color` is the single accent: mark outlines, the callout bubble's border, and the leader with its decorations. `fill`/`text_color` (built-ins `"#171717"`/`"white"`) style callout chrome (bubble and its badge); a mark's badge instead follows its mark's `color` with white text, overridable per call with `label_fill`/`label_text_color` (named differently from the staged `fill`/`text_color` so a badge style isn't read as filling a `"box"` mark). One `stroke_width` (default 2.5 CSS px) covers marks and callout leaders; decoration sizes scale with it. On marks, the font arguments style the label badges. `font_size` is CSS px; screen-space captions scale by the output's scale factor.
 - **Stills:** page annotations appear in `pz_screenshot()`; `pz_inspect()` outlines stay hidden. The current caption is composited onto stills.
 - **Frames:** by default a frame measures element geometry only, which can clip an annotation's label or arrow. `pz_frame(target_box = "annotated")` makes each target contribute its box plus its own attached annotations (spotlight counts as its cutout, redaction adds nothing). This applies to stills and camera shots, but never to the recording's home frame, which is measured once while annotations come and go.
 

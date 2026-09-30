@@ -128,7 +128,7 @@ check_callout_leader <- function(leader, call = caller_env()) {
   ends <- names(leader)
   if (
     is.null(ends) ||
-      any(!nzchar(ends)) ||
+      !all(nzchar(ends)) ||
       anyDuplicated(ends) ||
       !all(ends %in% c("start", "end"))
   ) {

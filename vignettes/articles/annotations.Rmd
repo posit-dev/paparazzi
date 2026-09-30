@@ -113,7 +113,7 @@ page |>
     "Priority is optional",
     target = "#task-priority",
     side = "bottom",
-    arrow = FALSE
+    leader = FALSE
   )
 page |>
   pz_screenshot(

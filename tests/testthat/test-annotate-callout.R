@@ -109,7 +109,12 @@ test_that("auto chooses roomiest cardinal once and sync follows movement", {
     "document.querySelector('#target').style.left='20px';document.querySelector('#target').style.top=innerHeight/2+'px'"
   )
   page |>
-    pz_annotate_callout("Follow", target = "#target", id = "tip", leader = FALSE)
+    pz_annotate_callout(
+      "Follow",
+      target = "#target",
+      id = "tip",
+      leader = FALSE
+    )
   first <- callout_details(page)
   expect_gt(first$nodes[[1]]$rect[[1]], first$target[[3]])
   pz_js(
@@ -332,7 +337,12 @@ test_that("automatic placement chooses each roomiest cardinal side", {
       )
     )
     page |>
-      pz_annotate_callout("Auto", target = "#target", leader = FALSE, id = "tip")
+      pz_annotate_callout(
+        "Auto",
+        target = "#target",
+        leader = FALSE,
+        id = "tip"
+      )
     state <- callout_details(page)
     target <- unlist(state$target)
     rect <- unlist(state$nodes[[1]]$rect)

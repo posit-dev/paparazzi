@@ -1246,18 +1246,27 @@ test_that("mark badges follow their mark unless overridden per call", {
     )
   }
   page |> pz_annotate("#box", label = "A", reveal = "none", id = "mark")
-  expect_equal(unlist(badge_style()), c("rgb(225, 29, 72)", "rgb(255, 255, 255)"))
+  expect_equal(
+    unlist(badge_style()),
+    c("rgb(225, 29, 72)", "rgb(255, 255, 255)")
+  )
 
   page |>
     pz_stage_annotate(color = "#16a34a") |>
     pz_annotate("#box", label = "A", reveal = "none", id = "mark")
-  expect_equal(unlist(badge_style()), c("rgb(22, 163, 74)", "rgb(255, 255, 255)"))
+  expect_equal(
+    unlist(badge_style()),
+    c("rgb(22, 163, 74)", "rgb(255, 255, 255)")
+  )
 
   # Staged fill/text_color style callout chrome only, never mark badges.
   page |>
     pz_stage_annotate(fill = "#fef3c7", text_color = "#1c1917") |>
     pz_annotate("#box", label = "A", reveal = "none", id = "mark")
-  expect_equal(unlist(badge_style()), c("rgb(22, 163, 74)", "rgb(255, 255, 255)"))
+  expect_equal(
+    unlist(badge_style()),
+    c("rgb(22, 163, 74)", "rgb(255, 255, 255)")
+  )
 
   page |>
     pz_annotate(
@@ -1268,7 +1277,10 @@ test_that("mark badges follow their mark unless overridden per call", {
       label_fill = "#dbeafe",
       label_text_color = "#172554"
     )
-  expect_equal(unlist(badge_style()), c("rgb(219, 234, 254)", "rgb(23, 37, 84)"))
+  expect_equal(
+    unlist(badge_style()),
+    c("rgb(219, 234, 254)", "rgb(23, 37, 84)")
+  )
   page |>
     pz_annotate_clear() |>
     pz_stage_annotate(color = NULL, fill = NULL, text_color = NULL)
