@@ -63,7 +63,7 @@ with \code{\link[chromote:set_chrome_args]{chromote::set_chrome_args()}}. A defa
 }
 
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 # A local HTML file opens as a file:// URL
 page <- pz_open(pz_example("tasks"))
 pz_get_url(page)
@@ -74,7 +74,7 @@ phone <- pz_open(pz_example("tasks"), width = 390, height = 844, mobile = TRUE)
 pz_js(phone, "window.innerWidth")
 pz_close(phone)
 \dontshow{\}) # examplesIf}
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run("shiny")) withAutoprint(\{ # examplesIf}
 # An app directory runs in a background R process that the page owns.
 # pz_open() returns once Shiny has connected and gone idle.
 page <- pz_open(pz_example("tasks-app"))

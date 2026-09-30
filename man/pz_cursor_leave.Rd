@@ -28,7 +28,7 @@ visible (just off-frame); the next pointer action or cursor call
 glides it back in from that side.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run("av")) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "help.mp4")
 page |>

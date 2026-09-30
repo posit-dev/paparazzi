@@ -26,7 +26,7 @@ element-state change, not an input event, so the direct method call
 is the faithful implementation (Playwright does the same).
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_focus("#task-title")
 pz_expect_focused(page, target = "#task-title")

@@ -19,7 +19,7 @@ still hold them -- and resetting never mutates the context it was
 called on. At the root it is a no-op returning \code{ctx} unchanged.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
   pz_find(".task-list") |>

@@ -41,7 +41,7 @@ a value-setting primitive that works on selects, checkboxes, and range
 inputs, see \code{\link[=pz_set_value]{pz_set_value()}}.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_type("Buy milk", target = "#task-title")
 pz_get_value(page, target = "#task-title")

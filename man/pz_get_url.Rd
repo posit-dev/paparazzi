@@ -16,7 +16,7 @@ A character vector of length one.
 \code{\link[=pz_get_url]{pz_get_url()}} returns the page's current URL.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_click(pz_loc(".filters a", has_text = "Open"))
 basename(pz_get_url(page))

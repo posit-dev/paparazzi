@@ -40,7 +40,7 @@ Keys only reach focused elements; call \code{\link[=pz_click]{pz_click()}} or \c
 first to focus the element you're typing into.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
   pz_type("Buy milkk", target = "#task-title") |>

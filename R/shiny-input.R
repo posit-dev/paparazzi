@@ -15,7 +15,7 @@
 #' @param wait If `TRUE`, call [pz_wait_for_shiny_idle()] after the change.
 #'   If `FALSE`, return immediately after dispatching the change.
 #' @return `ctx`, invisibly.
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("shiny")
+#' @examplesIf paparazzi:::examples_run("shiny")
 #' page <- pz_open(pz_example("tasks-app"))
 #'
 #' # Each call waits for Shiny to go idle, so the server has seen the value

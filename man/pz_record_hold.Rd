@@ -23,7 +23,7 @@ out doesn't pay for video-only pauses. A camera move still in
 progress (see \code{\link[=pz_camera]{pz_camera()}}) finishes before the hold begins.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run("av")) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 
 # Without a recording, pz_record_hold() returns straight away

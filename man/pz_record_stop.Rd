@@ -22,7 +22,7 @@ Ends the recording started with \code{\link[=pz_record_start]{pz_record_start()}
 captured frames, and writes the file given to \code{pz_record_start()}.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome())) && rlang::is_installed("av")) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run("av")) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "done.gif")
 page |>

@@ -33,7 +33,7 @@ NULL
 #'   capture), `"browser"` (outlines left in the live page), or `"none"`.
 #'
 #' @return `ctx`, invisibly, so it can be dropped anywhere in a chain.
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_inspect()
 #'

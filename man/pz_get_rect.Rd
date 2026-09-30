@@ -28,7 +28,7 @@ from it: \code{rects$element[[2]] |> pz_hover()}.
 \code{target}, one row per match in match order.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))) withAutoprint(\{ # examplesIf}
+\dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 rects <- pz_get_rect(page, target = ".filters a")
 rects

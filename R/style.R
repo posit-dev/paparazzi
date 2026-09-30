@@ -41,7 +41,7 @@
 #'
 #' @seealso [pz_expect_style()]
 #'
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' pz_get_style(page, c("font-size", "font_weight"), target = "h1")
 #'
@@ -136,7 +136,7 @@ pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
 #'   comparing? See Details.
 #'
 #' @return `ctx`, invisibly.
-#' @examplesIf rlang::is_interactive() && !is.null(suppressMessages(chromote::find_chrome()))
+#' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Expected values are written as you'd write them in CSS
