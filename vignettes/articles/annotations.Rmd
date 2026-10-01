@@ -257,16 +257,20 @@ Per-call arguments with the same names override the staged values for that call.
 
 ### Web fonts
 
-A `font_family` string can name only fonts the browser already has: generic families like `"monospace"`, or fonts installed on the machine running Chrome. To use a web font, load it into the page first with [`pz_stage_fonts()`](../reference/pz_stage_fonts.html). Declare the font with [`pz_font_google()`](../reference/pz_font_google.html), [`pz_font_bunny()`](../reference/pz_font_bunny.html), or [`pz_font_file()`](../reference/pz_font_file.html) for a font file on disk. `pz_stage_fonts()` waits until the font has loaded, so no annotation is ever drawn in a fallback font while it downloads.
+A `font_family` string names a font Chrome can already find, such as a generic family like `"monospace"` or a font installed on the machine running Chrome. To use a web font, load it into the page first with [`pz_stage_fonts()`](../reference/pz_stage_fonts.html). Declare the font with [`pz_font_google()`](../reference/pz_font_google.html), [`pz_font_bunny()`](../reference/pz_font_bunny.html), or [`pz_font_file()`](../reference/pz_font_file.html) for a font file on disk. `pz_stage_fonts()` waits until the font has loaded, so no annotation is ever drawn in a fallback font while it downloads.
 
 A handwritten font makes a callout look like a note written over the screenshot. We'll stage Patrick Hand from Google Fonts and make it the default for later annotations:
 
-```{r web-font, fig.alt = "PLACEHOLDER: describe the rendered image."}
+```{r web-font, fig.alt = "The new-task form with a dark callout below the attachment field, pointing up at it and reading Optional: attach a file in a handwritten font."}
 hand <- pz_font_google("Patrick Hand")
 page |>
   pz_stage_fonts(hand) |>
   pz_stage_annotate(font_family = hand, font_size = 18) |>
-  pz_annotate_callout("Then click Add", target = "#add-task", side = "bottom")
+  pz_annotate_callout(
+    "Optional: attach a file",
+    target = "#attachment",
+    side = "bottom"
+  )
 page |>
   pz_screenshot(
     frame = pz_frame("#new-task", pad = 8, target_box = "annotated")

@@ -163,13 +163,14 @@ The steps are the same ones we ran before, but the recording looks as though a p
 page |> pz_stage(enter = "bottom", pause = 0.3)
 ```
 
-Clicks are staged too. By default, the cursor shrinks briefly as it presses. In a small video that's hard to see, so `pz_act_click()` can also draw a ring that grows out from the click point and fades. Here the cursor checks Urgent with the default press, then unchecks it with `effect = "ring"`:
+Clicks are staged too. By default, the cursor shrinks briefly as it presses. In a small video that's hard to see, so `pz_act_click()` can draw a ring instead, one that grows out from the click point and fades. Here the cursor checks Urgent with the default press, then unchecks it with `effect = "ring"`:
 
-```{r, fig.alt = "PLACEHOLDER: describe the rendered GIF."}
+```{r, fig.alt = "The cursor glides to the Urgent checkbox and checks it with a brief press, then clicks it again, and a crimson ring spreads out from the click as the box unchecks."}
 page |>
   pz_record(
     format = "gif",
-    frame = pz_frame("#new-task", pad = 16),
+    scale = 800,
+    frame = pz_frame("#new-task", pad = 8),
     code = {
       page |>
         pz_act_click("#task-urgent") |>
