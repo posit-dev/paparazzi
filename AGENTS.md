@@ -33,6 +33,17 @@
    lock browser-free or isolated runs. Judge test results by reported
    FAIL/WARN, not exit code or variable PASS counts.
 
+## Agent Skill and Vignettes
+
+The `agents*.Rmd` vignettes are thin wrappers that embed
+`inst/skills/paparazzi/` files at render time (`vignettes/skill-source.R`);
+edit skill content in the skill directory, never in the vignettes.
+`skill-source.R` rewrites `references/<topic>.md` links to
+`agents-<topic>.html`, so reference topic names must match the vignette
+names. When adding, renaming or removing a topic, update the
+`references/*.md` file, the matching `agents-*.Rmd` wrapper, and
+`_pkgdown.yml` together.
+
 ## Rendered Docs
 
 README.md and pkgdown/index.md are rendered from man/fragments/*.Rmd —
