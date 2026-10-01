@@ -68,10 +68,15 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
   page |> pz_annotate("#box", id = "box", reveal = "none")
   page |> pz_annotate("#inner", id = "inner", reveal = "none")
   page |> pz_annotate("#fixed", id = "fixed", reveal = "none")
+  # #inner starts scrolled out of #outer's box, so its mark is hidden;
+  # bring it into the container's view before measuring movement.
+  pz_js(page, "document.getElementById('outer').scrollTop = 100")
+  pump_loop(page$child_loop, 0.07)
+  expect_true(annotation_state(page)[[2]]$visible)
   before <- annotation_state(page)
   pz_js(
     page,
-    "window.scrollTo(0, 80); document.getElementById('outer').scrollTop = 30; document.getElementById('box').style.top = '350px'"
+    "window.scrollTo(0, 80); document.getElementById('outer').scrollTop = 130; document.getElementById('box').style.top = '350px'"
   )
   pump_loop(page$child_loop, 0.07)
   after <- annotation_state(page)
@@ -96,6 +101,9 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
   pz_js(page, "document.getElementById('inner').style.display = ''")
   pump_loop(page$child_loop, 0.07)
   expect_true(annotation_state(page)[[2]]$visible)
+  pz_js(page, "document.getElementById('outer').scrollTop = 0")
+  pump_loop(page$child_loop, 0.07)
+  expect_false(annotation_state(page)[[2]]$visible)
   pz_js(page, "document.getElementById('box').remove()")
   pump_loop(page$child_loop, 0.07)
   expect_false(annotation_state(page)[[1]]$visible)
@@ -482,6 +490,129 @@ test_that("redaction clips scaled overflow ancestors in viewport coordinates", {
   expect_equal(pixel(450, 180), rep(23 / 255, 3), tolerance = 0.03)
   expect_equal(pixel(500, 180), rep(1, 3), tolerance = 0.03)
   expect_equal(pixel(450, 210), rep(1, 3), tolerance = 0.03)
+})
+
+test_that("marks and badges hide on scrolled-out and visibility:hidden targets", {
+  skip_if_not_installed("png")
+  page <- local_page(pz_example("tasks"), color_scheme = "light")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  baseline <- png::readPNG(path)
+  page |>
+    pz_annotate(
+      ".task-done",
+      label = TRUE,
+      reveal = "none",
+      color = "rgb(255, 0, 0)"
+    )
+  # Annotation nodes are created in target order, so index i pairs the i-th
+  # Done button with the i-th box.
+  info <- pz_js(
+    page,
+    paste0(
+      "(() => { const layer = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+      "const nodes = [...layer.querySelectorAll('.pz-annotation')];",
+      "const list = document.querySelector('.task-list').getBoundingClientRect();",
+      "return {listBottom: list.bottom, viewport: [innerWidth, innerHeight],",
+      "buttons: [...document.querySelectorAll('.task-done')].map((b, i) => {",
+      "const r = b.getBoundingClientRect();",
+      "return {rect: [r.left, r.top, r.width, r.height],",
+      "clipped: r.top >= list.bottom || r.bottom <= list.top,",
+      "shown: getComputedStyle(b).visibility === 'visible',",
+      "annotated: nodes[i].style.display !== 'none'}; })}; })()"
+    )
+  )
+  expect_length(info$buttons, 7)
+  # Rows 6-7 sit at or below the list's bottom edge; the done row's own
+  # Done button is visibility:hidden.
+  expect_gt(sum(vapply(info$buttons, `[[`, TRUE, "clipped")), 0)
+  for (b in info$buttons) {
+    if (b$clipped || !b$shown) {
+      expect_false(b$annotated)
+    } else {
+      expect_true(b$annotated)
+    }
+  }
+  page |> pz_screenshot(path)
+  marked <- png::readPNG(path)
+  dpr <- page_dpr(page)
+  at <- function(img, x, y) {
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  red <- c(1, 0, 0)
+  rects <- lapply(info$buttons, function(b) unlist(b$rect))
+  # Control: a visible button's outline and badge really do paint.
+  first <- rects[[Position(
+    function(b) b$shown && !b$clipped,
+    info$buttons
+  )]]
+  expect_equal(
+    at(marked, first[1] + first[3] / 2, first[2] + 1),
+    red,
+    tolerance = 0.05
+  )
+  expect_equal(at(marked, first[1] + 2, first[2] - 6), red, tolerance = 0.05)
+  # A scrolled-out button paints neither its box nor its badge over the
+  # area below the list.
+  checked <- 0
+  for (rect in rects[vapply(info$buttons, `[[`, TRUE, "clipped")]) {
+    if (rect[2] < info$listBottom + 24 || rect[2] + 2 >= info$viewport[[2]]) {
+      next
+    }
+    checked <- checked + 1
+    expect_equal(
+      at(marked, rect[1] + rect[3] / 2, rect[2] + 1),
+      at(baseline, rect[1] + rect[3] / 2, rect[2] + 1),
+      tolerance = 0.03
+    )
+    expect_equal(
+      at(marked, rect[1] + 2, rect[2] - 6),
+      at(baseline, rect[1] + 2, rect[2] - 6),
+      tolerance = 0.03
+    )
+  }
+  expect_gt(checked, 0)
+  # The hidden Done button shows no empty outline or badge.
+  hb <- rects[[Position(function(b) !b$shown, info$buttons)]]
+  expect_equal(
+    at(marked, hb[1] + hb[3] / 2, hb[2] + 1),
+    at(baseline, hb[1] + hb[3] / 2, hb[2] + 1),
+    tolerance = 0.03
+  )
+  expect_equal(
+    at(marked, hb[1] + 2, hb[2] - 6),
+    at(baseline, hb[1] + 2, hb[2] - 6),
+    tolerance = 0.03
+  )
+})
+
+test_that("a mark clips at the edge of a scrolling overflow ancestor", {
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.insertAdjacentHTML('beforeend', ",
+      "'<div id=markclip style=\"position:absolute;left:350px;top:100px;width:160px;height:100px;overflow:auto;background:white\">' +",
+      "'<div style=\"height:70px\"></div><div id=marked style=\"margin-left:20px;width:90px;height:80px\"></div>' +",
+      "'<div style=\"height:300px\"></div></div>')"
+    )
+  )
+  page |> pz_annotate("#marked", reveal = "none", color = "rgb(255, 0, 0)")
+  path <- withr::local_tempfile(fileext = ".png")
+  pixel <- function(x, y) {
+    page |> pz_screenshot(path)
+    img <- png::readPNG(path)
+    dpr <- page_dpr(page)
+    as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
+  }
+  # The mark's left edge spans y 170..250; its container ends at y 200.
+  expect_equal(pixel(371, 180), c(1, 0, 0), tolerance = 0.05)
+  expect_equal(pixel(371, 205), c(1, 1, 1), tolerance = 0.03)
+  pz_js(page, "document.getElementById('markclip').scrollTop = 250")
+  pump_loop(page$child_loop, 0.05)
+  expect_false(annotation_state(page)[[1]]$visible)
+  expect_equal(pixel(371, 110), c(1, 1, 1), tolerance = 0.03)
 })
 
 test_that("non-clipping inline and root body overflow do not hide redactions", {

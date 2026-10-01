@@ -88,6 +88,96 @@ test_that("pz_act_click produces trusted mouse events in order", {
   expect_true(all(vapply(save, function(e) isTRUE(e$isTrusted), logical(1))))
 })
 
+test_that("pz_act_click validates effect and effect_color", {
+  page <- local_cursor_page()
+  expect_error(
+    pz_act_click(page, "#btn", effect = "ring"),
+    class = "rlang_error"
+  )
+  expect_error(
+    pz_act_click(page, "#btn", effect = NA_character_),
+    class = "rlang_error"
+  )
+  expect_error(
+    pz_act_click(page, "#btn", effect_color = ""),
+    "effect_color.*empty string"
+  )
+  expect_error(
+    pz_act_click(page, "#btn", effect_color = 7),
+    class = "rlang_error"
+  )
+
+  # A valid staged value does not excuse a bad per-call one.
+  pz_stage(page, click_effect = "ripple")
+  expect_error(
+    pz_act_click(page, "#btn", effect = "ring"),
+    class = "rlang_error"
+  )
+})
+
+test_that("click effects draw nothing without a recording", {
+  page <- local_cursor_page()
+  page |> pz_act_click("#btn", effect = "ripple", effect_color = "#2563eb")
+  page |> pz_stage(click_effect = "ripple") |> pz_act_click("#btn")
+  expect_equal(pz_js(page, "window.__log.clicks"), 2)
+  expect_null(cursor_overlay_state(page))
+})
+
+test_that("the click effect resolves per call and styles only pz_act_click", {
+  page <- local_cursor_page()
+  page |>
+    pz_stage(click_effect = "none", click_effect_color = "#2563eb") |>
+    pz_cursor_move("#btn")
+
+  calls <- list()
+  local_mocked_bindings(
+    stage_recording = function(page) TRUE,
+    cursor_press = function(ctx, pressed) {
+      calls <<- c(calls, list(list(kind = "press", pressed = pressed)))
+      ctx_return(ctx)
+    },
+    cursor_ripple = function(ctx, point, color) {
+      calls <<- c(calls, list(list(kind = "ripple", color = color)))
+      ctx_return(ctx)
+    }
+  )
+  kinds <- function() {
+    vapply(calls, `[[`, character(1), "kind")
+  }
+
+  # The staged "none": neither a press nor a ripple.
+  page |> pz_act_click("#btn")
+  expect_length(calls, 0)
+
+  # A per-call effect overrides the staged value; the color falls back
+  # to the staged one.
+  page |> pz_act_click("#btn", effect = "ripple")
+  expect_length(calls, 1)
+  expect_identical(calls[[1]]$kind, "ripple")
+  expect_identical(calls[[1]]$color, "#2563eb")
+
+  calls <- list()
+  page |> pz_act_click("#btn", effect = "ripple", effect_color = "#123456")
+  expect_identical(calls[[1]]$color, "#123456")
+
+  calls <- list()
+  page |> pz_act_click("#btn", effect = "press")
+  expect_identical(kinds(), c("press", "press"))
+
+  # pz_act_type()'s focus click shares dispatch_click() but keeps the
+  # press scale.
+  calls <- list()
+  page |> pz_act_type("hi", target = "#name")
+  expect_identical(kinds(), c("press", "press"))
+
+  # So do drags, which press through cursor_press() directly.
+  adv <- local_advanced_page()
+  pz_stage(adv, click_effect = "none")
+  calls <- list()
+  pz_act_drag(adv, "#dragbox", "#dropzone")
+  expect_true("press" %in% kinds())
+})
+
 test_that("pz_act_click scrolls off-screen elements into view first", {
   page <- local_actions_page()
   expect_equal(pz_js(page, "window.scrollY"), 0)

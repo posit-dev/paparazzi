@@ -74,6 +74,9 @@ Draws an annotation for each element matched by \code{target}. Annotations
 follow their elements as the page scrolls or changes layout, and appear
 in screenshots and recordings until cleared with \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}.
 Annotations belong to the current document; navigating away removes them.
+Marks and their badges are clipped by the target's overflow containers
+(axis-aligned clipping only, not a custom \code{overflow-clip-margin}). A mark
+hides while its target is disconnected, not rendered, \code{visibility: hidden} with no visible descendants, or entirely clipped.
 }
 \seealso{
 \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}, \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}

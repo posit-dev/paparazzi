@@ -57,6 +57,13 @@
 #' @param show_keys Keystroke callouts for [pz_act_press()]: `"none"` (default),
 #'   `"words"`, `"mac"`, or `"both"`. Supply `NULL` to restore the default.
 #'   Callouts appear only in recordings.
+#' @param click_effect Click feedback shown by [pz_act_click()] while
+#'   recording: `"press"` (the default) scales the cursor down while
+#'   pressed, `"ripple"` draws an expanding ring that fades out at the
+#'   click point instead of scaling, and `"none"` shows nothing.
+#'   Supply `NULL` to restore the default.
+#' @param click_effect_color CSS color of the `"ripple"` click effect.
+#'   The default is `"#e11d48"`. Supply `NULL` to restore the default.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -68,6 +75,9 @@
 #'
 #' # Staging settings stay on the page until you change them
 #' page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
+#'
+#' # Recorded clicks ripple in a custom color instead of pressing
+#' page |> pz_stage(click_effect = "ripple", click_effect_color = "#2563eb")
 #'
 #' path <- file.path(tempdir(), "add-task.mp4")
 #' page |>
@@ -99,7 +109,9 @@ pz_stage <- function(
   typing_speed = NULL,
   pause = NULL,
   camera_follow = NULL,
-  show_keys = NULL
+  show_keys = NULL,
+  click_effect = NULL,
+  click_effect_color = NULL
 ) {
   check_context(ctx)
   check_dots_empty()
@@ -187,6 +199,21 @@ pz_stage <- function(
       NULL
     } else {
       arg_match(show_keys, c("none", "words", "mac", "both"))
+    }
+  }
+  if (!missing(click_effect)) {
+    overrides$click_effect <- if (is.null(click_effect)) {
+      NULL
+    } else {
+      arg_match(click_effect, c("press", "ripple", "none"))
+    }
+  }
+  if (!missing(click_effect_color)) {
+    if (is.null(click_effect_color)) {
+      overrides[["click_effect_color"]] <- NULL
+    } else {
+      check_string(click_effect_color, allow_empty = FALSE)
+      overrides$click_effect_color <- click_effect_color
     }
   }
   page_set_stage(page, overrides)
@@ -357,6 +384,8 @@ STAGE_DEFAULTS <- list(
   pause = 0,
   camera_follow = TRUE,
   show_keys = "none",
+  click_effect = "press",
+  click_effect_color = "#e11d48",
   annotate_color = "#e11d48",
   annotate_fill = "#171717",
   annotate_text_color = "white",

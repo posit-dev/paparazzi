@@ -15,7 +15,9 @@ pz_stage(
   typing_speed = NULL,
   pause = NULL,
   camera_follow = NULL,
-  show_keys = NULL
+  show_keys = NULL,
+  click_effect = NULL,
+  click_effect_color = NULL
 )
 }
 \arguments{
@@ -66,6 +68,15 @@ a zoomed recording camera to keep their target in view. Defaults to
 \item{show_keys}{Keystroke callouts for \code{\link[=pz_act_press]{pz_act_press()}}: \code{"none"} (default),
 \code{"words"}, \code{"mac"}, or \code{"both"}. Supply \code{NULL} to restore the default.
 Callouts appear only in recordings.}
+
+\item{click_effect}{Click feedback shown by \code{\link[=pz_act_click]{pz_act_click()}} while
+recording: \code{"press"} (the default) scales the cursor down while
+pressed, \code{"ripple"} draws an expanding ring that fades out at the
+click point instead of scaling, and \code{"none"} shows nothing.
+Supply \code{NULL} to restore the default.}
+
+\item{click_effect_color}{CSS color of the \code{"ripple"} click effect.
+The default is \code{"#e11d48"}. Supply \code{NULL} to restore the default.}
 }
 \value{
 \code{ctx}, invisibly.
@@ -86,6 +97,9 @@ page <- pz_open(pz_example("tasks"))
 
 # Staging settings stay on the page until you change them
 page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
+
+# Recorded clicks ripple in a custom color instead of pressing
+page |> pz_stage(click_effect = "ripple", click_effect_color = "#2563eb")
 
 path <- file.path(tempdir(), "add-task.mp4")
 page |>
