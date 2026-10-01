@@ -1838,3 +1838,9 @@ test_that("key callouts keep the font_family staged at press time", {
   expect_length(events, 1)
   expect_equal(events[[1]]$font_family, '"Silkscreen", sans-serif')
 })
+
+test_that("root scroll source retains arrays and full numeric precision", {
+  expect_identical(scroll_arg_json(by = 1.23456789), '{"by":[1.23456789]}')
+  expect_identical(scroll_arg_json(to = c(3, 4)), '{"to":[3,4]}')
+  expect_identical(scroll_arg_json(by = numeric()), '{"by":[]}')
+})

@@ -530,7 +530,7 @@ stable_sample_js <- function(prop) {
       "function() {
         return this.map((el) => {
           const v = el[",
-      jsonlite::toJSON(prop, auto_unbox = TRUE),
+      js_literal(prop),
       "];
           return v == null ? '' : String(v);
         });

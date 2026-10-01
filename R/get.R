@@ -145,7 +145,7 @@ pz_get_attr <- function(ctx, name, target = NULL, ...) {
   check_string(name)
   js <- paste0(
     "function() { return this.map((el) => el.getAttribute(",
-    jsonlite::toJSON(name, auto_unbox = TRUE),
+    js_literal(name),
     ")); }"
   )
   get_impl(

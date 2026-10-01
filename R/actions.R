@@ -1486,7 +1486,7 @@ scroll_apply_js <- "function(arg) {
 # aren't available to Runtime$evaluate.
 scroll_arg_json <- function(by = NULL, to = NULL) {
   arg <- if (!is.null(by)) list(by = by) else list(to = to)
-  jsonlite::toJSON(arg, digits = NA)
+  js_literal(arg, auto_unbox = FALSE, digits = NA)
 }
 
 dest_point_js <- paste0(

@@ -692,7 +692,7 @@ cursor_ring <- function(ctx, point, color) {
 cursor_command <- function(ctx, state) {
   state$scale <- page_stage(ctx$page)$cursor_scale
   state$icons <- CURSOR_ART
-  json <- jsonlite::toJSON(state, auto_unbox = TRUE, null = "null")
+  json <- js_literal(state, auto_unbox = TRUE, null = "null")
   pz_js(ctx, paste0("(", cursor_command_js, ")(", json, ")"), await = FALSE)
 }
 
@@ -884,7 +884,7 @@ cursor_register_init <- function(ctx) {
     scale = page_stage(page)$cursor_scale,
     icons = CURSOR_ART
   )
-  json <- jsonlite::toJSON(state, auto_unbox = TRUE, null = "null")
+  json <- js_literal(state, auto_unbox = TRUE, null = "null")
   # New-document scripts run before the document element exists, so the
   # boot waits for it.
   source <- paste0(

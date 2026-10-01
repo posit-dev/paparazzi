@@ -45,3 +45,35 @@ test_that("cdp_check_exception reports JavaScript errors with and without contex
     fixed = TRUE
   )
 })
+
+test_that("js_literal returns escaped JSON as JavaScript source text", {
+  value <- "quote: \" and '; slash: /; backslash: \\; newline:\nUnicode: café ☃"
+  literal <- js_literal(value)
+
+  expect_type(literal, "character")
+  expect_length(literal, 1)
+  expect_identical(jsonlite::fromJSON(literal), value)
+})
+
+test_that("js_literal preserves unboxing, array shape, and JSON options", {
+  expect_identical(js_literal("one"), '"one"')
+  expect_identical(js_literal("one", auto_unbox = FALSE), '["one"]')
+  expect_identical(js_literal(character(), auto_unbox = FALSE), "[]")
+  expect_identical(
+    jsonlite::fromJSON(
+      js_literal("one", auto_unbox = FALSE),
+      simplifyVector = FALSE
+    ),
+    list("one")
+  )
+  expect_identical(
+    jsonlite::fromJSON(
+      js_literal(character(), auto_unbox = FALSE),
+      simplifyVector = FALSE
+    ),
+    list()
+  )
+  expect_identical(js_literal(NULL, null = "null"), "null")
+  expect_identical(js_literal(NA_character_), "null")
+  expect_identical(js_literal(1.23456789, digits = NA), "1.23456789")
+})

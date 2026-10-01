@@ -99,3 +99,7 @@ cli_escape <- function(x) {
   x <- gsub("{", "{{", x, fixed = TRUE)
   gsub("}", "}}", x, fixed = TRUE)
 }
+
+js_literal <- function(x, auto_unbox = TRUE, ...) {
+  as.character(jsonlite::toJSON(x, auto_unbox = auto_unbox, ...))
+}

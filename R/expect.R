@@ -1013,7 +1013,7 @@ expect_text_js <- "function() {
 expect_attrs_js <- function(names) {
   paste0(
     "function() { const names = ",
-    jsonlite::toJSON(names, auto_unbox = FALSE),
+    js_literal(names, auto_unbox = FALSE),
     "; return this.map((el) => names.map((name) => el.getAttribute(name))); }"
   )
 }
@@ -1021,7 +1021,7 @@ expect_attrs_js <- function(names) {
 expect_class_js <- function(class) {
   paste0(
     "function() { return this.map((el) => el.classList.contains(",
-    jsonlite::toJSON(class, auto_unbox = TRUE),
+    js_literal(class),
     ")); }"
   )
 }
