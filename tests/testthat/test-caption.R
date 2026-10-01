@@ -925,25 +925,48 @@ test_that("a throwing render script fails with a paparazzi error", {
   expect_false(file.exists(path))
 })
 
-test_that("a shared render session serves multiple overlays", {
+test_that("a shared render session shows each overlay on its own", {
   page <- local_record_page()
   screen <- screen_open(page, 400, 300)
   withr::defer(screen$close())
-  caption <- list(
-    text = "Note",
-    side = "bottom",
-    color = "white",
-    font_family = "sans-serif",
-    font_size = 20
+  caption <- function(side) {
+    list(
+      text = "Note",
+      side = side,
+      color = "white",
+      font_family = "sans-serif",
+      font_size = 20
+    )
+  }
+  top <- withr::local_tempfile(fileext = ".png")
+  bottom <- withr::local_tempfile(fileext = ".png")
+  height <- caption_render(
+    page,
+    caption("top"),
+    400,
+    300,
+    1,
+    top,
+    session = screen
   )
-  first <- withr::local_tempfile(fileext = ".png")
-  second <- withr::local_tempfile(fileext = ".png")
-  height <- caption_render(page, caption, 400, 300, 1, first, session = screen)
   expect_gt(height, 0)
-  expect_true(file.exists(first))
-  height <- caption_render(page, caption, 400, 300, 1, second, session = screen)
+  expect_true(file.exists(top))
+  # The second render must not inherit the first overlay: without the body
+  # reset the top caption would still be lit in the bottom render's PNG.
+  height <- caption_render(
+    page,
+    caption("bottom"),
+    400,
+    300,
+    1,
+    bottom,
+    session = screen
+  )
   expect_gt(height, 0)
-  expect_true(file.exists(second))
+  expect_true(file.exists(bottom))
+  lit <- which(png::readPNG(bottom)[,, 4] > 0, arr.ind = TRUE)
+  expect_gt(nrow(lit), 0L)
+  expect_gt(min(lit[, 1]), nrow(png::readPNG(bottom)) / 2)
 })
 
 test_that("key callout windows carry the font_family recorded at press time", {

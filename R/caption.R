@@ -135,19 +135,27 @@ caption_render <- function(
 # paying a target setup per window.
 screen_open <- function(page, width, height) {
   session <- page$session$new_session()
-  # The blank tab has its own document.fonts; staged faces are re-added
-  # there and awaited before the screenshot.
-  fonts_ensure_page_session(page, session)
-  session$Emulation$setDeviceMetricsOverride(
-    width = as.integer(width),
-    height = as.integer(height),
-    deviceScaleFactor = 1,
-    mobile = FALSE
+  tryCatch(
+    {
+      # The blank tab has its own document.fonts; staged faces are re-added
+      # there and awaited before the screenshot.
+      fonts_ensure_page_session(page, session)
+      session$Emulation$setDeviceMetricsOverride(
+        width = as.integer(width),
+        height = as.integer(height),
+        deviceScaleFactor = 1,
+        mobile = FALSE
+      )
+      session$Emulation$setDefaultBackgroundColorOverride(
+        color = list(r = 0, g = 0, b = 0, a = 0)
+      )
+      session
+    },
+    error = function(e) {
+      session$close()
+      stop(e)
+    }
   )
-  session$Emulation$setDefaultBackgroundColorOverride(
-    color = list(r = 0, g = 0, b = 0, a = 0)
-  )
-  session
 }
 
 screen_render <- function(
@@ -168,7 +176,11 @@ screen_render <- function(
   script <- paste0("document.body.replaceChildren();", script)
   timeout <- page$default_timeout
   geometry <- cdp_call(
-    session$Runtime$evaluate(expression = script, returnByValue = TRUE),
+    session$Runtime$evaluate(
+      expression = script,
+      returnByValue = TRUE,
+      timeout_ = timeout
+    ),
     timeout,
     what
   )
@@ -180,7 +192,8 @@ screen_render <- function(
       format = "png",
       fromSurface = TRUE,
       captureBeyondViewport = TRUE,
-      clip = list(x = 0, y = 0, width = width, height = height, scale = 1)
+      clip = list(x = 0, y = 0, width = width, height = height, scale = 1),
+      timeout_ = timeout
     ),
     timeout,
     what
