@@ -61,9 +61,9 @@ run_probe <- function() {
     )
     # The callback's return value becomes the chained promise's value;
     # TRUE distinguishes the pre-settled path from a plain pass-through.
-    # Rejections must NOT be swallowed with a plain FALSE return: that
-    # would resolve the chained promise and make wait_for() succeed,
-    # mislabeling CDP errors as the wedge signature.
+    # The error callback resolves the chained promise, so the rejection
+    # is recorded in err_msg and reported as ERROR before the
+    # instant/WEDGED check.
     settled <- FALSE
     err_msg <- NULL
     p <- s$parent$send_command(
@@ -103,6 +103,9 @@ run_probe <- function() {
     dt <- proc.time()[["elapsed"]] - t0
     status <- if (!is.null(err_msg)) {
       paste("ERROR:", err_msg)
+    } else if (is.character(val)) {
+      # wait_for() itself threw (closed session, interrupt, ...)
+      paste("ERROR:", val)
     } else if (isTRUE(val) && dt < 0.5) {
       "instant"
     } else {
