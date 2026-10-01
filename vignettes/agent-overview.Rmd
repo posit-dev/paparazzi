@@ -1,0 +1,15 @@
+---
+title: "paparazzi for coding agents"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{paparazzi for coding agents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<!-- The content lives in inst/skills/paparazzi/SKILL.md; edit it there. -->
+
+```{r, echo = FALSE, results = "asis"}
+source(file.path(dirname(knitr::current_input(dir = TRUE)), "skill-source.R"))
+cat_skill_source("SKILL.md")
+```
