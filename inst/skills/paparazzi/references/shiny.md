@@ -177,5 +177,4 @@ The same actions and expectations make a recording: call `pz_stage()`, then
 run the steps inside `pz_record()`. Staged cursor motion and typing only
 animate while recording, so the test still runs at full speed. Use direct
 setters for setup the viewer doesn't need to see, and user actions for the
-steps they should watch. The recording example in the skill overview shows
-the pattern.
+steps they should watch. The Recording and staging reference shows the pattern.

@@ -106,6 +106,10 @@ vignette named `agent-<topic>`.
   text and position filters, scoped contexts and moving between scopes.
 - [Testing](references/testing.md): choosing expectations, waiting on
   conditions, testthat integration and inspecting failures.
+- [Screenshots and annotations](references/screenshots-and-annotations.md):
+  framing captures, marks, callouts, spotlights, redactions and fonts.
+- [Recording and staging](references/recording-and-staging.md): recording
+  formats, cursor and typing settings, camera moves and captions.
 - [Shiny](references/shiny.md): app processes, Shiny readiness, setting bound
   inputs, module IDs and sharing one app across pages.
 
