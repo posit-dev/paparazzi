@@ -512,21 +512,17 @@ frame_effective <- function(ctx, frame, call = caller_env()) {
     return(FALSE)
   }
   staged <- page_frame(ctx$page)
-  scoped <- length(ctx$scope) > 0L
-  if (is.null(frame)) {
-    if (is.null(staged)) {
-      return(NULL)
-    }
-    out <- frame_fill(staged, defaults = frame_defaults)
-    if (scoped) {
-      out["target"] <- list(NULL)
-    }
-    return(out)
+  if (is.null(frame) && is.null(staged)) {
+    return(NULL)
   }
-  if (!scoped && is.null(frame[["target"]]) && !is.null(staged[["target"]])) {
-    frame["target"] <- list(staged[["target"]])
-  }
-  frame_fill(frame, staged, frame_defaults)
+  out <- frame_fill(frame %||% pz_frame(), staged, frame_defaults)
+  out["target"] <- frame_target(
+    target = if (!is.null(frame[["target"]])) frame["target"],
+    scope = if (length(ctx$scope) > 0L) list(target = NULL),
+    staged = if (!is.null(staged[["target"]])) staged["target"],
+    viewport = list(target = NULL)
+  )
+  out
 }
 
 frame_measure <- function(
@@ -609,17 +605,21 @@ frame_clip <- function(ctx, spec, call = caller_env()) {
   frame_region(box, call = call)
 }
 
+frame_target <- function(target, scope = NULL, staged = NULL, viewport = NULL) {
+  target %||% scope %||% staged %||% viewport
+}
+
 frame_content_box <- function(ctx, spec, call = caller_env()) {
-  if (!is.null(spec[["target"]])) {
+  target <- if (!is.null(spec[["target"]])) {
     els <- loc_resolve(ctx, spec[["target"]], multiple = "all", call = call)
     withr::defer(release_elements(els))
-    return(frame_target_box(ctx, els, spec, call = call))
+    els
   }
-  scoped <- scope_connected(ctx, call = call)
-  if (!is.null(scoped)) {
-    return(frame_target_box(ctx, scoped, spec, call = call))
+  els <- frame_target(target, scope = scope_connected(ctx, call = call))
+  if (is.null(els)) {
+    return(NULL)
   }
-  NULL
+  frame_target_box(ctx, els, spec, call = call)
 }
 
 frame_target_box <- function(ctx, els, spec, call = caller_env()) {

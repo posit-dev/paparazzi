@@ -1012,3 +1012,75 @@ test_that("zoom places the padded target by anchor and honors ratio", {
   pz_screenshot(page, path, frame = pz_frame("#mid", zoom = 2, ratio = 1))
   expect_identical(png_dimensions(path), as.integer(round(c(300, 300) * dpr)))
 })
+
+test_that("effective frames choose explicit targets before scope and staging", {
+  page <- local_frame_page()
+  pz_stage_frame(page, "#small")
+  scoped <- pz_find(page, "#card")
+
+  expect_identical(
+    frame_effective(page, pz_frame("#card"))$target[[1]]$css,
+    "#card"
+  )
+  expect_identical(
+    frame_effective(page, pz_frame())$target[[1]]$css,
+    "#small"
+  )
+  expect_null(frame_effective(scoped, pz_frame())$target)
+  expect_identical(
+    frame_effective(scoped, pz_frame("#small"))$target[[1]]$css,
+    "#small"
+  )
+})
+
+test_that("frame target selection leaves lower-priority candidates lazy", {
+  expect_identical(
+    frame_target(NULL, list(target = NULL), stop("stage read early")),
+    list(target = NULL)
+  )
+  expect_identical(
+    frame_target("explicit", stop("scope measured early")),
+    "explicit"
+  )
+})
+
+test_that("recordings freeze staged targets and fields but measure at the chosen time", {
+  skip_if_no_av()
+  page <- local_frame_page()
+  for (when in c("start", "stop")) {
+    pz_js(page, "document.getElementById('small').style.width = '60px'")
+    pz_stage_frame(page, "#small", pad = 8)
+    out <- withr::local_tempfile(fileext = ".mp4")
+    pz_record_start(page, out, hold = c(0, 0), frame = pz_frame(when = when))
+    defer_record_stop(page)
+    rec <- page_recorder(page)
+    expect_named(rec$frame, names(pz_frame()), ignore.order = TRUE)
+    expect_identical(rec$frame$target[[1]]$css, "#small")
+    expect_identical(rec$frame$pad, rep(8, 4))
+    if (when == "stop") {
+      expect_null(rec$crop)
+    } else {
+      expect_equal(rec$crop$width, 76)
+    }
+
+    pz_stage_frame(page, "#card", pad = 30)
+    pz_js(page, "document.getElementById('small').style.width = '80px'")
+    pz_wait(page, 0.2)
+    pz_record_stop(page)
+    expect_equal(rec$crop$width, if (when == "start") 76 else 96)
+    expect_identical(rec$frame$target[[1]]$css, "#small")
+    expect_identical(rec$frame$pad, rep(8, 4))
+  }
+})
+
+test_that("scoped framing stays lazy and detached scopes do not become viewport frames", {
+  page <- local_frame_page()
+  scoped <- pz_find(page, "#card")
+  pz_stage_frame(page, "#small", pad = 0)
+  spec <- frame_effective(scoped, pz_frame())
+  expect_null(spec$target)
+  pz_js(page, "document.getElementById('card').style.width = '200px'")
+  expect_equal(frame_clip(scoped, spec)$width, 200)
+  pz_js(page, "document.getElementById('card').remove()")
+  expect_error(frame_clip(scoped, spec), class = "paparazzi_error_detached")
+})

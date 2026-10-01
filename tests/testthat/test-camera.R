@@ -475,6 +475,7 @@ test_that("follow keyframes share the pointer glide and skip in-shot actions", {
   expect_length(rec$camera, 2)
   move <- rec$camera[[2]]
   expect_true(move$follow)
+  expect_equal(move$zoom, 640 / (move$box[3] - move$box[1]))
   expect_gte(move$start, start)
   expect_lte(move$end, rec_vt(rec))
   expect_equal(
@@ -1041,4 +1042,18 @@ test_that("removed camera arguments error", {
   expect_error(pz_camera(page, "#box", pad = 0), "empty")
   expect_error(pz_camera(page, "#box", target_box = "element"), "empty")
   expect_error(pz_camera(page, target = "#box"), "empty")
+})
+
+test_that("camera home estimates use only the measured crop or live viewport", {
+  page <- local_frame_page()
+  pz_stage_frame(page, "#small", pad = 32)
+  rec <- list(crop = NULL)
+  geometry <- page_geometry(page)
+  expect_equal(
+    camera_home_estimate(rec, page),
+    c(0, 0, geometry$viewport_width, geometry$viewport_height)
+  )
+  rec$crop <- list(x = 20, y = 30, width = 100, height = 60)
+  expect_equal(camera_home_estimate(rec, page), c(20, 30, 120, 90))
+  expect_equal(camera_home_estimate(rec, NULL), c(20, 30, 120, 90))
 })
