@@ -188,7 +188,7 @@ PaparazziPage <- R6::R6Class(
     closed_ = FALSE,
     default_timeout_ = 10,
     # Main-frame loaderId captured before the last user action.
-    last_action_loader_ = NULL,
+    pre_action_loader_ = NULL,
     # One object group per page for every remote object a scope pinned,
     # released wholesale on close and navigation. A constant
     # is safe because groups are per session, so it can't collide across

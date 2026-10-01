@@ -95,7 +95,7 @@ pz_act_click <- function(
   effect <- arg_match(effect, c("press", "ring", "none"))
   effect_color <- effect_color %||% stage$click_effect_color
   check_string(effect_color, allow_empty = FALSE)
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   els <- action_elements(ctx, target)
   point <- el_pointer_point(ctx, els)
   dispatch_click(
@@ -141,7 +141,7 @@ pz_act_click <- function(
 pz_act_hover <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   els <- action_elements(ctx, target)
   point <- el_pointer_point(ctx, els)
   dispatch_mouse(
@@ -210,7 +210,7 @@ pz_act_hover <- function(ctx, target = NULL, ...) {
 pz_act_type <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   check_string(text)
 
   if (is.null(target) && is.null(scope_top(ctx))) {
@@ -302,7 +302,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   check_character(key)
   show_keys <- show_keys %||% page_stage(ctx$page)$show_keys
   show_keys <- arg_match(show_keys, c("none", "words", "mac", "both"))
@@ -389,7 +389,7 @@ pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
 pz_act_focus <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   els <- action_elements(ctx, target)
   el_scroll_into_view(els)
   els_call(
@@ -428,7 +428,7 @@ pz_act_focus <- function(ctx, target = NULL, ...) {
 pz_act_blur <- function(ctx, ...) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   scoped <- scope_root(ctx)
   if (!is.null(scoped)) {
     check_scope_single(scoped)
@@ -495,7 +495,7 @@ pz_act_blur <- function(ctx, ...) {
 pz_set_value <- function(ctx, value, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   arg <- set_value_argument(value)
 
   els <- action_elements(ctx, target)
@@ -548,7 +548,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
 pz_set_files <- function(ctx, files, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   files <- check_file_paths(files)
 
   els <- action_elements(ctx, target)
@@ -632,7 +632,7 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 pz_act_select_text <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   check_string(text)
   if (!nzchar(text)) {
     cli::cli_abort(
@@ -740,7 +740,7 @@ pz_act_scroll <- function(
     allow_null = TRUE,
     allow_infinite = FALSE
   )
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   modes <- c(target = !is.null(target), by = !is.null(by), to = !is.null(to))
   if (sum(modes) != 1L) {
     cli::cli_abort(
@@ -864,7 +864,7 @@ pz_act_scroll <- function(
 pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   to_dest <- !is.null(to)
   by_offset <- !is.null(by)
   if (!to_dest && !by_offset) {
@@ -951,8 +951,8 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   ctx_return(ctx)
 }
 
-action_start <- function(ctx) {
-  ctx$page$.__enclos_env__$private$last_action_loader_ <-
+record_pre_action_loader <- function(ctx) {
+  ctx$page$.__enclos_env__$private$pre_action_loader_ <-
     ctx$page$session$Page$getFrameTree(
       timeout_ = ctx$page$default_timeout
     )$frameTree$frame$loaderId
