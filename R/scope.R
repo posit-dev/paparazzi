@@ -396,11 +396,7 @@ scope_slice_js <- function(which) {
 
 narrow_description <- function(locs, description, which) {
   if (length(locs) == 1) {
-    loc <- locs[[1]]
-    if (is.null(loc$which)) {
-      loc$which <- which
-    }
-    format_loc(loc)
+    format_loc(narrow_locs(locs, which)[[1]])
   } else {
     paste0(description, " (match: ", which, ")")
   }
