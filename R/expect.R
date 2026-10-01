@@ -898,10 +898,10 @@ expect_report <- function(
   )
   msg <- cli::format_message(msg_template)
   if (isTRUE(result$pass)) {
-    expect_bridge(TRUE, msg)
+    report_to_testthat(TRUE, msg)
     return(ctx_return(ctx))
   }
-  if (expect_bridge(FALSE, msg)) {
+  if (report_to_testthat(FALSE, msg)) {
     return(ctx_return(ctx))
   }
   cli::cli_abort(
@@ -939,7 +939,7 @@ expect_page_impl <- function(
   expect_report(ctx, result, description, "the page", waited, call = call)
 }
 
-expect_bridge <- function(ok, msg) {
+report_to_testthat <- function(ok, msg) {
   if (
     !requireNamespace("testthat", quietly = TRUE) || !testthat::is_testing()
   ) {
@@ -1094,27 +1094,21 @@ check_text_like <- function(js, values, match, not) {
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
     vals <- collapse_ws(chr_or_na(els_values(els, js)))
-    if (length(values) == 1L) {
-      hits <- map_lgl(
-        vals,
-        expect_text_hit,
-        pattern = values,
-        match = match
-      )
-      pass <- if (not) !any(hits) else all(hits)
-    } else {
-      hits <- if (els$count == length(values)) {
-        vapply(
-          seq_along(values),
-          function(i) expect_text_hit(vals[[i]], values[[i]], match),
-          logical(1)
-        )
-      } else {
-        FALSE
-      }
-      pass <- if (not) !any(hits) else all(hits)
+    observed <- expect_seen_texts(vals)
+    if (length(values) > 1L && els$count != length(values)) {
+      return(list(pass = not, observed = observed))
     }
-    list(pass = pass, observed = expect_seen_texts(vals))
+    hits <- if (length(values) == 1L) {
+      map_lgl(vals, expect_text_hit, pattern = values, match = match)
+    } else {
+      vapply(
+        seq_along(values),
+        function(i) expect_text_hit(vals[[i]], values[[i]], match),
+        logical(1)
+      )
+    }
+    pass <- if (not) !any(hits) else all(hits)
+    list(pass = pass, observed = observed)
   }
 }
 

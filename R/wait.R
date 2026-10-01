@@ -372,6 +372,8 @@ pz_wait_for_navigation <- function(
 
 nav_settle_secs <- 0.5
 
+NAV_IN_FLIGHT <- list(complete = FALSE, origin = NULL)
+
 nav_snapshot <- function(ctx, timeout) {
   s <- tryCatch(
     pz_js(
@@ -387,7 +389,7 @@ nav_snapshot <- function(ctx, timeout) {
     }
   )
   if (is.null(s)) {
-    list(complete = FALSE, origin = NULL)
+    NAV_IN_FLIGHT
   } else {
     state <- jsonlite::fromJSON(s, simplifyVector = FALSE)
     list(complete = isTRUE(state[[1]]), origin = state[[2]])
@@ -435,11 +437,8 @@ nav_settle <- function(
       # simplifyVector = FALSE keeps the boolean a boolean: the mixed
       # [boolean, number] JSON would coerce TRUE to 1 otherwise.
       state <- jsonlite::fromJSON(s$js, simplifyVector = FALSE)
-      nav <- !identical(state[[2]], snapshot$origin) ||
-        !isTRUE(snapshot$complete) ||
-        (!is.null(action_loader) && !identical(s$loader, action_loader))
       isTRUE(state[[1]]) &&
-        nav &&
+        nav_happened(state[[2]], s$loader, snapshot, action_loader) &&
         as.numeric(difftime(now, stable_since, units = "secs")) >= settle
     },
     timeout = timeout,
@@ -447,6 +446,12 @@ nav_settle <- function(
     what = "the navigation to complete",
     call = call
   )
+}
+
+nav_happened <- function(origin, loader, snapshot, action_loader) {
+  !identical(origin, snapshot$origin) ||
+    !isTRUE(snapshot$complete) ||
+    (!is.null(action_loader) && !identical(loader, action_loader))
 }
 
 pump_loop <- function(loop, seconds, interval = 0.1) {
@@ -474,23 +479,22 @@ pz_poll <- function(
   what = "condition",
   call = caller_env()
 ) {
-  deadline <- Sys.time() + timeout
-  repeat {
-    if (isTRUE(fn())) {
-      return(invisible(TRUE))
-    }
-    remaining <- as.numeric(difftime(deadline, Sys.time(), units = "secs"))
-    if (remaining <= 0) {
-      cli::cli_abort(
-        # Plain interpolation: descriptions may carry their own quotes
-        # (has_text: "..."), and {.val} would escape them.
-        "Timed out after {timeout}s waiting for {what}.",
-        class = "paparazzi_error_timeout",
-        call = call
-      )
-    }
-    later::run_now(timeoutSecs = min(remaining, interval), loop = loop)
+  result <- expect_retry(
+    function() list(pass = isTRUE(fn())),
+    timeout = timeout,
+    loop = loop,
+    interval = interval
+  )
+  if (!result$pass) {
+    cli::cli_abort(
+      # Plain interpolation: descriptions may carry their own quotes
+      # (has_text: "..."), and {.val} would escape them.
+      "Timed out after {timeout}s waiting for {what}.",
+      class = "paparazzi_error_timeout",
+      call = call
+    )
   }
+  invisible(TRUE)
 }
 
 check_stable_prop <- function(prop, call = caller_env()) {
