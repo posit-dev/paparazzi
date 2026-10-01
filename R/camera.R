@@ -153,7 +153,7 @@ camera_move <- function(
   }
   camera_settle(ctx$page, rec)
   now <- rec_vt(rec)
-  home <- camera_home(rec, ctx)
+  home <- camera_home_estimate(rec, ctx)
   density <- camera_density(rec, ctx)
   scroll <- page_geometry(ctx)
   scroll <- c(scroll$scroll_x, scroll$scroll_y)
@@ -210,7 +210,7 @@ camera_follow_move <- function(ctx, rect, duration) {
     return(FALSE)
   }
   now <- rec_vt(rec)
-  home <- camera_home(rec, ctx)
+  home <- camera_home_estimate(rec, ctx)
   geometry <- page_geometry(ctx)
   scroll <- c(geometry$scroll_x, geometry$scroll_y)
   density <- camera_density(rec, ctx)
@@ -300,7 +300,7 @@ camera_density <- function(rec, ctx) {
   }
 }
 
-camera_home <- function(rec, ctx) {
+camera_home_estimate <- function(rec, ctx) {
   if (!is.null(rec$crop)) {
     return(c(
       rec$crop$x,
