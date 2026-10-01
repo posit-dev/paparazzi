@@ -168,6 +168,39 @@ PaparazziPage <- R6::R6Class(
     #'   object a scope pinned (read-only; internal).
     object_group = function() {
       private$object_group_
+    },
+
+    #' @field staging Staged page settings (internal).
+    staging = function(value) {
+      if (missing(value)) {
+        private$staging_
+      } else {
+        private$staging_ <- value
+      }
+    },
+
+    #' @field recorder Current recorder state, or `NULL` (internal).
+    recorder = function(value) {
+      if (missing(value)) {
+        private$recorder_
+      } else {
+        private$recorder_ <- value
+      }
+    },
+
+    #' @field pre_action_loader Main-frame loader ID before the last user
+    #'   action, or `NULL` (internal).
+    pre_action_loader = function(value) {
+      if (missing(value)) {
+        private$pre_action_loader_
+      } else {
+        private$pre_action_loader_ <- value
+      }
+    },
+
+    #' @field app The owned or shared app handle, or `NULL` (read-only; internal).
+    app = function() {
+      private$owned_app_ %||% private$shared_app_
     }
   ),
   private = list(

@@ -1,3 +1,19 @@
+test_that("recorder accessors share the page recorder binding", {
+  page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
+  rec <- new.env(parent = emptyenv())
+  rec$active <- TRUE
+
+  expect_invisible(page_set_recorder(page, rec))
+  expect_identical(page$recorder, rec)
+
+  page$recorder$active <- FALSE
+  expect_identical(page_recorder(page), rec)
+  expect_false(page_recorder(page)$active)
+
+  page_set_recorder(page, NULL)
+  expect_null(page$recorder)
+})
+
 test_that("recording rejects explicit annotated home but uses staged element home", {
   skip_if_no_av()
   page <- local_record_page()

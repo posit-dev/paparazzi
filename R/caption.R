@@ -58,11 +58,11 @@ pz_annotate_caption <- function(
 }
 
 page_caption <- function(page) {
-  page$.__enclos_env__$private$staging_$caption
+  page$staging$caption
 }
 
 page_set_caption <- function(page, caption) {
-  page$.__enclos_env__$private$staging_$caption <- caption
+  page$staging$caption <- caption
   rec <- page_recorder(page)
   if (!is.null(rec) && rec$active) {
     rec$captions <- c(

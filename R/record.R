@@ -585,11 +585,11 @@ url_encode_path <- function(path) {
 }
 
 page_recorder <- function(page) {
-  page$.__enclos_env__$private$recorder_
+  page$recorder
 }
 
 page_set_recorder <- function(page, rec) {
-  page$.__enclos_env__$private$recorder_ <- rec
+  page$recorder <- rec
   invisible(page)
 }
 

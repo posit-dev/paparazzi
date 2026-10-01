@@ -118,6 +118,15 @@ Waits must pump this loop so scheduled timers keep firing.}
 
     \item{\code{object_group}}{The CDP object group holding every remote
 object a scope pinned (read-only; internal).}
+
+    \item{\code{staging}}{Staged page settings (internal).}
+
+    \item{\code{recorder}}{Current recorder state, or \code{NULL} (internal).}
+
+    \item{\code{pre_action_loader}}{Main-frame loader ID before the last user
+action, or \code{NULL} (internal).}
+
+    \item{\code{app}}{The owned or shared app handle, or \code{NULL} (read-only; internal).}
   }
   \if{html}{\out{</div>}}
 }

@@ -116,7 +116,7 @@ pz_stage <- function(
   check_context(ctx)
   check_dots_empty()
   page <- ctx$page
-  overrides <- page$.__enclos_env__$private$staging_$stage %||% list()
+  overrides <- page$staging$stage %||% list()
 
   if (!missing(cursor)) {
     if (is.null(cursor)) {
@@ -307,7 +307,7 @@ pz_stage_annotate <- function(
   check_context(ctx)
   check_dots_empty()
   page <- ctx$page
-  overrides <- page$.__enclos_env__$private$staging_$stage %||% list()
+  overrides <- page$staging$stage %||% list()
   if (!missing(color)) {
     if (is.null(color)) {
       overrides[["annotate_color"]] <- NULL
@@ -389,12 +389,12 @@ STAGE_DEFAULTS <- list(
 )
 
 page_stage <- function(page) {
-  overrides <- page$.__enclos_env__$private$staging_$stage
+  overrides <- page$staging$stage
   utils::modifyList(STAGE_DEFAULTS, overrides %||% list())
 }
 
 page_set_stage <- function(page, overrides) {
-  page$.__enclos_env__$private$staging_$stage <- overrides
+  page$staging$stage <- overrides
   invisible(page)
 }
 
