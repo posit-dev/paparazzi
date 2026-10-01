@@ -1,7 +1,3 @@
-# pillar rendering for the getters' element list-column: a short type
-# label, and a shaft showing the top scope's description compactly
-# (pillar truncates to the available width). Root contexts -- and
-# pages, defensively -- never appear in the column; they show "root".
 #' @importFrom pillar type_sum
 #' @export
 type_sum.PaparazziContext <- function(x) {
@@ -102,12 +98,7 @@ PaparazziPage <- R6::R6Class(
         if (!is.null(private$owned_app_)) {
           on.exit(private$owned_app_$stop(), add = TRUE)
         }
-        # A recorder on this page can't wait for its next tick or event:
-        # tear it down before the session goes away.
         record_page_closed(self)
-        # Release every pinned scope object before the session goes away;
-        # contexts that survive the release raise the classed detach
-        # error on their next use instead of a raw chromote one.
         self$release_object_group()
         private$closed_ <- TRUE
         private$chromote_$close()
@@ -116,9 +107,7 @@ PaparazziPage <- R6::R6Class(
     },
 
     #' @description Release every remote object a scope pinned.
-    #'   Internal: runs on close and before navigation resets scopes. (An
-    #'   `@noRd` here would suppress the whole PaparazziPage topic, so it stays
-    #'   documented like its siblings on this internal-keyword topic.)
+    #'   Internal: runs on close and before navigation resets scopes.
     release_object_group = function() {
       try(
         private$chromote_$Runtime$releaseObjectGroup(
@@ -188,11 +177,9 @@ PaparazziPage <- R6::R6Class(
     closed_ = FALSE,
     default_timeout_ = 10,
     # Main-frame loaderId captured before the last user action.
-    last_action_loader_ = NULL,
-    # One object group per page for every remote object a scope pinned,
-    # released wholesale on close and navigation. A constant
-    # is safe because groups are per session, so it can't collide across
-    # pages.
+    pre_action_loader_ = NULL,
+    # A constant is safe because groups are per session, so it can't
+    # collide across pages.
     object_group_ = "paparazzi_scopes",
     staging_ = list(),
     recorder_ = NULL
@@ -207,14 +194,10 @@ knit_print.PaparazziContext <- function(x, ...) {
   knitr::normal_print(x)
 }
 
-# Derived contexts stay in their recording chain.
 ctx_derive <- function(ctx, scope) {
   PaparazziContext$new(ctx$page, scope = scope, recording = ctx$recording)
 }
 
-# The return value of every chainable function: visible only in a
-# recording chain whose recording is still running, so autoprint at the
-# end of the chain stops it.
 ctx_return <- function(ctx) {
   if (ctx_recording(ctx)) ctx else invisible(ctx)
 }

@@ -73,8 +73,6 @@ pz_camera <- function(ctx, frame, ..., duration = NULL, wait = FALSE) {
     }
     frame <- frame_fill(frame, defaults = frame_camera_defaults)
   } else {
-    # FALSE (unframed) or NULL (the scope box): camera defaults, with
-    # FALSE dropping the pad.
     frame <- frame_fill(
       new_frame_spec(pad = if (identical(frame, FALSE)) 0),
       defaults = frame_camera_defaults
@@ -153,9 +151,6 @@ camera_move <- function(
       reason = "to apply the recording camera to GIFs."
     )
   }
-  # Manual moves queue behind each other by settling first: a second
-  # pz_camera() starts where the first one lands. Follow moves never
-  # outlast their action, so they are already done here.
   camera_settle(ctx$page, rec)
   now <- rec_vt(rec)
   home <- camera_home(rec, ctx)
@@ -197,9 +192,6 @@ camera_move <- function(
   invisible(rec)
 }
 
-# Holds and pauses freeze video time, camera included, and a stop ends
-# it, so each lets an in-flight move land first. Moves only ever interrupt earlier
-# ones, so the last move is the one still running.
 camera_settle <- function(page, rec) {
   if (!rec$active || rec$paused || !length(rec$camera)) {
     return(invisible())
@@ -240,23 +232,17 @@ camera_follow_move <- function(ctx, rect, duration) {
   ) +
     rep(scroll, 2)
   arrival <- now + camera_effective_duration(rec, duration)
-  # An in-flight move already heading to a shot that frames the target
-  # (a zoom toward it, or a reset) is left alone; otherwise the target
-  # must be in the shot when the action lands.
   last_end <- if (length(rec$camera)) rec$camera[[length(rec$camera)]]$end
-  if (
-    !is.null(last_end) &&
-      last_end > arrival &&
-      is.null(camera_follow_shot(shot_at(last_end), target, home, scroll))
-  ) {
+  heading_to_target <- !is.null(last_end) &&
+    last_end > arrival &&
+    is.null(camera_follow_shot(shot_at(last_end), target, home, scroll))
+  if (heading_to_target) {
     return(FALSE)
   }
   shot <- camera_follow_shot(shot_at(arrival), target, home, scroll)
   if (is.null(shot)) {
     return(FALSE)
   }
-  # Stop-time home is not measured yet: encode reinterprets this zoom
-  # against the final home, like automatic durations in manual moves.
   rec$camera[[length(rec$camera) + 1L]] <- list(
     start = now,
     end = arrival,
@@ -302,9 +288,8 @@ camera_follow_shot <- function(current, target, home, scroll) {
   if (all(abs(shot - current) < 1e-7)) NULL else shot
 }
 
-# Capture pixels per CSS px, from the first frame once one exists. Before
-# that, screencast frames arrive at CSS resolution and poll frames at the
-# page's DPR.
+# Before the first frame, screencast frames arrive at CSS resolution and
+# poll frames at the page's DPR.
 camera_density <- function(rec, ctx) {
   if (length(rec$files) && !is.null(rec$camera_viewport_width)) {
     png_read_size(rec$files[[1]])$width / rec$camera_viewport_width
@@ -324,15 +309,10 @@ camera_home <- function(rec, ctx) {
       rec$crop$y + rec$crop$height
     ))
   }
-  # A stop-time frame has no measured home yet: estimate automatic
-  # duration with the current viewport and resolve the shot at encode.
   geometry <- page_geometry(ctx)
   c(0, 0, geometry$viewport_width, geometry$viewport_height)
 }
 
-# The shot for a move: zoom = NULL fits the box, grown to home's
-# aspect and capped at the capture's pixel density; a number fixes the
-# shot at home / zoom. The box is placed in the shot by the anchor.
 camera_shot <- function(
   box,
   home,

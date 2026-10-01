@@ -213,8 +213,6 @@ pz_expect_hidden <- function(
   not = FALSE,
   timeout = NULL
 ) {
-  # Validated here: inverting before the check would silently coerce
-  # non-booleans (e.g. not = 1 becomes FALSE).
   check_bool(not)
   pz_expect_visible(ctx, ..., target = target, not = !not, timeout = timeout)
 }
@@ -814,15 +812,6 @@ pz_expect_title <- function(
   )
 }
 
-#' Retry an expectation check
-#'
-#' Like `pz_poll()`, but instead of aborting on the deadline it returns
-#' the last failure result so the caller can raise the rich classed
-#' error. `fn()` returns `list(pass = TRUE)` or `list(pass = FALSE,
-#' observed = <value for the error>)`. Between checks, pumps `loop` (the
-#' page's child loop) so timers keep firing. `timeout = 0` checks once.
-#'
-#' @noRd
 expect_retry <- function(fn, timeout, loop, interval = 0.1) {
   deadline <- Sys.time() + timeout
   repeat {
@@ -838,28 +827,6 @@ expect_retry <- function(fn, timeout, loop, interval = 0.1) {
   }
 }
 
-#' Drive one expectation: resolve, check, retry
-#'
-#' Resolves `target` once per poll iteration with `loc_resolve_once()`
-#' and releases the handle after each iteration: `check(els)` extracts
-#' the observed values to R first, so nothing pins across iterations.
-#' `check(els)` returns `list(pass, observed)`; comparison happens in R,
-#' not in a JS predicate, so the classed failure reports a real
-#' last-seen value. Every attempt re-queries lazily inside the pinned
-#' scope (re-renders within a scope are fine) behind a fresh detach
-#' probe: a scope detaching mid-expectation aborts with the classed
-#' error instead of degrading into a failing check on a stale set. At
-#' the root the probe is a pure NULL read, so each attempt is
-#' byte-identical to the unscoped path.
-#' `target = NULL` means the current context: at a scoped context that
-#' is the pinned set itself, used as-is and never released (its scope
-#' owns it); at the root it resolves to a single implicit
-#' `document.body` element -- a one-element JS array, resolved with
-#' loc_resolve_once() but without the loc resolver expression. Passes
-#' and failures route through the testthat bridge when running inside
-#' testthat; outside, a failure is a `paparazzi_expectation_failure`.
-#'
-#' @noRd
 expect_impl <- function(
   ctx,
   target,
@@ -873,26 +840,17 @@ expect_impl <- function(
   check_context(ctx, call = call)
   timeout <- resolve_timeout(timeout, ctx$page, call = call)
 
-  target_expr <- target_resolver_expr(target, call = call)
+  target_expr <- target_resolver(target, call = call)
   expr <- target_expr$fn
   target_desc <- target_expr$description
 
-  # scope_top() is the raw stack read, for routing only: is this a
-  # scoped context? The detach probe itself runs inside the retry
-  # loop, once per attempt: a scope detaching mid-expectation aborts
-  # with the classed error instead of degrading into a failing check
-  # on a stale set. At the root scope_root() is a pure NULL read, so
-  # every attempt is byte-identical to the unscoped path.
   scoped <- scope_top(ctx)
 
   start <- Sys.time()
   if (is.null(target) && !is.null(scoped)) {
-    # target = NULL on a scoped context: the pinned set itself, no
-    # resolution and no re-query. check() re-reads the DOM through it
-    # on every attempt, so retries still follow re-renders.
     target_desc <- scoped$description
     result <- expect_retry(
-      fn = function() check(scope_root(ctx, call = call)),
+      fn = function() check(scope_connected(ctx, call = call)),
       timeout = timeout,
       loop = ctx$page$child_loop
     )
@@ -904,7 +862,7 @@ expect_impl <- function(
           expr,
           target_desc,
           call,
-          root = scope_root(ctx, call = call)
+          root = scope_connected(ctx, call = call)
         )
         withr::defer(release_elements(els))
         check(els)
@@ -917,13 +875,11 @@ expect_impl <- function(
   expect_report(ctx, result, description, target_desc, waited, call = call)
 }
 
-# The shared tail of every expectation: the fixed failure format and the
-# testthat bridge. The failure text carries page-derived content
-# (observed) and user-derived content (the headline holds the expected
-# text, which may be a regex containing braces). Both are interpolated as
-# cli VALUES, never pasted into templates: cli only evaluates the
-# template, so braces inside a value stay literal and can't inject markup
-# or code.
+# The failure text carries page-derived content (observed) and
+# user-derived content (the headline holds the expected text, which may
+# be a regex containing braces). Both are interpolated as cli VALUES,
+# never pasted into templates: cli only evaluates the template, so
+# braces inside a value stay literal and can't inject markup or code.
 expect_report <- function(
   ctx,
   result,
@@ -940,13 +896,12 @@ expect_report <- function(
     "Last seen: {observed}",
     "Waited {waited}s."
   )
-  # Plain-text rendering for the testthat bridge, which takes a string.
   msg <- cli::format_message(msg_template)
   if (isTRUE(result$pass)) {
-    expect_bridge(TRUE, msg)
+    report_to_testthat(TRUE, msg)
     return(ctx_return(ctx))
   }
-  if (expect_bridge(FALSE, msg)) {
+  if (report_to_testthat(FALSE, msg)) {
     return(ctx_return(ctx))
   }
   cli::cli_abort(
@@ -956,10 +911,6 @@ expect_report <- function(
   )
 }
 
-# Page-level expectations (url, title) have no target to resolve: read
-# the page once per attempt, compare in R, then reuse the shared report
-# and bridge. Works from any context -- scoped or root -- and never
-# probes the scope: a detached scope doesn't change the page's URL.
 expect_page_impl <- function(
   ctx,
   values,
@@ -979,7 +930,6 @@ expect_page_impl <- function(
     fn = function() {
       observed <- read()
       hit <- expect_text_hit(collapse_ws(observed), expected, match)
-      # Quoted to match the SPEC's failure format ("Last seen: ...").
       list(pass = if (not) !hit else hit, observed = paste0('"', observed, '"'))
     },
     timeout = timeout,
@@ -989,10 +939,7 @@ expect_page_impl <- function(
   expect_report(ctx, result, description, "the page", waited, call = call)
 }
 
-# testthat is in Suggests: inside tests, passes count and failures are
-# reported through testthat::expect(); anywhere else, the caller gets the
-# classed error instead. Returns FALSE when the bridge is inactive.
-expect_bridge <- function(ok, msg) {
+report_to_testthat <- function(ok, msg) {
   if (
     !requireNamespace("testthat", quietly = TRUE) || !testthat::is_testing()
   ) {
@@ -1002,10 +949,6 @@ expect_bridge <- function(ok, msg) {
   TRUE
 }
 
-# Read observed values off a resolved element array with one
-# callFunctionOn. `args` supplies optional CDP callArguments; the caller
-# releases the handle right after. Returns the raw per-element result
-# list: NULLs (JS null or undefined) survive for nullable reads.
 els_values <- function(
   els,
   js,
@@ -1031,13 +974,10 @@ els_values <- function(
   res$result$value
 }
 
-# Non-nullable reads flatten the per-element result list to a vector.
-els_call <- function(els, js, call = caller_env()) {
+els_values_flat <- function(els, js, call = caller_env()) {
   unlist(els_values(els, js, call = call))
 }
 
-# Whitespace collapse for text comparison, both sides: runs collapse to a
-# single space, then leading/trailing space is dropped.
 collapse_ws <- function(x) {
   trimws(gsub("\\s+", " ", x))
 }
@@ -1070,8 +1010,6 @@ expect_text_js <- "function() {
   return this.map((el) => el.textContent);
 }"
 
-# Name/class reach JS JSON-encoded, so quotes and specials can't break
-# out of the function string (same as pz_get_attr()).
 expect_attrs_js <- function(names) {
   paste0(
     "function() { const names = ",
@@ -1088,8 +1026,6 @@ expect_class_js <- function(class) {
   )
 }
 
-# The user's expr is code by design (like pz_js), embedded as the
-# predicate every match is mapped through.
 expect_js_predicate <- function(expr) {
   paste0(
     "function() {\n",
@@ -1118,9 +1054,6 @@ expect_truncate <- function(x, width = 80) {
   }
 }
 
-# Each check takes a resolved element set and returns list(pass, observed).
-# `not` is folded in at construction: it passes when no match satisfies
-# the positive condition, including zero matches (SPEC table).
 check_exists <- function(not) {
   function(els) {
     pass <- if (not) els$count == 0L else els$count >= 1L
@@ -1129,7 +1062,6 @@ check_exists <- function(not) {
 }
 
 check_count <- function(min, max, not) {
-  # n was already encoded as min = max = n; NULL bounds are unbounded.
   min <- min %||% -Inf
   max <- max %||% Inf
   function(els) {
@@ -1141,17 +1073,12 @@ check_count <- function(min, max, not) {
   }
 }
 
-# State checks share one shape: a JS predicate per element, pass when
-# every match satisfies it (or, with not, when none does, including
-# zero matches, per the SPEC table).
 check_state <- function(js, not, seen) {
   function(els) {
     if (els$count == 0L) {
-      # No remote object exists for an empty set; zero matches satisfies
-      # only the negated form.
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
-    n_ok <- sum(els_call(els, js))
+    n_ok <- sum(els_values_flat(els, js))
     pass <- if (not) n_ok == 0L else n_ok == els$count
     list(pass = pass, observed = paste0(n_ok, " of ", els$count, " ", seen))
   }
@@ -1161,44 +1088,27 @@ check_visible <- function(not) {
   check_state(expect_visible_js, not, "visible")
 }
 
-# Text and value checks share one shape: read one
-# JS expression per match, collapse whitespace, then compare. NA reads
-# satisfy nothing, so they only pass through not, via "no match satisfies".
 check_text_like <- function(js, values, match, not) {
   function(els) {
     if (els$count == 0L) {
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
     vals <- collapse_ws(chr_or_na(els_values(els, js)))
-    if (length(values) == 1L) {
-      # A single value applies to every match; at least one is required.
-      hits <- map_lgl(
-        vals,
-        expect_text_hit,
-        pattern = values,
-        match = match
-      )
-      # Negated passes only when NO match satisfies (SPEC), which is
-      # stronger than "not all": partial satisfaction fails both forms.
-      pass <- if (not) !any(hits) else all(hits)
-    } else {
-      # A vector requires exactly n matches, compared pairwise in order.
-      # Negated passes only when NO element satisfies its pairwise
-      # expectation (SPEC's "no match satisfies"); when the count
-      # differs from the vector length there is no pairwise
-      # correspondence at all, so the negation passes vacuously.
-      hits <- if (els$count == length(values)) {
-        vapply(
-          seq_along(values),
-          function(i) expect_text_hit(vals[[i]], values[[i]], match),
-          logical(1)
-        )
-      } else {
-        FALSE
-      }
-      pass <- if (not) !any(hits) else all(hits)
+    observed <- expect_seen_texts(vals)
+    if (length(values) > 1L && els$count != length(values)) {
+      return(list(pass = not, observed = observed))
     }
-    list(pass = pass, observed = expect_seen_texts(vals))
+    hits <- if (length(values) == 1L) {
+      map_lgl(vals, expect_text_hit, pattern = values, match = match)
+    } else {
+      vapply(
+        seq_along(values),
+        function(i) expect_text_hit(vals[[i]], values[[i]], match),
+        logical(1)
+      )
+    }
+    pass <- if (not) !any(hits) else all(hits)
+    list(pass = pass, observed = observed)
   }
 }
 
@@ -1299,7 +1209,6 @@ expect_text_matches <- function(x, pattern, match) {
   )
 }
 
-# Keep comparisons strictly TRUE or FALSE even for missing observed values.
 expect_text_hit <- function(x, pattern, match) {
   isTRUE(expect_text_matches(x, pattern, match))
 }

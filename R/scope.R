@@ -249,9 +249,6 @@ pz_find_reset <- function(ctx) {
   ctx_derive(ctx, list())
 }
 
-# The pinned set at the top of the scope stack, or NULL at the root:
-# the raw stack read, without the detach check scope_root() adds. For
-# routing decisions that don't consume the scope.
 scope_top <- function(ctx) {
   if (length(ctx$scope) == 0) {
     NULL
@@ -273,12 +270,7 @@ check_scope_single <- function(scoped, call = caller_env()) {
   }
 }
 
-# The pinned set at the top of the scope stack, after the detach check;
-# NULL at the root context. The single seam every consumer reads once
-# per pz_*() call: "before each use" is per operation that touches the
-# scope, not per CDP command (an action's scroll-rect-dispatch sequence
-# is one use).
-scope_root <- function(ctx, call = caller_env()) {
+scope_connected <- function(ctx, call = caller_env()) {
   check_context(ctx, call = call)
   scoped <- scope_top(ctx)
   if (is.null(scoped)) {
@@ -288,19 +280,10 @@ scope_root <- function(ctx, call = caller_env()) {
   }
 }
 
-# Pushing never touches an existing context: derived contexts share the
-# parent's pinned sets, which is safe because the wrapper is immutable
-# and never released by consumers (cleanup is the finalizer plus group
-# release).
 push_scope <- function(ctx, pinned) {
   ctx_derive(ctx, c(ctx$scope, list(pinned)))
 }
 
-# The pinned-set wrapper: a paparazzi_elements subclass, so
-# els_call()/els_values()/el_rects()/el_scroll_into_view() accept
-# pinned sets unchanged and action_elements()'s top-of-stack branch
-# treats one as the element set. `locs` keeps the spec the set was
-# pinned from, for formatting narrowed scopes.
 new_pinned <- function(page, object_id, count, description, locs) {
   els <- structure(
     list(
@@ -315,9 +298,7 @@ new_pinned <- function(page, object_id, count, description, locs) {
   # reg.finalizer() only binds to environments, so the finalizer rides
   # on a fresh one the wrapper alone holds: when the wrapper becomes
   # unreachable, so does the environment, and the release fires. The
-  # closure captures the pieces, never the wrapper, so no cycle keeps
-  # the wrapper alive. Best-effort only -- group release is
-  # authoritative. The release must be fire-and-forget: a finalizer can
+  # release must be fire-and-forget: a finalizer can
   # run at any allocation, and a synchronous wait would pump the event
   # loop mid-expression, settling an in-flight command's promise before
   # its own wait_for() registers -- chromote's synchronize() then
@@ -343,15 +324,6 @@ new_pinned <- function(page, object_id, count, description, locs) {
   els
 }
 
-# The detach check: one callFunctionOn, returnByValue. Any detached
-# element invalidates the set (pinned sets promise their whole set). A
-# CDP failure that means the set's world is gone -- "Could not find
-# object with given id" (a context that outlived a group release) or
-# "Cannot find context with specified id" / "Execution context was
-# destroyed" (a navigation that destroyed the context the set was
-# pinned in) -- maps to the same class, so post-navigation /
-# post-close contexts raise the classed error rather than a raw
-# chromote one.
 pinned_assert_connected <- function(pinned, call = caller_env()) {
   res <- tryCatch(
     pinned$page$session$Runtime$callFunctionOn(
@@ -406,11 +378,6 @@ pinned_abort_detached <- function(pinned, call = caller_env()) {
   )
 }
 
-# Eager narrowing of the current scope: one callFunctionOn on the
-# pinned array, tagged with the object group so the slice is released
-# with everything else. No re-query and no auto-wait -- the set was
-# fixed at pin time, so waiting is pointless. The null filters are
-# defensive: a live set always holds its pick.
 scope_slice_js <- function(which) {
   # NOT switch(): a numeric which would select an alternative by
   # position (2 -> "last", > 3 -> no match), not by value.
@@ -427,21 +394,9 @@ scope_slice_js <- function(which) {
   }
 }
 
-# A narrowed scope's description: a single loc takes `which` directly
-# and re-formats with format_loc(); a union (or no locs at all) can't
-# carry a which, so its description is the parent's plus a match
-# suffix. A loc that already carries a which keeps it: it selected
-# exactly one match, so any narrowing of that set is the same element
-# and re-labeling it would name the wrong match. Shared by scope
-# narrowing (the parent is the pinned set) and the element list-column
-# (the parent is the getter's matched array).
 narrow_description <- function(locs, description, which) {
   if (length(locs) == 1) {
-    loc <- locs[[1]]
-    if (is.null(loc$which)) {
-      loc$which <- which
-    }
-    format_loc(loc)
+    format_loc(narrow_locs(locs, which)[[1]])
   } else {
     paste0(description, " (match: ", which, ")")
   }
@@ -455,14 +410,10 @@ narrow_locs <- function(locs, which) {
     }
     list(loc)
   } else {
-    # A union can't take a which; the description carries the match.
     locs
   }
 }
 
-# pz_find_first()/pz_find_last()/pz_find_nth() with a target: apply
-# `which` to the promoted loc and pin its match. Without a target:
-# narrow the current scope eagerly.
 find_which <- function(ctx, target, which, from_root, call = caller_env()) {
   if (is.null(target)) {
     return(find_narrow(ctx, which, from_root, call))
@@ -493,8 +444,6 @@ find_which <- function(ctx, target, which, from_root, call = caller_env()) {
   find_push(ctx, list(loc), from_root, call)
 }
 
-# Narrow the current scope: slice the pinned set at the top, eager and
-# without re-query, and push the slice.
 find_narrow <- function(ctx, which, from_root, call) {
   if (from_root) {
     cli::cli_abort(
@@ -506,7 +455,7 @@ find_narrow <- function(ctx, which, from_root, call) {
       call = call
     )
   }
-  scoped <- scope_root(ctx, call = call)
+  scoped <- scope_connected(ctx, call = call)
   if (is.null(scoped)) {
     cli::cli_abort(
       c(
@@ -518,9 +467,6 @@ find_narrow <- function(ctx, which, from_root, call) {
     )
   }
   if (is.numeric(which) && which > scoped$count) {
-    # An out-of-range narrowing errors immediately: the set was fixed
-    # at pin time, so there is nothing to wait for. An out-of-range
-    # `which` on a target, by contrast, keeps auto-waiting.
     cli::cli_abort(
       "The current scope has {scoped$count} elements; there is no match {which}.",
       class = "paparazzi_error_scope",
@@ -546,7 +492,6 @@ find_narrow <- function(ctx, which, from_root, call) {
   push_scope(ctx, pinned)
 }
 
-# Resolve locs eagerly, pin the whole matched set, and push it.
 find_push <- function(ctx, locs, from_root, call = caller_env()) {
   els <- loc_resolve(
     ctx,

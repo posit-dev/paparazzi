@@ -71,7 +71,7 @@ pz_stage_fonts <- function(
   results <- fonts_ensure_session(page$session, fonts, page$default_timeout)
   ok <- vapply(results, is.null, logical(1))
   if (!all(ok)) {
-    messages <- cli_escape_braces(unlist(results[!ok]))
+    messages <- cli_escape(unlist(results[!ok]))
     problems <- c(
       "Failed to load {sum(!ok)} font face{?s}:",
       rlang::set_names(messages, rep("x", length(messages)))
@@ -248,8 +248,6 @@ check_font_weight <- function(x, arg = caller_arg(x), call = caller_env()) {
   as.integer(x)
 }
 
-# font_family args take a CSS family string or a staged font object; an
-# object resolves to its quoted family plus a generic fallback.
 check_font_family <- function(
   x,
   page,
@@ -292,7 +290,12 @@ fonts_faces <- function(page) {
 }
 
 font_face_spec <- function(font) {
-  spec <- list(family = font$family, weight = font$weight, style = font$style)
+  spec <- list(
+    family = font$family,
+    weight = font$weight,
+    style = font$style,
+    key = font_key(font)
+  )
   if (!is.null(font$url)) {
     spec$url <- font$url
     spec$id <- font$url
@@ -304,25 +307,10 @@ font_face_spec <- function(font) {
   spec
 }
 
-# Must match the key FONTS_ENSURE_JS builds per face.
 font_key <- function(font) {
   tolower(paste(font$family, font$weight, font$style, sep = "|"))
 }
 
-# Failure messages carry user family names and URLs; cli would read
-# their braces as glue expressions.
-cli_escape_braces <- function(x) {
-  x <- gsub("{", "{{", x, fixed = TRUE)
-  gsub("}", "}}", x, fixed = TRUE)
-}
-
-# Loads every face into the session's current document and awaits the
-# loads. Remote faces go through the css2 stylesheet (fetched by Chrome,
-# parsed in-page with a constructable stylesheet); file faces go in as
-# ArrayBuffers. Per-document bookkeeping lives on the document object, so
-# a fresh document after navigation re-adds and re-awaits every staged
-# face. Returns a list aligned with `fonts`: NULL per loaded face, an
-# error message per failure.
 fonts_ensure_session <- function(session, fonts, timeout) {
   if (!length(fonts)) {
     return(list())
@@ -349,10 +337,6 @@ fonts_ensure_session <- function(session, fonts, timeout) {
   value
 }
 
-# Lazy re-load hooks: cheap once the document's set is populated.
-# Failures (e.g. a stricter CSP after navigation, or an evicted HTTP
-# cache at render time) warn rather than break the annotation or the
-# encode. Staging-time failures are pz_stage_fonts()'s on_error path.
 fonts_ensure_page <- function(page) {
   fonts_ensure_page_session(page, page$session)
 }
@@ -362,15 +346,12 @@ fonts_ensure_page_session <- function(page, session) {
   if (!length(faces)) {
     return(invisible(NULL))
   }
-  # Two-phase: ask which faces the document lacks or holds with a
-  # different source id, and send full specs (with base64 bytes) only
-  # for those.
   needed <- fonts_needed(session, faces, page$default_timeout)
   if (!length(needed)) {
     return(invisible(NULL))
   }
   results <- fonts_ensure_session(session, faces[needed], page$default_timeout)
-  messages <- cli_escape_braces(unlist(Filter(Negate(is.null), results)))
+  messages <- cli_escape(unlist(Filter(Negate(is.null), results)))
   if (length(messages)) {
     cli::cli_warn(c(
       "Failed to load staged fonts:",
@@ -392,7 +373,6 @@ FONTS_NEEDED_JS <- paste0(
   "}"
 )
 
-# Zero-based JS indices of the faces the session's document still needs.
 fonts_needed <- function(session, fonts, timeout) {
   pairs <- lapply(fonts, function(font) {
     list(font_key(font), font_face_spec(font)$id)
@@ -421,7 +401,7 @@ FONTS_ENSURE_JS <- paste0(
   "const have = document.__paparazziFonts ||",
   "(document.__paparazziFonts = new Map());",
   "const jobs = spec.map((f) => {",
-  "const key = (f.family + '|' + f.weight + '|' + f.style).toLowerCase();",
+  "const key = f.key;",
   "const entry = have.get(key);",
   "if (entry && entry.id === f.id) return Promise.resolve(null);",
   "return (async () => {",
@@ -451,7 +431,6 @@ FONTS_ENSURE_JS <- paste0(
   "faces.push(new FontFace(f.family, bytes.buffer,",
   "{weight: String(f.weight), style: f.style}));",
   "}",
-  # A re-staged face with a new source replaces the old one in place.
   "if (entry) for (const old of entry.faces) document.fonts.delete(old);",
   "const loads = faces.map((face) => {",
   "document.fonts.add(face);",

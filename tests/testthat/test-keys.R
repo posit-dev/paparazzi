@@ -20,7 +20,7 @@ test_that("key_parse resolves named keys from the key table", {
   for (name in names(keys)) {
     parsed <- key_parse(name)
     expect_identical(parsed$modifiers, character(0), label = name)
-    expect_identical(parsed$modifier_keys, character(0), label = name)
+    expect_identical(parsed$pressed_modifiers, character(0), label = name)
     expect_identical(parsed$key$key, name, label = name)
     expect_identical(parsed$key$code, name, label = name)
     expect_identical(parsed$key$keyCode, keys[[name]], label = name)
@@ -30,7 +30,7 @@ test_that("key_parse resolves named keys from the key table", {
 test_that("key_parse parses a plain key without modifiers", {
   parsed <- key_parse("Enter")
   expect_identical(parsed$modifiers, character(0))
-  expect_identical(parsed$modifier_keys, character(0))
+  expect_identical(parsed$pressed_modifiers, character(0))
   expect_identical(
     parsed$key,
     list(key = "Enter", code = "Enter", keyCode = 13L, text = "\r")
@@ -56,7 +56,7 @@ test_that("key_parse parses single characters", {
   # An uppercase letter implies Shift, like Playwright's USKeyboardLayout.
   upper <- key_parse("A")
   expect_identical(upper$modifiers, "Shift")
-  expect_identical(upper$modifier_keys, character(0))
+  expect_identical(upper$pressed_modifiers, character(0))
   expect_identical(
     upper$key,
     list(key = "A", code = "KeyA", keyCode = 65L, text = "A")
@@ -71,7 +71,7 @@ test_that("key_parse parses single characters", {
   # Shifted digit symbols map to the digit's key with Shift implied.
   bang <- key_parse("!")
   expect_identical(bang$modifiers, "Shift")
-  expect_identical(bang$modifier_keys, character(0))
+  expect_identical(bang$pressed_modifiers, character(0))
   expect_identical(
     bang$key,
     list(key = "!", code = "Digit1", keyCode = 49L, text = "!")
@@ -94,12 +94,12 @@ test_that("key_parse parses modifier combos", {
   ctrl_a <- key_parse("Control+A")
   # "A" implies Shift on top of the written Control.
   expect_identical(ctrl_a$modifiers, c("Control", "Shift"))
-  expect_identical(ctrl_a$modifier_keys, "Control")
+  expect_identical(ctrl_a$pressed_modifiers, "Control")
   expect_identical(ctrl_a$key$key, "A")
 
   meta_enter <- key_parse("Meta+Enter")
   expect_identical(meta_enter$modifiers, "Meta")
-  expect_identical(meta_enter$modifier_keys, "Meta")
+  expect_identical(meta_enter$pressed_modifiers, "Meta")
   expect_identical(
     meta_enter$key,
     list(key = "Enter", code = "Enter", keyCode = 13L, text = "\r")
@@ -108,23 +108,23 @@ test_that("key_parse parses modifier combos", {
   # Explicit Shift doesn't double up with an implied one.
   shift_tab <- key_parse("Shift+Tab")
   expect_identical(shift_tab$modifiers, "Shift")
-  expect_identical(shift_tab$modifier_keys, "Shift")
+  expect_identical(shift_tab$pressed_modifiers, "Shift")
   expect_identical(shift_tab$key$key, "Tab")
 })
 
 test_that("Mod resolves to a physical modifier before generating events", {
   mac <- key_parse("mOd+k", mod = "Meta")
   expect_identical(mac$modifiers, "Meta")
-  expect_identical(mac$modifier_keys, "Meta")
+  expect_identical(mac$pressed_modifiers, "Meta")
   expect_identical(mac$key$key, "k")
   expect_identical(key_events(mac)[[2]]$modifiers, 4L)
 
   other <- key_parse("Shift+Mod+k", mod = "Control")
   expect_identical(other$modifiers, c("Control", "Shift"))
-  expect_identical(other$modifier_keys, c("Shift", "Control"))
+  expect_identical(other$pressed_modifiers, c("Shift", "Control"))
   expect_identical(key_events(other)[[3]]$modifiers, 10L)
   expect_identical(
-    key_parse("Mod+Control+k", mod = "Meta")$modifier_keys,
+    key_parse("Mod+Control+k", mod = "Meta")$pressed_modifiers,
     c("Meta", "Control")
   )
 
@@ -139,7 +139,7 @@ test_that("Mod resolves to a physical modifier before generating events", {
 
 test_that("modifiers match case-insensitively and normalize", {
   parsed <- key_parse("cOnTrOl+aLt+Delete")
-  expect_identical(parsed$modifier_keys, c("Control", "Alt"))
+  expect_identical(parsed$pressed_modifiers, c("Control", "Alt"))
   # The full set comes back in canonical order: Alt, Control, Meta, Shift.
   expect_identical(parsed$modifiers, c("Alt", "Control"))
   expect_identical(parsed$key$key, "Delete")
@@ -206,7 +206,7 @@ test_that("a lone plus presses the plus key", {
 test_that("explicit Shift shifts the main character", {
   shifted_a <- key_parse("Shift+a")
   expect_identical(shifted_a$modifiers, "Shift")
-  expect_identical(shifted_a$modifier_keys, "Shift")
+  expect_identical(shifted_a$pressed_modifiers, "Shift")
   expect_identical(
     shifted_a$key,
     list(key = "A", code = "KeyA", keyCode = 65L, text = "A")

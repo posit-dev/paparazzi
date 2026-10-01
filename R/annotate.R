@@ -188,7 +188,6 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
       ") || false; })()"
     )
   )
-  # Log the caption clear at the call's video time, not after mark fades.
   if (is.null(id) || identical(id, "caption")) {
     caption_clear(ctx$page)
   }
@@ -197,7 +196,7 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
 }
 
 annotate_elements <- function(ctx, target, frame = caller_env()) {
-  scoped <- if (is.null(target)) scope_root(ctx, call = frame)
+  scoped <- if (is.null(target)) scope_connected(ctx, call = frame)
   if (!is.null(scoped)) {
     return(scoped)
   }
@@ -223,8 +222,6 @@ annotate_style <- function(
   list(color = color, font_family = font_family, font_size = font_size)
 }
 
-# Bubble and badge surfaces: per-call fill/text_color win, then the staged
-# defaults, then the built-ins in STAGE_DEFAULTS.
 annotate_fill_style <- function(
   ctx,
   fill,
@@ -252,12 +249,14 @@ annotate_stroke_width <- function(ctx, stroke_width, call = caller_env()) {
   stroke_width
 }
 
-# Unset, a callout with a leader stands off far enough for the line to
-# read as an arrow; a leaderless tooltip hugs its target.
+CALLOUT_LEADER_DISTANCE <- 24
+
+CALLOUT_TOOLTIP_DISTANCE <- 8
+
 annotate_distance <- function(ctx, distance, leader, call = caller_env()) {
   distance <- distance %||%
     page_stage(ctx$page)$annotate_distance %||%
-    if (isFALSE(leader)) 8 else 24
+    if (isFALSE(leader)) CALLOUT_TOOLTIP_DISTANCE else CALLOUT_LEADER_DISTANCE
   check_number_decimal(
     distance,
     min = 0,
@@ -268,13 +267,9 @@ annotate_distance <- function(ctx, distance, leader, call = caller_env()) {
   distance
 }
 
-# Calls a layer entry point with the resolved elements as `this`, booting
-# the layer first if this document doesn't have one yet.
 annotate_call <- function(ctx, els, fn, options, what) {
   json <- jsonlite::toJSON(options, auto_unbox = TRUE, null = "null")
   timeout <- ctx$page$default_timeout
-  # Staged faces are awaited in the current document before drawing, so
-  # annotations never flash a fallback font after navigation.
   fonts_ensure_page(ctx$page)
   res <- cdp_call(
     ctx$page$session$Runtime$callFunctionOn(
@@ -306,7 +301,7 @@ annotate_pump <- function(ctx, duration) {
 }
 
 annotate_recording <- function(page) {
-  stage_recording(page) && !isTRUE(page_recorder(page)$paused)
+  recorder_active(page) && !isTRUE(page_recorder(page)$paused)
 }
 
 annotate_register_init <- function(ctx) {
@@ -332,7 +327,6 @@ annotate_register_init <- function(ctx) {
   invisible(NULL)
 }
 
-# A document-bound runtime: the layer owns the only Map of annotations.
 annotate_boot_js <- local({
   boot <- NULL
   function() {

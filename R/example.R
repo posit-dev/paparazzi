@@ -34,7 +34,6 @@ pz_example <- function(name = NULL) {
   check_string(name, allow_null = TRUE)
   dir <- system.file("examples", package = "paparazzi", mustWork = TRUE)
   files <- list.files(dir)
-  # Examples are pages (.html) or app directories; other files are assets.
   files <- files[
     tools::file_ext(files) == "html" | dir.exists(file.path(dir, files))
   ]

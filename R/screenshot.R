@@ -84,8 +84,6 @@ pz_screenshot <- function(ctx, path = NULL, ..., frame = NULL) {
   }
   check_string(path)
 
-  # NULL means the staged framing (pz_stage_frame()) if one is set;
-  # FALSE opts out for one call; a bare locator promotes to a spec.
   frame <- frame_effective(ctx, frame)
 
   clip <- if (inherits(frame, "paparazzi_frame")) {
@@ -93,19 +91,12 @@ pz_screenshot <- function(ctx, path = NULL, ..., frame = NULL) {
   } else if (length(ctx$scope) == 0) {
     clip_viewport(ctx)
   } else {
-    # The clip is the union of the boxes of the current scope's pinned
-    # set, detach-checked once per call (one use, one check): a scope
-    # that left the page raises the classed error instead of clipping
-    # to stale zero boxes. Revisit if scoping settles on
-    # intersect-instead-of-union.
-    scoped <- scope_root(ctx)
+    scoped <- scope_connected(ctx)
     clip_rects_union(ctx, el_rects(scoped))
   }
 
-  # Hide only inspect outlines for the capture; annotations and the
-  # visible cursor belong in stills.
-  overlay_display <- overlay_hide(ctx)
-  on.exit(overlay_restore(ctx, overlay_display), add = TRUE)
+  overlay_display <- inspect_outlines_hide(ctx)
+  on.exit(inspect_outlines_restore(ctx, overlay_display), add = TRUE)
   res <- screenshot_capture(ctx, clip)
   writeBin(jsonlite::base64_dec(res$data), path)
   caption <- page_caption(ctx$page)
@@ -224,7 +215,6 @@ knit_capture_path <- function(ext) {
   path
 }
 
-# The clip for a root-context capture: the viewport in document coordinates.
 clip_viewport <- function(ctx, call = caller_env()) {
   g <- page_geometry(ctx, call = call)
   # RTL scrollX can be negative; CDP rejects negative clip origins.
@@ -236,8 +226,10 @@ clip_viewport <- function(ctx, call = caller_env()) {
   )
 }
 
-# The clip for an element capture: the union of viewport-relative rects,
-# shifted into document coordinates.
+page_scroll <- function(ctx) {
+  unlist(pz_js(ctx, "[window.scrollX, window.scrollY]"))
+}
+
 clip_rects_union <- function(ctx, rects, call = caller_env()) {
   edges <- box_union(rects, call = call)
   clip <- list(
@@ -249,17 +241,15 @@ clip_rects_union <- function(ctx, rects, call = caller_env()) {
   # el_rects() is viewport-relative; CDP clip coordinates (with
   # captureBeyondViewport) are document-relative, so add the scroll
   # offsets. Off-viewport targets need no scrollIntoView.
-  scroll <- pz_js(ctx, "[window.scrollX, window.scrollY]")
+  scroll <- page_scroll(ctx)
   clip$x <- clip$x + scroll[[1]]
   clip$y <- clip$y + scroll[[2]]
-  # CDP rejects negative clip offsets; clamping to the document bounds is
-  # the framing task's job, so only the origin is fixed.
+  # CDP rejects negative clip origins.
   clip$x <- max(clip$x, 0)
   clip$y <- max(clip$y, 0)
   clip
 }
 
-# One synchronous CDP call, like loc_resolve_once(): no promise chaining.
 # captureBeyondViewport = TRUE makes Chrome interpret the clip in page
 # (document) coordinates, and fromSurface = TRUE renders the surface at
 # the page's device pixel ratio, so clip$scale = 1 yields a PNG at

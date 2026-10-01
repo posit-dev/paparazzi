@@ -33,11 +33,8 @@
 pz_get_count <- function(ctx, target = NULL, ...) {
   check_dots_empty()
   check_context(ctx)
-  resolved <- target_resolver_expr(target)
-  # One use, one check: the scope is probed once per call, so a
-  # detached scope raises its classed error through the count getter
-  # too instead of counting nothing.
-  root <- scope_root(ctx)
+  resolved <- target_resolver(target)
+  root <- scope_connected(ctx)
   if (is.null(target) && !is.null(root)) {
     return(root$count)
   }
@@ -89,7 +86,7 @@ pz_get_text <- function(ctx, target = NULL, ..., raw = FALSE) {
     target = target,
     timeout = NULL,
     read = function(els, call) {
-      texts <- els_call(els, expect_text_js, call = call)
+      texts <- els_values_flat(els, expect_text_js, call = call)
       if (raw) texts else collapse_ws(texts)
     }
   )
@@ -146,8 +143,6 @@ pz_get_value <- function(ctx, target = NULL, ...) {
 pz_get_attr <- function(ctx, name, target = NULL, ...) {
   check_dots_empty()
   check_string(name)
-  # The name reaches JS JSON-encoded, so quotes and specials can't break
-  # out of the function string.
   js <- paste0(
     "function() { return this.map((el) => el.getAttribute(",
     jsonlite::toJSON(name, auto_unbox = TRUE),
@@ -262,7 +257,7 @@ pz_get_html <- function(ctx, target = NULL, ...) {
     ctx = ctx,
     target = target,
     timeout = NULL,
-    read = function(els, call) els_call(els, get_html_js, call = call)
+    read = function(els, call) els_values_flat(els, get_html_js, call = call)
   )
 }
 
@@ -305,17 +300,9 @@ pz_get_title <- function(ctx) {
   pz_js(ctx, "document.title")
 }
 
-# Driver for the target-based getters. `read(els, call)` pulls values into R;
-# it never sees an empty set, because loc_resolve() errors on timeout.
-# `target = NULL` means the current context: at a scoped context that is
-# the pinned set itself, used as-is, never released (its scope owns it),
-# and detach-checked here once; at the root, NULL keeps the implicit
-# document.body meaning through loc_resolve(). Explicit targets resolve
-# lazily inside the current scope -- loc_resolve() probes the scope once
-# per call.
 get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
   if (is.null(target)) {
-    scoped <- scope_root(ctx, call = call)
+    scoped <- scope_connected(ctx, call = call)
     if (!is.null(scoped)) {
       return(read(scoped, call))
     }
@@ -331,17 +318,10 @@ get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
   read(els, call)
 }
 
-# JS null/undefined reads become NA_character_, preserving positions:
-# unlist() silently drops NULLs.
 chr_or_na <- function(x) {
   map_chr(x, function(v) if (is.null(v)) NA_character_ else as.character(v))
 }
 
-# Pin one single-element set off a matched array: the element column's
-# per-match scope. The slice is tagged with the page's object group, so
-# it outlives the getter's transient handle and is released with every
-# other pinned object; the array it was sliced from stays with its
-# caller. `i` is 1-based, so it always picks a live element.
 pin_match_id <- function(els, i, call = caller_env()) {
   timeout <- els$page$default_timeout
   doing <- sprintf("pinning match %d of %s", i, els$description)
@@ -361,12 +341,6 @@ pin_match_id <- function(els, i, call = caller_env()) {
   res$result$objectId
 }
 
-# Wrap one pinned match as the element column's entry: a context whose
-# stack is the getter context's whole stack plus that match. The
-# description narrows the getter's locs with `which = i`, so a later
-# detach names the row. One extra CDP round trip per match, accepted:
-# contexts sharing the getter's array handle would break the uniform
-# one-array-per-scope wrapper contract.
 pin_match <- function(ctx, els, locs, i, call = caller_env()) {
   pinned <- new_pinned(
     els$page,
@@ -378,11 +352,6 @@ pin_match <- function(ctx, els, locs, i, call = caller_env()) {
   push_scope(ctx, pinned)
 }
 
-# The locs the per-match element scopes narrow from: the promoted
-# target for an explicit target, and the scope's own locs for
-# target = NULL on a scoped context (the pinned set itself). At the
-# root, target = NULL is the provisional document.body match, whose
-# single element is the body.
 get_element_locs <- function(els, target, call = caller_env()) {
   if (is.null(target)) {
     if (inherits(els, "paparazzi_pinned")) {
@@ -395,10 +364,6 @@ get_element_locs <- function(els, target, call = caller_env()) {
   }
 }
 
-# Tibble factory for the getters: while the getter's transient handle
-# is still live (inside get_impl()'s read, before the on-exit release),
-# pin one single-element set per match off the matched array and store
-# one context per match in the trailing `element` list-column.
 new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
   out <- tibble::tibble(...)
   locs <- get_element_locs(els, target, call = call)
@@ -413,8 +378,6 @@ get_value_js <- "function() {
   return this.map((el) => el.value === undefined ? null : String(el.value));
 }"
 
-# id/class come back as JS null when the attribute is absent, so the
-# getter can map them to NA like pz_get_attr() does.
 get_elements_js <- "function() {
   return this.map((el) => ({
     tag: el.tagName.toLowerCase(),

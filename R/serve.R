@@ -285,7 +285,7 @@ quarto_start <- function(path, render, cli, timeout = 60, call = caller_env()) {
     failure <- if (is.null(preview)) {
       list(kind = "exited", port_taken = TRUE, log = character())
     } else {
-      app_wait_ready(preview, timeout)
+      app_wait_failure(preview, timeout)
     }
     if (is.null(failure)) {
       url <- quarto_browse_url(preview, port)
@@ -376,9 +376,6 @@ check_app_envvars <- function(
   envvars
 }
 
-# The picker races the actual bind (the probe socket closes before
-# httpuv takes the port), so a taken port is a normal startup failure,
-# retried on a fresh port.
 app_start <- function(
   app_dir,
   envvars,
@@ -397,7 +394,7 @@ app_start <- function(
     config <- config[!duplicated(names(config), fromLast = TRUE)]
     app <- new_app(config, port, envvars)
     if (is.null(app)) {
-      # A preflight connect succeeded. On some platforms a second bind
+      # On some platforms a second bind
       # can also succeed, but traffic would reach the other listener.
       if (attempt < max_attempts) {
         shiny_options$port <- NULL
@@ -410,13 +407,12 @@ app_start <- function(
         call = call
       )
     }
-    failure <- app_wait_ready(app, timeout)
+    failure <- app_wait_failure(app, timeout)
     if (is.null(failure)) {
       return(app)
     }
     app$stop()
     if (failure$port_taken && attempt < max_attempts) {
-      # Forced ports retry on a new random port like any other.
       shiny_options$port <- NULL
       next
     }
@@ -424,8 +420,7 @@ app_start <- function(
   }
 }
 
-# NULL when the app is listening; otherwise a list(kind, port_taken, log).
-app_wait_ready <- function(app, timeout) {
+app_wait_failure <- function(app, timeout) {
   deadline <- Sys.time() + timeout
   repeat {
     if (!app$is_running()) {
@@ -469,7 +464,6 @@ app_startup_error <- function(
     c(
       "The {engine} at {.path {app_dir}} {what}.",
       if (length(failure$log)) {
-        # Tail and escape opaque child output before cli parses its braces.
         log <- paste(utils::tail(failure$log, 20L), collapse = "\n")
         log <- substr(log, max(1L, nchar(log) - 3999L), nchar(log))
         c(x = cli_escape(log))
@@ -482,11 +476,6 @@ app_startup_error <- function(
     },
     call = call
   )
-}
-
-cli_escape <- function(x) {
-  x <- gsub("{", "{{", x, fixed = TRUE)
-  gsub("}", "}}", x, fixed = TRUE)
 }
 
 # Chrome refuses to navigate to these ports in 3000:8000, so they are
@@ -536,7 +525,6 @@ new_app <- function(config, port, envvars) {
   config_file <- tempfile(pattern = "paparazzi-app-", fileext = ".rds")
   saveRDS(config, config_file)
   log_file <- tempfile(pattern = "paparazzi-app-", fileext = ".log")
-  # The sole busy-port probe runs after serialization, just before spawn.
   if (app_port_connectable(port)) {
     return(NULL)
   }
@@ -581,8 +569,6 @@ PaparazziServe <- R6::R6Class(
       self$url <- url %||% sprintf("http://127.0.0.1:%d/", port)
     },
 
-    # Interrupt, wait, kill; each step no-ops once the process is gone,
-    # so repeated stop() is safe.
     stop = function() {
       if (!private$stopped_) {
         private$stopped_ <- TRUE

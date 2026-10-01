@@ -73,10 +73,10 @@ pz_device <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  width <- check_dimension(width, "width")
-  height <- check_dimension(height, "height")
-  scale <- check_dimension(scale, "scale")
-  zoom <- check_dimension(zoom, "zoom")
+  width <- check_positive_number(width, "width")
+  height <- check_positive_number(height, "height")
+  scale <- check_positive_number(scale, "scale")
+  zoom <- check_positive_number(zoom, "zoom")
   if (!is.null(mobile)) {
     check_bool(mobile)
   }
@@ -106,8 +106,6 @@ pz_device <- function(
     state$zoom_method <- zoom_method %||% state$zoom_method
     device_apply_override(ctx$page, state)
   })
-  # CSS zoom spans several CDP calls and records each as it succeeds, so
-  # rolling it back would lose a script Chrome already registered.
   device_apply_css_zoom(ctx$page, state)
   device_step(
     state,
@@ -130,16 +128,10 @@ pz_device <- function(
   ctx_return(ctx)
 }
 
-# pz_open()'s dots are pz_device() settings, validated up front so a
-# misspelling names the mistake instead of landing in check_dots_empty()
-# as an anonymous unused argument. Unnamed dots error (settings must be
-# named); unknown names error with a near-miss hint (adist, the same
-# idea as match.arg's suggestion).
 device_check_dots <- function(dots, call = caller_env()) {
   if (!length(dots)) {
     return(dots)
   }
-  # Unnamed dots have no name at all, not an empty one.
   nms <- names(dots)
   if (is.null(nms) || !all(nzchar(nms))) {
     cli::cli_abort(
@@ -166,9 +158,6 @@ device_check_dots <- function(dots, call = caller_env()) {
   dots
 }
 
-# pz_open() applies forwarded device settings right after the page is
-# created, before any navigation, so media queries and layout are
-# right at first render.
 device_open <- function(page, dots) {
   if (length(dots)) {
     do.call(pz_device, c(list(ctx = page), dots))
@@ -176,37 +165,6 @@ device_open <- function(page, dots) {
   invisible(page)
 }
 
-# pz_device()'s positive-numeric arguments (width, height, scale, zoom):
-# rlang has no check_number_positive(), so this wraps check_number_decimal().
-# 0 is rejected everywhere: a zero viewport is meaningless and a zero
-# scale/zoom would silently reset the page.
-check_dimension <- function(
-  x,
-  arg = caller_arg(x),
-  call = caller_env()
-) {
-  if (is.null(x)) {
-    return(NULL)
-  }
-  check_number_decimal(x, min = 0, arg = arg, call = call)
-  if (x <= 0) {
-    cli::cli_abort(
-      "{.arg {arg}} must be positive, not {x}.",
-      class = "paparazzi_error_input",
-      call = call
-    )
-  }
-  x
-}
-
-# Device state rides on the page as an attribute: R6 objects are
-# environments, so the attribute travels with the page and dies with
-# it, and no R6 field is needed for it. The state is an environment so
-# device_apply_*() helpers can update it in place. Sticky base_width/
-# base_height hold the pre-zoom viewport captured at the first
-# viewport zoom (a live innerWidth read is already zoomed then);
-# base_scale is not sticky because scale always carries a value
-# whenever an override is applied.
 device_state <- function(page) {
   state <- attr(page, "paparazzi_device")
   if (is.null(state)) {
@@ -217,8 +175,8 @@ device_state <- function(page) {
     state$mobile <- NULL
     state$zoom <- NULL
     state$zoom_method <- NULL
-    state$base_width <- NULL
-    state$base_height <- NULL
+    state$unzoomed_width <- NULL
+    state$unzoomed_height <- NULL
     state$overridden <- FALSE
     state$css_zoom <- NULL
     state$css_script <- NULL
@@ -230,10 +188,6 @@ device_state <- function(page) {
   state
 }
 
-# Apply one step of a device change. The step records its settings in
-# state before sending them, so a failed step puts the state back:
-# otherwise a later partial pz_device() call would re-send settings the
-# page never got. Earlier steps that succeeded stay recorded.
 device_step <- function(state, code) {
   prev <- as.list(state, all.names = TRUE)
   tryCatch(code, error = function(e) {
@@ -258,8 +212,7 @@ device_apply_override <- function(page, state, call = caller_env()) {
 
   if (!viewport_zoom && !base_set) {
     if (isTRUE(state$overridden)) {
-      # An in-flight capture restores the device metrics it saw at its start.
-      record_hold(
+      record_device_change(
         page,
         page$session$Emulation$clearDeviceMetricsOverride(
           timeout_ = page$default_timeout
@@ -272,14 +225,15 @@ device_apply_override <- function(page, state, call = caller_env()) {
   }
 
   if (
-    viewport_zoom && (is.null(state$base_width) || is.null(state$base_height))
+    viewport_zoom &&
+      (is.null(state$unzoomed_width) || is.null(state$unzoomed_height))
   ) {
     current <- device_viewport(page)
-    state$base_width <- state$width %||% current$width
-    state$base_height <- state$height %||% current$height
+    state$unzoomed_width <- state$width %||% current$width
+    state$unzoomed_height <- state$height %||% current$height
   }
-  eff_width <- state$width %||% state$base_width %||% 0
-  eff_height <- state$height %||% state$base_height %||% 0
+  eff_width <- state$width %||% state$unzoomed_width %||% 0
+  eff_height <- state$height %||% state$unzoomed_height %||% 0
   eff_scale <- state$scale %||% 2
   eff_mobile <- state$mobile %||% FALSE
   if (viewport_zoom) {
@@ -287,7 +241,7 @@ device_apply_override <- function(page, state, call = caller_env()) {
     eff_height <- eff_height / zoom
     eff_scale <- eff_scale * zoom
   }
-  record_hold(
+  record_device_change(
     page,
     page$session$Emulation$setDeviceMetricsOverride(
       width = round(eff_width),
@@ -302,16 +256,11 @@ device_apply_override <- function(page, state, call = caller_env()) {
   invisible(page)
 }
 
-# The CSS-zoom method: one style property on <html>, everything else
-# untouched. The style dies with its document, so the zoom is carried
+# The style dies with its document, so the zoom is carried
 # by a script CDP evaluates on every NEW document (registered while a
 # css zoom is active, removed when it disables) and an inline
 # application covers the current one, which the registration alone
-# never touches. The script guards on the top frame so iframes keep
-# their own layout. Only touched when the desired zoom differs from
-# the one in effect, or when a failed first apply left its script
-# registered; a user's own html zoom style is overwritten while
-# active, but never added or removed otherwise.
+# never touches.
 device_apply_css_zoom <- function(page, state, register = TRUE) {
   zoom <- state$zoom
   method <- state$zoom_method %||% "viewport"
@@ -320,17 +269,12 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
   ) {
     zoom
   }
-  if (
-    identical(desired, state$css_zoom) &&
-      (!is.null(desired) || is.null(state$css_script))
-  ) {
+  unchanged <- identical(desired, state$css_zoom)
+  orphan_script <- is.null(desired) && !is.null(state$css_script)
+  if (unchanged && !orphan_script) {
     return(invisible(page))
   }
   if (is.null(desired)) {
-    # Disable: the injected script goes away with the effect, so
-    # future documents stay at their own size too, and the current
-    # document gets back the inline zoom paparazzi found at the first
-    # application (or none).
     if (!is.null(state$css_script)) {
       page$session$Page$removeScriptToEvaluateOnNewDocument(
         identifier = state$css_script,
@@ -352,20 +296,15 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
     }
     state$css_zoom_saved <- NULL
   } else {
-    # Reapply after a navigation skips the registration: the script
-    # in place already encodes the desired zoom (only pz_device()
-    # changes the factor, and it re-registers).
-    if (register || is.null(state$css_script)) {
-      if (is.null(state$css_script)) {
-        # First application: remember the page's own inline zoom so
-        # disable can give it back (never re-captured once the script
-        # is in place, so the settle reapplies keep the first save).
+    first_apply <- is.null(state$css_script)
+    if (register || first_apply) {
+      if (first_apply) {
         state$css_zoom_saved <- device_eval(
           page,
           "document.documentElement.style.zoom || ''"
         )
       }
-      if (!is.null(state$css_script)) {
+      if (!first_apply) {
         page$session$Page$removeScriptToEvaluateOnNewDocument(
           identifier = state$css_script,
           timeout_ = page$default_timeout
@@ -394,8 +333,7 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
   invisible(page)
 }
 
-# The script that carries a css zoom onto every new document. The
-# top-frame guard keeps iframes at their own layout. The script runs
+# The top-frame guard keeps iframes at their own layout. The script runs
 # before the document has an <html> element, so the application waits
 # for readyState to move past "loading" in that case.
 device_zoom_script <- function(zoom) {
@@ -415,13 +353,11 @@ device_zoom_script <- function(zoom) {
   )
 }
 
-# Reapply the css zoom on the document a navigation just settled on.
 # The injected script covers commits while the Page domain is enabled,
 # but chromote auto-disables it once its last event listener releases
 # (a released frameNavigated promise), and a commit in that window
 # runs no script -- so every paparazzi settle point re-applies the
-# inline zoom instead. wait_nav_reset() clears the cache slot first:
-# the inline style died with the outgoing document.
+# inline zoom instead.
 device_css_reapply <- function(page) {
   state <- attr(page, "paparazzi_device")
   if (is.null(state)) {
@@ -431,10 +367,17 @@ device_css_reapply <- function(page) {
   invisible(TRUE)
 }
 
+device_css_forget <- function(page) {
+  state <- attr(page, "paparazzi_device")
+  if (!is.null(state)) {
+    state$css_zoom <- NULL
+  }
+  invisible(page)
+}
+
 # Emulated media features. CDP replaces the whole features set on every
 # call (probed), so color scheme and reduced motion are tracked as one
 # pair and the union of the active ones is sent whenever either changes.
-# A "" value would clear a feature, but the API has no clear path yet.
 device_apply_media <- function(page, state, color_scheme, reduced_motion) {
   changed <- (!is.null(color_scheme) &&
     !identical(color_scheme, state$color_scheme)) ||
@@ -466,8 +409,6 @@ device_apply_media <- function(page, state, color_scheme, reduced_motion) {
   invisible(page)
 }
 
-# Evaluate with returnByValue; JS failures in these one-line scripts
-# surface as classed errors instead of raw chromote ones.
 device_eval <- function(page, expr, call = caller_env()) {
   res <- cdp_call(
     page$session$Runtime$evaluate(

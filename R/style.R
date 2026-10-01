@@ -65,16 +65,10 @@ pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
     read = function(els, call) {
       vals <- els_values(els, style_get_js(props), call = call)
       out_props <- if (is.null(props)) {
-        # Union across matches, first-seen order: standard computed
-        # properties are enumerated for every element, but a custom
-        # property appears only where it's set or inherited, so the
-        # first match's set can miss columns later matches have.
         unique(unlist(lapply(vals, names)))
       } else {
         props
       }
-      # Missing = "" (empty string), not NA: the property simply
-      # isn't in that match's computed style.
       cols <- lapply(
         out_props,
         function(p) map_chr(vals, function(v) v[[p]] %||% "")
@@ -312,14 +306,6 @@ style_expect_pairs <- function(dots, call = caller_env()) {
   values
 }
 
-# One expectation check: reads the target's computed values and, when
-# normalizing, resolves the expected values through the probe, in one
-# synchronous JS call. Comparison happens in R (see the expectation
-# core note): the classed failure gets real last-seen values. With no
-# matches there is nothing to compare, but the invalid-CSS verdict
-# still runs: it needs no target, and without it a plain expectation
-# would retry a rejected declaration to the timeout and not = TRUE
-# would pass on invalid CSS.
 check_style <- function(pairs, not, normalize, call = caller_env()) {
   js <- style_expect_js(pairs, normalize)
   props <- names(pairs)
@@ -343,9 +329,6 @@ check_style <- function(pairs, not, normalize, call = caller_env()) {
   }
 }
 
-# Invalid CSS aborts immediately, outside the retry loop: the browser's
-# verdict on a declaration never changes. Acceptance is a property of
-# the (property, value) pair, so the verdict vector is per pair.
 style_abort_invalid <- function(accepted, pairs, call = caller_env()) {
   if (!all(accepted)) {
     p <- which(!accepted)[[1]]
@@ -358,10 +341,6 @@ style_abort_invalid <- function(accepted, pairs, call = caller_env()) {
   invisible(NULL)
 }
 
-# The invalid-declaration verdict with no matches: there is no element
-# array to callFunctionOn, so the check runs on the page with one
-# Runtime$evaluate. The probe is a detached div: setProperty validity
-# holds regardless of attachment, so nothing needs to touch the DOM.
 style_check_invalid <- function(page, pairs, call = caller_env()) {
   timeout <- page$default_timeout
   res <- cdp_call(
@@ -379,8 +358,6 @@ style_check_invalid <- function(page, pairs, call = caller_env()) {
   map_lgl(res$result$value, isTRUE)
 }
 
-# Comparison matrix [match, pair]: identical strings pass; px values
-# compare numerically with a 0.5px tolerance; anything else is exact.
 style_hits <- function(vals, pairs, normalize) {
   out <- matrix(TRUE, nrow = length(vals), ncol = length(pairs))
   for (e in seq_along(vals)) {
@@ -431,15 +408,6 @@ expect_headline_style <- function(pairs, not) {
   paste0("Expected style", if (not) " not", " to match ", what)
 }
 
-# One synchronous callFunctionOn on the matched element array: read
-# the targets and whatever context each value needs (SPEC table) from
-# the live document, THEN attach the probe, set the expected values
-# inline on it, and read it back. Reading before attaching is the
-# contract: an appended node changes what positional selectors match
-# (body:last-child stops matching once the host follows body), so the
-# target's styles must never be read with the host in the document.
-# Nothing persists between calls: the probe host is removed in a
-# finally block, so the app's DOM is untouched once the call returns.
 style_expect_js <- function(pairs, normalize) {
   paste0(
     "function() {\n",
@@ -454,8 +422,6 @@ style_expect_js <- function(pairs, normalize) {
   )
 }
 
-# The invalid-declaration check alone, for the zero-match path: the
-# same setProperty-to-empty-readback verdict, on a detached div.
 style_invalid_js <- function(pairs) {
   paste0(
     "function() {
@@ -484,20 +450,6 @@ style_pairs_json <- function(pairs) {
 }
 
 style_probe_js <- "
-  // Every read of the live document -- the targets' computed styles
-  // and the parent font/size context the normalization needs -- is
-  // captured BEFORE the probe host attaches: an appended node changes
-  // what positional selectors match (body:last-child stops matching
-  // once the host follows body), and getComputedStyle() would force
-  // the recalc that sees it. The probe lives in a closed shadow root
-  // under a zero-size host for the duration of this one synchronous
-  // call only: JS runs to completion, so no selector, :empty check,
-  // screenshot, or recording frame can ever observe the host. The
-  // MutationObserver add/remove records are the accepted residual:
-  // a rendered, attached probe is required for percentage resolution.
-  // visibility: hidden keeps the subtree laid out (display: none would
-  // leave raw percentages in the computed read) and zero size plus
-  // overflow hidden means nothing ever paints.
   const captured = this.map((el) => {
     const cs = getComputedStyle(el);
     return pairs.map((p) => {
@@ -529,6 +481,9 @@ style_probe_js <- "
       return out;
     });
   });
+  // visibility: hidden keeps the subtree laid out (display: none would
+  // leave raw percentages in the computed read) and zero size plus
+  // overflow hidden means nothing ever paints.
   const host = document.createElement('div');
   host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;visibility:hidden';
   document.documentElement.appendChild(host);
@@ -550,9 +505,6 @@ style_probe_js <- "
       if (probe.style.getPropertyValue(c.prop) === '') {
         return {actual: c.actual, normalized: null, accepted: false};
       }
-      // Context needs are independent, not exclusive: calc(50% - 1em)
-      // wants the parent's size and the element's font at once. The
-      // contexts touch different container styles, so they compose.
       if (c.color !== undefined) {
         container.style.color = c.color;
       }

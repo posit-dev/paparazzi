@@ -131,7 +131,7 @@ test_that("the click effect resolves per call and styles only pz_act_click", {
 
   calls <- list()
   local_mocked_bindings(
-    stage_recording = function(page) TRUE,
+    recorder_active = function(page) TRUE,
     cursor_press = function(ctx, pressed) {
       calls <<- c(calls, list(list(kind = "press", pressed = pressed)))
       ctx_return(ctx)
@@ -744,7 +744,7 @@ test_that("pz_set_value maintains radio groups", {
   expect_identical(state(), c(radio1 = TRUE, radio2 = FALSE, radio3 = TRUE))
 
   # Checking radio2 unchecks radio1 but leaves the other-named group
-  # alone; the native checked setter doesn't do this by itself.
+  # alone.
   pz_set_value(page, TRUE, target = "#radio2")
   expect_identical(state(), c(radio1 = FALSE, radio2 = TRUE, radio3 = TRUE))
 
@@ -757,8 +757,7 @@ test_that("pz_set_value maintains radio groups", {
 
 test_that("pz_set_value radio groups stop at the form owner", {
   page <- local_form_page()
-  # Same name in two different forms: separate groups, even though the
-  # candidates for a formless radio come from the whole document.
+  # Same name in two different forms: separate groups.
   pz_set_value(page, TRUE, target = "#orphan-free")
   expect_true(pz_js(page, "document.getElementById('orphan-free').checked"))
   expect_false(pz_js(page, "document.getElementById('orphan-form').checked"))
@@ -770,8 +769,7 @@ test_that("pz_set_value radio groups stop at the form owner", {
   expect_true(pz_js(page, "document.getElementById('orphan-form').checked"))
 
   # Same again for formless radios associated via the form="..."
-  # attribute: peers are found through the tree root and matched by
-  # form owner, so loose-b and loose-c stay independent.
+  # attribute: loose-b and loose-c stay independent.
   pz_set_value(page, TRUE, target = "#loose-b")
   expect_true(pz_js(page, "document.getElementById('loose-b').checked"))
   expect_false(pz_js(page, "document.getElementById('loose-c').checked"))
@@ -1792,7 +1790,7 @@ test_that("press records original and resolved keys only while unpaused", {
     "/^mac/i.test(navigator.userAgentData?.platform || navigator.platform || '')"
   )
   expect_identical(
-    event$keys[[1]]$resolved$modifier_keys,
+    event$keys[[1]]$resolved$pressed_modifiers,
     if (isTRUE(mac)) "Meta" else "Control"
   )
   expect_gte(event$last, event$vt)

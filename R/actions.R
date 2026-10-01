@@ -95,16 +95,13 @@ pz_act_click <- function(
   effect <- arg_match(effect, c("press", "ring", "none"))
   effect_color <- effect_color %||% stage$click_effect_color
   check_string(effect_color, allow_empty = FALSE)
-  action_start(ctx)
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  point <- el_pointer_point(ctx, found$els)
+  record_pre_action_loader(ctx)
+  els <- action_elements(ctx, target)
+  point <- el_pointer_point(ctx, els)
   dispatch_click(
     ctx,
     "clicking",
-    found$els$description,
+    els$description,
     point,
     effect = effect,
     effect_color = effect_color
@@ -144,16 +141,13 @@ pz_act_click <- function(
 pz_act_hover <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  point <- el_pointer_point(ctx, found$els)
+  record_pre_action_loader(ctx)
+  els <- action_elements(ctx, target)
+  point <- el_pointer_point(ctx, els)
   dispatch_mouse(
     ctx,
     "hovering over",
-    found$els$description,
+    els$description,
     "mouseMoved",
     point,
     button = "none",
@@ -216,15 +210,12 @@ pz_act_hover <- function(ctx, target = NULL, ...) {
 pz_act_type <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   check_string(text)
 
-  # Root with no target: insert into whatever currently has focus.
-  # Nothing editable focused means the text goes nowhere, matching what
-  # a real keypress does in that situation.
   if (is.null(target) && is.null(scope_top(ctx))) {
     if (
-      stage_recording(ctx$page) && isTRUE(page_stage(ctx$page)$camera_follow)
+      recorder_active(ctx$page) && isTRUE(page_stage(ctx$page)$camera_follow)
     ) {
       rect <- pz_js(
         ctx,
@@ -242,28 +233,19 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
     return(ctx_return(ctx))
   }
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  # The scoped select-then-type step: the scope element holds the
-  # page's real selection, and a keypress replaces it. The focusing
-  # click below would collapse the selection first, so a scoped
-  # element with an active selection is typed into directly (the
-  # element is focused in the probe). Only the no-target path: an
-  # explicit target keeps its click-to-focus.
-  if (is.null(target) && isTRUE(els_call(found$els, type_selection_js))) {
-    stage_follow_without_glide(ctx, action_target_rect(found$els))
-    insert_text(ctx, found$els$description, text)
+  els <- action_elements(ctx, target)
+  if (
+    is.null(target) && isTRUE(els_values_flat(els, focus_held_selection_js))
+  ) {
+    stage_follow_without_glide(ctx, action_target_rect(els))
+    insert_text(ctx, els$description, text)
     stage_action_pause(ctx)
     return(ctx_return(ctx))
   }
-  point <- el_pointer_point(ctx, found$els)
-  # Focus comes from the real click pipeline (not JS .focus()) so
-  # pointer state stays real.
-  dispatch_click(ctx, "typing into", found$els$description, point)
+  point <- el_pointer_point(ctx, els)
+  dispatch_click(ctx, "typing into", els$description, point)
   cursor_rest(ctx)
-  insert_text(ctx, found$els$description, text)
+  insert_text(ctx, els$description, text)
   stage_action_pause(ctx)
   ctx_return(ctx)
 }
@@ -322,7 +304,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   check_character(key)
   show_keys <- show_keys %||% page_stage(ctx$page)$show_keys
   show_keys <- arg_match(show_keys, c("none", "words", "mac", "both"))
@@ -374,8 +356,6 @@ pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
         vt = started,
         last = rec_vt(rec),
         style = show_keys,
-        # Resolved at press time: the callout keeps this family even if
-        # the staged default changes before the encode.
         font_family = page_stage(ctx$page)$annotate_font_family,
         keys = pressed
       ))
@@ -411,14 +391,11 @@ pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
 pz_act_focus <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  el_scroll_into_view(found$els)
-  els_call(
-    found$els,
+  record_pre_action_loader(ctx)
+  els <- action_elements(ctx, target)
+  el_scroll_into_view(els)
+  els_values_flat(
+    els,
     "function() { if (this.length) this[0].focus(); }"
   )
   stage_action_pause(ctx)
@@ -453,11 +430,11 @@ pz_act_focus <- function(ctx, target = NULL, ...) {
 pz_act_blur <- function(ctx, ...) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
-  scoped <- scope_root(ctx)
+  record_pre_action_loader(ctx)
+  scoped <- scope_connected(ctx)
   if (!is.null(scoped)) {
     check_scope_single(scoped)
-    els_call(
+    els_values_flat(
       scoped,
       "function() { if (this.length) this[0].blur(); }"
     )
@@ -520,29 +497,26 @@ pz_act_blur <- function(ctx, ...) {
 pz_set_value <- function(ctx, value, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   arg <- set_value_argument(value)
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  el_scroll_into_view(found$els)
+  els <- action_elements(ctx, target)
+  el_scroll_into_view(els)
 
   res <- els_values(
-    found$els,
+    els,
     set_value_js,
     args = list(list(value = arg)),
     doing = "working with"
   )
   if (identical(res$status, "contenteditable")) {
-    els_call(found$els, select_all_js)
-    insert_text(ctx, found$els$description, arg$text)
+    els_values_flat(els, select_all_js)
+    insert_text(ctx, els$description, arg$text)
     return(ctx_return(ctx))
   }
   if (!identical(res$status, "ok")) {
     cli::cli_abort(
-      c(res$message, i = "Target: {found$els$description}"),
+      c(res$message, i = "Target: {els$description}"),
       class = "paparazzi_error_value"
     )
   }
@@ -576,40 +550,35 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
 pz_set_files <- function(ctx, files, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   files <- check_file_paths(files)
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  el_scroll_into_view(found$els)
+  els <- action_elements(ctx, target)
+  el_scroll_into_view(els)
   if (
-    !isTRUE(els_call(
-      found$els,
+    !isTRUE(els_values_flat(
+      els,
       "function() { const el = this[0]; return el.tagName === 'INPUT' && el.type === 'file'; }"
     ))
   ) {
     cli::cli_abort(
-      c("Target is not a file input.", i = "Target: {found$els$description}"),
+      c("Target is not a file input.", i = "Target: {els$description}"),
       class = "paparazzi_error_value"
     )
   }
 
-  # A resolved set's handle is the JS array of elements, not the
-  # element; DOM.setFileInputFiles addresses the element itself.
-  el_object_id <- els_first_object_id(found$els)
+  el_object_id <- els_first_object_id(els)
   withr::defer(try(
-    found$els$page$session$Runtime$releaseObject(
+    els$page$session$Runtime$releaseObject(
       el_object_id,
-      timeout_ = found$els$page$default_timeout
+      timeout_ = els$page$default_timeout
     ),
     silent = TRUE
   ))
   action_cdp(
     ctx,
     "setting files on",
-    found$els$description,
+    els$description,
     cmd = ctx$page$session$DOM$setFileInputFiles(
       # A single path must stay a one-element array in the CDP payload.
       as.list(files),
@@ -665,7 +634,7 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 pz_act_select_text <- function(ctx, text, ..., target = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   check_string(text)
   if (!nzchar(text)) {
     cli::cli_abort(
@@ -674,14 +643,11 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
     )
   }
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  el_scroll_into_view(found$els)
+  els <- action_elements(ctx, target)
+  el_scroll_into_view(els)
 
   res <- els_values(
-    found$els,
+    els,
     select_text_js,
     args = list(list(value = text)),
     doing = "working with"
@@ -689,13 +655,13 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
   if (!identical(res$status, "ok")) {
     cli::cli_abort(
       c(
-        "No {.str {text}} in {found$els$description}.",
+        "No {.str {text}} in {els$description}.",
         i = "The match must contain the exact text, across tags if needed."
       ),
       class = "paparazzi_error_text"
     )
   }
-  stage_follow_without_glide(ctx, action_target_rect(found$els))
+  stage_follow_without_glide(ctx, action_target_rect(els))
   stage_action_pause(ctx)
   ctx_return(ctx)
 }
@@ -776,7 +742,7 @@ pz_act_scroll <- function(
     allow_null = TRUE,
     allow_infinite = FALSE
   )
-  action_start(ctx)
+  record_pre_action_loader(ctx)
   modes <- c(target = !is.null(target), by = !is.null(by), to = !is.null(to))
   if (sum(modes) != 1L) {
     cli::cli_abort(
@@ -786,33 +752,24 @@ pz_act_scroll <- function(
   }
 
   if (!is.null(target)) {
-    found <- action_elements(ctx, target)
-    if (!found$pinned) {
-      withr::defer(release_elements(found$els))
-    }
-    stage_scroll_into_view(ctx, found$els, duration = duration)
+    els <- action_elements(ctx, target)
+    stage_scroll_into_view(ctx, els, duration = duration)
     stage_action_pause(ctx)
     return(ctx_return(ctx))
   }
 
   by <- if (!is.null(by)) check_offset(by, arg = "by") else NULL
   to <- if (!is.null(to)) parse_direction(to, arg = "to") else NULL
-  scoped <- scope_root(ctx)
-  # by/to act on the scope's ONE container, before both the staged
-  # wheel branch and the instant JS -- a multi-match scope has no
-  # single container, the same error every scoped element action
-  # raises.
+  scoped <- scope_connected(ctx)
   if (!is.null(scoped)) {
     check_scope_single(scoped)
   }
-  if (stage_recording(ctx$page) && !isTRUE(duration == 0)) {
+  if (recorder_active(ctx$page) && !isTRUE(duration == 0)) {
     scroll_staged(ctx, scoped, by, to, duration = duration)
     stage_action_pause(ctx)
     return(ctx_return(ctx))
   }
   if (!is.null(scoped)) {
-    # Offsets serialize as JSON numbers: a scalar integer offset
-    # keeps its integer type through check_offset()'s length-1 rep().
     arg <- if (!is.null(by)) {
       list(by = as.list(as.double(by)))
     } else {
@@ -909,8 +866,7 @@ pz_act_scroll <- function(
 pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   check_context(ctx)
   check_dots_empty()
-  action_start(ctx)
-  # NULL must not reach the resolver, where it means document.body.
+  record_pre_action_loader(ctx)
   to_dest <- !is.null(to)
   by_offset <- !is.null(by)
   if (!to_dest && !by_offset) {
@@ -926,13 +882,10 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
     )
   }
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
+  els <- action_elements(ctx, target)
 
   if (!to_dest) {
-    from <- el_pointer_point(ctx, found$els)
+    from <- el_pointer_point(ctx, els)
     offset <- check_offset(by, arg = "by")
     to_point <- c(
       x = from[["x"]] + offset[[1]],
@@ -941,13 +894,8 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   } else {
     dest <- loc_resolve(ctx, to, multiple = "error")
     withr::defer(release_elements(dest))
-    # Destination point first: the source's scroll can shift the
-    # destination rect, so the drop point is re-read once after (no
-    # scroll, so it can't shift back). Both endpoints must then share
-    # the viewport -- a real drag can't span two screens of a tall
-    # page, and a drop dispatched off-screen lands on nothing.
     to_point <- el_actionable_point(ctx, dest)
-    from <- el_pointer_point(ctx, found$els)
+    from <- el_pointer_point(ctx, els)
     probe <- els_values(dest, dest_point_js)
     if (isTRUE(probe$visible) && probe$width > 0 && probe$height > 0) {
       drop <- c(
@@ -980,10 +928,6 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
       }
       to_point <- drop
     } else {
-      # The source's scroll hid or emptied the destination: its
-      # earlier point is stale, so dropping there lands on whatever
-      # moved in -- a failed final probe is a non-actionable
-      # destination, not a fall-through.
       cli::cli_abort(
         c(
           "The drag destination is no longer visible with a non-empty box after bringing the source into view.",
@@ -994,13 +938,13 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
     }
   }
 
-  if (isTRUE(els_call(found$els, draggable_js))) {
-    drag_html5(ctx, found$els, from, to_point)
+  if (isTRUE(els_values_flat(els, draggable_js))) {
+    drag_html5(ctx, els, from, to_point)
   } else {
     dispatch_mouse_drag(
       ctx,
       "dragging",
-      found$els$description,
+      els$description,
       from,
       to_point
     )
@@ -1009,25 +953,16 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   ctx_return(ctx)
 }
 
-# Record before resolution or dispatch: either can trigger navigation.
-action_start <- function(ctx) {
-  ctx$page$.__enclos_env__$private$last_action_loader_ <-
+record_pre_action_loader <- function(ctx) {
+  ctx$page$.__enclos_env__$private$pre_action_loader_ <-
     ctx$page$session$Page$getFrameTree(
       timeout_ = ctx$page$default_timeout
     )$frameTree$frame$loaderId
 }
 
-# The element set an element action operates on, detach-checked. NULL
-# means the current context: the pinned set itself at a scoped
-# context, used as-is and never released (its scope owns it), erroring
-# on multiple matches like loc_resolve() does; at the root, NULL needs
-# a target. An explicit target resolves lazily INSIDE the current
-# scope (auto-waiting, so re-renders within the scope are fine) and is
-# released after the action. Returns list(els, pinned): a pinned set
-# must NOT be released by the caller.
-action_elements <- function(ctx, target, call = caller_env()) {
+action_elements <- function(ctx, target, frame = caller_env()) {
   if (is.null(target)) {
-    scoped <- scope_root(ctx, call = call)
+    scoped <- scope_connected(ctx, call = frame)
     if (is.null(scoped)) {
       cli::cli_abort(
         c(
@@ -1035,22 +970,18 @@ action_elements <- function(ctx, target, call = caller_env()) {
           i = "Pass a CSS selector or a {.fn pz_loc} spec."
         ),
         class = "paparazzi_error_target",
-        call = call
+        call = frame
       )
     }
-    check_scope_single(scoped, call = call)
-    return(list(els = scoped, pinned = TRUE))
+    check_scope_single(scoped, call = frame)
+    return(scoped)
   }
-  list(
-    els = loc_resolve(ctx, target, multiple = "error", call = call),
-    pinned = FALSE
-  )
+  els <- loc_resolve(ctx, target, multiple = "error", call = frame)
+  withr::defer(release_elements(els), envir = frame)
+  els
 }
 
-# Given a target and a viewport CSS point, return the receiving element's
-# raw identity when it is not in the target's composed subtree. Keeping
-# this separate lets destination probes use the same rule after source scroll.
-pointer_hit_test_js <- "const pointerHitTest = (target, x, y) => {
+pointer_blocker_js <- "const pointerBlocker = (target, x, y) => {
   let hit = document.elementFromPoint(x, y);
   while (hit && hit.shadowRoot) {
     const inner = hit.shadowRoot.elementFromPoint(x, y);
@@ -1067,10 +998,9 @@ pointer_hit_test_js <- "const pointerHitTest = (target, x, y) => {
   } : { tag: '', id: '', classes: [] };
 };"
 
-# A single post-scroll probe reads the center and verifies its event receiver.
 pointer_actionable_js <- paste0(
   "function() {\n",
-  pointer_hit_test_js,
+  pointer_blocker_js,
   "
   if (!this.length) return { status: 'unavailable' };
   const el = this[0];
@@ -1079,7 +1009,7 @@ pointer_actionable_js <- paste0(
       r.width <= 0 || r.height <= 0) return { status: 'unavailable' };
   const x = r.x + r.width / 2;
   const y = r.y + r.height / 2;
-  const blocker = pointerHitTest(el, x, y);
+  const blocker = pointerBlocker(el, x, y);
   return blocker ? { status: 'blocked', blocker } : { status: 'ok', x, y };
 }"
 )
@@ -1096,33 +1026,16 @@ format_pointer_blocker <- function(blocker) {
   )
 }
 
-# Scroll the first element into view and return the center of its
-# bounding rect as c(x, y) (viewport CSS pixels), auto-waiting until it
-# is actionable: visible, non-empty, and the topmost element at that
-# point. Resolution auto-wait only covers ">= 1 match", so without this
-# a hidden, zero-sized, or covered match would send input to whatever
-# sits at the point. Rects go stale after the scroll, so each attempt
-# scrolls first, then probes. The scroll and the post-poll cursor move
-# are the staging seams (stage_scroll_into_view(), stage_move_cursor()).
 el_pointer_point <- function(ctx, els, call = caller_env()) {
   point <- el_actionable_point(ctx, els, call = call)
-  # The actionable point may sit on a descendant covering the target;
-  # entry timing uses the RESOLVED target's rect, so glide-icon switches
-  # happen at the target's edge, not a covering child's.
-  rects <- el_rects(els, call = call)
-  attr(point, "rect") <- c(
-    x = rects$x[[1]],
-    y = rects$y[[1]],
-    width = rects$width[[1]],
-    height = rects$height[[1]]
-  )
+  attr(point, "rect") <- action_target_rect(els, call = call)
   attr(point, "camera_follow") <- TRUE
   stage_move_cursor(ctx, point)
   point
 }
 
-action_target_rect <- function(els) {
-  rects <- el_rects(els)
+action_target_rect <- function(els, call = caller_env()) {
+  rects <- el_rects(els, call = call)
   c(
     x = rects$x[[1]],
     y = rects$y[[1]],
@@ -1174,7 +1087,6 @@ el_actionable_point <- function(ctx, els, call = caller_env()) {
   point
 }
 
-# Use the page's default timeout; doing names the action and target.
 action_cdp <- function(ctx, action, target = NULL, cmd, call = caller_env()) {
   cdp_call(
     cmd,
@@ -1184,8 +1096,6 @@ action_cdp <- function(ctx, action, target = NULL, cmd, call = caller_env()) {
   )
 }
 
-# One Input.dispatchMouseEvent at `point`, pointerType "mouse";
-# `action` and `target` name the dispatch in timeout errors.
 dispatch_mouse <- function(
   ctx,
   action,
@@ -1215,17 +1125,6 @@ dispatch_mouse <- function(
   )
 }
 
-# The real pointer sequence behind pz_act_click() and pz_act_type()'s
-# focus-via-click: a move to the point first so pointer state stays
-# real (:hover, the cursor), then a left-button press and release at the
-# same point. While recording with a visible cursor, the staging adds a
-# short pause after the glide, plays the press scale-down around
-# pressed/released, and holds briefly after; all of it is skipped
-# otherwise (the SPEC matrix).
-# `effect` is the resolved pz_act_click() click effect; callers that
-# share this focus-via-click (pz_act_type()) keep the default press
-# scale. "ring" draws the ring instead of pressing, "none" draws
-# nothing; the pumps still hold the beat either way.
 dispatch_click <- function(
   ctx,
   action,
@@ -1246,7 +1145,7 @@ dispatch_click <- function(
     clickCount = 0,
     call = call
   )
-  staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
   if (staged) {
     pump_loop(ctx$page$child_loop, 0.15)
     if (identical(effect, "press")) {
@@ -1289,16 +1188,11 @@ dispatch_click <- function(
   }
 }
 
-# Typing is instant everywhere except a recording with
-# typing = "natural": one Input.insertText per character with a pumped,
-# randomized delay around 1/typing_speed between characters (the
-# recording captures the text growing; no typo simulation). The pumped
-# delay keeps the recorder's ticks firing between keystrokes.
 insert_text <- function(ctx, target, text, call = caller_env()) {
   page <- ctx$page
   stage <- page_stage(page)
   if (
-    stage_recording(page) &&
+    recorder_active(page) &&
       identical(stage$typing, "natural") &&
       nchar(text) > 1L
   ) {
@@ -1326,12 +1220,7 @@ insert_text_once <- function(ctx, target, text, call = caller_env()) {
   )
 }
 
-# Does the element hold the page's active selection (pz_act_select_text's
-# work), ready for a keypress to replace it? TRUE means the caller
-# skips the focusing click -- a click collapses the selection -- and
-# inserts instead; the focus the click would have produced is taken
-# here, which keeps the selection (it lives inside the element).
-type_selection_js <- "function() {
+focus_held_selection_js <- "function() {
   const el = this[0];
   if (!el || !el.isContentEditable) {
     return false;
@@ -1347,9 +1236,6 @@ type_selection_js <- "function() {
   return true;
 }"
 
-# pz_set_value()'s `value` as the CDP callArgument the brancher reads: a
-# kind discriminator ("text" or "checked") plus the value in both
-# shapes, so the payload has the same shape for every R type.
 set_value_argument <- function(value, call = caller_env()) {
   if (!is.character(value) && !is.numeric(value) && !is.logical(value)) {
     stop_input_type(
@@ -1380,9 +1266,6 @@ set_value_argument <- function(value, call = caller_env()) {
   }
 }
 
-# The first element's own remote objectId. The caller releases the
-# returned object; a detached element surfaces as the raw chromote
-# error, like every other callFunctionOn.
 els_first_object_id <- function(els, call = caller_env()) {
   timeout <- els$page$default_timeout
   res <- cdp_call(
@@ -1399,11 +1282,9 @@ els_first_object_id <- function(els, call = caller_env()) {
   res$result$objectId
 }
 
-# pz_set_value()'s whole element branch. The native prototype setters
-# bypass instance-level value/checked overrides (what framework
-# controlled inputs install), and the readback goes through the native
-# getter for the same reason. Errors are statuses, not exceptions, so
-# the R side wraps them in paparazzi_error_value.
+# The native prototype setters bypass instance-level value/checked
+# overrides (what framework controlled inputs install), and the readback
+# goes through the native getter for the same reason.
 set_value_js <- "function(value) {
   const el = this[0];
   if (el.isContentEditable) {
@@ -1469,27 +1350,9 @@ set_value_js <- "function(value) {
       'checked'
     ).set;
     setChecked.call(el, value.checked);
-    if (el.type === 'radio' && value.checked && el.name) {
-      // The native checked setter doesn't maintain radio groups --
-      // that's the browser's pre-click activation behavior -- so the
-      // group is unchecked by hand. Per HTML a radio group is same
-      // tree root AND same form owner AND same name: filtering by name
-      // alone would uncheck same-name radios in other forms (relevant
-      // once the element sits outside any form, where the candidates
-      // come from the whole document), and candidates must come from
-      // the root because a form attribute (form='...') associates a radio
-      // with a form it isn't inside.
-      const root = el.getRootNode();
-      root.querySelectorAll('input[type=radio]').forEach((r) => {
-        if (r !== el && r.name === el.name && r.form === el.form) {
-          setChecked.call(r, false);
-        }
-      });
-    }
     dispatch();
     return { status: 'ok' };
   }
-  // Every other input type and textareas: the text path.
   if (value.kind !== 'text') {
     return {
       status: 'error',
@@ -1501,9 +1364,6 @@ set_value_js <- "function(value) {
     ? HTMLTextAreaElement.prototype
     : HTMLInputElement.prototype;
   const valueProp = Object.getOwnPropertyDescriptor(proto, 'value');
-  // Capture the previous value before setting: if the browser rejects
-  // or clamps the new one, restoring it keeps a failed set from
-  // leaving the element mutated with no events fired.
   const previous = valueProp.get.call(el);
   valueProp.set.call(el, value.text);
   const kept = valueProp.get.call(el);
@@ -1519,10 +1379,8 @@ set_value_js <- "function(value) {
   return { status: 'ok' };
 }"
 
-# The contenteditable fallback's first half: focus the element and
-# select all of its contents, so the insertText that follows replaces
-# everything -- an insertText with an active selection, empty text
-# included, deletes the selection.
+# An insertText with an active selection, empty text included, deletes
+# the selection.
 select_all_js <- "function() {
   const el = this[0];
   el.focus();
@@ -1533,11 +1391,6 @@ select_all_js <- "function() {
   sel.addRange(range);
 }"
 
-# The exact-substring selection: a TreeWalker collects the target's
-# text nodes, the concatenated data is searched, and one Range spans
-# the start and end (node, offset) pair -- so a match crossing inline
-# tags is a single selection. The Range becomes the window's only
-# selection, the same state a mouse drag across the text produces.
 select_text_js <- "function(text) {
   const el = this[0];
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -1572,22 +1425,12 @@ select_text_js <- "function(text) {
   const sel = window.getSelection();
   sel.removeAllRanges();
   sel.addRange(range);
-  // A user dragging across editable text focuses it; that focus is
-  // what lets typing replace the selection.
   if (el.isContentEditable) {
     el.focus();
   }
   return { status: 'ok' };
 }"
 
-# The by/to scroll, applied to the current scope's container: the scope
-# element or its nearest scrollable ancestor (overflow auto|scroll
-# plus actual overflow), falling back to the document. One function
-# serves both rootings: callFunctionOn on the pinned set as `this`, or
-# Runtime$evaluate with `this` an empty array (root -- the walk never
-# starts, so the document wins). Application is instant JS, matching
-# el_scroll_into_view()'s precedent; recording uses scroll_staged()
-# for animated mouseWheel events.
 scroll_apply_js <- "function(arg) {
   const isScrollable = (e) => {
     if (e === document.scrollingElement) {
@@ -1630,29 +1473,16 @@ scroll_apply_js <- "function(arg) {
   return [container.scrollTop, container.scrollLeft];
 }"
 
-# The root-context scroll's call payload, inlined into the evaluated
-# function call: callFunctionOn arguments aren't available to
-# Runtime$evaluate, and the values are already validated (finite
-# numbers by check_offset(), direction tokens by parse_direction()).
+# The root-context scroll inlines its payload: callFunctionOn arguments
+# aren't available to Runtime$evaluate.
 scroll_arg_json <- function(by = NULL, to = NULL) {
-  if (!is.null(by)) {
-    # as.double() first: a scalar integer offset (by = 100L) survives
-    # check_offset() as an integer, and deparse(100L) is "100L" -- not
-    # a JavaScript number. deparse() of a double is a valid JSON
-    # number for every finite value (the only ones check_offset()
-    # allows through).
-    by <- as.double(by)
-    paste0('{"by":[', deparse(by[[1]]), ',', deparse(by[[2]]), ']}')
-  } else {
-    paste0('{"to":[', paste(paste0('"', to, '"'), collapse = ","), ']}')
-  }
+  arg <- if (!is.null(by)) list(by = by) else list(to = to)
+  jsonlite::toJSON(arg, digits = NA)
 }
 
-# The destination's final point after the source settles: visibility,
-# box, viewport, and the receiver at the box center.
 dest_point_js <- paste0(
   "function() {\n",
-  pointer_hit_test_js,
+  pointer_blocker_js,
   "
   const el = this[0];
   const r = el.getBoundingClientRect();
@@ -1661,17 +1491,15 @@ dest_point_js <- paste0(
     visible, x: r.x, y: r.y, width: r.width, height: r.height,
     viewportWidth: window.innerWidth, viewportHeight: window.innerHeight,
     blocker: visible && r.width > 0 && r.height > 0
-      ? pointerHitTest(el, r.x + r.width / 2, r.y + r.height / 2)
+      ? pointerBlocker(el, r.x + r.width / 2, r.y + r.height / 2)
       : null
   };
 }"
 )
 
-# Is the source a real HTML5 drag source? Own or inherited draggable
-# attribute (the IDL property only reflects the element's own
-# attribute, so inheritance needs the closest() walk; an explicit
-# false opts out; the attribute keywords are case-insensitive), or the
-# img / <a href> element defaults.
+# The IDL draggable property only reflects the element's own attribute,
+# so inheritance needs the closest() walk; the attribute keywords are
+# case-insensitive.
 draggable_js <- "function() {
   const el = this[0];
   const own = el.getAttribute('draggable');
@@ -1686,15 +1514,6 @@ draggable_js <- "function() {
     (el.tagName === 'A' && el.hasAttribute('href'));
 }"
 
-# The mouse drag: press at the source, move to the destination,
-# release. While recording with a visible cursor the press scale-down
-# plays at the source and the carry streams held moves along the
-# cursor's glide, so pointer-following pages track the cursor through
-# the carry; the last move to the destination and the release land as
-# the cursor arrives. Without a recording everything runs straight
-# through. A dispatch error between press and release leaves the button
-# held, so the release is re-attempted on exit until the normal path
-# completes it.
 dispatch_mouse_drag <- function(
   ctx,
   action,
@@ -1703,7 +1522,7 @@ dispatch_mouse_drag <- function(
   to,
   call = caller_env()
 ) {
-  staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
   pressed <- FALSE
   withr::defer({
     if (pressed) {
@@ -1798,45 +1617,21 @@ dispatch_mouse_drag <- function(
   }
 }
 
-# HTML5 drag-and-drop, intercept-then-replay. With interception on, the
-# press-and-move starts a REAL drag (the page's dragstart runs), and the
-# browser reports the resulting drag data -- what the page put on its
-# dataTransfer -- as an Input.dragIntercepted event. The event callback
-# must be registered first (the registration auto-enables the Input
-# domain); the event arrives on chromote's child loop, so the wait is the
-# standard pz_poll. Interception goes OFF before the release -- releasing
-# with it still on cancels the drag and the replayed events never land --
-# then the captured data is replayed onto the destination as
-# dragEnter/dragOver/drop: trusted DnD events with the real payload.
-# While recording with a visible cursor, the carry is staged between the
-# intercepted dragstart and the replayed drop. The drag is started with
-# a short nudge toward the destination instead of the full move, so the
-# real pointer stays by the source and the drop row shows no hover
-# during the carry; the carry then streams dragEnter/dragOver along the
-# cursor's glide with interception still on and the button still held,
-# so intermediate elements see the drag pass and the page's dragstart
-# styling shows through the carry. Interception still goes off before
-# the release at the destination, and the replay lands as the cursor
-# arrives. The swallowed release doesn't move the page-visible pointer,
-# so a trailing unheld move to the destination settles it there: the
-# overlay cursor and the real pointer both end at the drop point.
+DRAG_START_NUDGE <- 12
+
 drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
-  staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
   data <- NULL
   dereg <- session$Input$dragIntercepted(
     callback_ = function(msg) data <<- msg$data
   )
   withr::defer(try(dereg(), silent = TRUE))
 
-  settled <- FALSE
-  # Any exit before the release leaves the button held and interception
-  # on -- a CDP error mid-sequence, or a dragstart the page cancels (the
-  # interception event never fires, so the poll times out). Both are
-  # undone here; the latch drops once the normal path has released.
+  released <- FALSE
   withr::defer({
-    if (!settled) {
+    if (!released) {
       try(
         session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout),
         silent = TRUE
@@ -1895,13 +1690,15 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     clickCount = 1,
     call = call
   )
-  # Staged, a short nudge (well past the browser's drag threshold)
-  # starts the drag without putting the real pointer on the destination.
   start_at <- to
   if (staged) {
     delta <- c(to[["x"]] - from[["x"]], to[["y"]] - from[["y"]])
     dist <- sqrt(sum(delta^2))
-    start_at <- if (dist > 0) from + delta / dist * min(12, dist) else from
+    start_at <- if (dist > 0) {
+      from + delta / dist * min(DRAG_START_NUDGE, dist)
+    } else {
+      from
+    }
   }
   dispatch_mouse(
     ctx,
@@ -1923,9 +1720,6 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   )
 
   if (staged) {
-    # Paired dragEnter/dragOver per step: the browser synthesizes the
-    # matching dragleave from the enter, so each row sees one
-    # enter/leave transition as the drag passes.
     stage_drag_carry(ctx, from, to, function(point) {
       for (type in c("dragEnter", "dragOver")) {
         action_cdp(
@@ -1962,7 +1756,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     clickCount = 1,
     call = call
   )
-  settled <- TRUE
+  released <- TRUE
   for (type in c("dragEnter", "dragOver", "drop")) {
     action_cdp(
       ctx,
@@ -1978,6 +1772,8 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
       )
     )
   }
+  # The swallowed release doesn't move the page-visible pointer, so a
+  # trailing unheld move to the destination settles it there.
   if (staged) {
     dispatch_mouse(
       ctx,
@@ -1995,8 +1791,6 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   }
 }
 
-# pz_set_files()'s `files`: paths to existing local files, normalized
-# to the absolute paths the browser reads.
 check_file_paths <- function(files, call = caller_env()) {
   check_character(files, call = call)
   missing <- files[!file.exists(files)]

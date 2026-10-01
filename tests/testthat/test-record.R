@@ -1294,7 +1294,7 @@ test_that("a device hold skips capture ticks and clears on exit", {
   )
 
   expect_identical(
-    record_hold(page$page, {
+    record_device_change(page$page, {
       expect_true(rec$held)
       record_tick(page$page, rec)
       "done"
@@ -1307,10 +1307,10 @@ test_that("a device hold skips capture ticks and clears on exit", {
   expect_false(rec$paused)
   expect_false(rec$held)
 
-  expect_error(record_hold(page$page, stop("boom")), "boom")
+  expect_error(record_device_change(page$page, stop("boom")), "boom")
   expect_false(rec$held)
   rec$active <- FALSE
-  expect_identical(record_hold(page$page, 42), 42)
+  expect_identical(record_device_change(page$page, 42), 42)
   expect_false(rec$held)
 })
 
@@ -1328,7 +1328,7 @@ test_that("a device hold fails on a stuck capture and restores an outer hold", {
     }
   )
   expect_error(
-    record_hold(page$page, ran <- TRUE),
+    record_device_change(page$page, ran <- TRUE),
     class = "paparazzi_error_timeout"
   )
   expect_false(ran)
@@ -1336,8 +1336,8 @@ test_that("a device hold fails on a stuck capture and restores an outer hold", {
   expect_identical(rec$n_errors, 0L)
 
   rec$pending <- NULL
-  record_hold(page$page, {
-    record_hold(page$page, NULL)
+  record_device_change(page$page, {
+    record_device_change(page$page, NULL)
     expect_true(rec$held)
   })
   expect_false(rec$held)
@@ -1836,7 +1836,7 @@ test_that("a device change captures the new state after held paints", {
   )
 
   before <- length(rec$files)
-  record_hold(page$page, {
+  record_device_change(page$page, {
     pz_device(page, width = 800, height = 600)
     pz_js(page, "document.getElementById('box').style.background = 'red'")
     pz_wait(page, 0.25)
@@ -1856,7 +1856,7 @@ test_that("a device change captures the new state after held paints", {
   expect_equal(pz_js(page, "window.innerWidth"), 800)
   before_error <- length(rec$files)
   expect_error(
-    record_hold(page$page, stop("failed override")),
+    record_device_change(page$page, stop("failed override")),
     "failed override"
   )
   expect_false(rec$held)
