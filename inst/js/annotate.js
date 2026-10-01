@@ -162,6 +162,54 @@ function(root) {
     shaft.setAttribute('x2', tx - left - ux * consumedEnd);
     shaft.setAttribute('y2', ty - top - uy * consumedEnd);
   };
+  // The intersection of the content boxes of el's axis-aligned overflow
+  // ancestors, in viewport coordinates; a side no ancestor clips stays
+  // infinite. Null when el has no rendered box or is visibility:hidden with
+  // no visible descendants. Custom overflow-clip-margin is not honored.
+  const clipRegion = (el) => {
+    if (!el.isConnected || !el.getClientRects().length) return null;
+    if (getComputedStyle(el).visibility !== 'visible' &&
+        ![...el.querySelectorAll('*')].some(child =>
+          child.getClientRects().length &&
+          getComputedStyle(child).visibility === 'visible')) {
+      return null;
+    }
+    const region = {left:-Infinity, top:-Infinity, right:Infinity, bottom:Infinity};
+    let node = el;
+    let ancestor = el.parentElement || el.getRootNode().host;
+    let position = getComputedStyle(el).position;
+    let escaping = false, containingBlock = null;
+    while (ancestor && ancestor !== document.documentElement) {
+      if (position === 'absolute' || position === 'fixed') {
+        containingBlock = node.offsetParent;
+        escaping = true;
+      }
+      if (ancestor === containingBlock) escaping = false;
+      const style = getComputedStyle(ancestor);
+      const x = style.overflowX !== 'visible';
+      const y = style.overflowY !== 'visible';
+      if (!escaping && ancestor !== document.body &&
+          style.display !== 'inline' && style.display !== 'contents' && (x || y)) {
+        const a = ancestor.getBoundingClientRect();
+        const scaleX = a.width / (ancestor.offsetWidth || 1);
+        const scaleY = a.height / (ancestor.offsetHeight || 1);
+        if (x) {
+          const edge = a.left + ancestor.clientLeft * scaleX;
+          region.left = Math.max(region.left, edge);
+          region.right = Math.min(region.right, edge + ancestor.clientWidth * scaleX);
+        }
+        if (y) {
+          const edge = a.top + ancestor.clientTop * scaleY;
+          region.top = Math.max(region.top, edge);
+          region.bottom = Math.min(region.bottom, edge + ancestor.clientHeight * scaleY);
+        }
+      }
+      node = ancestor;
+      position = style.position;
+      ancestor = ancestor.parentElement || ancestor.getRootNode().host;
+    }
+    return region;
+  };
   const sync = () => {
     if (!entries.size) return;
     const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
@@ -193,41 +241,53 @@ function(root) {
         svg.lastChild.setAttribute('height', height);
         entry.elements.forEach((el, i) => {
           const hole = entry.holes[i];
-          if (!el.isConnected || !el.getClientRects().length) {
+          const clip = clipRegion(el);
+          if (clip === null) {
             hole.style.display = 'none';
             return;
           }
           const r = el.getBoundingClientRect(), p = entry.pad;
-          const w = r.width + p[1] + p[3], h = r.height + p[0] + p[2];
-          if (getComputedStyle(el).visibility !== 'visible' || r.width <= 0 ||
-              r.height <= 0 || w <= 0 || h <= 0) {
+          // Zero-size targets leave no hole, padded or not.
+          if (r.width <= 0 || r.height <= 0) {
+            hole.style.display = 'none';
+            return;
+          }
+          const hx = Math.max(r.left - p[3], clip.left);
+          const hy = Math.max(r.top - p[0], clip.top);
+          const hw = Math.min(r.right + p[1], clip.right) - hx;
+          const hh = Math.min(r.bottom + p[2], clip.bottom) - hy;
+          if (hw <= 0 || hh <= 0) {
             hole.style.display = 'none';
             return;
           }
           hole.style.display = '';
-          hole.setAttribute('x', r.left - left - p[3]);
-          hole.setAttribute('y', r.top - top - p[0]);
-          hole.setAttribute('width', w);
-          hole.setAttribute('height', h);
+          hole.setAttribute('x', hx - left);
+          hole.setAttribute('y', hy - top);
+          hole.setAttribute('width', hw);
+          hole.setAttribute('height', hh);
         });
         continue;
       }
       entry.elements.forEach((el, i) => {
         const box = entry.nodes[i];
-        if (!el.isConnected || !el.getClientRects().length) {
-          box.style.display = 'none';
-          return;
-        }
-        if (entry.kind === 'redact' && getComputedStyle(el).visibility !== 'visible' &&
-            ![...el.querySelectorAll('*')].some(child =>
-              child.getClientRects().length && getComputedStyle(child).visibility === 'visible')) {
+        const clip = clipRegion(el);
+        if (clip === null) {
           box.style.display = 'none';
           return;
         }
         const r = el.getBoundingClientRect();
         box.style.display = '';
         if (entry.kind === 'callout') {
-          positionCallout(entry, i, r);
+          const left = Math.max(r.left, clip.left), top = Math.max(r.top, clip.top);
+          const right = Math.min(r.right, clip.right), bottom = Math.min(r.bottom, clip.bottom);
+          if (right <= left || bottom <= top) {
+            box.style.display = 'none';
+            return;
+          }
+          // The leader anchors to the visible part of a partly clipped
+          // target; the bubble itself is never clipped.
+          positionCallout(entry, i, {left, top, right, bottom,
+            width:right - left, height:bottom - top});
           return;
         }
         const p = entry.pad;
@@ -238,47 +298,17 @@ function(root) {
         box.style.width = w + 'px';
         const h = Math.max(0, r.height + p[0] + p[2]);
         box.style.height = h + 'px';
-        if (entry.kind === 'redact') {
-          const bounds = {left, top, right:left + w, bottom:top + h};
-          let node = el;
-          let ancestor = el.parentElement || el.getRootNode().host;
-          let position = getComputedStyle(el).position;
-          let escaping = false, containingBlock = null;
-          while (ancestor && ancestor !== document.documentElement) {
-            if (position === 'absolute' || position === 'fixed') {
-              containingBlock = node.offsetParent;
-              escaping = true;
-            }
-            if (ancestor === containingBlock) escaping = false;
-            const style = getComputedStyle(ancestor);
-            const x = style.overflowX !== 'visible';
-            const y = style.overflowY !== 'visible';
-            if (!escaping && ancestor !== document.body &&
-                style.display !== 'inline' && style.display !== 'contents' && (x || y)) {
-              const a = ancestor.getBoundingClientRect();
-              const scaleX = a.width / (ancestor.offsetWidth || 1);
-              const scaleY = a.height / (ancestor.offsetHeight || 1);
-              if (x) {
-                const edge = a.left + ancestor.clientLeft * scaleX;
-                bounds.left = Math.max(bounds.left, edge);
-                bounds.right = Math.min(bounds.right, edge + ancestor.clientWidth * scaleX);
-              }
-              if (y) {
-                const edge = a.top + ancestor.clientTop * scaleY;
-                bounds.top = Math.max(bounds.top, edge);
-                bounds.bottom = Math.min(bounds.bottom, edge + ancestor.clientHeight * scaleY);
-              }
-            }
-            node = ancestor;
-            position = style.position;
-            ancestor = ancestor.parentElement || ancestor.getRootNode().host;
-          }
-          if (w <= 0 || h <= 0 || bounds.right <= bounds.left || bounds.bottom <= bounds.top) {
-            box.style.display = 'none';
-          } else {
-            box.style.clipPath = `inset(${bounds.top - top}px ${left + w - bounds.right}px ${top + h - bounds.bottom}px ${bounds.left - left}px)`;
-          }
+        if (Math.max(left, clip.left) >= Math.min(left + w, clip.right) ||
+            Math.max(top, clip.top) >= Math.min(top + h, clip.bottom)) {
+          box.style.display = 'none';
+          return;
         }
+        // The badge overhangs the box above (and to the right when wider),
+        // so the clip reaches past the box on sides no ancestor clips.
+        const badge = entry.badges[i];
+        const overTop = badge ? badge[1] : 0;
+        const overRight = badge ? Math.max(0, badge[0] - w) : 0;
+        box.style.clipPath = `inset(${Math.max(-overTop, clip.top - top)}px ${Math.max(-overRight, left + w - clip.right)}px ${Math.max(0, top + h - clip.bottom)}px ${Math.max(0, clip.left - left)}px)`;
         if (entry.kind === 'circle' || (entry.kind === 'box' && entry.reveal === 'draw')) {
           const svg = box.querySelector('svg');
           const path = svg.firstChild;
@@ -327,6 +357,12 @@ function(root) {
     remove(id, false);
     nodes.forEach(node => layer.appendChild(node));
     entry.nodes = nodes;
+    // Badge text and font are fixed at draw, so the overhang is measured
+    // once; the sync loop reads it to keep unclipped badges paintable.
+    entry.badges = nodes.map(node => {
+      const span = node.querySelector('span');
+      return span ? [span.offsetWidth, span.offsetHeight] : null;
+    });
     if (entry.kind === 'callout') measureCallout(entry, opts);
     entries.set(id, entry);
     sync();
