@@ -27,7 +27,9 @@ pz_annotate_caption(
 staged annotation accent.}
 
 \item{font_family}{CSS font family. \code{NULL} uses the page's
-\code{font_family} setting in \code{\link[=pz_stage_annotate]{pz_stage_annotate()}} (initially sans-serif).}
+\code{font_family} setting in \code{\link[=pz_stage_annotate]{pz_stage_annotate()}} (initially sans-serif).
+A font object staged with \code{\link[=pz_stage_fonts]{pz_stage_fonts()}} is also accepted and
+resolves to its family with a sans-serif fallback.}
 
 \item{font_size}{Font size in CSS pixels; defaults to 20, independent
 of the annotation badge size. Captions scale with the output.}
