@@ -595,9 +595,9 @@ stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
 stage_drag_carry <- function(ctx, from, to, step) {
   page <- ctx$page
   duration <- stage_glide_duration(from, to, page_stage(page)$cursor_speed)
+  start <- Sys.time()
   cursor_apply(ctx, to, duration = duration, pressed = TRUE, pump = FALSE)
   interval <- 1 / 30
-  start <- Sys.time()
   repeat {
     elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
     at <- (elapsed + interval / 2) / duration
@@ -615,6 +615,14 @@ stage_drag_carry <- function(ctx, from, to, step) {
     if (rest > 0.005) {
       pump_loop(page$child_loop, rest, interval = min(rest, 0.02))
     }
+  }
+  rest <- as.numeric(difftime(
+    start + duration + 0.05,
+    Sys.time(),
+    units = "secs"
+  ))
+  if (rest > 0) {
+    pump_loop(page$child_loop, rest, interval = min(rest, 0.02))
   }
   invisible(TRUE)
 }
