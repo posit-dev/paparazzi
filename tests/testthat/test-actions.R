@@ -163,6 +163,10 @@ test_that("the click effect resolves per call and styles only pz_act_click", {
   calls <- list()
   page |> pz_act_click("#btn", effect = "press")
   expect_identical(kinds(), c("press", "press"))
+  expect_identical(
+    vapply(calls, `[[`, logical(1), "pressed"),
+    c(TRUE, FALSE)
+  )
 
   # pz_act_type()'s focus click shares dispatch_click() but keeps the
   # press scale.
