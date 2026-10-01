@@ -1,11 +1,5 @@
 url: https://posit-dev.github.io/paparazzi/
 
-repo:
-  url:
-    home: https://github.com/posit-dev/paparazzi/
-    source: https://github.com/posit-dev/paparazzi/blob/main/
-    issue: https://github.com/posit-dev/paparazzi/issues/
-
 template:
   bootstrap: 5
   light-switch: true
