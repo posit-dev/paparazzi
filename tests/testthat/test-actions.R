@@ -1790,7 +1790,7 @@ test_that("press records original and resolved keys only while unpaused", {
     "/^mac/i.test(navigator.userAgentData?.platform || navigator.platform || '')"
   )
   expect_identical(
-    event$keys[[1]]$resolved$modifier_keys,
+    event$keys[[1]]$resolved$pressed_modifiers,
     if (isTRUE(mac)) "Meta" else "Control"
   )
   expect_gte(event$last, event$vt)

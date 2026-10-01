@@ -82,33 +82,35 @@ for (i in seq_along(digit_keys)) {
 }
 
 punctuation_keys <- list(
-  c("-", "_", "Minus", "189"),
-  c("=", "+", "Equal", "187"),
-  c("[", "{", "BracketLeft", "219"),
-  c("]", "}", "BracketRight", "221"),
-  c("\\", "|", "Backslash", "220"),
-  c(";", ":", "Semicolon", "186"),
-  c("'", "\"", "Quote", "222"),
-  c("`", "~", "Backquote", "192"),
-  c(",", "<", "Comma", "188"),
-  c(".", ">", "Period", "190"),
-  c("/", "?", "Slash", "191")
+  c(key = "-", shifted = "_", code = "Minus", keyCode = "189"),
+  c(key = "=", shifted = "+", code = "Equal", keyCode = "187"),
+  c(key = "[", shifted = "{", code = "BracketLeft", keyCode = "219"),
+  c(key = "]", shifted = "}", code = "BracketRight", keyCode = "221"),
+  c(key = "\\", shifted = "|", code = "Backslash", keyCode = "220"),
+  c(key = ";", shifted = ":", code = "Semicolon", keyCode = "186"),
+  c(key = "'", shifted = "\"", code = "Quote", keyCode = "222"),
+  c(key = "`", shifted = "~", code = "Backquote", keyCode = "192"),
+  c(key = ",", shifted = "<", code = "Comma", keyCode = "188"),
+  c(key = ".", shifted = ">", code = "Period", keyCode = "190"),
+  c(key = "/", shifted = "?", code = "Slash", keyCode = "191")
 )
 
 for (punctuation in punctuation_keys) {
-  code <- punctuation[3]
-  key_code <- as.integer(punctuation[4])
-  key_table[[punctuation[1]]] <- list(
-    key = punctuation[1],
+  key <- punctuation[["key"]]
+  shifted <- punctuation[["shifted"]]
+  code <- punctuation[["code"]]
+  key_code <- as.integer(punctuation[["keyCode"]])
+  key_table[[key]] <- list(
+    key = key,
     code = code,
     keyCode = key_code,
-    text = punctuation[1]
+    text = key
   )
-  key_table[[punctuation[2]]] <- list(
-    key = punctuation[2],
+  key_table[[shifted]] <- list(
+    key = shifted,
     code = code,
     keyCode = key_code,
-    text = punctuation[2],
+    text = shifted,
     implied_shift = TRUE
   )
 }
@@ -126,21 +128,17 @@ key_parse <- function(spec, mod = NULL, call = caller_env()) {
     )
   }
 
-  tokens <- if (nchar(spec) == 1L) {
-    spec
-  } else {
-    if (endsWith(spec, "+")) {
-      cli::cli_abort(
-        c(
-          "{.val {spec}} ends with {.val +} but no key follows it.",
-          i = "Pass a key spec like {.val \"Control+A\"}."
-        ),
-        class = "paparazzi_error_key",
-        call = call
-      )
-    }
-    strsplit(spec, "+", fixed = TRUE)[[1]]
+  if (nchar(spec) > 1L && endsWith(spec, "+")) {
+    cli::cli_abort(
+      c(
+        "{.val {spec}} ends with {.val +} but no key follows it.",
+        i = "Pass a key spec like {.val \"Control+A\"}."
+      ),
+      class = "paparazzi_error_key",
+      call = call
+    )
   }
+  tokens <- key_spec_tokens(spec)
   modifier_tokens <- tokens[-length(tokens)]
   key_token <- tokens[length(tokens)]
 
@@ -214,7 +212,7 @@ key_parse <- function(spec, mod = NULL, call = caller_env()) {
 
   list(
     modifiers = intersect(key_modifiers, modifiers),
-    modifier_keys = explicit,
+    pressed_modifiers = explicit,
     key = list(
       key = entry$key,
       code = entry$code,
@@ -222,6 +220,13 @@ key_parse <- function(spec, mod = NULL, call = caller_env()) {
       text = entry$text
     )
   )
+}
+
+key_spec_tokens <- function(spec) {
+  if (nchar(spec) == 1L) {
+    return(spec)
+  }
+  strsplit(spec, "+", fixed = TRUE)[[1]]
 }
 
 key_shifted_sibling <- function(entry) {
@@ -258,7 +263,7 @@ key_cdp_event <- function(type, modifiers, entry, text = NULL) {
 key_events <- function(parsed) {
   events <- list()
   mask <- 0L
-  for (modifier in parsed$modifier_keys) {
+  for (modifier in parsed$pressed_modifiers) {
     mask <- mask + key_modifier_bits[[modifier]]
     events <- c(
       events,
@@ -286,7 +291,7 @@ key_events <- function(parsed) {
     )
   )
 
-  for (modifier in rev(parsed$modifier_keys)) {
+  for (modifier in rev(parsed$pressed_modifiers)) {
     # Release the bit before the keyUp so it doesn't report itself held.
     mask <- mask - key_modifier_bits[[modifier]]
     events <- c(
@@ -299,13 +304,9 @@ key_events <- function(parsed) {
 }
 
 key_callout_labels <- function(spec, parsed, style) {
-  tokens <- if (nchar(spec) == 1L) {
-    spec
-  } else {
-    strsplit(spec, "+", fixed = TRUE)[[1]]
-  }
+  tokens <- key_spec_tokens(spec)
   modifiers <- tokens[-length(tokens)]
-  resolved <- parsed$modifier_keys
+  resolved <- parsed$pressed_modifiers
   names_words <- c(
     Alt = "Alt",
     Control = "Ctrl",
