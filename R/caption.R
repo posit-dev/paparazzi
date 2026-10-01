@@ -14,6 +14,8 @@
 #'   staged annotation accent.
 #' @param font_family CSS font family. `NULL` uses the page's
 #'   `font_family` setting in [pz_stage_annotate()] (initially sans-serif).
+#'   A font object staged with [pz_stage_fonts()] is also accepted and
+#'   resolves to its family with a sans-serif fallback.
 #' @param font_size Font size in CSS pixels; defaults to 20, independent
 #'   of the annotation badge size. Captions scale with the output.
 #' @return `ctx`, invisibly.
@@ -115,6 +117,9 @@ caption_render <- function(page, caption, width, height, font_scale, path) {
 screen_render <- function(page, width, height, path, script) {
   session <- page$session$new_session()
   on.exit(session$close(), add = TRUE)
+  # The blank tab has its own document.fonts; staged faces are re-added
+  # there and awaited before the screenshot.
+  fonts_ensure_page_session(page, session)
   session$Emulation$setDeviceMetricsOverride(
     width = as.integer(width),
     height = as.integer(height),
@@ -145,13 +150,15 @@ key_callout_render <- function(
   height,
   scale,
   bottom_offset,
+  family,
   path
 ) {
   data <- jsonlite::toJSON(
     list(
       groups = lapply(groups, as.list),
       scale = scale,
-      bottom = bottom_offset
+      bottom = bottom_offset,
+      family = family %||% "sans-serif"
     ),
     auto_unbox = TRUE
   )
@@ -166,7 +173,7 @@ key_callout_render <- function(
     "transform:'translateX(-50%)',display:'flex',flexWrap:'wrap',",
     "alignItems:'center',justifyContent:'center',width:'max-content',",
     "maxWidth:'80vw',",
-    "gap:(6*c.scale)+'px',fontFamily:'sans-serif',",
+    "gap:(6*c.scale)+'px',fontFamily:c.family,",
     "fontSize:(18*c.scale)+'px',color:'white'});",
     "c.groups.forEach((group,i)=>{",
     "if(i){const arrow=document.createElement('span');arrow.textContent='\u2192';",
@@ -330,6 +337,7 @@ key_callout_windows <- function(rec, sampled) {
       end = (end - 1L) / rec$fps,
       fade_start = (fade - 1L) / rec$fps,
       style = events[[i]]$style,
+      font_family = events[[i]]$font_family,
       keys = events[[i]]$keys
     )
   }
@@ -405,6 +413,7 @@ key_callout_overlays <- function(rec, page, out, windows, captions, dir) {
       out$height,
       scale,
       bottom,
+      window$font_family,
       file.path(dir, name)
     )
     list(

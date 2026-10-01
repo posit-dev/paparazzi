@@ -80,6 +80,16 @@ reference:
       - pz_annotate_clear
       - pz_stage_annotate
 
+  - title: Fonts
+    desc: >
+      Stage fonts from Google Fonts, Bunny Fonts or local files so that
+      annotations, callouts, captions and key callouts render in them.
+    contents:
+      - pz_stage_fonts
+      - pz_font_google
+      - pz_font_bunny
+      - pz_font_file
+
   - title: Framing and camera
     desc: >
       Choose the part of the page that a screenshot or recording shows with

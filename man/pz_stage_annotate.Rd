@@ -42,8 +42,10 @@ is 3. Supply \code{NULL} to restore the default.}
 with or without a leader. By default the gap is 24 with a leader and
 8 without one. Supply \code{NULL} to restore the default.}
 
-\item{font_family}{CSS font family for new annotation badges. The default
-is \code{"sans-serif"}. Supply \code{NULL} to restore the default.}
+\item{font_family}{CSS font family for new annotation badges and key
+callouts. The default is \code{"sans-serif"}. Supply \code{NULL} to restore the
+default. A font object staged with \code{\link[=pz_stage_fonts]{pz_stage_fonts()}} is also accepted
+and resolves to its family with a sans-serif fallback.}
 
 \item{font_size}{Badge font size in CSS pixels. The default is 14.
 Supply \code{NULL} to restore the default.}

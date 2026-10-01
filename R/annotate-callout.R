@@ -46,6 +46,8 @@
 #'   staged `distance` from [pz_stage_annotate()]. Without either, the gap
 #'   is 24 with a leader and 8 without one.
 #' @param font_family CSS font family; `NULL` uses the staged default.
+#'   A font object staged with [pz_stage_fonts()] is also accepted and
+#'   resolves to its family with a sans-serif fallback.
 #' @param font_size Font size in CSS pixels; `NULL` uses the staged default.
 #' @return `ctx`, invisibly.
 #' @seealso [pz_annotate()], [pz_annotate_clear()]

@@ -374,6 +374,9 @@ pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
         vt = started,
         last = rec_vt(rec),
         style = show_keys,
+        # Resolved at press time: the callout keeps this family even if
+        # the staged default changes before the encode.
+        font_family = page_stage(ctx$page)$annotate_font_family,
         keys = pressed
       ))
     )

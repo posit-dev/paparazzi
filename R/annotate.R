@@ -39,7 +39,8 @@ NULL
 #' @param stroke_width Mark stroke width in CSS pixels, or `NULL` for the
 #'   staged `stroke_width` from [pz_stage_annotate()].
 #' @param font_family CSS font family for the badge, or `NULL` for the
-#'   page default.
+#'   page default. A font object staged with [pz_stage_fonts()] is also
+#'   accepted and resolves to its family with a sans-serif fallback.
 #' @param font_size Badge font size in CSS pixels, or `NULL` for the page
 #'   default.
 #'
@@ -217,7 +218,7 @@ annotate_style <- function(
   font_family <- font_family %||% stage$annotate_font_family
   font_size <- font_size %||% stage$annotate_font_size
   check_string(color, allow_empty = FALSE, call = call)
-  check_string(font_family, allow_empty = FALSE, call = call)
+  font_family <- check_font_family(font_family, ctx$page, call = call)
   check_annotation_font_size(font_size, call = call)
   list(color = color, font_family = font_family, font_size = font_size)
 }
@@ -272,6 +273,9 @@ annotate_distance <- function(ctx, distance, leader, call = caller_env()) {
 annotate_call <- function(ctx, els, fn, options, what) {
   json <- jsonlite::toJSON(options, auto_unbox = TRUE, null = "null")
   timeout <- ctx$page$default_timeout
+  # Staged faces are awaited in the current document before drawing, so
+  # annotations never flash a fallback font after navigation.
+  fonts_ensure_page(ctx$page)
   res <- cdp_call(
     ctx$page$session$Runtime$callFunctionOn(
       paste0(

@@ -272,8 +272,10 @@ pz_stage <- function(
 #' @param distance Bubble-to-target gap in CSS pixels for new callouts,
 #'   with or without a leader. By default the gap is 24 with a leader and
 #'   8 without one. Supply `NULL` to restore the default.
-#' @param font_family CSS font family for new annotation badges. The default
-#'   is `"sans-serif"`. Supply `NULL` to restore the default.
+#' @param font_family CSS font family for new annotation badges and key
+#'   callouts. The default is `"sans-serif"`. Supply `NULL` to restore the
+#'   default. A font object staged with [pz_stage_fonts()] is also accepted
+#'   and resolves to its family with a sans-serif fallback.
 #' @param font_size Badge font size in CSS pixels. The default is 14.
 #'   Supply `NULL` to restore the default.
 #'
@@ -322,8 +324,7 @@ pz_stage_annotate <- function(
     if (is.null(font_family)) {
       overrides[["annotate_font_family"]] <- NULL
     } else {
-      check_string(font_family, allow_empty = FALSE)
-      overrides$annotate_font_family <- font_family
+      overrides$annotate_font_family <- check_font_family(font_family, page)
     }
   }
   if (!missing(fill)) {

@@ -60,7 +60,8 @@ and uses white text. The \code{fill} and \code{text_color} set by
 staged \code{stroke_width} from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}.}
 
 \item{font_family}{CSS font family for the badge, or \code{NULL} for the
-page default.}
+page default. A font object staged with \code{\link[=pz_stage_fonts]{pz_stage_fonts()}} is also
+accepted and resolves to its family with a sans-serif fallback.}
 
 \item{font_size}{Badge font size in CSS pixels, or \code{NULL} for the page
 default.}

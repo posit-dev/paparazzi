@@ -840,8 +840,17 @@ test_that("a keycap row narrower than 80% of the output stays on one line", {
     c("Ctrl", "Shift", "P"),
     c("Enter")
   )
-  wide <- key_callout_render(page, groups, 720, 480, 1, 24, path)
-  single <- key_callout_render(page, list("K"), 720, 480, 1, 24, path)
+  wide <- key_callout_render(page, groups, 720, 480, 1, 24, "sans-serif", path)
+  single <- key_callout_render(
+    page,
+    list("K"),
+    720,
+    480,
+    1,
+    24,
+    "sans-serif",
+    path
+  )
   expect_lt(wide, single * 1.5)
 })
 
@@ -856,4 +865,49 @@ test_that("caption literal styles ignore staged accent and size and reject NULL"
   expect_equal(omitted$font_size, 20)
   expect_error(pz_annotate_caption(page, "Note", color = NULL), "color")
   expect_error(pz_annotate_caption(page, "Note", font_size = NULL), "font_size")
+})
+
+test_that("key callouts render in the family captured at press time", {
+  page <- local_page()
+  # Silkscreen 400 (latin subset), OFL 1.1 -- see fixtures/fonts/
+  silkscreen <- pz_font_file(
+    "Silkscreen",
+    test_path("fixtures", "fonts", "silkscreen-400.woff2")
+  )
+  pz_stage_fonts(page, silkscreen)
+  groups <- list(list("Ctrl", "S"))
+  staged_png <- withr::local_tempfile(fileext = ".png")
+  fallback_png <- withr::local_tempfile(fileext = ".png")
+
+  key_callout_render(
+    page,
+    groups,
+    400,
+    300,
+    1,
+    24,
+    '"Silkscreen", sans-serif',
+    staged_png
+  )
+  key_callout_render(page, groups, 400, 300, 1, 24, "sans-serif", fallback_png)
+
+  expect_false(identical(
+    readBin(staged_png, "raw", file.size(staged_png)),
+    readBin(fallback_png, "raw", file.size(fallback_png))
+  ))
+})
+
+test_that("key callout windows carry the font_family recorded at press time", {
+  rec <- list(fps = 10)
+  rec$keypresses <- list(list(
+    vt = 0,
+    last = 0,
+    style = "words",
+    font_family = '"Silkscreen", sans-serif',
+    keys = list("a")
+  ))
+  sampled <- list(vts = seq(0, 1, by = 0.1), n_ticks = 11L)
+  windows <- key_callout_windows(rec, sampled)
+  expect_length(windows, 1)
+  expect_equal(windows[[1]]$font_family, '"Silkscreen", sans-serif')
 })
