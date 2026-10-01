@@ -609,7 +609,7 @@ scroll_staged <- function(
           "(",
           wheel_container_hit_js,
           ").call([], ",
-          jsonlite::toJSON(unname(aim)),
+          js_literal(unname(aim), auto_unbox = FALSE),
           ")"
         )
       )
