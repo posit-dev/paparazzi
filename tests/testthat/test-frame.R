@@ -1013,15 +1013,27 @@ test_that("zoom places the padded target by anchor and honors ratio", {
   expect_identical(png_dimensions(path), as.integer(round(c(300, 300) * dpr)))
 })
 
-test_that("frame target selection is explicit, scoped, staged, then viewport", {
+test_that("effective frames choose explicit targets before scope and staging", {
+  page <- local_frame_page()
+  pz_stage_frame(page, "#small")
+  scoped <- pz_find(page, "#card")
+
   expect_identical(
-    frame_target("explicit", "scope", "staged", "viewport"),
-    "explicit"
+    frame_effective(page, pz_frame("#card"))$target[[1]]$css,
+    "#card"
   )
-  expect_identical(frame_target(NULL, "scope", "staged", "viewport"), "scope")
-  expect_identical(frame_target(NULL, NULL, "staged", "viewport"), "staged")
-  expect_identical(frame_target(NULL, NULL, NULL, "viewport"), "viewport")
-  expect_null(frame_target(NULL))
+  expect_identical(
+    frame_effective(page, pz_frame())$target[[1]]$css,
+    "#small"
+  )
+  expect_null(frame_effective(scoped, pz_frame())$target)
+  expect_identical(
+    frame_effective(scoped, pz_frame("#small"))$target[[1]]$css,
+    "#small"
+  )
+})
+
+test_that("frame target selection leaves lower-priority candidates lazy", {
   expect_identical(
     frame_target(NULL, list(target = NULL), stop("stage read early")),
     list(target = NULL)

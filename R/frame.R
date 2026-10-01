@@ -610,17 +610,14 @@ frame_target <- function(target, scope = NULL, staged = NULL, viewport = NULL) {
 }
 
 frame_content_box <- function(ctx, spec, call = caller_env()) {
-  els <- frame_target(
-    target = if (!is.null(spec[["target"]])) {
-      loc_resolve(ctx, spec[["target"]], multiple = "all", call = call)
-    },
-    scope = scope_connected(ctx, call = call)
-  )
+  target <- if (!is.null(spec[["target"]])) {
+    els <- loc_resolve(ctx, spec[["target"]], multiple = "all", call = call)
+    withr::defer(release_elements(els))
+    els
+  }
+  els <- frame_target(target, scope = scope_connected(ctx, call = call))
   if (is.null(els)) {
     return(NULL)
-  }
-  if (!is.null(spec[["target"]])) {
-    withr::defer(release_elements(els))
   }
   frame_target_box(ctx, els, spec, call = call)
 }
