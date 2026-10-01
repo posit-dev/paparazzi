@@ -697,6 +697,32 @@ cursor_press <- function(ctx, pressed) {
   ctx_return(ctx)
 }
 
+# The "ripple" click effect: a ring at `point` that expands and fades
+# out, drawn in the cursor layer while the caller pumps (the transition
+# is the clock, like the press scale). The cursor itself keeps its
+# scale. The state carries no position change and is not baked into the
+# new-document script, so the ring lives and dies within the click.
+cursor_ripple <- function(ctx, point, color) {
+  if (!cursor_drawn(ctx$page)) {
+    return(ctx_return(ctx))
+  }
+  cur <- page_cursor(ctx$page)
+  cursor_command(
+    ctx,
+    list(
+      x = unname(point[["x"]]),
+      y = unname(point[["y"]]),
+      visible = TRUE,
+      icon = cur$icon,
+      pressed = FALSE,
+      duration = 0,
+      anim = stage_recording(ctx$page),
+      ripple = color
+    )
+  )
+  ctx_return(ctx)
+}
+
 # One state application in the page. The JS is create-if-missing (boot
 # + apply in every call), so a page whose init script never ran -- or a
 # fresh document after navigation -- can always be driven forward.
@@ -846,6 +872,17 @@ cursor_command_js <- paste0(
     : 'none';
   inner.style.opacity = state.visible ? '1' : '0';
   inner.style.transform = 'scale(' + state.scale * (state.pressed ? 0.8 : 1) + ')';
+  if (state.anim && state.ripple) {
+    const ring = document.createElement('div');
+    ring.className = 'pz-ripple';
+    ring.style.cssText = 'position:absolute;left:' + state.x + 'px;top:' + state.y + 'px;width:18px;height:18px;border:2px solid ' + state.ripple + ';border-radius:50%;pointer-events:none;opacity:0.85;transform:translate(-50%,-50%) scale(0.4);';
+    layer.appendChild(ring);
+    void ring.offsetWidth;
+    ring.style.transition = 'transform 0.45s ease-out, opacity 0.45s ease-out';
+    ring.style.opacity = '0';
+    ring.style.transform = 'translate(-50%,-50%) scale(2.6)';
+    ring.addEventListener('transitionend', () => ring.remove(), { once: true });
+  }
   return icon;
 })"
 )
