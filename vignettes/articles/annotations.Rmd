@@ -255,6 +255,37 @@ page |>
 
 Per-call arguments with the same names override the staged values for that call. Mark badges are the exception: they ignore the staged `fill` and `text_color` and follow the mark's color unless you pass `label_fill` or `label_text_color`.
 
+### Web fonts
+
+A `font_family` string names a font Chrome can already find, such as a generic family like `"monospace"` or a font installed on the machine running Chrome. To use a web font, load it into the page first with [`pz_stage_fonts()`](../reference/pz_stage_fonts.html). Declare the font with [`pz_font_google()`](../reference/pz_font_google.html), [`pz_font_bunny()`](../reference/pz_font_bunny.html), or [`pz_font_file()`](../reference/pz_font_file.html) for a font file on disk. `pz_stage_fonts()` waits until the font has loaded, so no annotation is ever drawn in a fallback font while it downloads.
+
+A handwritten font makes a callout look like a note written over the screenshot. We'll stage Patrick Hand from Google Fonts and make it the default for later annotations:
+
+```{r web-font, fig.alt = "The new-task form with a dark callout below the attachment field, pointing up at it and reading Optional: attach a file in a handwritten font."}
+hand <- pz_font_google("Patrick Hand")
+page |>
+  pz_stage_fonts(hand) |>
+  pz_stage_annotate(font_family = hand, font_size = 18) |>
+  pz_annotate_callout(
+    "Optional: attach a file",
+    target = "#attachment",
+    side = "bottom"
+  )
+page |>
+  pz_screenshot(
+    frame = pz_frame("#new-task", pad = 8, target_box = "annotated")
+  )
+```
+
+The font object works anywhere `font_family` does. It stands for the CSS string `'"Patrick Hand", sans-serif'`, so text falls back to sans-serif for characters the font lacks. A font object that isn't staged on the page is an error. Captions and keystroke callouts follow the staged `font_family` too, and staged fonts stay with the page when it navigates to a new document.
+
+Google and Bunny fonts are downloaded by Chrome, so staging them needs a network connection. `pz_font_file()` reads the file in R and works offline.
+
+```{r}
+page |> pz_annotate_clear()
+page |> pz_stage_annotate(font_family = NULL, font_size = NULL)
+```
+
 ## Framing stills
 
 A screenshot's frame is measured from the target's elements. Badges and callouts paint *outside* those elements, so the default `target_box = "element"` can crop them off. `target_box = "annotated"` measures the elements plus their attached marks, callouts, and spotlight cutouts. Here's the difference on the same callout:

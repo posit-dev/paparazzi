@@ -17,12 +17,12 @@ scope; at the root context a target is required.}
 
 \item{effect}{Click feedback while recording: \code{NULL} (the default)
 uses the page's \code{\link[=pz_stage]{pz_stage()}} \code{click_effect} setting. \code{"press"}
-scales the cursor down while pressed, \code{"ripple"} draws an
+scales the cursor down while pressed, \code{"ring"} draws an
 expanding ring that fades out at the click point instead of
 scaling, and \code{"none"} shows nothing. Without a recording no
 effect is drawn.}
 
-\item{effect_color}{CSS color of the \code{"ripple"} effect. \code{NULL} (the
+\item{effect_color}{CSS color of the \code{"ring"} effect. \code{NULL} (the
 default) uses the page's \code{\link[=pz_stage]{pz_stage()}} \code{click_effect_color} setting.}
 }
 \value{

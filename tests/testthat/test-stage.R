@@ -849,11 +849,11 @@ test_that("click_effect and click_effect_color stage, validate, and reset", {
   expect_identical(page_stage(page)$click_effect, "press")
   expect_identical(page_stage(page)$click_effect_color, "#e11d48")
 
-  for (effect in c("ripple", "none", "press")) {
+  for (effect in c("ring", "none", "press")) {
     pz_stage(page, click_effect = effect)
     expect_identical(page_stage(page)$click_effect, effect)
   }
-  expect_error(pz_stage(page, click_effect = "ring"), class = "rlang_error")
+  expect_error(pz_stage(page, click_effect = "slide"), class = "rlang_error")
 
   pz_stage(page, click_effect_color = "#2563eb")
   expect_identical(page_stage(page)$click_effect_color, "#2563eb")
