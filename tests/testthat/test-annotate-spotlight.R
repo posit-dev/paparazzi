@@ -62,6 +62,38 @@ test_that("spotlight leaves its cutout unchanged and dims the outside in stills"
   )
 })
 
+test_that("spotlight padding stays inside fractional scaled overflow clips", {
+  page <- local_page(test_path("fixtures", "annotation-clipping.html"))
+  rect <- pz_get_rect(page, "#target")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate_spotlight("#target", pad = 6, dim = 0.5) |>
+    pz_screenshot(path)
+  expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y + 2, rep(255, 3))
+  expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y - 2, rep(127, 3))
+  expect_png_pixel(
+    page,
+    path,
+    rect$x + rect$width + 2,
+    rect$y + rect$height / 2,
+    rep(127, 3)
+  )
+  expect_png_pixel(
+    page,
+    path,
+    rect$x + rect$width / 2,
+    rect$y + rect$height + 2,
+    rep(127, 3)
+  )
+  expect_png_pixel(
+    page,
+    path,
+    rect$x - 2,
+    rect$y + rect$height / 2,
+    rep(127, 3)
+  )
+})
+
 test_that("spotlight dims the visible bottom of a tall document", {
   skip_if_not_installed("png")
   page <- local_page(

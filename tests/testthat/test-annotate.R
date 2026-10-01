@@ -629,10 +629,8 @@ test_that("a fully visible new task keeps every padded outline edge", {
     pz_act_type("Prepare release notes", target = "#task-title") |>
     pz_act_click("#add-task")
   target <- pz_loc(".task", has_text = "Prepare release notes")
-  rect <- unlist(pz_js(
-    page,
-    "(() => { const r = document.querySelector('.task').getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; })()"
-  ))
+  pz_expect_visible(page, target)
+  rect <- pz_get_rect(page, target)
   path <- withr::local_tempfile(fileext = ".png")
   red <- c(255, 0, 0)
 
@@ -647,11 +645,158 @@ test_that("a fully visible new task keeps every padded outline edge", {
         id = "new"
       ) |>
       pz_screenshot(path)
-    expect_png_pixel(page, path, mean(rect[c(1, 3)]), rect[2] - 2, red)
-    expect_png_pixel(page, path, rect[3] + 2, mean(rect[c(2, 4)]), red)
-    expect_png_pixel(page, path, mean(rect[c(1, 3)]), rect[4] + 2, red)
-    expect_png_pixel(page, path, rect[1] - 2, mean(rect[c(2, 4)]), red)
+    expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y - 2, red)
+    expect_png_pixel(
+      page,
+      path,
+      rect$x + rect$width + 2,
+      rect$y + rect$height / 2,
+      red
+    )
+    expect_png_pixel(
+      page,
+      path,
+      rect$x + rect$width / 2,
+      rect$y + rect$height + 2,
+      red
+    )
+    expect_png_pixel(page, path, rect$x - 2, rect$y + rect$height / 2, red)
   }
+})
+
+test_that("flush fractional scaled targets keep all padded outline edges", {
+  page <- local_page(test_path("fixtures", "annotation-clipping.html"))
+  path <- withr::local_tempfile(fileext = ".png")
+  styles <- c(
+    "",
+    "transform:none",
+    "box-sizing:border-box",
+    "overflow:scroll",
+    "overflow:scroll;box-sizing:border-box;direction:rtl",
+    "zoom:1.1",
+    "zoom:1.5",
+    "zoom:2"
+  )
+  red <- c(255, 0, 0)
+  for (style in styles) {
+    pz_js(
+      page,
+      paste0("document.getElementById('clip').style.cssText = '", style, "'")
+    )
+    rect <- pz_get_rect(page, "#target")
+    page |>
+      pz_annotate(
+        "#target",
+        pad = 6,
+        stroke_width = 4,
+        color = "red",
+        id = "mark"
+      ) |>
+      pz_screenshot(path)
+    expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y - 4, red)
+    expect_png_pixel(
+      page,
+      path,
+      rect$x + rect$width + 4,
+      rect$y + rect$height / 2,
+      red
+    )
+    expect_png_pixel(
+      page,
+      path,
+      rect$x + rect$width / 2,
+      rect$y + rect$height + 4,
+      red
+    )
+    expect_png_pixel(page, path, rect$x - 4, rect$y + rect$height / 2, red)
+  }
+})
+
+test_that("genuinely subpixel-clipped sides do not regain their padded outline", {
+  page <- local_page(test_path("fixtures", "annotation-clipping.html"))
+  pz_js(page, "document.getElementById('target').style.left = '-0.015625px'")
+  rect <- pz_get_rect(page, "#target")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate("#target", pad = 6, stroke_width = 4, color = "red") |>
+    pz_screenshot(path)
+  expect_png_pixel(
+    page,
+    path,
+    rect$x - 4,
+    rect$y + rect$height / 2,
+    rep(255, 3)
+  )
+  expect_png_pixel(
+    page,
+    path,
+    rect$x + rect$width + 4,
+    rect$y + rect$height / 2,
+    c(255, 0, 0)
+  )
+})
+
+test_that("padding cannot reveal a target touching a fractional clip from outside", {
+  page <- local_page(test_path("fixtures", "annotation-clipping.html"))
+  pz_js(page, "document.getElementById('target').style.top = '100%'")
+  rect <- pz_get_rect(page, "#target")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate("#target", pad = 6, stroke_width = 4, color = "red") |>
+    pz_screenshot(path)
+  expect_false(annotation_state(page)[[1]]$visible)
+  expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y - 4, rep(255, 3))
+})
+
+test_that("a subpixel-visible target still shows its mark", {
+  page <- local_page(test_path("fixtures", "annotation-clipping.html"))
+  pz_js(
+    page,
+    "document.getElementById('target').style.top = 'calc(100% - 0.015625px)'"
+  )
+  rect <- pz_get_rect(page, "#target")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate("#target", pad = 6, stroke_width = 4, color = "red") |>
+    pz_screenshot(path)
+  expect_true(annotation_state(page)[[1]]$visible)
+  expect_png_pixel(
+    page,
+    path,
+    rect$x + rect$width / 2,
+    rect$y - 4,
+    c(255, 0, 0)
+  )
+})
+
+test_that("redactions stay inside fractional scaled overflow clips", {
+  page <- local_page(test_path("fixtures", "annotation-clipping.html"))
+  rect <- pz_get_rect(page, "#target")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_annotate_redact("#target", pad = 6) |> pz_screenshot(path)
+  expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y + 2, rep(23, 3))
+  expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y - 2, rep(255, 3))
+  expect_png_pixel(
+    page,
+    path,
+    rect$x + rect$width + 2,
+    rect$y + rect$height / 2,
+    rep(255, 3)
+  )
+  expect_png_pixel(
+    page,
+    path,
+    rect$x + rect$width / 2,
+    rect$y + rect$height + 2,
+    rep(255, 3)
+  )
+  expect_png_pixel(
+    page,
+    path,
+    rect$x - 2,
+    rect$y + rect$height / 2,
+    rep(255, 3)
+  )
 })
 
 test_that("only the cut side of a partially visible mark loses its padding", {
@@ -728,6 +873,27 @@ test_that("a fully clipped target hides its mark even when padding overlaps", {
   expect_false(annotation_state(page)[[1]]$visible)
   expect_png_pixel(page, path, 150, 198, c(255, 255, 255))
   expect_png_pixel(page, path, 100, 190, c(255, 255, 255))
+})
+
+test_that("padding does not reveal zero-size targets on a clipping edge", {
+  page <- local_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.innerHTML = '<div style=\"position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white\">' +",
+      "'<div class=mark style=\"position:relative;left:0;top:50px;width:0;height:0\"></div>' +",
+      "'<div class=mark style=\"position:relative;left:50px;top:50px;width:0;height:0\"></div></div>';",
+      "document.body.style.background = 'white';"
+    )
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate(".mark", pad = 10, stroke_width = 4, color = "red") |>
+    pz_screenshot(path)
+  expect_false(annotation_state(page)[[1]]$visible)
+  expect_true(annotation_state(page)[[2]]$visible)
+  expect_png_pixel(page, path, 108, 150, rep(255, 3))
+  expect_png_pixel(page, path, 158, 150, c(255, 0, 0))
 })
 
 test_that("a mark clips at the edge of a scrolling overflow ancestor", {

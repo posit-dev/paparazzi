@@ -162,7 +162,7 @@ function(root) {
     shaft.setAttribute('x2', tx - left - ux * consumedEnd);
     shaft.setAttribute('y2', ty - top - uy * consumedEnd);
   };
-  // The intersection of the content boxes of el's axis-aligned overflow
+  // The intersection of the padding boxes of el's axis-aligned overflow
   // ancestors, in viewport coordinates; a side no ancestor clips stays
   // infinite. Null when el has no rendered box or is visibility:hidden with
   // no visible descendants. Custom overflow-clip-margin is not honored.
@@ -191,17 +191,34 @@ function(root) {
       if (!escaping && ancestor !== document.body &&
           style.display !== 'inline' && style.display !== 'contents' && (x || y)) {
         const a = ancestor.getBoundingClientRect();
-        const scaleX = a.width / (ancestor.offsetWidth || 1);
-        const scaleY = a.height / (ancestor.offsetHeight || 1);
+        const bl = parseFloat(style.borderLeftWidth), br = parseFloat(style.borderRightWidth);
+        const bt = parseFloat(style.borderTopWidth), bb = parseFloat(style.borderBottomWidth);
+        const px = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        const py = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+        const borderBox = style.boxSizing === 'border-box';
+        const baseWidth = parseFloat(style.width) + (borderBox ? 0 : px + bl + br);
+        const baseHeight = parseFloat(style.height) + (borderBox ? 0 : py + bt + bb);
+        const scrollbarX = Math.max(0, borderBox ?
+          Math.round(baseWidth - bl - br) - ancestor.clientWidth :
+          ancestor.offsetWidth - Math.round(baseWidth));
+        const scrollbarY = Math.max(0, borderBox ?
+          Math.round(baseHeight - bt - bb) - ancestor.clientHeight :
+          ancestor.offsetHeight - Math.round(baseHeight));
+        // Resolved content-box sizes exclude scrollbars. Only the scrollbar
+        // measurement needs the integer CSSOM dimensions, not the scale.
+        const width = baseWidth + (borderBox ? 0 : scrollbarX);
+        const height = baseHeight + (borderBox ? 0 : scrollbarY);
+        const scaleX = a.width / (width || 1);
+        const scaleY = a.height / (height || 1);
         if (x) {
-          const edge = a.left + ancestor.clientLeft * scaleX;
-          region.left = Math.max(region.left, edge);
-          region.right = Math.min(region.right, edge + ancestor.clientWidth * scaleX);
+          const scrollbarLeft = Math.max(0, ancestor.clientLeft - Math.round(bl));
+          region.left = Math.max(region.left, a.left + (bl + scrollbarLeft) * scaleX);
+          region.right = Math.min(region.right, a.right - (br + scrollbarX - scrollbarLeft) * scaleX);
         }
         if (y) {
-          const edge = a.top + ancestor.clientTop * scaleY;
-          region.top = Math.max(region.top, edge);
-          region.bottom = Math.min(region.bottom, edge + ancestor.clientHeight * scaleY);
+          const scrollbarTop = Math.max(0, ancestor.clientTop - Math.round(bt));
+          region.top = Math.max(region.top, a.top + (bt + scrollbarTop) * scaleY);
+          region.bottom = Math.min(region.bottom, a.bottom - (bb + scrollbarY - scrollbarTop) * scaleY);
         }
       }
       node = ancestor;
@@ -299,17 +316,21 @@ function(root) {
         const h = Math.max(0, r.height + p[0] + p[2]);
         box.style.height = h + 'px';
         if (entry.kind !== 'redact') {
-          if (r.right <= clip.left || r.left >= clip.right ||
-              r.bottom <= clip.top || r.top >= clip.bottom) {
+          // CSSOM lengths are serialized and transformed rects use float
+          // precision. Ignore numeric roundoff, not subpixel clipping.
+          const precision = 1e-6 * Math.max(1, Math.abs(r.left), Math.abs(r.top),
+            Math.abs(r.right), Math.abs(r.bottom));
+          if (r.right <= clip.left + precision || r.left >= clip.right - precision ||
+              r.bottom <= clip.top + precision || r.top >= clip.bottom - precision) {
             box.style.display = 'none';
             return;
           }
           // Preserve padding on uncut target sides without letting padding
           // bring an entirely clipped target's mark back into view.
-          if (r.left >= clip.left) clip.left = Math.min(clip.left, left);
-          if (r.top >= clip.top) clip.top = Math.min(clip.top, top);
-          if (r.right <= clip.right) clip.right = Math.max(clip.right, left + w);
-          if (r.bottom <= clip.bottom) clip.bottom = Math.max(clip.bottom, top + h);
+          if (r.left >= clip.left - precision) clip.left = Math.min(clip.left, left);
+          if (r.top >= clip.top - precision) clip.top = Math.min(clip.top, top);
+          if (r.right <= clip.right + precision) clip.right = Math.max(clip.right, left + w);
+          if (r.bottom <= clip.bottom + precision) clip.bottom = Math.max(clip.bottom, top + h);
         }
         if (Math.max(left, clip.left) >= Math.min(left + w, clip.right) ||
             Math.max(top, clip.top) >= Math.min(top + h, clip.bottom)) {

@@ -79,7 +79,8 @@ Marks and their badges are clipped by the target's overflow containers
 where the target is not cut off, the clip leaves room for the mark's \code{pad}
 so its outline stays intact. A mark hides while its target is disconnected,
 not rendered, \code{visibility: hidden} with no visible descendants, or entirely
-clipped, even if its padding would reach into view.
+clipped, even if its padding would reach into view. Zero-size targets on
+a clipping edge also stay hidden.
 }
 \seealso{
 \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}, \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}

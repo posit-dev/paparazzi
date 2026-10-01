@@ -12,7 +12,8 @@ NULL
 #' where the target is not cut off, the clip leaves room for the mark's `pad`
 #' so its outline stays intact. A mark hides while its target is disconnected,
 #' not rendered, `visibility: hidden` with no visible descendants, or entirely
-#' clipped, even if its padding would reach into view.
+#' clipped, even if its padding would reach into view. Zero-size targets on
+#' a clipping edge also stay hidden.
 #'
 #' @inheritParams pz_act_click
 #' @param target A selector, [pz_loc()] spec, or list of targets.
