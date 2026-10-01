@@ -88,15 +88,12 @@ pz_act_click <- function(
   effect_color <- effect_color %||% stage$click_effect_color
   check_string(effect_color, allow_empty = FALSE)
   action_start(ctx)
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  point <- el_pointer_point(ctx, found$els)
+  els <- action_elements(ctx, target)
+  point <- el_pointer_point(ctx, els)
   dispatch_click(
     ctx,
     "clicking",
-    found$els$description,
+    els$description,
     point,
     effect = effect,
     effect_color = effect_color
@@ -137,15 +134,12 @@ pz_act_hover <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  point <- el_pointer_point(ctx, found$els)
+  els <- action_elements(ctx, target)
+  point <- el_pointer_point(ctx, els)
   dispatch_mouse(
     ctx,
     "hovering over",
-    found$els$description,
+    els$description,
     "mouseMoved",
     point,
     button = "none",
@@ -231,20 +225,17 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
     return(ctx_return(ctx))
   }
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  if (is.null(target) && isTRUE(els_call(found$els, type_selection_js))) {
-    stage_follow_without_glide(ctx, action_target_rect(found$els))
-    insert_text(ctx, found$els$description, text)
+  els <- action_elements(ctx, target)
+  if (is.null(target) && isTRUE(els_call(els, focus_held_selection_js))) {
+    stage_follow_without_glide(ctx, action_target_rect(els))
+    insert_text(ctx, els$description, text)
     stage_action_pause(ctx)
     return(ctx_return(ctx))
   }
-  point <- el_pointer_point(ctx, found$els)
-  dispatch_click(ctx, "typing into", found$els$description, point)
+  point <- el_pointer_point(ctx, els)
+  dispatch_click(ctx, "typing into", els$description, point)
   cursor_rest(ctx)
-  insert_text(ctx, found$els$description, text)
+  insert_text(ctx, els$description, text)
   stage_action_pause(ctx)
   ctx_return(ctx)
 }
@@ -391,13 +382,10 @@ pz_act_focus <- function(ctx, target = NULL, ...) {
   check_context(ctx)
   check_dots_empty()
   action_start(ctx)
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  el_scroll_into_view(found$els)
+  els <- action_elements(ctx, target)
+  el_scroll_into_view(els)
   els_call(
-    found$els,
+    els,
     "function() { if (this.length) this[0].focus(); }"
   )
   stage_action_pause(ctx)
@@ -502,26 +490,23 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
   action_start(ctx)
   arg <- set_value_argument(value)
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  el_scroll_into_view(found$els)
+  els <- action_elements(ctx, target)
+  el_scroll_into_view(els)
 
   res <- els_values(
-    found$els,
+    els,
     set_value_js,
     args = list(list(value = arg)),
     doing = "working with"
   )
   if (identical(res$status, "contenteditable")) {
-    els_call(found$els, select_all_js)
-    insert_text(ctx, found$els$description, arg$text)
+    els_call(els, select_all_js)
+    insert_text(ctx, els$description, arg$text)
     return(ctx_return(ctx))
   }
   if (!identical(res$status, "ok")) {
     cli::cli_abort(
-      c(res$message, i = "Target: {found$els$description}"),
+      c(res$message, i = "Target: {els$description}"),
       class = "paparazzi_error_value"
     )
   }
@@ -558,35 +543,32 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
   action_start(ctx)
   files <- check_file_paths(files)
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  el_scroll_into_view(found$els)
+  els <- action_elements(ctx, target)
+  el_scroll_into_view(els)
   if (
     !isTRUE(els_call(
-      found$els,
+      els,
       "function() { const el = this[0]; return el.tagName === 'INPUT' && el.type === 'file'; }"
     ))
   ) {
     cli::cli_abort(
-      c("Target is not a file input.", i = "Target: {found$els$description}"),
+      c("Target is not a file input.", i = "Target: {els$description}"),
       class = "paparazzi_error_value"
     )
   }
 
-  el_object_id <- els_first_object_id(found$els)
+  el_object_id <- els_first_object_id(els)
   withr::defer(try(
-    found$els$page$session$Runtime$releaseObject(
+    els$page$session$Runtime$releaseObject(
       el_object_id,
-      timeout_ = found$els$page$default_timeout
+      timeout_ = els$page$default_timeout
     ),
     silent = TRUE
   ))
   action_cdp(
     ctx,
     "setting files on",
-    found$els$description,
+    els$description,
     cmd = ctx$page$session$DOM$setFileInputFiles(
       # A single path must stay a one-element array in the CDP payload.
       as.list(files),
@@ -651,14 +633,11 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
     )
   }
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
-  el_scroll_into_view(found$els)
+  els <- action_elements(ctx, target)
+  el_scroll_into_view(els)
 
   res <- els_values(
-    found$els,
+    els,
     select_text_js,
     args = list(list(value = text)),
     doing = "working with"
@@ -666,13 +645,13 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
   if (!identical(res$status, "ok")) {
     cli::cli_abort(
       c(
-        "No {.str {text}} in {found$els$description}.",
+        "No {.str {text}} in {els$description}.",
         i = "The match must contain the exact text, across tags if needed."
       ),
       class = "paparazzi_error_text"
     )
   }
-  stage_follow_without_glide(ctx, action_target_rect(found$els))
+  stage_follow_without_glide(ctx, action_target_rect(els))
   stage_action_pause(ctx)
   ctx_return(ctx)
 }
@@ -763,11 +742,8 @@ pz_act_scroll <- function(
   }
 
   if (!is.null(target)) {
-    found <- action_elements(ctx, target)
-    if (!found$pinned) {
-      withr::defer(release_elements(found$els))
-    }
-    stage_scroll_into_view(ctx, found$els, duration = duration)
+    els <- action_elements(ctx, target)
+    stage_scroll_into_view(ctx, els, duration = duration)
     stage_action_pause(ctx)
     return(ctx_return(ctx))
   }
@@ -896,13 +872,10 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
     )
   }
 
-  found <- action_elements(ctx, target)
-  if (!found$pinned) {
-    withr::defer(release_elements(found$els))
-  }
+  els <- action_elements(ctx, target)
 
   if (!to_dest) {
-    from <- el_pointer_point(ctx, found$els)
+    from <- el_pointer_point(ctx, els)
     offset <- check_offset(by, arg = "by")
     to_point <- c(
       x = from[["x"]] + offset[[1]],
@@ -912,7 +885,7 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
     dest <- loc_resolve(ctx, to, multiple = "error")
     withr::defer(release_elements(dest))
     to_point <- el_actionable_point(ctx, dest)
-    from <- el_pointer_point(ctx, found$els)
+    from <- el_pointer_point(ctx, els)
     probe <- els_values(dest, dest_point_js)
     if (isTRUE(probe$visible) && probe$width > 0 && probe$height > 0) {
       drop <- c(
@@ -955,13 +928,13 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
     }
   }
 
-  if (isTRUE(els_call(found$els, draggable_js))) {
-    drag_html5(ctx, found$els, from, to_point)
+  if (isTRUE(els_call(els, draggable_js))) {
+    drag_html5(ctx, els, from, to_point)
   } else {
     dispatch_mouse_drag(
       ctx,
       "dragging",
-      found$els$description,
+      els$description,
       from,
       to_point
     )
@@ -977,9 +950,9 @@ action_start <- function(ctx) {
     )$frameTree$frame$loaderId
 }
 
-action_elements <- function(ctx, target, call = caller_env()) {
+action_elements <- function(ctx, target, frame = caller_env()) {
   if (is.null(target)) {
-    scoped <- scope_root(ctx, call = call)
+    scoped <- scope_root(ctx, call = frame)
     if (is.null(scoped)) {
       cli::cli_abort(
         c(
@@ -987,19 +960,18 @@ action_elements <- function(ctx, target, call = caller_env()) {
           i = "Pass a CSS selector or a {.fn pz_loc} spec."
         ),
         class = "paparazzi_error_target",
-        call = call
+        call = frame
       )
     }
-    check_scope_single(scoped, call = call)
-    return(list(els = scoped, pinned = TRUE))
+    check_scope_single(scoped, call = frame)
+    return(scoped)
   }
-  list(
-    els = loc_resolve(ctx, target, multiple = "error", call = call),
-    pinned = FALSE
-  )
+  els <- loc_resolve(ctx, target, multiple = "error", call = frame)
+  withr::defer(release_elements(els), envir = frame)
+  els
 }
 
-pointer_hit_test_js <- "const pointerHitTest = (target, x, y) => {
+pointer_blocker_js <- "const pointerBlocker = (target, x, y) => {
   let hit = document.elementFromPoint(x, y);
   while (hit && hit.shadowRoot) {
     const inner = hit.shadowRoot.elementFromPoint(x, y);
@@ -1018,7 +990,7 @@ pointer_hit_test_js <- "const pointerHitTest = (target, x, y) => {
 
 pointer_actionable_js <- paste0(
   "function() {\n",
-  pointer_hit_test_js,
+  pointer_blocker_js,
   "
   if (!this.length) return { status: 'unavailable' };
   const el = this[0];
@@ -1027,7 +999,7 @@ pointer_actionable_js <- paste0(
       r.width <= 0 || r.height <= 0) return { status: 'unavailable' };
   const x = r.x + r.width / 2;
   const y = r.y + r.height / 2;
-  const blocker = pointerHitTest(el, x, y);
+  const blocker = pointerBlocker(el, x, y);
   return blocker ? { status: 'blocked', blocker } : { status: 'ok', x, y };
 }"
 )
@@ -1046,20 +1018,14 @@ format_pointer_blocker <- function(blocker) {
 
 el_pointer_point <- function(ctx, els, call = caller_env()) {
   point <- el_actionable_point(ctx, els, call = call)
-  rects <- el_rects(els, call = call)
-  attr(point, "rect") <- c(
-    x = rects$x[[1]],
-    y = rects$y[[1]],
-    width = rects$width[[1]],
-    height = rects$height[[1]]
-  )
+  attr(point, "rect") <- action_target_rect(els, call = call)
   attr(point, "camera_follow") <- TRUE
   stage_move_cursor(ctx, point)
   point
 }
 
-action_target_rect <- function(els) {
-  rects <- el_rects(els)
+action_target_rect <- function(els, call = caller_env()) {
+  rects <- el_rects(els, call = call)
   c(
     x = rects$x[[1]],
     y = rects$y[[1]],
@@ -1244,7 +1210,7 @@ insert_text_once <- function(ctx, target, text, call = caller_env()) {
   )
 }
 
-type_selection_js <- "function() {
+focus_held_selection_js <- "function() {
   const el = this[0];
   if (!el || !el.isContentEditable) {
     return false;
@@ -1508,17 +1474,13 @@ scroll_apply_js <- "function(arg) {
 # The root-context scroll inlines its payload: callFunctionOn arguments
 # aren't available to Runtime$evaluate.
 scroll_arg_json <- function(by = NULL, to = NULL) {
-  if (!is.null(by)) {
-    by <- as.double(by)
-    paste0('{"by":[', deparse(by[[1]]), ',', deparse(by[[2]]), ']}')
-  } else {
-    paste0('{"to":[', paste(paste0('"', to, '"'), collapse = ","), ']}')
-  }
+  arg <- if (!is.null(by)) list(by = by) else list(to = to)
+  jsonlite::toJSON(arg, digits = NA)
 }
 
 dest_point_js <- paste0(
   "function() {\n",
-  pointer_hit_test_js,
+  pointer_blocker_js,
   "
   const el = this[0];
   const r = el.getBoundingClientRect();
@@ -1527,7 +1489,7 @@ dest_point_js <- paste0(
     visible, x: r.x, y: r.y, width: r.width, height: r.height,
     viewportWidth: window.innerWidth, viewportHeight: window.innerHeight,
     blocker: visible && r.width > 0 && r.height > 0
-      ? pointerHitTest(el, r.x + r.width / 2, r.y + r.height / 2)
+      ? pointerBlocker(el, r.x + r.width / 2, r.y + r.height / 2)
       : null
   };
 }"
@@ -1653,6 +1615,8 @@ dispatch_mouse_drag <- function(
   }
 }
 
+DRAG_START_NUDGE <- 12
+
 drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
@@ -1663,9 +1627,9 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   )
   withr::defer(try(dereg(), silent = TRUE))
 
-  settled <- FALSE
+  released <- FALSE
   withr::defer({
-    if (!settled) {
+    if (!released) {
       try(
         session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout),
         silent = TRUE
@@ -1728,7 +1692,11 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   if (staged) {
     delta <- c(to[["x"]] - from[["x"]], to[["y"]] - from[["y"]])
     dist <- sqrt(sum(delta^2))
-    start_at <- if (dist > 0) from + delta / dist * min(12, dist) else from
+    start_at <- if (dist > 0) {
+      from + delta / dist * min(DRAG_START_NUDGE, dist)
+    } else {
+      from
+    }
   }
   dispatch_mouse(
     ctx,
@@ -1786,7 +1754,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     clickCount = 1,
     call = call
   )
-  settled <- TRUE
+  released <- TRUE
   for (type in c("dragEnter", "dragOver", "drop")) {
     action_cdp(
       ctx,
