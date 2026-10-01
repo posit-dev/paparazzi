@@ -173,10 +173,6 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
   check_context(ctx)
   check_string(expr)
   timeout <- resolve_timeout(timeout, ctx$page)
-  # Truthiness is JavaScript's, not R's: a non-empty string or non-zero
-  # number must count, so the poll reads an actual boolean. Each
-  # evaluation gets the wait's full budget, so a pending promise can't
-  # stretch the wait past its own timeout.
   check <- paste0("Promise.resolve(", expr, ").then((v) => !!v)")
   pz_poll(
     fn = function() isTRUE(pz_js(ctx, check, timeout = timeout)),
@@ -249,18 +245,12 @@ pz_wait_for_stable <- function(
   scoped <- scope_top(ctx)
   target_expr <- target_resolver_expr(target)
   if (!is.null(target) || is.null(scoped)) {
-    # Stability of a set that doesn't exist yet is meaningless, so
-    # the wait first waits (up to `timeout`) for a match -- BEFORE the
-    # stability poll starts. The sampling loop then owns its own full
-    # budget: a target appearing near the locator deadline still
-    # gets its whole `for_ms` window.
     release_elements(
       loc_resolve(ctx, target, timeout = timeout, multiple = "all")
     )
   }
   sample <- function() {
     els <- if (is.null(target) && !is.null(scoped)) {
-      # The pinned set itself, detach-probed per sample.
       scope_root(ctx)
     } else {
       loc_resolve_once(
@@ -365,13 +355,6 @@ pz_wait_for_navigation <- function(
   if (identical(wait, "none")) {
     return(ctx_return(wait_nav_reset(ctx)))
   }
-  # The load and settle phases each get the full timeout, like
-  # wait_for_stable's resolve and stability windows. The snapshot
-  # precedes them both: a complete, settled page satisfies the settle
-  # check with nothing navigating, so the wait holds the identity of the
-  # document it started on and passes only on a different document (a
-  # new timeOrigin), a different loaderId from the last action, or
-  # one it caught incomplete (the in-flight navigation it waits out).
   snapshot <- nav_snapshot(ctx, timeout)
   wait_for_load(ctx$page, timeout = timeout)
   nav_settle(
@@ -387,18 +370,8 @@ pz_wait_for_navigation <- function(
   ctx_return(root)
 }
 
-# The quiescence window for a navigation: how long the page's load state
-# must hold still before pz_wait_for_navigation() proceeds. A commit in
-# flight when the wait starts shows up as a state change inside this
-# window and is waited out; anything later than that is beyond a
-# post-action wait.
 nav_settle_secs <- 0.5
 
-# The wait-start document identity: readyState completeness plus the
-# document's timeOrigin, the token a navigation always replaces. A read
-# that fails during a document swap (including a command timeout) can't
-# pin the identity, so it degrades to the in-flight reading. Closed-page
-# and JavaScript errors cannot indicate a swap.
 nav_snapshot <- function(ctx, timeout) {
   s <- tryCatch(
     pz_js(
@@ -421,13 +394,6 @@ nav_snapshot <- function(ctx, timeout) {
   }
 }
 
-# Phase two of pz_wait_for_navigation(): the page's main-frame loaderId,
-# readyState, and timeOrigin must be complete and unchanged for `settle`
-# seconds. A loader change restarts the window even when the old document
-# was complete. Completing the window is not enough on its own: the pass
-# needs positive evidence a navigation occurred -- a changed wait-start
-# timeOrigin, an incomplete wait-start snapshot, or a loaderId different
-# from the last action's main-frame loaderId.
 nav_settle <- function(
   ctx,
   settle,
@@ -499,13 +465,6 @@ pump_loop <- function(loop, seconds, interval = 0.1) {
 #'
 #' Between checks, pumps `loop` (the page's child loop) instead of sleeping,
 #' so timers scheduled on the loop keep firing during the poll.
-#'
-#' @param fn Zero-arg function returning `TRUE` when the condition holds.
-#' @param timeout Seconds before giving up.
-#' @param interval Seconds between checks.
-#' @param loop A `later` event loop.
-#' @param what Description of the condition, used in the timeout error.
-#' @param call Reported as the source of the timeout error.
 #' @noRd
 pz_poll <- function(
   fn,
@@ -534,9 +493,6 @@ pz_poll <- function(
   }
 }
 
-# A sampled property: any single JavaScript property name, or "rect" for
-# the bounding box. The identifier check keeps property names from being
-# interpreted as JS source.
 check_stable_prop <- function(prop, call = caller_env()) {
   check_string(prop, call = call)
   if (identical(prop, "rect")) {
@@ -555,10 +511,6 @@ check_stable_prop <- function(prop, call = caller_env()) {
   prop
 }
 
-# One sample of every element in the set, as a per-element string:
-# property values stringified (null/undefined as empty), rects rounded
-# to whole pixels so sub-pixel noise doesn't read as change. A change
-# in the match count changes the joined sample too.
 stable_sample_js <- function(prop) {
   if (identical(prop, "rect")) {
     paste0(
@@ -583,17 +535,10 @@ stable_sample_js <- function(prop) {
   }
 }
 
-# The reset that follows every navigation: the object group holding
-# every pinned scope is released wholesale (contexts derived before the
-# navigation raise the classed detach error on their next use), and the
-# returned context is back at the root. The caller's context is never
-# mutated.
 wait_nav_reset <- function(ctx) {
   ctx$page$.__enclos_env__$private$last_action_loader_ <- NULL
   ctx$page$release_object_group()
   record_nav_rebased(ctx$page)
-  # The inline css zoom dies with the document being left; its
-  # "applied" cache dies with it, and the settle point re-applies.
   state <- attr(ctx$page, "paparazzi_device")
   if (!is.null(state)) {
     state$css_zoom <- NULL
