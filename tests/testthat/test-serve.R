@@ -306,6 +306,7 @@ test_that("static directories and single HTML files share the handle contract", 
   file.copy(html, file.path(dir, "index.html"))
 
   for (path in c(dir, html)) {
+    gc()
     servers <- httpuv::listServers()
     server <- pz_serve_static(path)
     withr::defer(server$stop())
@@ -325,20 +326,26 @@ test_that("static directories and single HTML files share the handle contract", 
     expect_false(server$is_running())
     # A parallel worker can bind the freed port; observe our httpuv servers.
     expect_identical(httpuv::listServers(), servers)
-
-    owned <- local_page(path)
-    owned_server <- owned$app
-    expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
-    pz_nav_reload(owned)
-    expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
-    pz_close(owned)
-    expect_false(owned_server$is_running())
-    expect_identical(httpuv::listServers(), servers)
   }
+
+  gc()
+  servers <- httpuv::listServers()
+  owned <- local_page(dir)
+  owned_server <- owned$app
+  expect_s3_class(owned_server, "PaparazziServe")
+  expect_true(owned_server$is_running())
+  expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
+  pz_nav_reload(owned)
+  expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
+  pz_close(owned)
+  expect_false(owned_server$is_running())
+  expect_identical(httpuv::listServers(), servers)
 })
 
 test_that("static handles stop on scope exit and finalization", {
   skip_if_not_installed("httpuv")
+  # Collect unrelated finalizers before snapshotting the running servers.
+  gc()
   servers <- httpuv::listServers()
   local({
     server <- pz_serve_static(dirname(fixture_file()))
