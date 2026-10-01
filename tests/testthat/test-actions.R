@@ -1397,8 +1397,8 @@ test_that("pz_act_drag glides the cursor while holding a mouse drag when recordi
   pz_act_drag(page, "#dragbox", "#dropzone")
   recorded <- proc.time()[["elapsed"]] - t0
 
-  # The page sees one held move, sent as the cursor arrives, so the box
-  # jumps to the zone at the end of the glide.
+  # The page sees held moves streamed along the carry, so the box
+  # follows the pointer through the glide and ends at the zone.
   centers <- function(sel) {
     unlist(pz_js(
       page,
@@ -1418,6 +1418,285 @@ test_that("pz_act_drag glides the cursor while holding a mouse drag when recordi
   state <- cursor_overlay_state(page)
   expect_lt(abs(state[[2]] - zone[[1]]), 2)
   expect_lt(abs(state[[3]] - zone[[2]]), 2)
+  pz_record_stop(page)
+})
+
+test_that("a recorded mouse drag streams held moves that follow the cursor", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(pause = 0)
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+  defer_record_stop(page)
+
+  page |> pz_cursor_move("#dragbox", duration = 0)
+  centers <- function(sel) {
+    unlist(pz_js(
+      page,
+      paste0(
+        "(() => { const r = document.querySelector('",
+        sel,
+        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+      )
+    ))
+  }
+  from <- centers("#dragbox")
+  to <- centers("#dropzone")
+  # Page-side rAF log of the box and the overlay cursor's rendered
+  # position, read after the drag so sampling can't disturb the carry.
+  pz_js(
+    page,
+    "(() => {
+      window.__carryLog = [];
+      window.__carryDone = false;
+      document.addEventListener('mouseup', () => { window.__carryDone = true; }, true);
+      (function sample() {
+        const glide = document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-glide');
+        let cursor = [-1, -1];
+        if (glide) {
+          const m = new DOMMatrixReadOnly(getComputedStyle(glide).transform);
+          cursor = [m.e, m.f];
+        }
+        const r = document.getElementById('dragbox').getBoundingClientRect();
+        window.__carryLog.push({ cursor: cursor, box: [r.x + r.width / 2, r.y + r.height / 2] });
+        if (!window.__carryDone) requestAnimationFrame(sample);
+      })();
+      return true;
+    })()"
+  )
+  pz_act_drag(page, "#dragbox", "#dropzone")
+
+  # More than one held move lands between the press and the release.
+  types <- adv_log_types(adv_log(page))
+  down <- match("mousedown", types)
+  up <- match("mouseup", types)
+  between <- if (up - down > 1) types[(down + 1):(up - 1)] else character(0)
+  expect_gt(sum(between == "mousemove"), 1)
+
+  # The box tracks the cursor through the carry, not just at arrival:
+  # samples taken while the cursor is mid-path have the box near it.
+  samples <- jsonlite::fromJSON(
+    pz_js(page, "JSON.stringify(window.__carryLog)"),
+    simplifyVector = FALSE
+  )
+  cur <- t(vapply(samples, function(s) unlist(s$cursor), numeric(2)))
+  box <- t(vapply(samples, function(s) unlist(s$box), numeric(2)))
+  seg <- to - from
+  along <- as.vector(sweep(cur, 2, from) %*% seg) / sum(seg^2)
+  mid <- along > 0.15 & along < 0.85 & cur[, 1] >= 0
+  expect_gte(sum(mid), 3)
+  drift <- sqrt((box[mid, 1] - cur[mid, 1])^2 + (box[mid, 2] - cur[mid, 2])^2)
+  expect_lt(median(drift), 80)
+  pz_record_stop(page)
+})
+
+test_that("a recorded HTML5 drag streams drag events along the carry", {
+  skip_if_no_av()
+  page <- local_page(pz_example("tasks"), width = 800, height = 900)
+  page |> pz_stage(pause = 0)
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+  defer_record_stop(page)
+
+  center <- function(sel) {
+    unlist(pz_js(
+      page,
+      paste0(
+        "(() => { const r = document.querySelector('",
+        sel,
+        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+      )
+    ))
+  }
+  from <- center(".task:nth-child(5)")
+  to <- center(".task:first-child")
+  page |> pz_cursor_move(".task:nth-child(5)", duration = 0)
+  # Event log and a hover/dragging/cursor sampler, both page-side and
+  # read after the drag.
+  pz_js(
+    page,
+    "(() => {
+      const row = (el) => {
+        const li = el && el.closest ? el.closest('.task') : null;
+        const t = li && li.querySelector('.task-title');
+        return t ? t.textContent.trim() : null;
+      };
+      window.__dragLog = [];
+      ['dragstart', 'dragenter', 'dragover', 'dragleave', 'drop', 'dragend', 'mouseup', 'click']
+        .forEach((type) => {
+          document.addEventListener(type, (e) => {
+            window.__dragLog.push({ type: type, row: row(e.target) });
+          }, true);
+        });
+      window.__carrySamples = [];
+      window.__carryDone = false;
+      document.addEventListener('dragend', () => { window.__carryDone = true; }, true);
+      const titles = (sel) => [...document.querySelectorAll(sel)]
+        .map((li) => li.querySelector('.task-title').textContent.trim());
+      (function sample() {
+        const glide = document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-glide');
+        let cursor = [-1, -1];
+        if (glide) {
+          const m = new DOMMatrixReadOnly(getComputedStyle(glide).transform);
+          cursor = [m.e, m.f];
+        }
+        window.__carrySamples.push({
+          cursor: cursor,
+          hover: titles('.task:hover'),
+          dragging: titles('.task.dragging')
+        });
+        if (!window.__carryDone) setTimeout(sample, 40);
+      })();
+      return true;
+    })()"
+  )
+  pz_act_drag(page, ".task:nth-child(5)", ".task:first-child")
+
+  # Mid-carry samples: the overlay cursor is travelling between source
+  # and drop. The drop row never shows hover styling during the carry
+  # (the real pointer stays by the source), and the dragstart styling
+  # persists.
+  samples <- jsonlite::fromJSON(
+    pz_js(page, "JSON.stringify(window.__carrySamples)"),
+    simplifyVector = FALSE
+  )
+  cur <- t(vapply(samples, function(s) unlist(s$cursor), numeric(2)))
+  seg <- to - from
+  along <- as.vector(sweep(cur, 2, from) %*% seg) / sum(seg^2)
+  mid <- along > 0.15 & along < 0.85 & cur[, 1] >= 0
+  expect_gte(sum(mid), 3)
+  mid_samples <- samples[mid]
+  hovers <- function(s) unlist(s$hover)
+  expect_false(any(vapply(
+    mid_samples,
+    function(s) "Renew passport" %in% hovers(s),
+    logical(1)
+  )))
+  expect_gt(
+    mean(vapply(
+      mid_samples,
+      function(s) "Water the plants" %in% hovers(s),
+      logical(1)
+    )),
+    0.8
+  )
+  expect_true(all(vapply(
+    mid_samples,
+    function(s) "Water the plants" %in% unlist(s$dragging),
+    logical(1)
+  )))
+
+  # Intermediate rows see dragenter in path order on the way up.
+  log <- jsonlite::fromJSON(
+    pz_js(page, "JSON.stringify(window.__dragLog)"),
+    simplifyVector = FALSE
+  )
+  types <- vapply(log, function(e) e$type, character(1))
+  rows <- vapply(log, function(e) e$row %||% NA_character_, character(1))
+  enters <- rows[types == "dragenter" & !is.na(rows)]
+  enters <- enters[c(TRUE, enters[-1] != enters[-length(enters)])]
+  at <- match(
+    c("Return library books", "Book dentist appointment", "File tax return"),
+    enters
+  )
+  expect_false(anyNA(at))
+  expect_true(all(diff(at) > 0))
+
+  # The drop and dragend land with the payload, and the release around
+  # the intercepted drag produces no stray mouseup or click.
+  expect_true("drop" %in% types)
+  expect_true("dragend" %in% types)
+  expect_false(any(types %in% c("mouseup", "click")))
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('.task:first-child .task-title').textContent.trim()"
+    ),
+    "Water the plants"
+  )
+  pz_record_stop(page)
+})
+
+test_that("a mid-carry dispatch failure propagates and the drag still releases", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(pause = 0)
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+  defer_record_stop(page)
+
+  page |> pz_cursor_move("#dragbox", duration = 0)
+  real_dispatch_mouse <- dispatch_mouse
+  held <- 0L
+  local_mocked_bindings(
+    dispatch_mouse = function(
+      ctx,
+      action,
+      target,
+      type,
+      point,
+      button,
+      buttons,
+      clickCount,
+      call = caller_env()
+    ) {
+      if (type == "mouseMoved" && buttons == 1) {
+        held <<- held + 1L
+        if (held == 2L) {
+          cli::cli_abort("simulated mid-carry dispatch failure")
+        }
+      }
+      real_dispatch_mouse(
+        ctx,
+        action,
+        target,
+        type,
+        point,
+        button,
+        buttons,
+        clickCount,
+        call = call
+      )
+    }
+  )
+  expect_error(
+    pz_act_drag(page, "#dragbox", "#dropzone"),
+    "simulated mid-carry dispatch failure"
+  )
+
+  # The exit defer released the held button: the page saw a mouseup
+  # after the press, so a following drag works.
+  types <- adv_log_types(adv_log(page))
+  up <- match("mouseup", types)
+  expect_false(is.na(up))
+  expect_gt(up, match("mousedown", types))
+  pz_act_drag(page, "#dragbox", "#dropzone")
+  centers <- function(sel) {
+    unlist(pz_js(
+      page,
+      paste0(
+        "(() => { const r = document.querySelector('",
+        sel,
+        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+      )
+    ))
+  }
+  box <- centers("#dragbox")
+  zone <- centers("#dropzone")
+  expect_lt(abs(box[[1]] - zone[[1]]), 2)
+  expect_lt(abs(box[[2]] - zone[[2]]), 2)
   pz_record_stop(page)
 })
 
