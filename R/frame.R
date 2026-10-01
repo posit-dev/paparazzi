@@ -260,9 +260,6 @@ pz_stage_frame <- function(
   ctx_return(ctx)
 }
 
-# The direction vocabulary (SPEC "Directions") as sorted token sets:
-# the sides, the four corners, and "center". Consumers that take a
-# subset of the vocabulary pass their own `valid` to parse_direction().
 DIRECTION_TOKENS <- c("bottom", "center", "left", "right", "top")
 
 DIRECTIONS <- list(
@@ -281,10 +278,6 @@ direction_labels <- function(valid = DIRECTIONS) {
   map_chr(valid, paste, collapse = " ")
 }
 
-# Normalize a direction string to its sorted token set: lowercase,
-# split on spaces or hyphens, sort, dedupe. Tokens outside the
-# vocabulary and combinations outside `valid` abort with the valid
-# values listed. Shared by framing, cursor, staging, and action directions.
 parse_direction <- function(
   x,
   valid = DIRECTIONS,
@@ -311,13 +304,6 @@ parse_direction <- function(
   tokens
 }
 
-# The frame spec constructor: validates and normalizes every set
-# field. Fields left NULL stay NULL -- they inherit the staged value or
-# the built-in default when a capture resolves the spec. target and
-# bounds are promoted to loc lists eagerly, so type errors surface at
-# spec-build time; resolution stays lazy. pad is normalized to
-# c(top, right, bottom, left), offset to c(x, y), anchor to its sorted
-# token set.
 new_frame_spec <- function(
   target = NULL,
   ratio = NULL,
@@ -397,11 +383,6 @@ new_frame_spec <- function(
   )
 }
 
-# Built-in defaults for spec fields left unset by both the call and the
-# staged frame, in normalized form. `target` has no default: it
-# resolves by precedence (explicit, scope, staged, viewport). The
-# camera fills from its own table (pad 24, `when` unset) and never
-# inherits the staged frame.
 frame_defaults <- list(
   ratio = NULL,
   pad = c(0, 0, 0, 0),
@@ -424,11 +405,6 @@ frame_camera_defaults <- list(
   zoom = NULL
 )
 
-# Fill a spec's unset fields: the staged frame's value where set, else
-# the built-in default. Always copies -- the staged spec is page state
-# shared across captures. NULL fills are skipped rather than assigned:
-# `out[[field]] <- NULL` would REMOVE the field, and partial matching
-# would then alias spec$target to spec$target_box.
 frame_fill <- function(spec, staged = NULL, defaults = frame_defaults) {
   out <- unclass(spec)
   for (field in names(defaults)) {
@@ -447,10 +423,6 @@ frame_fill <- function(spec, staged = NULL, defaults = frame_defaults) {
   out
 }
 
-# Promote a frame argument to a spec: a pz_frame() spec passes through;
-# a bare locator (a CSS selector string, a pz_loc() spec, or a list of
-# either) becomes pz_frame(<locator>). NULL and FALSE pass through for
-# the caller to interpret.
 as_frame_spec <- function(frame, arg = caller_arg(frame), call = caller_env()) {
   if (
     is.null(frame) ||
@@ -472,8 +444,6 @@ as_frame_spec <- function(frame, arg = caller_arg(frame), call = caller_env()) {
   )
 }
 
-# CSS-style padding: one number for all sides, or c(top, right,
-# bottom, left).
 check_pad <- function(pad, arg = caller_arg(pad), call = caller_env()) {
   if (
     !is.numeric(pad) || length(pad) == 0 || anyNA(pad) || !all(is.finite(pad))
@@ -527,12 +497,6 @@ check_offset <- function(
   )
 }
 
-# The page-level default framing: one field in the page's reserved
-# staging state (private in R/context.R), read by screenshots and
-# recordings. R6 private fields are reachable only through the
-# object's enclos environment; these helpers are the single access
-# point, so promoting the field to an active binding later touches
-# one place.
 page_frame <- function(page) {
   page$.__enclos_env__$private$staging_$frame
 }
@@ -542,14 +506,6 @@ page_set_frame <- function(page, frame) {
   invisible(page)
 }
 
-# The framing a capture uses: promote the call's frame (a bare
-# locator becomes a spec), then resolve it. FALSE opts out for one
-# call; NULL falls back to the staged frame, and with no staged frame
-# there is no framing. A spec's unset fields take the staged value,
-# then the built-in default. The target resolves by precedence instead:
-# the spec's own target, then the scope (applied at measure time), then
-# the staged target -- baked in here for an unscoped context -- then
-# the viewport.
 frame_effective <- function(ctx, frame, call = caller_env()) {
   frame <- as_frame_spec(frame, call = call)
   if (identical(frame, FALSE)) {
@@ -562,8 +518,6 @@ frame_effective <- function(ctx, frame, call = caller_env()) {
       return(NULL)
     }
     out <- frame_fill(staged, defaults = frame_defaults)
-    # The scope's box beats the staged target. (Single-bracket
-    # assignment: `out$target <- NULL` would remove the field.)
     if (scoped) {
       out["target"] <- list(NULL)
     }
@@ -575,9 +529,6 @@ frame_effective <- function(ctx, frame, call = caller_env()) {
   frame_fill(frame, staged, frame_defaults)
 }
 
-# Measure a frame before translating or rounding it. Screenshot capture
-# clamps to the document box (including its RTL left edge) because it can
-# render below the fold; recording captures only the visible viewport.
 frame_measure <- function(
   ctx,
   spec,
@@ -595,15 +546,11 @@ frame_measure <- function(
       call = call
     )
   }
-  # Resolution auto-waits; a target appearing mid-wait can expand the
-  # document. Read geometry only after resolving content and bounds.
   geometry <- page_geometry(ctx, call = call)
   if (is.null(box)) {
     box <- c(0, 0, geometry$viewport_width, geometry$viewport_height)
   }
   if (identical(extent, "page")) {
-    # The page's rendered area in viewport coordinates; the document
-    # box can extend left of the viewport for a wide RTL document.
     clamps[["the page"]] <- c(
       geometry$document_left - geometry$scroll_x,
       -geometry$scroll_y,
@@ -611,7 +558,6 @@ frame_measure <- function(
       -geometry$scroll_y + geometry$document_height
     )
   } else {
-    # The recording PNG holds only the viewport, not the full page.
     clamps[["the viewport"]] <- c(
       0,
       0,
@@ -626,8 +572,6 @@ frame_measure <- function(
     view = c(geometry$viewport_width, geometry$viewport_height),
     call = call
   )
-  # A binding clamp assigned its edge exactly; coinciding edges count as
-  # pinned too. Round these inward so the pixel clip stays within bounds.
   pinned <- c(
     some(clamps, function(clamp) clamp[1] >= box[1]),
     some(clamps, function(clamp) clamp[2] >= box[2]),
@@ -650,18 +594,14 @@ frame_region <- function(box, call = caller_env()) {
   list(x = box[1], y = box[2], width = width, height = height)
 }
 
-# The CDP clip for a framed still: measure against the page, translate
-# to document coordinates, and round to whole pixels.
 frame_clip <- function(ctx, spec, call = caller_env()) {
   m <- frame_measure(ctx, spec, extent = "page", call = call)
   # The pipeline ran viewport-relative; CDP clip coordinates are
   # document-relative.
   box <- m$box + rep(c(m$geometry$scroll_x, m$geometry$scroll_y), 2)
   box <- frame_round(box, pinned = m$pinned, even = FALSE)
-  # Horizontal only: an RTL frame can resolve into the document's
-  # negative-x region, and CDP clip origins must be non-negative.
-  # Shift the origin to 0 preserving the size -- the captured region
-  # shifts with it, mirroring the unframed path (clip_viewport()).
+  # An RTL frame can resolve into the document's negative-x region, and CDP
+  # clip origins must be non-negative.
   if (box[1] < 0) {
     box[3] <- box[3] - box[1]
     box[1] <- 0
@@ -669,10 +609,6 @@ frame_clip <- function(ctx, spec, call = caller_env()) {
   frame_region(box, call = call)
 }
 
-# The content box a frame is computed from, viewport-relative: the
-# frame's own target if it has one, else the pinned scope (scoped
-# context), else NULL for the viewport fallback (the caller fills it
-# from the geometry it reads after resolution).
 frame_content_box <- function(ctx, spec, call = caller_env()) {
   if (!is.null(spec[["target"]])) {
     els <- loc_resolve(ctx, spec[["target"]], multiple = "all", call = call)
@@ -711,8 +647,6 @@ frame_target_box <- function(ctx, els, spec, call = caller_env()) {
   )
 }
 
-# The union of element rects, as a viewport-relative box
-# c(left, top, right, bottom).
 box_union <- function(rects, call = caller_env()) {
   if (nrow(rects) == 0L) {
     cli::cli_abort(
@@ -729,9 +663,6 @@ box_union <- function(rects, call = caller_env()) {
   )
 }
 
-# One JS read of the geometry framing needs: scroll offsets, viewport
-# size, document size, and the document's left edge in document
-# coordinates.
 page_geometry <- function(ctx, call = caller_env()) {
   g <- pz_js(
     ctx,
@@ -770,13 +701,6 @@ page_geometry <- function(ctx, call = caller_env()) {
   )
 }
 
-# Pure framing geometry on a viewport-relative box
-# c(left, top, right, bottom): pad, then either offset + ratio growth
-# by anchor (zoom = NULL) or a fixed-size zoom region placed by anchor
-# and shifted by offset, then the clamps (named boxes in the same
-# space, intersected in order). A box that ends up degenerate aborts
-# with paparazzi_error_frame. `view` is the zoom reference size: the
-# viewport, for stills and recordings alike.
 frame_apply <- function(
   spec,
   box,
@@ -818,10 +742,6 @@ frame_apply <- function(
   box
 }
 
-# The region for a numeric zoom: the view divided by zoom, with
-# `ratio` setting the aspect (the largest such box inside view / zoom)
-# when set, else the view's aspect. The padded content box is placed
-# inside by the anchor, then the region shifts by offset.
 frame_zoom_region <- function(spec, box, view) {
   size <- view / spec$zoom
   if (!is.null(spec$ratio)) {
@@ -834,11 +754,6 @@ frame_zoom_region <- function(spec, box, view) {
   frame_place(size, box, spec$anchor) + rep(spec$offset, 2)
 }
 
-# Position a region of `size` c(width, height) against `box` by the
-# anchor tokens: a side pins that edge of the region to the box's edge
-# (a left anchor puts the region's left edge at the box's left edge);
-# otherwise the box is centered in the region. A box larger than the
-# region aligns the same way.
 frame_place <- function(size, box, anchor) {
   x <- if ("left" %in% anchor) {
     box[1]
@@ -857,11 +772,6 @@ frame_place <- function(size, box, anchor) {
   c(x, y, x + size[1], y + size[2])
 }
 
-# Grow the shorter side to reach `ratio` (width / height), never
-# shrinking, placing the content by the anchor tokens: left/right and
-# top/bottom pin the content to that edge (all growth on the opposite
-# side); otherwise the extra space splits evenly. A box with an empty
-# side has no aspect to grow and is returned unchanged.
 frame_grow_ratio <- function(ratio, box, anchor) {
   if (is.null(ratio)) {
     return(box)
@@ -895,11 +805,6 @@ frame_grow_ratio <- function(ratio, box, anchor) {
   box
 }
 
-# Round box edges: whole pixels for stills, even pixels for video
-# (the recorder's path), so width and height never split a pixel.
-# Edges a clamp fixed in place ("pinned") round INWARD -- left/top
-# up, right/bottom down -- so the final pixel clip stays within the
-# CSS bounds; free edges round to the nearest pixel.
 frame_round <- function(
   box,
   pinned = c(FALSE, FALSE, FALSE, FALSE),

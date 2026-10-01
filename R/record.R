@@ -171,8 +171,6 @@ pz_record_start <- function(
     )
   }
   frame <- frame_effective(ctx, frame)
-  # An annotated target_box inherited from the staged frame measures
-  # element boxes only for the home frame.
   if (
     inherits(frame, "paparazzi_frame") &&
       identical(frame$target_box, "annotated")
@@ -210,15 +208,9 @@ pz_record_start <- function(
   } else {
     list(list(vt = 0, caption = page_caption(page)))
   }
-  # Retain the framing context the recording started in: a when =
-  # "stop" frame is measured against the final layout, but resolved
-  # from this ctx -- its scope -- not from wherever pz_record_stop()
-  # is called. An unscoped start context behaves exactly as before.
   if (inherits(frame, "paparazzi_frame")) {
     rec$frame_ctx <- ctx
   }
-  # Measured before the first frame for when = "start"; for "stop" the
-  # crop is measured against the final layout in pz_record_stop().
   if (inherits(frame, "paparazzi_frame") && identical(frame$when, "start")) {
     rec$crop <- record_crop_box(rec$frame_ctx, frame)
   }
@@ -239,7 +231,6 @@ pz_record_start <- function(
       }
     )
   } else {
-    # The tick closure carries its recorder so it can't adopt a later one.
     later::later(
       function() record_tick(page, rec),
       delay = 0,
@@ -287,14 +278,10 @@ pz_record_stop <- function(ctx) {
 
   camera_settle(page, rec)
 
-  # Deactivate first so ticks scheduled by the recording stop re-arming
-  # and can't issue captures while the stop settles its own.
   rec$active <- FALSE
   rec$vt_end <- rec_vt(rec)
   record_stop_screencast(page, rec)
 
-  # A capture issued before the stop may still be in flight; it belongs
-  # to the recording, so let it settle before the final capture.
   tryCatch(
     record_wait_pending(rec, page, "the in-flight frame capture"),
     paparazzi_error_timeout = function(e) {
@@ -303,10 +290,6 @@ pz_record_stop <- function(ctx) {
     }
   )
 
-  # Capture and await the page state at stop: the final state must be in
-  # the video (the last-frame hold repeats it, not an older frame), and
-  # an immediate stop gets its one frame here. vt is pinned to vt_end so
-  # the frame is kept (post-vt_end captures are dropped).
   # A screencast frame may have CSS-viewport resolution even at a higher
   # device pixel ratio. Match it for the final screenshot so encode-time
   # framing uses the same coordinates for every frame.
@@ -340,14 +323,9 @@ pz_record_stop <- function(ctx) {
   if (
     inherits(rec$frame, "paparazzi_frame") && identical(rec$frame$when, "stop")
   ) {
-    # The final-layout measurement resolves from the retained start
-    # context, so the crop covers the scope the recording began in
-    # even when stop is called from a different one.
     rec$crop <- record_crop_box(rec$frame_ctx, rec$frame)
   }
   record_encode(rec, page)
-  # The staging hook: an auto cursor under cursor = NULL belonged to the
-  # recording, so it leaves the page now that stills would catch it.
   stage_record_stopped(ctx)
   if (isTRUE(getOption("knitr.in.progress"))) {
     return(record_knit_media(rec$path))
@@ -498,7 +476,6 @@ pz_record <- function(ctx, path = NULL, code, ...) {
   expr <- substitute(code)
   env <- parent.frame()
   pz_record_start(ctx, path, ...)
-  # Non-local exits (including interrupts) still stop the recording.
   on.exit(pz_record_stop(ctx), add = TRUE)
   code_error <- tryCatch(
     {
@@ -507,7 +484,6 @@ pz_record <- function(ctx, path = NULL, code, ...) {
     },
     error = identity
   )
-  # The normal path stops once, and the block's error takes priority.
   on.exit(NULL)
   stop_result <- tryCatch(pz_record_stop(ctx), error = identity)
   if (inherits(code_error, "error")) {
@@ -542,8 +518,6 @@ record_implicit_path <- function(format, call = caller_env()) {
   )
 }
 
-# Printing a running recording chain ends it: the recording is the
-# chain's printed result, shown in the viewer when interactive.
 record_print_stop <- function(ctx) {
   result <- pz_record_stop(ctx)
   if (rlang::is_interactive()) {
@@ -592,7 +566,6 @@ record_knit_media <- function(path) {
       output_dir %||% getwd()
     )
   }
-  # Percent-encode filename characters without encoding path separators.
   url <- gsub(
     "%2F",
     "/",
@@ -612,10 +585,6 @@ record_knit_media <- function(path) {
   knitr::asis_output(paste0("[Download recording](<", url, ">)"))
 }
 
-# The recorder state lives in the page's reserved private$recorder_
-# slot (R/context.R). R6 privates are reachable only through the
-# object's enclos environment; these helpers are the single access
-# point, matching page_frame()/page_set_frame() in R/frame.R.
 page_recorder <- function(page) {
   page$.__enclos_env__$private$recorder_
 }
@@ -697,9 +666,6 @@ new_recorder <- function(
   rec$keypresses <- list()
   rec$camera_viewport_width <- NULL
   rec$holds <- list()
-  # Video clock: vt = vt_base + (now - active_since) while running.
-  # Pausing folds the elapsed stretch into vt_base, so paused time
-  # never reaches the video timeline.
   rec$vt_base <- 0
   rec$active_since <- rec_now()
   rec$active <- TRUE
@@ -805,15 +771,6 @@ record_frames_dir <- function(path, keep_frames) {
   dir
 }
 
-# One timer tick on the child loop: re-arm, then issue an async capture
-# unless paused, held for a device change, or one is still in flight
-# (a skipped tick repeats a frame after resampling). The tick
-# runs inside run_now() during whatever pumped the loop, so its errors
-# are caught and counted on the recorder instead of escaping into an
-# unrelated call. Each scheduled tick is bound to the recorder that
-# scheduled it: one identity check against the page's current recorder
-# kills ticks left behind by a stopped recording, which would otherwise
-# adopt a newer one and double the capture chain after a quick restart.
 record_tick <- function(page, rec = page_recorder(page)) {
   if (is.null(rec) || !rec$active) {
     return(invisible(FALSE))
@@ -834,12 +791,6 @@ record_tick <- function(page, rec = page_recorder(page)) {
   invisible(TRUE)
 }
 
-# Synchronous teardown for the page-lifecycle close path (context.R):
-# the closed session's child loop may never pump again, so a later
-# tick can't be relied on to clean up. Deactivates the recorder,
-# clears the recorder slot, and drops the temp frames dir; kept frames
-# survive on purpose. An in-flight capture is left to resolve
-# harmlessly on the discarded recorder.
 record_page_closed <- function(page) {
   rec <- page_recorder(page)
   if (is.null(rec)) {
@@ -942,22 +893,14 @@ record_screencast_snapshot <- function(page, rec) {
   invisible(NULL)
 }
 
-# Shared async screenshot for poll ticks, screencast boundary snapshots,
-# and the stop-time final frame. The pending slot prevents overlapping captures; callbacks clear it when chromote
-# invokes them on the child loop. A synchronous failure (e.g. a closed
-# session) clears it and lands in the recorder's error tally instead.
 # Unclipped surface captures at DPR 2 can remap concurrent mouse input
 # to half its coordinates; a viewport clip avoids that Chrome path.
-# The screencast stop capture uses a smaller clip scale so its PNG
-# matches the event frames' CSS-pixel resolution.
 record_capture <- function(rec, page, vt, scale = 1) {
   index <- length(rec$files) + 1L
   pending <- new.env(parent = emptyenv())
   pending$vt <- vt
   pending$file <- file.path(rec$frames_dir, sprintf("frame-%06d.png", index))
   rec$pending <- pending
-  # Both stages share one timeout budget, the same budget
-  # pz_record_stop() allows an in-flight capture to settle.
   deadline <- Sys.time() + page$default_timeout
   remaining <- function() {
     max(0.1, as.numeric(difftime(deadline, Sys.time(), units = "secs")))
@@ -1001,9 +944,6 @@ record_capture <- function(rec, page, vt, scale = 1) {
   invisible(rec)
 }
 
-# The capture callback: writes the PNG to the frame store at resolve
-# time. A callback for a retired capture cannot consume a newer slot.
-# At most one active capture is pending, so frame timestamps stay ordered.
 record_frame_done <- function(rec, pending, res = NULL, err = NULL) {
   if (!identical(rec$pending, pending)) {
     return(invisible(NULL))
@@ -1015,8 +955,6 @@ record_frame_done <- function(rec, pending, res = NULL, err = NULL) {
         if (is_condition(err)) stop(err) else cli::cli_abort("{err}")
       }
       writeBin(jsonlite::base64_dec(res$data), pending$file)
-      # A capture issued just before pz_record_stop() resolves after
-      # vt_end is fixed; keep only frames taken inside the window.
       if (is.null(rec$vt_end) || pending$vt <= rec$vt_end) {
         rec$times <- c(rec$times, pending$vt)
         rec$files <- c(rec$files, pending$file)
@@ -1041,14 +979,6 @@ record_error <- function(rec, e) {
   invisible(NULL)
 }
 
-# A navigation replaces the document, so a recording's framing -- whose
-# target and bounds are pinned elements of the outgoing document --
-# dies with it. The recording itself survives (the timer, clock, and
-# captures are session-level), but the framing falls back to the
-# viewport: a when = "stop" crop not yet measured resolves as the
-# full viewport instead of raising the detach error at stop. A when =
-# "start" crop was already measured as a fixed box in viewport
-# coordinates and stays.
 record_nav_rebased <- function(page) {
   rec <- page_recorder(page)
   if (is.null(rec) || is.null(rec$frame)) {
@@ -1059,16 +989,12 @@ record_nav_rebased <- function(page) {
   invisible(TRUE)
 }
 
-# The crop box is viewport-relative CSS pixels (the PNG's coordinate
-# space). viewport_width is kept for CSS-to-pixel conversion at encode time.
 record_crop_box <- function(ctx, spec, call = caller_env()) {
   m <- frame_measure(ctx, spec, extent = "viewport", call = call)
   box <- frame_round(m$box, pinned = m$pinned, even = TRUE)
   c(frame_region(box, call = call), viewport_width = m$geometry$viewport_width)
 }
 
-# PNG pixel dimensions parsed straight from the IHDR chunk, so the
-# encode path doesn't need an image package (mirrors the test helper).
 png_read_size <- function(path, call = caller_env()) {
   png <- readBin(path, "raw", n = 24)
   signature <- as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a))
@@ -1089,12 +1015,7 @@ png_read_size <- function(path, call = caller_env()) {
   )
 }
 
-# The ffmpeg filter chain and final output dimensions. The crop is the
-# measured frame box (or the whole PNG) floored to the format's
-# alignment: multiples of 4 for mp4 and even pixels for webm, both
-# required by yuv420p-family encoders; gifski takes any size, so an
-# unframed GIF never needs a crop. scale <= 4 is a factor; larger is
-# the output width in pixels.
+# yuv420p encoders need even dimensions; gifski takes any size.
 record_output_spec <- function(rec, png_size, call = caller_env()) {
   align <- switch(rec$format, mp4 = 4, webm = 2, gif = 1)
   if (!is.null(rec$crop)) {
@@ -1169,9 +1090,6 @@ record_output_spec <- function(rec, png_size, call = caller_env()) {
   )
 }
 
-# Map output tick times to video times across the hold intervals
-# (sorted by vt): inside a hold the video time pins to the hold's vt;
-# past a hold the hold's duration shifts the mapping.
 ticks_to_vt <- function(ticks, holds) {
   res <- numeric(length(ticks))
   offset <- 0
@@ -1193,11 +1111,6 @@ ticks_to_vt <- function(ticks, holds) {
   res
 }
 
-# Resample the captured frames to constant fps in R: normalize video
-# time so the first frame is vt 0, lay output ticks over
-# vt_end + all holds, and take the latest frame at each tick. Repeats
-# in the index vector are how holds and skipped ticks manifest; av and
-# gifski both accept repeated input paths.
 record_resample <- function(rec) {
   t0 <- rec$times[[1]]
   times <- rec$times - t0
