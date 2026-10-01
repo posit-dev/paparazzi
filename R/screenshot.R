@@ -95,8 +95,8 @@ pz_screenshot <- function(ctx, path = NULL, ..., frame = NULL) {
     clip_rects_union(ctx, el_rects(scoped))
   }
 
-  overlay_display <- overlay_hide(ctx)
-  on.exit(overlay_restore(ctx, overlay_display), add = TRUE)
+  overlay_display <- inspect_outlines_hide(ctx)
+  on.exit(inspect_outlines_restore(ctx, overlay_display), add = TRUE)
   res <- screenshot_capture(ctx, clip)
   writeBin(jsonlite::base64_dec(res$data), path)
   caption <- page_caption(ctx$page)
@@ -226,6 +226,10 @@ clip_viewport <- function(ctx, call = caller_env()) {
   )
 }
 
+page_scroll <- function(ctx) {
+  unlist(pz_js(ctx, "[window.scrollX, window.scrollY]"))
+}
+
 clip_rects_union <- function(ctx, rects, call = caller_env()) {
   edges <- box_union(rects, call = call)
   clip <- list(
@@ -237,7 +241,7 @@ clip_rects_union <- function(ctx, rects, call = caller_env()) {
   # el_rects() is viewport-relative; CDP clip coordinates (with
   # captureBeyondViewport) are document-relative, so add the scroll
   # offsets. Off-viewport targets need no scrollIntoView.
-  scroll <- pz_js(ctx, "[window.scrollX, window.scrollY]")
+  scroll <- page_scroll(ctx)
   clip$x <- clip$x + scroll[[1]]
   clip$y <- clip$y + scroll[[2]]
   # CDP rejects negative clip origins.

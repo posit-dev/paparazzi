@@ -133,8 +133,7 @@ inspect_resolve_matches <- function(ctx, target, call = caller_env()) {
     description = target_expr$description,
     count = els$count,
     rows = rows,
-    rects = rects,
-    doc_rects = inspect_doc_rects(ctx, rects)
+    rects = rects
   )
 }
 
@@ -159,7 +158,7 @@ inspect_doc_rects <- function(ctx, rects) {
   if (nrow(rects) == 0L) {
     return(list())
   }
-  scroll <- unlist(pz_js(ctx, "[window.scrollX, window.scrollY]"))
+  scroll <- page_scroll(ctx)
   lapply(seq_len(nrow(rects)), function(i) {
     as.numeric(rects[i, ]) + c(scroll[[1]], scroll[[2]], 0, 0)
   })
@@ -229,15 +228,15 @@ inspect_summary_print <- function(ctx, matches = NULL) {
     )
     return(invisible(NULL))
   }
-  v <- pz_js(
+  view <- pz_js(
     ctx,
-    "[location.href, window.innerWidth, window.innerHeight, window.devicePixelRatio, matchMedia('(prefers-color-scheme: dark)').matches]"
+    "({href: location.href, width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio, dark: matchMedia('(prefers-color-scheme: dark)').matches})"
   )
-  scheme <- if (isTRUE(v[[5]])) "dark" else "light"
-  scale <- if (abs(v[[4]] - round(v[[4]])) < 1e-9) {
-    sprintf("%gx", as.integer(v[[4]]))
+  scheme <- if (isTRUE(view$dark)) "dark" else "light"
+  scale <- if (abs(view$dpr - round(view$dpr)) < 1e-9) {
+    sprintf("%gx", as.integer(view$dpr))
   } else {
-    paste0(v[[4]], "x")
+    paste0(view$dpr, "x")
   }
   rec <- inspect_recording_state(ctx$page)
 
@@ -253,12 +252,12 @@ inspect_summary_print <- function(ctx, matches = NULL) {
       cli::cli_inform(c("!" = "{msg}"), msg = msg)
     }
   }
-  cli::cat_line(sprintf("%-11s%s", "URL", v[[1]]))
+  cli::cat_line(sprintf("%-11s%s", "URL", view$href))
   cli::cat_line(sprintf(
     "%-11s%s \u00d7 %s @%s \u00b7 %s",
     "Device",
-    v[[2]],
-    v[[3]],
+    view$width,
+    view$height,
     scale,
     scheme
   ))
@@ -459,7 +458,7 @@ overlay_clear <- function(ctx) {
   invisible(TRUE)
 }
 
-overlay_hide <- function(ctx) {
+inspect_outlines_hide <- function(ctx) {
   pz_js(
     ctx,
     paste0(
@@ -475,7 +474,7 @@ overlay_hide <- function(ctx) {
   )
 }
 
-overlay_restore <- function(ctx, display) {
+inspect_outlines_restore <- function(ctx, display) {
   if (is.null(display)) {
     return(invisible(NULL))
   }
