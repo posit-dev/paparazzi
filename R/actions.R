@@ -1721,6 +1721,9 @@ dispatch_mouse_drag <- function(
         ),
         silent = TRUE
       )
+      if (staged) {
+        try(cursor_press(ctx, FALSE), silent = TRUE)
+      }
     }
   )
   dispatch_mouse(
@@ -1736,6 +1739,7 @@ dispatch_mouse_drag <- function(
   )
   if (staged) {
     pump_loop(ctx$page$child_loop, 0.15)
+    pressed <- TRUE
     cursor_press(ctx, TRUE)
     pump_loop(ctx$page$child_loop, 0.16)
   }
@@ -1788,9 +1792,11 @@ dispatch_mouse_drag <- function(
     clickCount = 1,
     call = call
   )
-  pressed <- FALSE
   if (staged) {
     cursor_press(ctx, FALSE)
+  }
+  pressed <- FALSE
+  if (staged) {
     pump_loop(ctx$page$child_loop, 0.2)
   }
 }
@@ -1832,7 +1838,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   # on -- a CDP error mid-sequence, or a dragstart the page cancels (the
   # interception event never fires, so the poll times out). Both are
   # undone here; the latch drops once the normal path has released.
-  withr::defer(
+  withr::defer({
     if (!settled) {
       try(
         session$Input$setInterceptDrags(enabled = FALSE, timeout_ = timeout),
@@ -1853,7 +1859,11 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
         silent = TRUE
       )
     }
-  )
+    # Release precedes replay and unpress, so settled alone cannot gate this.
+    if (staged) {
+      try(cursor_press(ctx, FALSE), silent = TRUE)
+    }
+  })
 
   action_cdp(
     ctx,

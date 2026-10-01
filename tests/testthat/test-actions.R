@@ -1684,6 +1684,7 @@ test_that("a mid-carry dispatch failure propagates and the drag still releases",
     pz_act_drag(page, "#dragbox", "#dropzone"),
     "simulated mid-carry dispatch failure"
   )
+  expect_equal(cursor_overlay_scale(page), page_stage(page)$cursor_scale)
 
   # The exit defer released the held button: the page saw a mouseup
   # after the press, so a following drag works.
