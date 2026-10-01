@@ -189,7 +189,15 @@ pz_font_file <- function(family, path, weight = 400, style = "normal") {
     )
   )
   data <- jsonlite::base64_enc(readBin(path, "raw", file.size(path)))
-  new_font(family, weight, style, source = "file", data = data, format = format)
+  new_font(
+    family,
+    weight,
+    style,
+    source = "file",
+    data = data,
+    format = format,
+    id = paste0("file:", rlang::hash(data))
+  )
 }
 
 #' @export
@@ -291,7 +299,7 @@ font_face_spec <- function(font) {
   }
   if (!is.null(font$data)) {
     spec$data <- font$data
-    spec$id <- paste0("file:", nchar(font$data), ":", substr(font$data, 1, 32))
+    spec$id <- font$id
   }
   spec
 }
