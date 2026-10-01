@@ -213,7 +213,7 @@ call with `pz_act_click(effect =, effect_color =)` and
 
 ```r
 page |>
-  pz_stage(pause = NULL, typing = NULL, click_effect = NULL)
+  pz_stage(pause = NULL, typing = NULL, show_keys = NULL, click_effect = NULL)
 
 per_call_video <- tempfile(fileext = ".mp4")
 pz_record(
@@ -239,8 +239,8 @@ pz_record(
 )
 ```
 
-The `NULL` values put typing, pause and click feedback back to their
-defaults. The click then asks for a green ripple just for that action, and
+The `NULL` values put typing, pause, key display and click feedback back to
+their defaults. The click then asks for a green ripple just for that action, and
 the Enter press shows a Mac keycap while it submits the second task. Each
 `pz_act_press()` replaces the previous key callout.
 

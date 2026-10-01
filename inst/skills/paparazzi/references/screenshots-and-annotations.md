@@ -247,10 +247,11 @@ page |>
   pz_annotate_clear(id = "private")
 ```
 
-Annotations belong to the current document and are removed on navigation,
-so in a multi-page recording, redact each new page before resuming capture.
-`pz_annotate_clear()` with no `id` clears everything; `"spotlight"` and
-`"caption"` are reserved ids.
+Marks, callouts, spotlights and redactions belong to the current document
+and are removed on navigation, so in a multi-page recording, redact each new
+page before resuming capture. Captions are the exception: they persist
+through navigation. `pz_annotate_clear()` with no `id` clears everything;
+`"spotlight"` and `"caption"` are reserved ids.
 
 ## Stage fonts before annotating
 
