@@ -13,7 +13,7 @@ cat_skill_source <- function(source_path) {
   skill_source <- skill_source[-match(TRUE, startsWith(skill_source, "# "))]
   skill_source <- gsub(
     "references/([a-z-]+)\\.md",
-    "agent-\\1.html",
+    "agents-\\1.html",
     skill_source
   )
 

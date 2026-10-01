@@ -24,13 +24,13 @@ articles:
       directory. Other agents can copy the directory returned by
       `system.file("skills/paparazzi", package = "paparazzi")`.
     contents:
-      - agent-overview
-      - agent-pages-and-serving
-      - agent-locators-and-scopes
-      - agent-testing
-      - agent-screenshots-and-annotations
-      - agent-recording-and-staging
-      - agent-shiny
+      - agents
+      - agents-pages-and-serving
+      - agents-locators-and-scopes
+      - agents-testing
+      - agents-screenshots-and-annotations
+      - agents-recording-and-staging
+      - agents-shiny
 
 reference:
   - title: Pages, apps and navigation

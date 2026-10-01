@@ -98,7 +98,7 @@ pz_with_page(pz_example("tasks"), function(page) {
 ## References
 
 Read the reference that matches the task. Each one is also a package
-vignette named `agent-<topic>`.
+vignette named `agents-<topic>`.
 
 - [Pages and serving](references/pages-and-serving.md): what `pz_open()`
   accepts, device settings, HTTP servers, navigation and cleanup.
