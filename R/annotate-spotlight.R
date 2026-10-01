@@ -3,11 +3,12 @@
 #' Dims the page except for a rounded cutout around each matched element.
 #' The scrim covers the document, including below-fold areas captured in
 #' screenshots. The spotlight follows its elements through scrolling and
-#' layout changes; hidden, disconnected, or zero-size elements lose their
-#' cutouts. Cutouts clip to the target's axis-aligned overflow ancestors
-#' (custom `overflow-clip-margin` excepted), so a target scrolled out of an
-#' overflow container opens no cutout over the content below it. It appears in screenshots and recordings until cleared, and is
-#' lost on navigation.
+#' layout changes. Disconnected or zero-size elements lose their cutouts,
+#' and so do `visibility: hidden` elements with no visible descendants.
+#' Cutouts are clipped by the target's overflow containers
+#' (axis-aligned clipping only, not a custom `overflow-clip-margin`), so a
+#' target scrolled out of a scrolling container gets no cutout. It appears
+#' in screenshots and recordings until cleared, and is lost on navigation.
 #' Only one spotlight exists per page: a new call replaces the previous one,
 #' and [pz_annotate_clear()] removes it by the reserved id `"spotlight"` or
 #' with a clear-all call. The cutout covers each target's padded border box;

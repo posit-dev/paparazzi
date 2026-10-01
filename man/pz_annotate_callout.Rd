@@ -91,9 +91,10 @@ appear in screenshots and recordings until cleared with
 on navigation. A bubble is kept within the viewport even if this moves it
 away from the requested side; text that cannot fit a tiny viewport is
 clipped. A viewport resize does not rewrap an existing callout. A
-callout hides while its target stops rendering or is entirely clipped by
-an overflow ancestor; for a partly clipped target the leader anchors to
-the visible part, and the bubble itself is never clipped.
+callout hides while its target isn't rendered, is \code{visibility: hidden}
+with no visible descendants, or is entirely clipped by an overflow
+container. When the target is partly clipped, the leader
+points at its visible part; the bubble itself is never clipped.
 }
 \seealso{
 \code{\link[=pz_annotate]{pz_annotate()}}, \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}
