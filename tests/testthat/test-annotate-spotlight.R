@@ -176,6 +176,11 @@ test_that("spotlight follows page and inner scroll, then hides disconnected hole
       "[...layer.querySelectorAll('.pz-spotlight mask rect')].slice(1).map(n => ({x:+n.getAttribute('x'),y:+n.getAttribute('y'),visible:n.style.display !== 'none'}))"
     )
   }
+  # #inner starts scrolled out of #outer's box, so it gets no hole;
+  # scroll it into view before measuring movement.
+  expect_false(holes()[[2]]$visible)
+  pz_js(page, "document.getElementById('outer').scrollTop = 100")
+  pump_loop(page$child_loop, 0.07)
   before <- holes()
   pz_js(
     page,
@@ -205,6 +210,45 @@ test_that("spotlight follows page and inner scroll, then hides disconnected hole
   pump_loop(page$child_loop, 0.07)
   expect_false(holes()[[1]]$visible)
   expect_true(holes()[[2]]$visible)
+})
+
+test_that("spotlight opens no cutout for a target clipped away by an overflow ancestor", {
+  skip_if_not_installed("png")
+  page <- spotlight_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.insertAdjacentHTML('beforeend', ",
+      "'<div style=\"position:absolute;left:100px;top:300px;width:200px;height:100px;overflow:auto\">' +",
+      "'<div style=\"height:220px\"></div><div id=buried style=\"margin-left:20px;width:120px;height:60px\"></div>' +",
+      "'<div style=\"height:220px\"></div></div>')"
+    )
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  baseline <- spotlight_image(page, path)
+  page |>
+    pz_annotate_spotlight(list("#one", "#buried"), dim = 0.6, reveal = "none")
+  lit <- spotlight_image(page, path)
+  # #one still gets its cutout.
+  expect_equal(
+    spotlight_rgb(lit, page, 150, 140),
+    spotlight_rgb(baseline, page, 150, 140),
+    tolerance = 0.03
+  )
+  # #buried's box projects to x 120..240, y 520..580, below its container;
+  # no hole may open there over unrelated content.
+  expect_equal(
+    spotlight_rgb(lit, page, 180, 550),
+    spotlight_rgb(baseline, page, 180, 550) * 0.4,
+    tolerance = 0.04
+  )
+  expect_identical(
+    unlist(spotlight_layer(
+      page,
+      "[...layer.querySelector('.pz-spotlight mask').children].slice(1).map(h => h.style.display)"
+    )),
+    c("", "none")
+  )
 })
 
 test_that("spotlight stays under marks and opaque redactions in either draw order", {

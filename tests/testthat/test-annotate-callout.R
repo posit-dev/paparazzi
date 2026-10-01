@@ -370,6 +370,13 @@ test_that("callout follows a target inside a scrolling container", {
   )
   page |>
     pz_annotate_callout("Inner", target = "#target", side = "right", id = "tip")
+  # The target starts scrolled out of #scroller's box: the callout hides
+  # until the target scrolls into view.
+  expect_false(callout_details(page)$nodes[[1]]$visible)
+  pz_js(
+    page,
+    "document.querySelector('#scroller').scrollTop=100;document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
+  )
   first <- callout_details(page)$nodes[[1]]$rect[[2]]
   pz_js(
     page,
@@ -379,6 +386,57 @@ test_that("callout follows a target inside a scrolling container", {
     callout_details(page)$nodes[[1]]$rect[[2]],
     first - 80,
     tolerance = 1
+  )
+})
+
+test_that("callout hides for a clipped-away target and anchors to the visible rect of a partly clipped one", {
+  page <- callout_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.insertAdjacentHTML('beforeend', ",
+      "'<div style=\"position:absolute;left:420px;top:100px;width:200px;height:120px;overflow:auto\">' +",
+      "'<div style=\"height:150px\"></div><div id=buried-call style=\"margin-left:20px;width:80px;height:60px\"></div>' +",
+      "'<div style=\"height:200px\"></div></div>' +",
+      "'<div style=\"position:absolute;left:420px;top:300px;width:200px;height:120px;overflow:auto\">' +",
+      "'<div style=\"height:60px\"></div><div id=part-call style=\"margin-left:20px;width:80px;height:120px\"></div>' +",
+      "'<div style=\"height:200px\"></div></div>')"
+    )
+  )
+  page |>
+    pz_annotate_callout(
+      "gone",
+      target = "#buried-call",
+      reveal = "none",
+      id = "gone"
+    ) |>
+    pz_annotate_callout(
+      "partial",
+      target = "#part-call",
+      side = "bottom",
+      reveal = "none",
+      id = "partial"
+    ) |>
+    pz_annotate_callout(
+      "partial",
+      target = "#target",
+      side = "bottom",
+      reveal = "none",
+      id = "control"
+    )
+  details <- callout_details(page)$nodes
+  expect_length(details, 3)
+  # #buried-call's box (y 250..310) sits below its container (y 100..220).
+  expect_false(details[[1]]$visible)
+  # #part-call's bottom (y 480) is cut by its container at y 420; the
+  # leader's arrow anchors to the visible bottom edge.
+  expect_true(details[[2]]$visible)
+  expect_equal(details[[2]]$end[[2]], 420, tolerance = 1)
+  # The bubble is never clipped.
+  expect_equal(
+    unlist(details[[2]]$bubble[5:6]),
+    unlist(details[[3]]$bubble[5:6]),
+    tolerance = 0.5
   )
 })
 
