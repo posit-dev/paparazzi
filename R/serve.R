@@ -285,7 +285,7 @@ quarto_start <- function(path, render, cli, timeout = 60, call = caller_env()) {
     failure <- if (is.null(preview)) {
       list(kind = "exited", port_taken = TRUE, log = character())
     } else {
-      app_wait_ready(preview, timeout)
+      app_wait_failure(preview, timeout)
     }
     if (is.null(failure)) {
       url <- quarto_browse_url(preview, port)
@@ -407,7 +407,7 @@ app_start <- function(
         call = call
       )
     }
-    failure <- app_wait_ready(app, timeout)
+    failure <- app_wait_failure(app, timeout)
     if (is.null(failure)) {
       return(app)
     }
@@ -420,7 +420,7 @@ app_start <- function(
   }
 }
 
-app_wait_ready <- function(app, timeout) {
+app_wait_failure <- function(app, timeout) {
   deadline <- Sys.time() + timeout
   repeat {
     if (!app$is_running()) {
@@ -476,11 +476,6 @@ app_startup_error <- function(
     },
     call = call
   )
-}
-
-cli_escape <- function(x) {
-  x <- gsub("{", "{{", x, fixed = TRUE)
-  gsub("}", "}}", x, fixed = TRUE)
 }
 
 # Chrome refuses to navigate to these ports in 3000:8000, so they are

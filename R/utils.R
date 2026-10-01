@@ -99,3 +99,8 @@ cdp_check_exception <- function(res, doing = NULL, call = caller_env()) {
     call = call
   )
 }
+
+cli_escape <- function(x) {
+  x <- gsub("{", "{{", x, fixed = TRUE)
+  gsub("}", "}}", x, fixed = TRUE)
+}

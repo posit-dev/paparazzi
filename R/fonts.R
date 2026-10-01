@@ -71,7 +71,7 @@ pz_stage_fonts <- function(
   results <- fonts_ensure_session(page$session, fonts, page$default_timeout)
   ok <- vapply(results, is.null, logical(1))
   if (!all(ok)) {
-    messages <- cli_escape_braces(unlist(results[!ok]))
+    messages <- cli_escape(unlist(results[!ok]))
     problems <- c(
       "Failed to load {sum(!ok)} font face{?s}:",
       rlang::set_names(messages, rep("x", length(messages)))
@@ -290,7 +290,12 @@ fonts_faces <- function(page) {
 }
 
 font_face_spec <- function(font) {
-  spec <- list(family = font$family, weight = font$weight, style = font$style)
+  spec <- list(
+    family = font$family,
+    weight = font$weight,
+    style = font$style,
+    key = font_key(font)
+  )
   if (!is.null(font$url)) {
     spec$url <- font$url
     spec$id <- font$url
@@ -304,11 +309,6 @@ font_face_spec <- function(font) {
 
 font_key <- function(font) {
   tolower(paste(font$family, font$weight, font$style, sep = "|"))
-}
-
-cli_escape_braces <- function(x) {
-  x <- gsub("{", "{{", x, fixed = TRUE)
-  gsub("}", "}}", x, fixed = TRUE)
 }
 
 fonts_ensure_session <- function(session, fonts, timeout) {
@@ -351,7 +351,7 @@ fonts_ensure_page_session <- function(page, session) {
     return(invisible(NULL))
   }
   results <- fonts_ensure_session(session, faces[needed], page$default_timeout)
-  messages <- cli_escape_braces(unlist(Filter(Negate(is.null), results)))
+  messages <- cli_escape(unlist(Filter(Negate(is.null), results)))
   if (length(messages)) {
     cli::cli_warn(c(
       "Failed to load staged fonts:",
@@ -401,7 +401,7 @@ FONTS_ENSURE_JS <- paste0(
   "const have = document.__paparazziFonts ||",
   "(document.__paparazziFonts = new Map());",
   "const jobs = spec.map((f) => {",
-  "const key = (f.family + '|' + f.weight + '|' + f.style).toLowerCase();",
+  "const key = f.key;",
   "const entry = have.get(key);",
   "if (entry && entry.id === f.id) return Promise.resolve(null);",
   "return (async () => {",
