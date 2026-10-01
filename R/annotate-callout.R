@@ -76,7 +76,7 @@ pz_annotate_callout <- function(
   if (!is.null(side)) {
     side <- parse_direction(side, valid = STAGE_DIRECTIONS, arg = "side")
   }
-  leader <- check_callout_leader(leader)
+  leader <- as_callout_leader(leader)
   label <- check_annotation_label(label)
   reveal <- rlang::arg_match(reveal)
   check_annotation_id(id)
@@ -87,13 +87,11 @@ pz_annotate_callout <- function(
   els <- annotate_elements(ctx, target)
   annotate_register_init(ctx)
   recording <- annotate_recording(ctx$page)
-  # as.list() keeps the start/end names through toJSON's auto_unbox,
-  # which drops them on atomic vectors.
   options <- list(
     id = id,
     text = text,
     side = side,
-    leader = if (isFALSE(leader)) FALSE else as.list(leader),
+    leader = leader,
     label = label,
     reveal = reveal,
     color = style$color,
@@ -111,12 +109,9 @@ pz_annotate_callout <- function(
 
 CALLOUT_DECORATIONS <- c("none", "arrow", "dot", "bar")
 
-# leader is TRUE/FALSE or a named character vector of decorations for the
-# shaft's ends; normalized to FALSE or c(start = , end = ) with omitted
-# ends filled with "none".
-check_callout_leader <- function(leader, call = caller_env()) {
+as_callout_leader <- function(leader, call = caller_env()) {
   if (isTRUE(leader)) {
-    return(c(start = "none", end = "arrow"))
+    return(list(start = "none", end = "arrow"))
   }
   if (isFALSE(leader)) {
     return(FALSE)
@@ -159,7 +154,7 @@ check_callout_leader <- function(leader, call = caller_env()) {
       call = call
     )
   }
-  out <- c(start = "none", end = "none")
-  out[ends] <- leader
+  out <- list(start = "none", end = "none")
+  out[ends] <- as.list(leader)
   out
 }
