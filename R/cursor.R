@@ -142,6 +142,7 @@ pz_cursor_hide <- function(ctx, ...) {
   check_dots_empty()
   cur <- page_cursor(ctx$page)
   cur$visibility <- "hidden"
+  cur$pressed <- FALSE
   cur$resting <- FALSE
   if (!is.null(cur$x)) {
     cursor_draw(ctx, visible = FALSE)
@@ -314,6 +315,7 @@ page_cursor <- function(page) {
     cur <- new.env(parent = emptyenv())
     cur$visibility <- "auto"
     cur$icon <- "default"
+    cur$pressed <- FALSE
     cur$x <- NULL
     cur$y <- NULL
     cur$off_frame <- NULL
@@ -648,6 +650,7 @@ cursor_apply <- function(
   cur$icon <- cursor_command(ctx, state)
   cur$x <- state$x
   cur$y <- state$y
+  cur$pressed <- pressed
   cur$off_frame <- NULL
   cur$resting <- FALSE
   if (pump && state$duration > 0) {
@@ -677,6 +680,7 @@ cursor_draw <- function(ctx, visible, pressed = FALSE) {
       anim = stage_recording(ctx$page)
     )
   )
+  cur$pressed <- pressed
   cursor_register_init(ctx)
   ctx_return(ctx)
 }
@@ -739,6 +743,7 @@ cursor_ring <- function(ctx, point, color) {
       ring = color
     )
   )
+  cur$pressed <- FALSE
   ctx_return(ctx)
 }
 
@@ -929,6 +934,11 @@ cursor_register_init <- function(ctx) {
   }
   if (!cur$page_enabled) {
     session$Page$enable(timeout_ = timeout)
+    session$Page$frameNavigated(callback_ = function(event) {
+      if (is.null(event$frame$parentId)) {
+        cur$pressed <- FALSE
+      }
+    })
     cur$page_enabled <- TRUE
   }
   state <- list(

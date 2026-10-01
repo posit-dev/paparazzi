@@ -1705,7 +1705,7 @@ dispatch_mouse_drag <- function(
 ) {
   staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
   pressed <- FALSE
-  withr::defer(
+  withr::defer({
     if (pressed) {
       try(
         dispatch_mouse(
@@ -1721,11 +1721,11 @@ dispatch_mouse_drag <- function(
         ),
         silent = TRUE
       )
-      if (staged) {
-        try(cursor_press(ctx, FALSE), silent = TRUE)
-      }
     }
-  )
+    if (isTRUE(page_cursor(ctx$page)$pressed)) {
+      try(cursor_press(ctx, FALSE), silent = TRUE)
+    }
+  })
   dispatch_mouse(
     ctx,
     action,
@@ -1739,7 +1739,6 @@ dispatch_mouse_drag <- function(
   )
   if (staged) {
     pump_loop(ctx$page$child_loop, 0.15)
-    pressed <- TRUE
     cursor_press(ctx, TRUE)
     pump_loop(ctx$page$child_loop, 0.16)
   }
@@ -1792,10 +1791,10 @@ dispatch_mouse_drag <- function(
     clickCount = 1,
     call = call
   )
+  pressed <- FALSE
   if (staged) {
     cursor_press(ctx, FALSE)
   }
-  pressed <- FALSE
   if (staged) {
     pump_loop(ctx$page$child_loop, 0.2)
   }
@@ -1859,8 +1858,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
         silent = TRUE
       )
     }
-    # Release precedes replay and unpress, so settled alone cannot gate this.
-    if (staged) {
+    if (isTRUE(page_cursor(ctx$page)$pressed)) {
       try(cursor_press(ctx, FALSE), silent = TRUE)
     }
   })

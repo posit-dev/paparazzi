@@ -1626,6 +1626,38 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
   pz_record_stop(page)
 })
 
+test_that("a failed staged mouse press does not dispatch a stray mouseup", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(pause = 0)
+  page |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    )
+  defer_record_stop(page)
+  page |> pz_cursor_move("#dragbox", duration = 0)
+
+  real_dispatch_mouse <- dispatch_mouse
+  local_mocked_bindings(
+    dispatch_mouse = function(ctx, action, target, type, ...) {
+      if (type == "mousePressed") {
+        cli::cli_abort("simulated mouse press failure")
+      }
+      real_dispatch_mouse(ctx, action, target, type, ...)
+    }
+  )
+  expect_error(
+    pz_act_drag(page, "#dragbox", "#dropzone"),
+    "simulated mouse press failure"
+  )
+  expect_false("mouseup" %in% adv_log_types(adv_log(page)))
+  expect_false(page_cursor(page)$pressed)
+  expect_equal(cursor_overlay_scale(page), page_stage(page)$cursor_scale)
+  pz_record_stop(page)
+})
+
 test_that("a mid-carry dispatch failure propagates and the drag still releases", {
   skip_if_no_av()
   page <- local_advanced_page()

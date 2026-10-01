@@ -684,6 +684,43 @@ test_that("CSS none has no ink and auto still infers through descendants", {
   expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
 })
 
+test_that("cursor state tracks presses, carries, and resets", {
+  page <- local_cursor_page()
+  expect_false(page_cursor(page)$pressed)
+  page |> pz_cursor_move("#btn")
+  cursor_press(page, TRUE)
+  expect_true(page_cursor(page)$pressed)
+  cursor_press(page, FALSE)
+  expect_false(page_cursor(page)$pressed)
+
+  cursor_apply(page, c(x = 200, y = 200), pressed = TRUE, pump = FALSE)
+  expect_true(page_cursor(page)$pressed)
+  expect_equal(cursor_overlay_scale(page), 1.4)
+  page |> pz_cursor_hide()
+  expect_false(page_cursor(page)$pressed)
+
+  page |> pz_cursor_show()
+  cursor_press(page, TRUE)
+  page |> pz_cursor_leave()
+  expect_false(page_cursor(page)$pressed)
+
+  page |> pz_cursor_move("#btn")
+  cursor_press(page, TRUE)
+  page |> pz_stage(cursor = FALSE)
+  expect_false(page_cursor(page)$pressed)
+})
+
+test_that("navigation reinitializes the cursor unpressed", {
+  page <- local_cursor_page()
+  page |> pz_cursor_move("#btn")
+  cursor_press(page, TRUE)
+  expect_true(page_cursor(page)$pressed)
+  pz_chromote(page)$Page$reload()
+  pz_wait(page, 1)
+  expect_false(page_cursor(page)$pressed)
+  expect_equal(cursor_overlay_scale(page), 1.75)
+})
+
 test_that("explicit icon survives navigation and recorded press", {
   skip_if_no_av()
   page <- local_cursor_page()
@@ -699,6 +736,17 @@ test_that("explicit icon survives navigation and recorded press", {
   expect_equal(cursor_overlay_scale(page), 1.4)
   expect_identical(attr(cursor_overlay_state(page), "icon"), "not-allowed")
   cursor_press(page, FALSE)
+  expect_false(page_cursor(page)$pressed)
+  cursor_apply(
+    page,
+    c(x = 200, y = 200),
+    duration = 0.5,
+    pressed = TRUE,
+    pump = FALSE
+  )
+  expect_true(page_cursor(page)$pressed)
+  cursor_press(page, FALSE)
+  expect_false(page_cursor(page)$pressed)
   page |> pz_record_stop()
 })
 
