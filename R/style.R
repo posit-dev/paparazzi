@@ -439,7 +439,7 @@ style_invalid_js <- function(pairs) {
 }
 
 style_pairs_json <- function(pairs) {
-  jsonlite::toJSON(
+  js_literal(
     lapply(
       seq_along(pairs),
       function(i) list(prop = names(pairs)[[i]], value = unname(pairs)[[i]])
@@ -527,7 +527,11 @@ style_probe_js <- "
 "
 
 style_get_js <- function(props) {
-  props_json <- if (is.null(props)) "null" else jsonlite::toJSON(props)
+  props_json <- if (is.null(props)) {
+    "null"
+  } else {
+    js_literal(props, auto_unbox = FALSE)
+  }
   paste0(
     "function() {
       const props = ",

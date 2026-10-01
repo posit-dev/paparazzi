@@ -173,7 +173,7 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
   check_dots_empty()
   check_annotation_id(id, allow_reserved = TRUE)
   recording <- annotate_recording(ctx$page)
-  data <- jsonlite::toJSON(
+  data <- js_literal(
     list(id = id, animate = recording),
     auto_unbox = TRUE,
     null = "null"
@@ -268,7 +268,7 @@ annotate_distance <- function(ctx, distance, leader, call = caller_env()) {
 }
 
 annotate_call <- function(ctx, els, fn, options, what) {
-  json <- jsonlite::toJSON(options, auto_unbox = TRUE, null = "null")
+  json <- js_literal(options, auto_unbox = TRUE, null = "null")
   timeout <- ctx$page$default_timeout
   fonts_ensure_page(ctx$page)
   res <- cdp_call(

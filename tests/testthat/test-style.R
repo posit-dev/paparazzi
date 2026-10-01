@@ -561,3 +561,14 @@ test_that("pz_get_style times out on a missing target before pinning", {
     class = "paparazzi_error_timeout"
   )
 })
+
+test_that("style source builders retain singleton and empty arrays", {
+  expect_identical(
+    style_pairs_json(c(color = "red")),
+    '[{"prop":"color","value":"red"}]'
+  )
+  expect_identical(style_pairs_json(character()), "[]")
+  expect_match(style_get_js("color"), 'const props = ["color"];', fixed = TRUE)
+  expect_match(style_get_js(character()), "const props = [];", fixed = TRUE)
+  expect_match(style_get_js(NULL), "const props = null;", fixed = TRUE)
+})

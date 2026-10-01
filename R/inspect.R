@@ -403,14 +403,17 @@ overlay_draw <- function(ctx, scope_rects, target_rects) {
     rects <- inspect_doc_rects(ctx, target_rects[keep, , drop = FALSE])
     Map(function(rect, n) c(rect, n), rects, keep)
   }
-  data <- jsonlite::toJSON(list(
-    scope = if (is.null(scope_rects)) {
-      list()
-    } else {
-      inspect_doc_rects(ctx, inspect_positive_rects(scope_rects))
-    },
-    targets = targets
-  ))
+  data <- js_literal(
+    list(
+      scope = if (is.null(scope_rects)) {
+        list()
+      } else {
+        inspect_doc_rects(ctx, inspect_positive_rects(scope_rects))
+      },
+      targets = targets
+    ),
+    auto_unbox = FALSE
+  )
   pz_js(ctx, paste0("(", overlay_draw_js, ")(", data, ")"), await = FALSE)
   invisible(TRUE)
 }
@@ -482,7 +485,7 @@ inspect_outlines_restore <- function(ctx, display) {
   if (is.null(display)) {
     return(invisible(NULL))
   }
-  values <- jsonlite::toJSON(as.character(unlist(display)))
+  values <- js_literal(as.character(unlist(display)), auto_unbox = FALSE)
   pz_js(
     ctx,
     paste0(

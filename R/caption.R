@@ -81,7 +81,7 @@ caption_clear <- function(page) {
 }
 
 caption_render <- function(page, caption, width, height, font_scale, path) {
-  data <- jsonlite::toJSON(
+  data <- js_literal(
     list(
       text = caption$text,
       side = caption$side,
@@ -153,7 +153,7 @@ key_callout_render <- function(
   family,
   path
 ) {
-  data <- jsonlite::toJSON(
+  data <- js_literal(
     list(
       groups = lapply(groups, as.list),
       scale = scale,

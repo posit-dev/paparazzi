@@ -6,7 +6,7 @@
 # callFunctionOn on one. loc_resolver_js() returns function TEXT; the
 # callers never see an expression, only the function.
 loc_resolver_js <- function(locs) {
-  specs <- jsonlite::toJSON(lapply(locs, loc_spec_fields), auto_unbox = TRUE)
+  specs <- js_literal(lapply(locs, loc_spec_fields), auto_unbox = TRUE)
   sprintf(
     r"(function() {
 const specs = %s;
