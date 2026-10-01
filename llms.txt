@@ -1,0 +1,610 @@
+# paparazzi
+
+**Polished demo videos and screenshots of anything that runs in a
+browser, written as R scripts.**
+
+![A demo of a task tracker. The view zooms in on the new-task form, a
+cursor clicks the title field and types Prepare release notes, then
+clicks Add. The view pulls back as the task appears at the top of the
+list, outlined in red, with the caption New tasks go to the top of the
+list. Under the caption Drag to reorder, the cursor drags the new task
+down the list and drops it just below the two high-priority tasks. Under
+the caption Check it off when you're done, the cursor clicks the task's
+Done button and the task is crossed out.](images/readme-hero-1.gif)
+
+That video came from the short R script shown below. paparazzi opened
+the page in a headless Chrome browser and did what the script said. The
+cursor glides to each control, text is typed one character at a time,
+and the camera zooms in on the form and pulls back to show the result.
+Captions and highlights appear on cue. There’s no screen recorder
+involved, and no timeline to edit afterward.
+
+Because the video is a script, you never have to record a second take.
+When the app changes, rerun the script and you get the same demo of the
+new version. paparazzi works with any page Chrome can open, including
+Shiny apps, Quarto documents and slides, pkgdown sites, and live
+websites.
+
+## Installation
+
+You can install the development version of paparazzi from GitHub:
+
+``` r
+
+# install.packages("pak")
+pak::pak("posit-dev/paparazzi")
+```
+
+### Additional requirements
+
+paparazzi controls Chrome (or another Chromium-based browser) through
+[chromote](https://rstudio.github.io/chromote/), so you’ll need one
+installed. If chromote can’t find it, see
+[`?chromote::find_chrome`](https://rstudio.github.io/chromote/reference/find_chrome.html).
+
+paparazzi routes each recording to the encoder that suits it best: MP4
+and WebM videos go to the [av](https://docs.ropensci.org/av/) package,
+GIFs to [gifski](https://r-rust.github.io/gifski/). These are suggested
+dependencies, checked only when a recording needs them. Simple GIFs need
+only gifski, but two features call in extra packages: cropping a GIF to
+a framed region of the page needs
+[png](https://cran.r-project.org/package=png), and camera movement or
+burned-in captions need av to composite the frames.
+
+## The code that made the video
+
+Here’s the whole script for the video at the top of this page, running
+on a small task-tracker page that ships with paparazzi:
+
+``` r
+
+library(paparazzi)
+
+page <- pz_open(
+  pz_example("tasks"),
+  width = 1000,
+  height = 720,
+  color_scheme = "light"
+)
+page |> pz_stage(enter = "bottom", pause = 0.3)
+
+new_task <- pz_loc(".task", has_text = "Prepare release notes")
+
+pz_record(
+  page,
+  frame = pz_frame(list("h1", ".task-list"), pad = 24, ratio = 16 / 9),
+  format = "gif",
+  scale = 800,
+  code = {
+    page |>
+      pz_annotate_caption("Add a task") |>
+      pz_camera("#new-task", wait = TRUE) |>
+      pz_act_type("Prepare release notes", target = "#task-title") |>
+      pz_act_click("#add-task") |>
+      pz_expect_visible(new_task) |>
+      pz_annotate(new_task, type = "box", pad = 4, id = "new") |>
+      pz_annotate_caption("New tasks go to the top of the list") |>
+      pz_record_hold(1.2) |>
+      pz_camera_reset() |>
+      pz_annotate_clear(id = "new") |>
+      pz_annotate_caption("Drag to reorder") |>
+      pz_act_drag(
+        new_task,
+        to = pz_loc(".task", has_text = "Book dentist appointment")
+      ) |>
+      pz_record_hold(1) |>
+      pz_annotate_caption("Check it off when you're done") |>
+      pz_find(new_task) |>
+      pz_act_click(".task-done") |>
+      pz_expect_class("done") |>
+      pz_cursor_leave() |>
+      pz_record_hold(1)
+  }
+)
+
+pz_close(page)
+```
+
+The first few lines set the scene.
+[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+opens the page at the size you want to record.
+[`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
+sets how the recording looks: the cursor enters from the bottom, and
+each step pauses for a moment so viewers can follow.
+[`pz_loc()`](https://posit-dev.github.io/paparazzi/reference/pz_loc.md)
+describes the task we’re about to add, so we can point at it once it
+exists.
+
+[`pz_record()`](https://posit-dev.github.io/paparazzi/reference/pz_record.md)
+records everything in its `code` block. The `frame` is the part of the
+page the video shows: the task card, from its heading to the bottom of
+the list, padded and widened to 16:9. `format` and `scale` make the
+result an 800-pixel-wide GIF, small enough for a README.
+
+Inside the block, each line is one step, and the steps fall into two
+groups:
+
+- **Using the page.**
+  [`pz_act_type()`](https://posit-dev.github.io/paparazzi/reference/pz_act_type.md)
+  clicks the title field and types into it,
+  [`pz_act_click()`](https://posit-dev.github.io/paparazzi/reference/pz_act_click.md)
+  presses a button, and
+  [`pz_act_drag()`](https://posit-dev.github.io/paparazzi/reference/pz_act_drag.md)
+  moves the new task to a new place in the list.
+  [`pz_find()`](https://posit-dev.github.io/paparazzi/reference/pz_find.md)
+  narrows the next steps to the new task, so `".task-done"` means that
+  task’s Done button.
+- **Directing the viewer.**
+  [`pz_camera()`](https://posit-dev.github.io/paparazzi/reference/pz_camera.md)
+  zooms in and
+  [`pz_camera_reset()`](https://posit-dev.github.io/paparazzi/reference/pz_camera_reset.md)
+  pulls back out.
+  [`pz_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate.md)
+  outlines the new task,
+  [`pz_annotate_caption()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_caption.md)
+  changes the caption, and
+  [`pz_record_hold()`](https://posit-dev.github.io/paparazzi/reference/pz_record_hold.md)
+  gives viewers a moment to read.
+  [`pz_cursor_leave()`](https://posit-dev.github.io/paparazzi/reference/pz_cursor_leave.md)
+  moves the cursor out of the shot at the end.
+
+[`pz_expect_visible()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_visible.md)
+waits for the page to finish saving the task before the script outlines
+it, and
+[`pz_expect_class()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_class.md)
+waits for it to be marked done. Waits like this keep a scripted demo in
+step with a real page. The video keeps rolling while the script waits,
+so if a step takes longer than you’d like viewers to watch,
+[`pz_record_pause()`](https://posit-dev.github.io/paparazzi/reference/pz_record_pause.md)
+and
+[`pz_record_resume()`](https://posit-dev.github.io/paparazzi/reference/pz_record_pause.md)
+cut it out.
+
+When a recording is the last thing in a knitted R Markdown or Quarto
+chunk, it appears in the document, so rendering the document again
+records the demo again.
+
+## Features
+
+### Point the viewer at what matters
+
+Zoom and pan the camera to a form, a button, or a whole panel with
+[`pz_camera()`](https://posit-dev.github.io/paparazzi/reference/pz_camera.md).
+While it’s zoomed in, the camera pans to keep each click and keystroke
+in view, so nothing happens out of the shot. The camera only exists in
+the video: it never scrolls or zooms the page itself. Outline, circle,
+underline, or highlight elements with
+[`pz_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate.md),
+with numbered badges if you want them. Add callouts with arrows
+([`pz_annotate_callout()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_callout.md)),
+or dim everything except one element with a spotlight
+([`pz_annotate_spotlight()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_spotlight.md)).
+In a recording, annotations draw, pop, fade, slide, or wipe in. They
+follow their elements as the page scrolls or changes.
+
+### Make it look like a person is using the page
+
+The cursor glides between elements, changes shape over text fields and
+links, and presses down when it clicks. Typing arrives one character at
+a time at a natural pace.
+[`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
+sets the cursor’s speed and size, the typing speed, and the pause after
+each step.
+
+### Tell the story
+
+Captions sit at the top or bottom of the video and change as you go. You
+can burn them into the video or, for MP4 and WebM, write them to a
+WebVTT subtitle file alongside it. Keyboard shortcuts pressed with
+[`pz_act_press()`](https://posit-dev.github.io/paparazzi/reference/pz_act_press.md)
+can appear on screen as keystrokes.
+[`pz_record_hold()`](https://posit-dev.github.io/paparazzi/reference/pz_record_hold.md)
+gives viewers time to read, and
+[`pz_record_pause()`](https://posit-dev.github.io/paparazzi/reference/pz_record_pause.md)
+cuts out anything they don’t need to see.
+
+### Frame it for wherever it’s going
+
+Crop a video or a screenshot to one element, or to several, with
+padding, using
+[`pz_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_frame.md).
+Set an aspect ratio, like 16:9 for slides or 9:16 for a vertical video.
+Save MP4, WebM, or GIF files, and scale them down to a size that suits a
+README.
+
+### Make every version from one script
+
+Record or capture the same steps on a phone, in dark mode, zoomed in, or
+in another locale or time zone.
+[`pz_device()`](https://posit-dev.github.io/paparazzi/reference/pz_device.md)
+switches between them. Cover private data with
+[`pz_annotate_redact()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_redact.md)
+before recording starts, so it stays hidden from the very first frame.
+
+Screenshots use the same annotations and framing. Here’s the task
+tracker on a phone in dark mode, with a callout:
+
+![The task tracker on a narrow phone screen in dark mode. A red-bordered
+callout under the first task's Done button reads Tap Done to finish a
+task.](images/readme-phone-1.png)
+
+Like the recording, a screenshot at the end of a knitted chunk becomes a
+figure in the document.
+
+## Shiny apps
+
+Give
+[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+the path to a Shiny app, and paparazzi runs the app in a background R
+process, opens it, and waits until it’s ready. Closing the page stops
+the app.
+[`pz_set_shiny_input()`](https://posit-dev.github.io/paparazzi/reference/pz_set_shiny_input.md)
+sets an input the way Shiny sees it, so even selectize inputs and
+sliders update on the page and the server responds:
+
+``` r
+
+app <- pz_open(pz_example("tasks-app"))
+
+app |>
+  pz_set_shiny_input("priority", "high") |>
+  pz_set_value("Buy milk", target = "#title") |>
+  pz_act_click("#add") |>
+  pz_expect_text("3 tasks", target = "#summary")
+
+pz_close(app)
+```
+
+Recording works the same way on an app as on any other page.
+
+## Browser tests with paparazzi
+
+The cursor animation and typing only happen while recording. Take away
+[`pz_record()`](https://posit-dev.github.io/paparazzi/reference/pz_record.md)
+and the same steps run at full speed: the cursor stays hidden, text goes
+in without the typing animation, and camera moves and holds do nothing.
+That makes a demo script a browser test too.
+
+The steps behave well in a test. Actions like
+[`pz_act_click()`](https://posit-dev.github.io/paparazzi/reference/pz_act_click.md)
+wait for their element to be ready before acting. Expectations like
+[`pz_expect_text()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_text.md)
+retry until the page shows what they expect, or time out with an error
+that says what they last saw. Inside a testthat test, expectations count
+as test expectations.
+[`pz_local_page()`](https://posit-dev.github.io/paparazzi/reference/pz_with_page.md)
+closes the page, and stops its app, when the test ends:
+
+``` r
+
+test_that("adding a task updates the summary", {
+  page <- pz_local_page(pz_example("tasks-app"))
+
+  page |>
+    pz_set_value("Buy milk", target = "#title") |>
+    pz_act_click("#add") |>
+    pz_expect_text("3 tasks", target = "#summary")
+})
+```
+
+If you mainly want regression tests for a Shiny app’s inputs and outputs
+compared against saved snapshots,
+[shinytest2](https://rstudio.github.io/shinytest2/) is built for that.
+paparazzi tests what a person does on the page, on any page, Shiny or
+not.
+
+## Learn more
+
+- [Get
+  started](https://posit-dev.github.io/paparazzi/articles/paparazzi.md)
+  builds a demo video one step at a time, from opening a page to framing
+  the finished recording.
+- [Make a three-part app
+  walkthrough](https://posit-dev.github.io/paparazzi/articles/walkthrough.md)
+  records a series of short videos with camera moves, callouts,
+  captions, and redactions.
+- [Annotate
+  pages](https://posit-dev.github.io/paparazzi/articles/annotations.md)
+  tours every kind of mark, callout, spotlight, redaction, and caption.
+- [Shiny apps](https://posit-dev.github.io/paparazzi/articles/shiny.md)
+  covers starting apps, waiting for the server, setting inputs, and
+  testing.
+- The [function
+  reference](https://posit-dev.github.io/paparazzi/reference/) lists
+  every function by task.
+
+# Package index
+
+## Pages, apps and navigation
+
+Open a page, a Shiny app, a Quarto document or a static site to start a
+chain. Set the page’s size and display settings, and move between pages.
+
+- [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+  : Open a page
+- [`pz_close()`](https://posit-dev.github.io/paparazzi/reference/pz_close.md)
+  : Close a page
+- [`pz_example()`](https://posit-dev.github.io/paparazzi/reference/pz_example.md)
+  : Paths to example pages and apps
+- [`pz_with_page()`](https://posit-dev.github.io/paparazzi/reference/pz_with_page.md)
+  [`pz_local_page()`](https://posit-dev.github.io/paparazzi/reference/pz_with_page.md)
+  : Open a page that closes when a block or calling frame exits
+- [`pz_serve_shiny()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_shiny.md)
+  : Run a Shiny app in a background process
+- [`pz_serve_quarto()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_quarto.md)
+  : Serve a document or project with Quarto
+- [`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md)
+  : Serve static files over HTTP
+- [`pz_device()`](https://posit-dev.github.io/paparazzi/reference/pz_device.md)
+  : Set the page's size and display settings
+- [`pz_nav_goto()`](https://posit-dev.github.io/paparazzi/reference/pz_nav_goto.md)
+  [`pz_nav_reload()`](https://posit-dev.github.io/paparazzi/reference/pz_nav_goto.md)
+  [`pz_nav_back()`](https://posit-dev.github.io/paparazzi/reference/pz_nav_goto.md)
+  [`pz_nav_forward()`](https://posit-dev.github.io/paparazzi/reference/pz_nav_goto.md)
+  : Navigate the page
+
+## Screenshots and recording
+
+Capture the page as a PNG screenshot or record it as an MP4, WebM or GIF
+video.
+[`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
+sets how actions look while recording: the cursor, the typing speed and
+the pause after each step.
+
+- [`pz_record()`](https://posit-dev.github.io/paparazzi/reference/pz_record.md)
+  : Record a block of code
+- [`pz_screenshot()`](https://posit-dev.github.io/paparazzi/reference/pz_screenshot.md)
+  : Take a screenshot
+- [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
+  : Stage the page for recording
+- [`pz_record_start()`](https://posit-dev.github.io/paparazzi/reference/pz_record_start.md)
+  : Record a page interaction
+- [`pz_record_stop()`](https://posit-dev.github.io/paparazzi/reference/pz_record_stop.md)
+  : Stop a recording and write the video
+- [`pz_record_pause()`](https://posit-dev.github.io/paparazzi/reference/pz_record_pause.md)
+  [`pz_record_resume()`](https://posit-dev.github.io/paparazzi/reference/pz_record_pause.md)
+  : Pause and resume a recording
+- [`pz_record_hold()`](https://posit-dev.github.io/paparazzi/reference/pz_record_hold.md)
+  : Hold the current frame while recording
+
+## Actions
+
+Use the page the way a person would: click, type, press keys, scroll and
+drag. While recording, actions are staged. The `pz_set_*()` functions
+set values directly instead.
+
+- [`paparazzi-actions`](https://posit-dev.github.io/paparazzi/reference/paparazzi-actions.md)
+  : How actions work
+- [`pz_act_click()`](https://posit-dev.github.io/paparazzi/reference/pz_act_click.md)
+  : Click an element
+- [`pz_act_type()`](https://posit-dev.github.io/paparazzi/reference/pz_act_type.md)
+  : Type text into an element
+- [`pz_act_press()`](https://posit-dev.github.io/paparazzi/reference/pz_act_press.md)
+  : Press key combinations
+- [`pz_act_hover()`](https://posit-dev.github.io/paparazzi/reference/pz_act_hover.md)
+  : Hover the pointer over an element
+- [`pz_act_scroll()`](https://posit-dev.github.io/paparazzi/reference/pz_act_scroll.md)
+  : Scroll the page or an element into view
+- [`pz_act_drag()`](https://posit-dev.github.io/paparazzi/reference/pz_act_drag.md)
+  : Drag an element to another element or by an offset
+- [`pz_act_select_text()`](https://posit-dev.github.io/paparazzi/reference/pz_act_select_text.md)
+  : Select text inside an element
+- [`pz_act_focus()`](https://posit-dev.github.io/paparazzi/reference/pz_act_focus.md)
+  : Focus an element
+- [`pz_act_blur()`](https://posit-dev.github.io/paparazzi/reference/pz_act_blur.md)
+  : Blur the focused element
+- [`pz_set_value()`](https://posit-dev.github.io/paparazzi/reference/pz_set_value.md)
+  : Set the value of a form control
+- [`pz_set_shiny_input()`](https://posit-dev.github.io/paparazzi/reference/pz_set_shiny_input.md)
+  : Set a bound Shiny input
+- [`pz_set_files()`](https://posit-dev.github.io/paparazzi/reference/pz_set_files.md)
+  : Attach files to a file input
+
+## Annotations
+
+Mark elements, point at them with callouts, spotlight or redact them,
+and add captions. Annotations appear in screenshots and recordings.
+[`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md)
+sets their default styles.
+
+- [`pz_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate.md)
+  : Mark page elements
+- [`pz_annotate_callout()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_callout.md)
+  : Add text callouts to page elements
+- [`pz_annotate_spotlight()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_spotlight.md)
+  : Spotlight page elements
+- [`pz_annotate_redact()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_redact.md)
+  : Redact page elements
+- [`pz_annotate_caption()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_caption.md)
+  : Add a screen-space caption
+- [`pz_annotate_clear()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_clear.md)
+  : Clear page annotations
+- [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md)
+  : Set the page's annotation style defaults
+
+## Fonts
+
+Stage fonts from Google Fonts, Bunny Fonts or local files so that
+annotations, callouts, captions and key callouts render in them.
+
+- [`pz_stage_fonts()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_fonts.md)
+  : Stage fonts for annotations and captions
+- [`pz_font_google()`](https://posit-dev.github.io/paparazzi/reference/pz_font_google.md)
+  : Declare a font from Google Fonts
+- [`pz_font_bunny()`](https://posit-dev.github.io/paparazzi/reference/pz_font_bunny.md)
+  : Declare a font from Bunny Fonts
+- [`pz_font_file()`](https://posit-dev.github.io/paparazzi/reference/pz_font_file.md)
+  : Declare a font from a local file
+
+## Framing and camera
+
+Choose the part of the page that a screenshot or recording shows with
+[`pz_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_frame.md),
+and set a default for the page with
+[`pz_stage_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_frame.md).
+During a recording, the camera zooms in on part of the frame and back
+out without changing the live page.
+
+- [`pz_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_frame.md)
+  : Frame a capture region
+- [`pz_stage_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_frame.md)
+  : Set or clear the page's default framing
+- [`pz_camera()`](https://posit-dev.github.io/paparazzi/reference/pz_camera.md)
+  : Move the recording camera
+- [`pz_camera_reset()`](https://posit-dev.github.io/paparazzi/reference/pz_camera_reset.md)
+  : Reset the recording camera
+
+## Cursor
+
+Show, move and hide the cursor drawn over the page. Its speed and size
+are set with
+[`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md).
+
+- [`pz_cursor_show()`](https://posit-dev.github.io/paparazzi/reference/pz_cursor_show.md)
+  : Show the overlay cursor
+- [`pz_cursor_move()`](https://posit-dev.github.io/paparazzi/reference/pz_cursor_move.md)
+  : Move the overlay cursor to an element
+- [`pz_cursor_leave()`](https://posit-dev.github.io/paparazzi/reference/pz_cursor_leave.md)
+  : Move the overlay cursor out of the frame
+- [`pz_cursor_hide()`](https://posit-dev.github.io/paparazzi/reference/pz_cursor_hide.md)
+  : Hide the overlay cursor
+
+## Finding elements
+
+Describe elements with reusable specs, and narrow a chain to part of the
+page with scopes.
+
+- [`pz_loc()`](https://posit-dev.github.io/paparazzi/reference/pz_loc.md)
+  : Locate elements by CSS, with text, position, and scope qualifiers
+- [`pz_find()`](https://posit-dev.github.io/paparazzi/reference/pz_find.md)
+  : Find elements and push them as the current scope
+- [`pz_find_first()`](https://posit-dev.github.io/paparazzi/reference/pz_find_first.md)
+  : Find the first match and push it as the current scope
+- [`pz_find_last()`](https://posit-dev.github.io/paparazzi/reference/pz_find_last.md)
+  : Find the last match and push it as the current scope
+- [`pz_find_nth()`](https://posit-dev.github.io/paparazzi/reference/pz_find_nth.md)
+  : Find the nth match and push it as the current scope
+- [`pz_find_pop()`](https://posit-dev.github.io/paparazzi/reference/pz_find_pop.md)
+  : Pop the current scope
+- [`pz_find_reset()`](https://posit-dev.github.io/paparazzi/reference/pz_find_reset.md)
+  : Clear all scope, back to the root
+
+## Expectations
+
+Check the page, retrying until the check passes or times out. Inside
+testthat, expectations count as test expectations.
+
+- [`pz_expect_attr()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_attr.md)
+  : Expect attributes
+- [`pz_expect_checked()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_checked.md)
+  : Expect elements to be checked
+- [`pz_expect_class()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_class.md)
+  : Expect a class
+- [`pz_expect_count()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_count.md)
+  : Expect a number of matching elements
+- [`pz_expect_enabled()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_enabled.md)
+  : Expect elements to be enabled
+- [`pz_expect_exists()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_exists.md)
+  : Expect at least one element to match
+- [`pz_expect_focused()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_focused.md)
+  : Expect elements to be focused
+- [`pz_expect_in_viewport()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_in_viewport.md)
+  : Expect elements to be in the viewport
+- [`pz_expect_js()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_js.md)
+  : Expect a JavaScript predicate to hold
+- [`pz_expect_style()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_style.md)
+  : Expect computed styles
+- [`pz_expect_text()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_text.md)
+  : Expect element text content
+- [`pz_expect_title()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_title.md)
+  : Expect the page title
+- [`pz_expect_url()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_url.md)
+  : Expect the page URL
+- [`pz_expect_value()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_value.md)
+  : Expect element values
+- [`pz_expect_visible()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_visible.md)
+  [`pz_expect_hidden()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_visible.md)
+  : Expect elements to be visible
+
+## Waits
+
+Wait for the page to settle when there’s no specific value to expect.
+
+- [`pz_wait()`](https://posit-dev.github.io/paparazzi/reference/pz_wait.md)
+  : Wait while pumping the page's event loop
+- [`pz_wait_for_js()`](https://posit-dev.github.io/paparazzi/reference/pz_wait_for_js.md)
+  : Wait until a JavaScript condition holds
+- [`pz_wait_for_navigation()`](https://posit-dev.github.io/paparazzi/reference/pz_wait_for_navigation.md)
+  : Wait for a navigation to finish
+- [`pz_wait_for_shiny_idle()`](https://posit-dev.github.io/paparazzi/reference/pz_wait_for_shiny_idle.md)
+  : Wait until a Shiny page is idle
+- [`pz_wait_for_stable()`](https://posit-dev.github.io/paparazzi/reference/pz_wait_for_stable.md)
+  : Wait until an element stops changing
+
+## Getters
+
+Read values from the page. Getters return values, so they end the chain.
+
+- [`pz_get_attr()`](https://posit-dev.github.io/paparazzi/reference/pz_get_attr.md)
+  : Read an attribute of matching elements
+- [`pz_get_count()`](https://posit-dev.github.io/paparazzi/reference/pz_get_count.md)
+  : Count matching elements
+- [`pz_get_elements()`](https://posit-dev.github.io/paparazzi/reference/pz_get_elements.md)
+  : Describe matching elements
+- [`pz_get_html()`](https://posit-dev.github.io/paparazzi/reference/pz_get_html.md)
+  : Read the HTML of matching elements
+- [`pz_get_rect()`](https://posit-dev.github.io/paparazzi/reference/pz_get_rect.md)
+  : Read the geometry of matching elements
+- [`pz_get_style()`](https://posit-dev.github.io/paparazzi/reference/pz_get_style.md)
+  : Read computed styles of matching elements
+- [`pz_get_text()`](https://posit-dev.github.io/paparazzi/reference/pz_get_text.md)
+  : Read the text of matching elements
+- [`pz_get_title()`](https://posit-dev.github.io/paparazzi/reference/pz_get_title.md)
+  : Read the page title
+- [`pz_get_url()`](https://posit-dev.github.io/paparazzi/reference/pz_get_url.md)
+  : Read the page URL
+- [`pz_get_value()`](https://posit-dev.github.io/paparazzi/reference/pz_get_value.md)
+  : Read the value of matching elements
+
+## Escape hatches and debugging
+
+- [`pz_inspect()`](https://posit-dev.github.io/paparazzi/reference/pz_inspect.md)
+  : Inspect the current page state
+- [`pz_js()`](https://posit-dev.github.io/paparazzi/reference/pz_js.md)
+  : Evaluate JavaScript in the page
+- [`pz_chromote()`](https://posit-dev.github.io/paparazzi/reference/pz_chromote.md)
+  : Get the underlying ChromoteSession
+
+# Articles
+
+### Guides
+
+- [Make a three-part app
+  walkthrough](https://posit-dev.github.io/paparazzi/articles/walkthrough.md):
+- [Annotate
+  pages](https://posit-dev.github.io/paparazzi/articles/annotations.md):
+- [Shiny apps](https://posit-dev.github.io/paparazzi/articles/shiny.md):
+
+### For coding agents
+
+These vignettes mirror the paparazzi agent skill shipped in the package.
+The Guides above are the human-first documentation with screenshots. btw
+finds the skill automatically when paparazzi is attached;
+`btw::btw_skill_install_package("paparazzi")` copies it into a skills
+directory. Other agents can copy the directory returned by
+`system.file("skills/paparazzi", package = "paparazzi")`.
+
+- [paparazzi for coding
+  agents](https://posit-dev.github.io/paparazzi/articles/agents.md):
+- [Agent guide: Pages and
+  serving](https://posit-dev.github.io/paparazzi/articles/agents-pages-and-serving.md):
+- [Agent guide: Locators and
+  scopes](https://posit-dev.github.io/paparazzi/articles/agents-locators-and-scopes.md):
+- [Agent guide:
+  Testing](https://posit-dev.github.io/paparazzi/articles/agents-testing.md):
+- [Agent guide: Screenshots and
+  annotations](https://posit-dev.github.io/paparazzi/articles/agents-screenshots-and-annotations.md):
+- [Agent guide: Recording and
+  staging](https://posit-dev.github.io/paparazzi/articles/agents-recording-and-staging.md):
+- [Agent guide:
+  Shiny](https://posit-dev.github.io/paparazzi/articles/agents-shiny.md):
