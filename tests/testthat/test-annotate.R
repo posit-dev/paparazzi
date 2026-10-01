@@ -1182,13 +1182,13 @@ test_that("draw leaves badge visible and removes it at start of reverse", {
   )
 })
 
-test_that("default reveal is fade for boxes and draw for other marks", {
+test_that("default reveals animate entry and reverse clear during recording", {
   skip_if_not_installed("av")
   page <- annotation_page()
   path <- withr::local_tempfile(fileext = ".mp4")
   pz_js(
     page,
-    "window.__markAnimations = []; const originalAnimate = Element.prototype.animate; Element.prototype.animate = function(frames, options) { window.__markAnimations.push(frames); return originalAnimate.call(this, frames, options); };"
+    "window.__markAnimations = []; const originalAnimate = Element.prototype.animate; Element.prototype.animate = function(frames, options) { window.__markAnimations.push({frames, direction:options.direction, duration:options.duration}); return originalAnimate.call(this, frames, options); };"
   )
   page |> pz_record_start(path, fps = 10, hold = c(0, 0))
   defer_record_stop(page)
@@ -1198,12 +1198,31 @@ test_that("default reveal is fade for boxes and draw for other marks", {
   }
   first <- pz_js(
     page,
-    "window.__markAnimations.filter((_, i) => i % 2 === 0).map(frames => Object.keys(frames[0]))"
+    "window.__markAnimations.filter((_, i) => i % 2 === 0).map(animation => Object.keys(animation.frames[0]))"
   )
   expect_true("opacity" %in% first[[1]])
   expect_true("strokeDashoffset" %in% first[[2]])
   expect_true("transform" %in% first[[3]])
   expect_true("transform" %in% first[[4]])
+
+  pz_js(page, "window.__markAnimations = []")
+  page |>
+    pz_annotate_spotlight("#box") |>
+    pz_annotate_clear("spotlight") |>
+    pz_annotate_callout("Tip", target = "#box", id = "tip") |>
+    pz_annotate_clear("tip")
+  animations <- pz_js(page, "window.__markAnimations")
+  expect_length(animations, 4)
+  expect_equal(
+    vapply(animations, `[[`, character(1), "direction"),
+    c("normal", "reverse", "normal", "reverse")
+  )
+  expect_true(all(vapply(animations, `[[`, numeric(1), "duration") > 0))
+  expect_equal(names(animations[[1]]$frames[[1]]), "opacity")
+  expect_equal(
+    names(animations[[3]]$frames[[1]]),
+    c("opacity", "transform")
+  )
   page |> pz_record_stop()
 })
 

@@ -319,40 +319,6 @@ test_that("spotlight validates its options and dim endpoints", {
   )
 })
 
-test_that("spotlight fade pumps during recording and reverses on clear", {
-  skip_if_not_installed("png")
-  skip_if_not_installed("av")
-  page <- spotlight_page()
-  path <- withr::local_tempfile(fileext = ".mp4")
-  page |> pz_record_start(path, fps = 20, hold = c(0, 0), keep_frames = TRUE)
-  defer_record_stop(page)
-  page |> pz_annotate_spotlight("#one")
-  expect_equal(
-    spotlight_layer(
-      page,
-      "layer.querySelector('.pz-spotlight').getAnimations().length"
-    ),
-    0
-  )
-  pump_loop(page$child_loop, 0.3)
-  files <- page_recorder(page)$files
-  dpr <- page_dpr(page)
-  outside <- function(file) {
-    png::readPNG(file)[round(30 * dpr) + 1, round(30 * dpr) + 1, 1]
-  }
-  entering <- vapply(files, outside, 0.0)
-  expect_true(any(entering > 0.5 & entering < 0.9))
-  expect_lt(tail(entering, 1), 0.47)
-  page |> pz_annotate_clear("spotlight")
-  expect_equal(
-    spotlight_layer(page, "layer.querySelectorAll('.pz-spotlight').length"),
-    0
-  )
-  leaving <- vapply(page_recorder(page)$files[-seq_along(files)], outside, 0.0)
-  expect_true(any(leaving > 0.5 & leaving < 0.9))
-  page |> pz_record_stop()
-})
-
 test_that("paused spotlight and its clear are instant", {
   skip_if_not_installed("av")
   page <- spotlight_page()

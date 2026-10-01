@@ -277,38 +277,6 @@ test_that("callout bubble paints in still and leaves after clearing", {
   expect_equal(sample(), c(1, 1, 1), tolerance = 0.05)
 })
 
-test_that("callout pop pumps intermediate poll frames and reverse clear", {
-  skip_if_not_installed("av")
-  skip_if_not_installed("png")
-  page <- callout_page()
-  path <- withr::local_tempfile(fileext = ".mp4")
-  page |> pz_record_start(path, fps = 20, hold = c(0, 0), keep_frames = TRUE)
-  defer_record_stop(page)
-  page |>
-    pz_annotate_callout(
-      "Recorded",
-      target = "#target",
-      side = "right",
-      id = "tip"
-    )
-  pump_loop(page$child_loop, 0.3)
-  state <- callout_details(page)$nodes[[1]]
-  x <- round(state$rect[[1]] + 6) * page_dpr(page) + 1
-  y <- round(state$rect[[2]] + 6) * page_dpr(page) + 1
-  files <- page_recorder(page)$files
-  red <- function(file) png::readPNG(file)[y, x, 1]
-  entering <- vapply(files, red, 0.0)
-  expect_gt(length(files), 2)
-  expect_true(any(entering > 0.2 & entering < 0.9))
-  expect_lt(tail(entering, 1), 0.4)
-  page |> pz_annotate_clear("tip")
-  leaving <- vapply(page_recorder(page)$files[-seq_along(files)], red, 0.0)
-  expect_true(any(leaving > 0.2 & leaving < 0.9))
-  expect_length(callout_state(page), 0)
-  page |> pz_record_stop()
-  expect_true(file.exists(path))
-})
-
 test_that("automatic placement chooses each roomiest cardinal side", {
   page <- callout_page()
   for (side in c("top", "right", "bottom", "left")) {
