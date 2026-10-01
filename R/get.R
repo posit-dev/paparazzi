@@ -183,15 +183,7 @@ pz_get_attr <- function(ctx, name, target = NULL, ...) {
 #' @export
 pz_get_rect <- function(ctx, target = NULL, ...) {
   check_dots_empty()
-  get_impl(
-    ctx = ctx,
-    target = target,
-    timeout = NULL,
-    read = function(els, call) {
-      rects <- el_rects(els, call = call)
-      new_get_tibble(ctx, els, target, !!!rects, call = call)
-    }
-  )
+  get_tibble_impl(ctx = ctx, target = target, read = el_rects)
 }
 
 #' Describe matching elements
@@ -215,22 +207,17 @@ pz_get_rect <- function(ctx, target = NULL, ...) {
 #' @export
 pz_get_elements <- function(ctx, target = NULL, ...) {
   check_dots_empty()
-  get_impl(
+  get_tibble_impl(
     ctx = ctx,
     target = target,
-    timeout = NULL,
     read = function(els, call) {
       vals <- els_values(els, get_elements_js, call = call)
       field <- function(name) chr_or_na(lapply(vals, `[[`, name))
-      new_get_tibble(
-        ctx,
-        els,
-        target,
+      list(
         tag = field("tag"),
         id = field("id"),
         class = field("class"),
-        text = collapse_ws(field("text")),
-        call = call
+        text = collapse_ws(field("text"))
       )
     }
   )
@@ -364,14 +351,22 @@ get_element_locs <- function(els, target, call = caller_env()) {
   }
 }
 
-new_get_tibble <- function(ctx, els, target, ..., call = caller_env()) {
-  out <- tibble::tibble(...)
-  locs <- get_element_locs(els, target, call = call)
-  out$element <- lapply(
-    seq_len(els$count),
-    function(i) pin_match(ctx, els, locs, i, call = call)
+get_tibble_impl <- function(ctx, target, read, call = caller_env()) {
+  get_impl(
+    ctx = ctx,
+    target = target,
+    timeout = NULL,
+    read = function(els, call) {
+      out <- tibble::tibble(!!!read(els, call))
+      locs <- get_element_locs(els, target, call = call)
+      out$element <- lapply(
+        seq_len(els$count),
+        function(i) pin_match(ctx, els, locs, i, call = call)
+      )
+      out
+    },
+    call = call
   )
-  out
 }
 
 get_value_js <- "function() {

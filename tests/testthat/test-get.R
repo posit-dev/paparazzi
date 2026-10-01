@@ -189,9 +189,17 @@ test_that("pz_get_elements summarizes every match", {
 
 test_that("pz_get_elements attributes pinning errors to the getter", {
   page <- local_getters_page()
+  pin_id <- NULL
+  released <- character()
+  original_release <- release_elements
   local_mocked_bindings(
     pin_match = function(ctx, els, locs, i, call = rlang::caller_env()) {
+      pin_id <<- els$object_id
       cli::cli_abort("Pinned match failed.", call = call)
+    },
+    release_elements = function(els) {
+      released <<- c(released, els$object_id)
+      original_release(els)
     }
   )
 
@@ -200,6 +208,8 @@ test_that("pz_get_elements attributes pinning errors to the getter", {
     err$call,
     quote(pz_get_elements(page, target = ".item"))
   )
+  expect_type(pin_id, "character")
+  expect_identical(released, pin_id)
 })
 
 test_that("pz_get_elements reads tag, id, and class from a form control", {
@@ -452,4 +462,88 @@ test_that("the element column renders its contexts through pillar", {
   rects <- pz_get_rect(page, target = "#scope-a .sc-item")
   out <- paste(capture.output(print(rects)), collapse = "\n")
   expect_match(out, "<pz_ctx>", fixed = TRUE)
+})
+
+test_that("tibble getters pin matches before releasing their resolved handle", {
+  page <- local_getters_page()
+  events <- character()
+  original_pin <- pin_match
+  original_release <- release_elements
+  local_mocked_bindings(
+    pin_match = function(ctx, els, locs, i, call = rlang::caller_env()) {
+      events <<- c(events, "pin")
+      original_pin(ctx, els, locs, i, call = call)
+    },
+    release_elements = function(els) {
+      events <<- c(events, "release")
+      original_release(els)
+    }
+  )
+
+  for (getter in list(pz_get_rect, pz_get_elements)) {
+    events <- character()
+    out <- getter(page, target = ".item")
+    expect_identical(events, c("pin", "pin", "pin", "release"))
+    expect_identical(pz_get_text(out$element[[2]]), "second item")
+  }
+})
+
+test_that("get_impl releases a resolved handle when its reader fails", {
+  page <- local_getters_page()
+  read_id <- NULL
+  released <- character()
+  original_release <- release_elements
+  local_mocked_bindings(
+    release_elements = function(els) {
+      released <<- c(released, els$object_id)
+      original_release(els)
+    }
+  )
+
+  expect_error(
+    get_impl(page, ".item", NULL, read = function(els, call) {
+      read_id <<- els$object_id
+      cli::cli_abort("Read failed.", call = call)
+    }),
+    "Read failed.",
+    fixed = TRUE
+  )
+  expect_type(read_id, "character")
+  expect_identical(released, read_id)
+})
+
+test_that("tibble getters borrow a pinned scope without releasing it", {
+  page <- local_getters_page()
+  ctx <- pz_find(page, ".item")
+  released <- character()
+  original_release <- release_elements
+  local_mocked_bindings(
+    release_elements = function(els) {
+      released <<- c(released, els$object_id)
+      original_release(els)
+    }
+  )
+
+  for (getter in list(pz_get_rect, pz_get_elements)) {
+    out <- getter(ctx)
+    expect_length(released, 0L)
+    expect_identical(length(out$element[[2]]$scope), 2L)
+    expect_identical(pz_get_text(out$element[[2]]), "second item")
+    expect_identical(pz_get_count(ctx), 3L)
+  }
+})
+
+test_that("missing tibble getter targets time out before pinning", {
+  page <- local_getters_page()
+  page$default_timeout <- 0.1
+  local_mocked_bindings(
+    pin_match = function(...) cli::cli_abort("Unexpected pin.")
+  )
+
+  for (getter in list(pz_get_rect, pz_get_elements)) {
+    expect_error(
+      getter(page, target = ".never"),
+      class = "paparazzi_error_timeout"
+    )
+  }
 })

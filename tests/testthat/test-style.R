@@ -490,3 +490,74 @@ test_that("the probe does not disturb positional-selector styles", {
     "200px"
   )
 })
+
+test_that("pz_get_style pins before release and leaves borrowed scopes owned", {
+  page <- local_style_page()
+  ctx <- pz_find(page, ".card")
+  events <- character()
+  original_pin <- pin_match
+  original_release <- release_elements
+  local_mocked_bindings(
+    pin_match = function(ctx, els, locs, i, call = rlang::caller_env()) {
+      events <<- c(events, "pin")
+      original_pin(ctx, els, locs, i, call = call)
+    },
+    release_elements = function(els) {
+      events <<- c(events, "release")
+      original_release(els)
+    }
+  )
+
+  styles <- pz_get_style(page, "color", target = ".card")
+  expect_identical(events, c("pin", "pin", "pin", "release"))
+  expect_identical(pz_get_text(styles$element[[2]]), "two")
+
+  events <- character()
+  styles <- pz_get_style(ctx, "color")
+  expect_identical(events, rep("pin", 3L))
+  expect_identical(length(styles$element[[2]]$scope), 2L)
+  expect_identical(pz_get_text(styles$element[[2]]), "two")
+  expect_identical(pz_get_count(ctx), 3L)
+})
+
+test_that("pz_get_style releases its resolved handle on pinning failure", {
+  page <- local_style_page()
+  pin_id <- NULL
+  released <- character()
+  original_release <- release_elements
+  local_mocked_bindings(
+    pin_match = function(ctx, els, locs, i, call = rlang::caller_env()) {
+      pin_id <<- els$object_id
+      cli::cli_abort("Pinned match failed.", call = call)
+    },
+    release_elements = function(els) {
+      released <<- c(released, els$object_id)
+      original_release(els)
+    }
+  )
+
+  err <- expect_error(
+    pz_get_style(page, "color", target = ".card"),
+    "Pinned match failed.",
+    fixed = TRUE
+  )
+  expect_identical(
+    err$call,
+    quote(pz_get_style(page, "color", target = ".card"))
+  )
+  expect_type(pin_id, "character")
+  expect_identical(released, pin_id)
+})
+
+test_that("pz_get_style times out on a missing target before pinning", {
+  page <- local_style_page()
+  page$default_timeout <- 0.1
+  local_mocked_bindings(
+    pin_match = function(...) cli::cli_abort("Unexpected pin.")
+  )
+
+  expect_error(
+    pz_get_style(page, "color", target = ".never"),
+    class = "paparazzi_error_timeout"
+  )
+})
