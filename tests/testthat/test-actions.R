@@ -1622,6 +1622,15 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
     ),
     "Water the plants"
   )
+  # The real pointer ends at the drop point with the cursor: the row
+  # now there shows hover.
+  expect_equal(
+    unlist(pz_js(
+      page,
+      "[...document.querySelectorAll('.task:hover')].map((li) => li.querySelector('.task-title').textContent.trim())"
+    )),
+    "Water the plants"
+  )
   pz_record_stop(page)
 })
 

@@ -1814,8 +1814,9 @@ dispatch_mouse_drag <- function(
 # so intermediate elements see the drag pass and the page's dragstart
 # styling shows through the carry. Interception still goes off before
 # the release at the destination, and the replay lands as the cursor
-# arrives: the overlay cursor and the real pointer both end at the drop
-# point.
+# arrives. The swallowed release doesn't move the page-visible pointer,
+# so a trailing unheld move to the destination settles it there: the
+# overlay cursor and the real pointer both end at the drop point.
 drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
@@ -1983,6 +1984,17 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     )
   }
   if (staged) {
+    dispatch_mouse(
+      ctx,
+      "dragging",
+      els$description,
+      "mouseMoved",
+      to,
+      button = "none",
+      buttons = 0,
+      clickCount = 0,
+      call = call
+    )
     cursor_press(ctx, FALSE)
     pump_loop(ctx$page$child_loop, 0.2)
   }
