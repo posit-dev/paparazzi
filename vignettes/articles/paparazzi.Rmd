@@ -223,6 +223,24 @@ page |> pz_annotate_clear()
 
 `pz_annotate()` can also draw circles, underlines, and highlights, with numbered badges. `pz_annotate_callout()` adds text with an arrow, `pz_annotate_spotlight()` dims everything but one element, and `pz_annotate_redact()` covers private information. The [annotations article](annotations.html) shows them all.
 
+Clicks can point the viewer too. By default, the cursor shrinks briefly as it presses, which is hard to see in a small video, so `pz_act_click()` can draw a ring instead, one that grows out from the click point and fades. Here the cursor checks Urgent with the default press, then unchecks it with `effect = "ring"`:
+
+```{r, fig.alt = "The cursor glides to the Urgent checkbox and checks it with a brief press, then clicks it again, and a crimson ring spreads out from the click as the box unchecks."}
+page |>
+  pz_record(
+    format = "gif",
+    scale = 800,
+    frame = pz_frame("#new-task", pad = 8),
+    code = {
+      page |>
+        pz_act_click("#task-urgent") |>
+        pz_act_click("#task-urgent", effect = "ring")
+    }
+  )
+```
+
+The ring is crimson unless you pass a CSS color as `effect_color`, and `effect = "none"` turns click feedback off. To change every click on the page, set `pz_stage(click_effect = "ring")`, and `click_effect_color` for the ring's color.
+
 ## Work in one part of the page
 
 Every task in our list has its own Done button. To mark the fern done, the script needs *its* Done button. `pz_find()` narrows the chain to one element, called the **scope**. After that, targets are looked up inside the scope, so `".task-done"` means this task's Done button:
