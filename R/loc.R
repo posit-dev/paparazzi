@@ -85,17 +85,14 @@ as_loc <- function(target, arg = caller_arg(target), call = caller_env()) {
   )
 }
 
-# A target accepted by the resolver: one spec, or a list of specs/strings
-# (the union form). Names are dropped so the union serializes as a JSON
-# array, not an object.
+# Names are dropped so the union serializes as a JSON array, not an
+# object.
 as_loc_list <- function(target, arg = caller_arg(target), call = caller_env()) {
   if (inherits(target, "paparazzi_loc")) {
     return(list(target))
   }
   if (is_list(target)) {
     if (length(target) == 0) {
-      # An empty union matches nothing, so auto-waiting on it would never
-      # resolve -- fail fast instead.
       cli::cli_abort(
         "{.arg {arg}} can't be an empty list of targets; it matches nothing, so there would be nothing to wait for.",
         class = "paparazzi_error_target",
@@ -107,18 +104,11 @@ as_loc_list <- function(target, arg = caller_arg(target), call = caller_env()) {
   list(as_loc(target, arg = arg, call = call))
 }
 
-# Target description, e.g.
-#   `.shiny-tool-request` (has_text: "get_weather", which: last, within: `.chat`)
-# Qualifiers appear in a fixed order; `within` is recursive. Used by the
-# resolver errors, the print method, expectation failures, and the
-# detached-scope error.
 format_loc <- function(loc) {
   if (is_list(loc) && !inherits(loc, "paparazzi_loc")) {
     return(paste(map_chr(loc, format_loc), collapse = " | "))
   }
   if (!inherits(loc, "paparazzi_loc")) {
-    # Only promoted targets reach here; a bare string would otherwise be
-    # treated as a union and recursed on forever.
     cli::cli_abort(
       "Internal error: the target must be a {.fn pz_loc} spec or a list of specs, not {.obj_type_friendly {loc}}. Promote it with {.fn as_loc_list} first.",
       class = "paparazzi_error_internal"

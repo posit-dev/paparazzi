@@ -20,9 +20,6 @@ check_context <- function(
   invisible(ctx)
 }
 
-# `which` validation shared by pz_loc() and the pz_find*() family: a
-# string ("first"/"last") or a 1-based whole number. The find wrappers
-# pass their literal which, so they only need the numeric form.
 check_which <- function(
   which,
   strings = TRUE,
@@ -61,9 +58,7 @@ resolve_timeout <- function(
   timeout
 }
 
-# Force a lazy chromote command, re-raising a chromote timeout as
-# paparazzi_error_timeout that names what was being done. `cmd` must stay
-# a promise so the command itself runs under the tryCatch.
+# `cmd` must stay a promise so the command itself runs under the tryCatch.
 cdp_call <- function(cmd, timeout, doing, call = caller_env()) {
   tryCatch(
     cmd,

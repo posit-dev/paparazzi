@@ -7,8 +7,6 @@
 # copy fresh from the upstream standalone (behavior quirks there are known
 # and accepted, e.g. map2 recycles unequal lengths like mapply).
 #
-# map2 has no direct call sites but backs imap.
-#
 # cursor.R collates after this file via its @include roxygen tag, because
 # its load-time CURSOR_ART block calls these helpers.
 

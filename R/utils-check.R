@@ -1,5 +1,4 @@
-# rlang exports no check_character(); this covers type + minimum length
-# + no NAs, following the conventions of rlang's other checkers.
+# rlang exports no check_character().
 check_character <- function(
   x,
   ...,

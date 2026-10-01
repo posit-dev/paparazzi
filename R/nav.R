@@ -64,9 +64,8 @@ pz_nav_goto <- function(
     # A cross-document navigation can return from Page.navigate while
     # the outgoing document still reports readyState "complete", so
     # the readyState wait alone would settle on the old page before
-    # the destination commits. frameNavigated fires at the commit --
-    # the reload path relies on the same event -- so the next
-    # occurrence is registered before the trigger and synchronized
+    # the destination commits. frameNavigated fires at the commit, so the
+    # next occurrence is registered before the trigger and synchronized
     # before the readyState wait.
     page$session$Page$frameNavigated(wait_ = FALSE)
   }
@@ -143,8 +142,6 @@ pz_nav_back <- function(ctx, ...) {
   if (nav_history(ctx$page, -1)) {
     wait_for_load(ctx$page, timeout = ctx$page$default_timeout)
   }
-  # Runs at the history boundary too: the cache was cleared in
-  # wait_nav_reset(), and re-setting the same zoom is harmless.
   device_css_reapply(ctx$page)
   ctx_return(root)
 }
@@ -164,7 +161,6 @@ pz_nav_forward <- function(ctx, ...) {
   ctx_return(root)
 }
 
-# Called after the navigation's existing load settle, on the landed document.
 nav_settle_shiny <- function(page, wait, timeout) {
   if (identical(wait, "auto")) {
     private <- page$.__enclos_env__$private
@@ -172,7 +168,6 @@ nav_settle_shiny <- function(page, wait, timeout) {
     if (is.null(app) || !identical(app$backend, "shiny")) {
       return(invisible(page))
     }
-    # pz_serve_shiny() URLs are root URLs ending in a slash.
     app_origin <- sub("/$", "", app$url)
     if (
       !identical(pz_js(page, "location.origin", timeout = timeout), app_origin)
@@ -186,14 +181,8 @@ nav_settle_shiny <- function(page, wait, timeout) {
   invisible(page)
 }
 
-# Step `offset` entries in the history (back: -1, forward: +1). CDP's
-# currentIndex is 0-based while R's entries list is 1-based, so the
-# current entry's R index is currentIndex + 1 and the target's is
-# currentIndex + offset + 1. A boundary step reaches no entry and
-# returns FALSE (the page stays put; no error). Back also stops at the
-# about:blank entry the browser creates with every new session -- it is
-# not part of the user's history, and forward can still reach any entry
-# a goto landed on.
+# Back also stops at the about:blank entry the browser creates with every
+# new session -- it is not part of the user's history.
 #
 # navigateToHistoryEntry returns while the outgoing document still
 # reports readyState "complete", so the caller's load wait would settle
@@ -202,9 +191,7 @@ nav_settle_shiny <- function(page, wait, timeout) {
 # at commit, before the new document finishes (readyState then cycles,
 # and the subsequent wait_for_load() does the real settling); for a
 # bfcache restore it flips instantly together with an already-complete
-# readyState, which is correct: nothing more loads. A window-marker
-# poll would not survive this split: a marker set on the page survives
-# a bfcache restore, so it never signals the flip.
+# readyState, which is correct: nothing more loads.
 nav_history <- function(page, offset, call = caller_env()) {
   session <- page$session
   hist <- session$Page$getNavigationHistory(timeout_ = page$default_timeout)
@@ -251,12 +238,6 @@ nav_history <- function(page, offset, call = caller_env()) {
   TRUE
 }
 
-# Synchronize a chromote event promise (registered with wait_ = FALSE
-# before its trigger): poll until it settles, pumping the page's child
-# loop so the websocket message that resolves it gets processed. Only
-# the public then() API is used; chromote event promises resolve with
-# the event payload and never reject in practice, but a rejection is
-# re-thrown rather than swallowed.
 nav_await <- function(page, p, what, call = caller_env()) {
   settled <- FALSE
   failed <- NULL
