@@ -70,14 +70,16 @@ test_that("font objects have a compact print method", {
   )
 })
 
-test_that("font printing preserves literal text, newlines, and invisible return", {
+test_that("font printing preserves literal lines and invisible return", {
   font <- pz_font_google("Braced {Font} {.arg x} 100% $value\\path\nline")
-  output <- withr::local_tempfile()
-  result <- withr::with_output_sink(output, withVisible(print(font)))
+  printed <- capture.output(result <- withVisible(print(font)))
 
   expect_identical(
-    readChar(output, file.info(output)$size, useBytes = TRUE),
-    "<paparazzi font> Braced {Font} {.arg x} 100% $value\\path\nline (google, weight 400, normal)\n"
+    printed,
+    c(
+      "<paparazzi font> Braced {Font} {.arg x} 100% $value\\path",
+      "line (google, weight 400, normal)"
+    )
   )
   expect_identical(result, list(value = font, visible = FALSE))
 })

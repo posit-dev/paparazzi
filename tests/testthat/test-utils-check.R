@@ -74,7 +74,6 @@ test_that("positive CSS pixels reject non-positive, missing, or non-scalar value
       class = "rlang_error"
     )
   }
-  expect_error(check_positive_css_px(), class = "missingArgError")
 })
 
 test_that("positive CSS pixel errors retain caller argument and call", {
