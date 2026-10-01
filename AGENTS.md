@@ -41,8 +41,8 @@ edit skill content in the skill directory, never in the vignettes.
 `skill-source.R` rewrites `references/<topic>.md` links to
 `agents-<topic>.html`, so reference topic names must match the vignette
 names. When adding, renaming or removing a topic, update the
-`references/*.md` file, the matching `agents-*.Rmd` wrapper, and
-`_pkgdown.yml` together.
+`references/*.md` file, its entry in SKILL.md's References list, the
+matching `agents-*.Rmd` wrapper, and `_pkgdown.yml` together.
 
 ## Rendered Docs
 
