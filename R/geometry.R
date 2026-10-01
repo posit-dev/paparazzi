@@ -36,7 +36,7 @@ el_scroll_into_view <- function(els, call = caller_env()) {
   if (!inherits(els, "paparazzi_elements")) {
     stop_input_type(els, "a <paparazzi_elements> object", call = call)
   }
-  if (els$count == 0L || is.null(els$object_id)) {
+  if (els$count == 0L) {
     return(invisible(els))
   }
   # The scroll is instant: CSS scroll-behavior: smooth would animate it,
