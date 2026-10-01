@@ -58,10 +58,9 @@ pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
     style_check_shorthand(props)
     style_check_duplicated(props)
   }
-  get_impl(
+  get_tibble_impl(
     ctx = ctx,
     target = target,
-    timeout = NULL,
     read = function(els, call) {
       vals <- els_values(els, style_get_js(props), call = call)
       out_props <- if (is.null(props)) {
@@ -74,7 +73,7 @@ pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
         function(p) map_chr(vals, function(v) v[[p]] %||% "")
       )
       names(cols) <- out_props
-      new_get_tibble(ctx, els, target, !!!cols, call = call)
+      cols
     }
   )
 }
