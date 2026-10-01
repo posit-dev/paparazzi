@@ -384,12 +384,12 @@ scope_slice_js <- function(which) {
   if (identical(which, "first")) {
     "function() { return this.slice(0, 1); }"
   } else if (identical(which, "last")) {
-    "function() { return [this[this.length - 1]].filter((el) => el != null); }"
+    "function() { return [this[this.length - 1]]; }"
   } else {
     paste0(
       "function() { return [this[",
       which,
-      " - 1]].filter((el) => el != null); }"
+      " - 1]]; }"
     )
   }
 }
