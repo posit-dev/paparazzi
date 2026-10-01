@@ -449,7 +449,9 @@ overlay_clear <- function(ctx) {
   pz_js(
     ctx,
     paste0(
-      "(() => { const h = document.getElementById('paparazzi-overlay-root'); ",
+      "(() => { const h = document.getElementById('",
+      OVERLAY_HOST_ID,
+      "'); ",
       "if (h && h.shadowRoot) h.shadowRoot.querySelectorAll('.pz-inspect').forEach((n) => n.remove()); ",
       "return true; })()"
     ),
@@ -462,7 +464,9 @@ inspect_outlines_hide <- function(ctx) {
   pz_js(
     ctx,
     paste0(
-      "(() => { const h = document.getElementById('paparazzi-overlay-root'); ",
+      "(() => { const h = document.getElementById('",
+      OVERLAY_HOST_ID,
+      "'); ",
       "if (!h || !h.shadowRoot) return null; ",
       "const layers = h.shadowRoot.querySelectorAll('.pz-inspect'); ",
       "if (!layers.length) return null; ",
@@ -482,7 +486,9 @@ inspect_outlines_restore <- function(ctx, display) {
   pz_js(
     ctx,
     paste0(
-      "(() => { const h = document.getElementById('paparazzi-overlay-root'); ",
+      "(() => { const h = document.getElementById('",
+      OVERLAY_HOST_ID,
+      "'); ",
       "if (!h || !h.shadowRoot) return; ",
       "const prev = ",
       values,

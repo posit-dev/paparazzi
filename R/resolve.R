@@ -29,7 +29,7 @@ const resolveSpec = (spec) => {
       if (!seen.has(el)) { seen.add(el); els.push(el); }
     }
   }
-  els = els.filter((el) => el.closest('#paparazzi-overlay-root') === null);
+  els = els.filter((el) => el.closest('#%s') === null);
   if (spec.has_text != null) {
     els = els.filter((el) => matchesText(el, spec.has_text));
   }
@@ -56,7 +56,8 @@ for (const spec of specs) {
 }
 return out.length ? out : null;
 })",
-    specs
+    specs,
+    OVERLAY_HOST_ID
   )
 }
 
