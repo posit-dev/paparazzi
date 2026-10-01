@@ -1708,20 +1708,27 @@ test_that("pz_act_drag validates its input and errors on multiple matches", {
   )
 })
 
-test_that("pz_act_drag review fixes: NULL to, uppercase draggable, viewport", {
+test_that("pz_act_drag requires a destination when `to` is NULL", {
   page <- local_advanced_page()
   # An explicit to = NULL is absent, not document.body.
   expect_error(
     pz_act_drag(page, "#dragbox", NULL),
     class = "paparazzi_error_input"
   )
-  # draggable attribute keywords are case-insensitive: an uppercase
-  # source still routes through the HTML5 pipeline.
+})
+
+test_that("pz_act_drag handles uppercase draggable values case-insensitively", {
+  page <- local_advanced_page()
+  # An uppercase draggable keyword still routes through the HTML5 pipeline.
   pz_act_drag(page, "#draggable-uc", "#dropzone")
   expect_equal(
     pz_js(page, "document.getElementById('dropzone').textContent"),
     "got:payload-uc"
   )
+})
+
+test_that("pz_act_drag refuses a destination outside the viewport after scrolling the source", {
+  page <- local_advanced_page()
   # Bringing a far source into view pushes the destination out of the
   # viewport; the drag errors instead of dropping on empty space.
   expect_error(

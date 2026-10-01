@@ -894,48 +894,9 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   } else {
     dest <- loc_resolve(ctx, to, multiple = "error")
     withr::defer(release_elements(dest))
-    to_point <- el_actionable_point(ctx, dest)
-    from <- el_pointer_point(ctx, els)
-    probe <- els_values(dest, dest_point_js)
-    if (isTRUE(probe$visible) && probe$width > 0 && probe$height > 0) {
-      drop <- c(
-        x = probe$x + probe$width / 2,
-        y = probe$y + probe$height / 2
-      )
-      if (
-        drop[[1]] < 0 ||
-          drop[[1]] > probe$viewportWidth ||
-          drop[[2]] < 0 ||
-          drop[[2]] > probe$viewportHeight
-      ) {
-        cli::cli_abort(
-          c(
-            "The drag destination is outside the viewport after bringing the source into view.",
-            i = "Both endpoints must be visible at once, like a real drag; scroll or scope so they are."
-          ),
-          class = "paparazzi_error_target"
-        )
-      }
-      if (!is.null(probe$blocker)) {
-        blocker_name <- format_pointer_blocker(probe$blocker)
-        cli::cli_abort(
-          c(
-            "The drag destination {dest$description} does not receive pointer events at its center after bringing the source into view; blocked by {blocker_name}.",
-            i = "Both endpoints must be visible at once, like a real drag; scroll or scope so they are."
-          ),
-          class = c("paparazzi_error_obstructed", "paparazzi_error_target")
-        )
-      }
-      to_point <- drop
-    } else {
-      cli::cli_abort(
-        c(
-          "The drag destination is no longer visible with a non-empty box after bringing the source into view.",
-          i = "Both endpoints must stay actionable at once, like a real drag; scroll or scope so they do."
-        ),
-        class = "paparazzi_error_target"
-      )
-    }
+    points <- drag_destination_points(ctx, els, dest)
+    from <- points$from
+    to_point <- points$to
   }
 
   if (isTRUE(els_values_flat(els, draggable_js))) {
@@ -951,6 +912,55 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   }
   stage_action_pause(ctx)
   ctx_return(ctx)
+}
+
+drag_destination_points <- function(ctx, source, dest, call = caller_env()) {
+  to_point <- el_actionable_point(ctx, dest, call = call)
+  from <- el_pointer_point(ctx, source, call = call)
+  probe <- els_values(dest, dest_point_js, call = call)
+  if (isTRUE(probe$visible) && probe$width > 0 && probe$height > 0) {
+    drop <- c(
+      x = probe$x + probe$width / 2,
+      y = probe$y + probe$height / 2
+    )
+    if (
+      drop[[1]] < 0 ||
+        drop[[1]] > probe$viewportWidth ||
+        drop[[2]] < 0 ||
+        drop[[2]] > probe$viewportHeight
+    ) {
+      cli::cli_abort(
+        c(
+          "The drag destination is outside the viewport after bringing the source into view.",
+          i = "Both endpoints must be visible at once, like a real drag; scroll or scope so they are."
+        ),
+        class = "paparazzi_error_target",
+        call = call
+      )
+    }
+    if (!is.null(probe$blocker)) {
+      blocker_name <- format_pointer_blocker(probe$blocker)
+      cli::cli_abort(
+        c(
+          "The drag destination {dest$description} does not receive pointer events at its center after bringing the source into view; blocked by {blocker_name}.",
+          i = "Both endpoints must be visible at once, like a real drag; scroll or scope so they are."
+        ),
+        class = c("paparazzi_error_obstructed", "paparazzi_error_target"),
+        call = call
+      )
+    }
+    to_point <- drop
+  } else {
+    cli::cli_abort(
+      c(
+        "The drag destination is no longer visible with a non-empty box after bringing the source into view.",
+        i = "Both endpoints must stay actionable at once, like a real drag; scroll or scope so they do."
+      ),
+      class = "paparazzi_error_target",
+      call = call
+    )
+  }
+  list(from = from, to = to_point)
 }
 
 record_pre_action_loader <- function(ctx) {
