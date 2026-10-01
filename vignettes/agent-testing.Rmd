@@ -1,0 +1,11 @@
+---
+title: "Agent guide: Testing"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Agent guide: Testing}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, child = "../inst/skills/paparazzi/references/testing.md"}
+```

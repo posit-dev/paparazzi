@@ -1,0 +1,11 @@
+---
+title: "Agent guide: Screenshots and annotations"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Agent guide: Screenshots and annotations}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, child = "../inst/skills/paparazzi/references/screenshots-and-annotations.md"}
+```

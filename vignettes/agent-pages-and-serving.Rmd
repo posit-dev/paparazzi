@@ -1,0 +1,11 @@
+---
+title: "Agent guide: Pages and serving"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Agent guide: Pages and serving}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, child = "../inst/skills/paparazzi/references/pages-and-serving.md"}
+```

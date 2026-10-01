@@ -1,0 +1,20 @@
+---
+title: "paparazzi for coding agents"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{paparazzi for coding agents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, echo = FALSE, results = "asis"}
+skill <- readLines("../inst/skills/paparazzi/SKILL.md")
+frontmatter_end <- which(skill == "---")[2]
+skill <- skill[-seq_len(frontmatter_end)]
+skill <- gsub(
+  "references/([a-z-]+)\\.md",
+  "agent-\\1.html",
+  skill
+)
+cat(skill, sep = "\n")
+```

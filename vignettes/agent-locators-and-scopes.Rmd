@@ -1,0 +1,11 @@
+---
+title: "Agent guide: Locators and scopes"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Agent guide: Locators and scopes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, child = "../inst/skills/paparazzi/references/locators-and-scopes.md"}
+```

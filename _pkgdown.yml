@@ -15,6 +15,23 @@ articles:
       - articles/annotations
       - articles/shiny
 
+  - title: For coding agents
+    desc: >
+      These vignettes mirror the paparazzi agent skill shipped in the package.
+      The Guides above are the human-first documentation with screenshots.
+      btw finds the skill automatically when paparazzi is attached;
+      `btw::btw_skill_install_package("paparazzi")` copies it into a skills
+      directory. Other agents can copy the directory returned by
+      `system.file("skills/paparazzi", package = "paparazzi")`.
+    contents:
+      - agent-overview
+      - agent-pages-and-serving
+      - agent-locators-and-scopes
+      - agent-testing
+      - agent-screenshots-and-annotations
+      - agent-recording-and-staging
+      - agent-shiny
+
 reference:
   - title: Pages, apps and navigation
     desc: >
