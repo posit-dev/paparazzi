@@ -218,7 +218,7 @@ annotate_style <- function(
   font_size <- font_size %||% stage$annotate_font_size
   check_string(color, allow_empty = FALSE, call = call)
   font_family <- check_font_family(font_family, ctx$page, call = call)
-  check_annotation_font_size(font_size, call = call)
+  check_positive_css_px(font_size, call = call)
   list(color = color, font_family = font_family, font_size = font_size)
 }
 

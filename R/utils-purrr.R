@@ -13,9 +13,11 @@
 map_lgl <- function(.x, .f, ...) {
   .rlang_purrr_map_mold(.x, .f, logical(1), ...)
 }
+
 map_dbl <- function(.x, .f, ...) {
   .rlang_purrr_map_mold(.x, .f, double(1), ...)
 }
+
 map_chr <- function(.x, .f, ...) {
   .rlang_purrr_map_mold(.x, .f, character(1), ...)
 }

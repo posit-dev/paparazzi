@@ -1026,3 +1026,14 @@ test_that("pz_stage_annotate stages fill, text color, stroke width and distance"
     STAGE_DEFAULTS$annotate_distance
   )
 })
+
+test_that("scrolling a zero-count set returns invisibly without probing CDP", {
+  local_mocked_bindings(
+    els_values = function(...) stop("Unexpected CDP probe")
+  )
+  els <- new_elements(NULL, NULL, 0L, "empty")
+  expect_identical(
+    withVisible(stage_wheel_into_view(NULL, els)),
+    list(value = els, visible = FALSE)
+  )
+})

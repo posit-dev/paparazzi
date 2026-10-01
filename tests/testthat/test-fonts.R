@@ -70,6 +70,20 @@ test_that("font objects have a compact print method", {
   )
 })
 
+test_that("font printing preserves literal lines and invisible return", {
+  font <- pz_font_google("Braced {Font} {.arg x} 100% $value\\path\nline")
+  printed <- capture.output(result <- withVisible(print(font)))
+
+  expect_identical(
+    printed,
+    c(
+      "<paparazzi font> Braced {Font} {.arg x} 100% $value\\path",
+      "line (google, weight 400, normal)"
+    )
+  )
+  expect_identical(result, list(value = font, visible = FALSE))
+})
+
 test_that("pz_stage_fonts requires font objects", {
   page <- local_page()
   expect_error(pz_stage_fonts(page, "Silkscreen"), "pz_font_google")

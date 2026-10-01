@@ -141,7 +141,7 @@ test_that("a non-Shiny page cannot have a bound Shiny input", {
 
 test_that("the owned fixture app has readable logs and stops at page close", {
   page <- local_shiny_input_page()
-  owned <- page$.__enclos_env__$private$owned_app_
+  owned <- page$app
   port <- owned$port
   expect_true(any(grepl(
     "PAPARAZZI_SHINY_INPUT_READY",

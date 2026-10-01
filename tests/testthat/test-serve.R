@@ -325,7 +325,7 @@ test_that("static directories and single HTML files share the handle contract", 
     expect_false(app_port_reachable(server$port))
 
     owned <- local_page(path)
-    port <- owned$.__enclos_env__$private$owned_app_$port
+    port <- owned$app$port
     expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
     pz_nav_reload(owned)
     expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
@@ -416,7 +416,7 @@ test_that("pz_open owns a one-off Quarto document preview", {
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
   page <- local_page(path)
-  port <- page$.__enclos_env__$private$owned_app_$port
+  port <- page$app$port
   expect_identical(
     pz_get_text(page, target = "#document-marker"),
     "Quarto capture"

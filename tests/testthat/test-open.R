@@ -186,7 +186,7 @@ test_that("pz_open owns an app started from a directory", {
   withr::defer(pz_close(page))
   port <- as.integer(pz_js(page, "location.port"))
   expect_true(app_port_reachable(port))
-  owned <- page$.__enclos_env__$private$owned_app_
+  owned <- page$app
   expect_true(any(grepl("marker: open-owned", owned$logs(), fixed = TRUE)))
   expect_false(any(grepl("Listening on", owned$logs(), fixed = TRUE)))
   expect_equal(pz_js(page, "innerWidth"), 390)
@@ -239,7 +239,7 @@ test_that("a temporary app handle survives GC while its page is open", {
   page <- pz_open(pz_serve_shiny(shiny_app_fixture_dir()))
   withr::defer({
     pz_close(page)
-    page$.__enclos_env__$private$shared_app_$stop()
+    page$app$stop()
   })
   port <- as.integer(pz_js(page, "location.port"))
   gc()

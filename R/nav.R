@@ -90,17 +90,6 @@ pz_nav_goto <- function(
   ctx_return(root)
 }
 
-# CDP reports navigation failures as `errorText`, not as errors.
-nav_check_response <- function(nav, url, call = caller_env()) {
-  if (!is.null(nav$errorText) && nzchar(nav$errorText)) {
-    cli::cli_abort(
-      "Navigation to {.url {url}} failed: {nav$errorText}",
-      class = "paparazzi_error_navigation",
-      call = call
-    )
-  }
-}
-
 #' @rdname pz_nav_goto
 #'
 #' @export
@@ -159,6 +148,17 @@ pz_nav_forward <- function(ctx, ...) {
   }
   device_css_reapply(ctx$page)
   ctx_return(root)
+}
+
+# CDP reports navigation failures as `errorText`, not as errors.
+nav_check_response <- function(nav, url, call = caller_env()) {
+  if (!is.null(nav$errorText) && nzchar(nav$errorText)) {
+    cli::cli_abort(
+      "Navigation to {.url {url}} failed: {nav$errorText}",
+      class = "paparazzi_error_navigation",
+      call = call
+    )
+  }
 }
 
 nav_settle_shiny <- function(page, wait, timeout) {

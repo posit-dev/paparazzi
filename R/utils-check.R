@@ -67,14 +67,6 @@ check_annotation_id <- function(
   invisible(NULL)
 }
 
-check_annotation_font_size <- function(
-  x,
-  arg = caller_arg(x),
-  call = caller_env()
-) {
-  check_positive_css_px(x, arg = arg, call = call)
-}
-
 check_positive_css_px <- function(
   x,
   arg = caller_arg(x),
