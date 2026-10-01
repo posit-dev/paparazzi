@@ -35,7 +35,7 @@ pz_annotate_caption <- function(
   check_string(text, allow_empty = FALSE)
   side <- arg_match(side, c("bottom", "top"))
   check_string(color, allow_empty = FALSE)
-  check_annotation_font_size(font_size)
+  check_positive_css_px(font_size)
   style <- annotate_style(ctx, color, font_family, font_size)
   rec <- page_recorder(ctx$page)
   if (!is.null(rec) && rec$active && rec$format == "gif") {
@@ -301,7 +301,6 @@ caption_vtt <- function(rec, windows) {
   writeLines(c("WEBVTT", "", cues), path, useBytes = TRUE)
   invisible(path)
 }
-
 
 key_callout_windows <- function(rec, sampled) {
   events <- rec$keypresses

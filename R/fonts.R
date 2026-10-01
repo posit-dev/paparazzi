@@ -213,7 +213,7 @@ format.paparazzi_font <- function(x, ...) {
 
 #' @export
 print.paparazzi_font <- function(x, ...) {
-  cat(format(x, ...), "\n", sep = "")
+  cli::cat_line(format(x, ...))
   invisible(x)
 }
 

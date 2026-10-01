@@ -359,7 +359,7 @@ pz_stage_annotate <- function(
     if (is.null(font_size)) {
       overrides[["annotate_font_size"]] <- NULL
     } else {
-      check_annotation_font_size(font_size)
+      check_positive_css_px(font_size)
       overrides$annotate_font_size <- font_size
     }
   }
@@ -474,7 +474,7 @@ stage_wheel_into_view <- function(
   duration = NULL,
   call = caller_env()
 ) {
-  if (els$count == 0L || is.null(els$object_id)) {
+  if (els$count == 0L) {
     return(invisible(els))
   }
   prev <- NULL
