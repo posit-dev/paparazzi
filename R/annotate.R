@@ -7,6 +7,10 @@ NULL
 #' follow their elements as the page scrolls or changes layout, and appear
 #' in screenshots and recordings until cleared with [pz_annotate_clear()].
 #' Annotations belong to the current document; navigating away removes them.
+#' Marks and their badges clip to the target's axis-aligned overflow
+#' ancestors (custom `overflow-clip-margin` excepted), and a mark hides
+#' while its target disconnects, stops rendering, is `visibility: hidden`
+#' with no visible descendants, or is entirely clipped.
 #'
 #' @inheritParams pz_act_click
 #' @param target A selector, [pz_loc()] spec, or list of targets.

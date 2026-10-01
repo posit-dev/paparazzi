@@ -4,7 +4,9 @@
 #' The scrim covers the document, including below-fold areas captured in
 #' screenshots. The spotlight follows its elements through scrolling and
 #' layout changes; hidden, disconnected, or zero-size elements lose their
-#' cutouts. It appears in screenshots and recordings until cleared, and is
+#' cutouts. Cutouts clip to the target's axis-aligned overflow ancestors
+#' (custom `overflow-clip-margin` excepted), so a target scrolled out of an
+#' overflow container opens no cutout over the content below it. It appears in screenshots and recordings until cleared, and is
 #' lost on navigation.
 #' Only one spotlight exists per page: a new call replaces the previous one,
 #' and [pz_annotate_clear()] removes it by the reserved id `"spotlight"` or

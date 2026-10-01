@@ -51,7 +51,9 @@ page |>
 page |> pz_screenshot(frame = pz_frame("main", pad = 16))
 ```
 
-Here and below, each screenshot passes a [`pz_frame()`](../reference/pz_frame.html) so the still is cropped to what it discusses. Marks stay on the page after they're drawn, so clear them between examples:
+Here and below, each screenshot passes a [`pz_frame()`](../reference/pz_frame.html) so the still is cropped to what it discusses. Marks stay on the page after they're drawn, so clear them between examples.
+
+A mark clips to its target's axis-aligned overflow ancestors and hides when the target disconnects, is hidden, stops rendering, or is entirely clipped — a mark on a task row scrolled out of the task list does not paint over the content below the list.
 
 ```{r}
 page |> pz_annotate_clear()
@@ -96,7 +98,7 @@ page |> pz_annotate_clear()
 
 ## Callouts
 
-[`pz_annotate_callout()`](../reference/pz_annotate_callout.html) draws a bubble next to each matching element, repeating the same `text` for every match. `side` picks where the bubble goes: a cardinal side (`"top"`, `"right"`, `"bottom"`, `"left"`) or a diagonal like `"top right"`. The default, `NULL`, chooses the cardinal side with the most room. A bubble is kept inside the viewport even if that moves it off the requested side.
+[`pz_annotate_callout()`](../reference/pz_annotate_callout.html) draws a bubble next to each matching element, repeating the same `text` for every match. `side` picks where the bubble goes: a cardinal side (`"top"`, `"right"`, `"bottom"`, `"left"`) or a diagonal like `"top right"`. The default, `NULL`, chooses the cardinal side with the most room. A bubble is kept inside the viewport even if that moves it off the requested side. A callout hides while its target stops rendering or is entirely clipped by an overflow ancestor; for a partly clipped target the leader anchors to the visible part, and the bubble is never clipped.
 
 A leader line runs from the bubble to the element, with an arrow at the element's end. `leader = FALSE` drops the line for a tooltip-style bubble, and `label` adds a badge just like on marks.
 
@@ -149,7 +151,7 @@ page |> pz_annotate_clear()
 
 ## Spotlight
 
-[`pz_annotate_spotlight()`](../reference/pz_annotate_spotlight.html) dims the whole page except for a rounded cutout around each target, so the reader's eye goes straight to what matters. `dim` sets the opacity of the black scrim from 0 (transparent) to 1 (black), defaulting to 0.6, and `pad` grows the cutouts. A list of targets gets one cutout each.
+[`pz_annotate_spotlight()`](../reference/pz_annotate_spotlight.html) dims the whole page except for a rounded cutout around each target, so the reader's eye goes straight to what matters. `dim` sets the opacity of the black scrim from 0 (transparent) to 1 (black), defaulting to 0.6, and `pad` grows the cutouts. A list of targets gets one cutout each. Cutouts clip to the target's overflow ancestors, so a target scrolled out of an overflow container opens no cutout over the content below it.
 
 ```{r spotlight, fig.alt = "The task tracker dimmed to near-black, with bright cutouts around the title field and the Add button."}
 page |>

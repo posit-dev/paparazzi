@@ -6,7 +6,10 @@
 #' [pz_annotate_clear()]. They belong to the current document and disappear
 #' on navigation. A bubble is kept within the viewport even if this moves it
 #' away from the requested side; text that cannot fit a tiny viewport is
-#' clipped. A viewport resize does not rewrap an existing callout.
+#' clipped. A viewport resize does not rewrap an existing callout. A
+#' callout hides while its target stops rendering or is entirely clipped by
+#' an overflow ancestor; for a partly clipped target the leader anchors to
+#' the visible part, and the bubble itself is never clipped.
 #'
 #' @inheritParams pz_annotate
 #' @param text One nonempty string of literal text (not HTML).
