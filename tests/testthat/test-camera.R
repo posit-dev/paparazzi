@@ -440,21 +440,34 @@ test_that("camera follow pans minimally and zooms out only to fit", {
 test_that("follow zoom is not treated as an explicit softness request", {
   testthat::skip_if_not_installed("png")
   path <- withr::local_tempfile(fileext = ".png")
-  png::writePNG(array(0.5, c(48, 64, 3)), path)
+  png::writePNG(array(0.5, c(600, 800, 3)), path)
   rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
-  rec$camera_viewport_width <- 64
+  rec$camera_viewport_width <- 400
   rec$files <- path
   rec$scroll <- list(c(0, 0))
-  rec$camera <- list(list(
-    start = 0,
-    end = 0,
-    box = c(20, 10, 40, 30),
-    zoom = 1 + 1e-8,
-    reset = FALSE,
-    follow = TRUE,
-    scroll = c(0, 0)
-  ))
-  sampled <- list(files = path, index = 1L, vts = 0, n_ticks = 1L)
+  rec$camera <- list(
+    list(
+      start = 0,
+      end = 0,
+      box = c(90, 70, 110, 90),
+      zoom = NULL,
+      reset = FALSE,
+      scroll = c(0, 0)
+    ),
+    list(
+      start = 1,
+      end = 1,
+      target = c(350, 230, 370, 250),
+      reset = FALSE,
+      follow = TRUE,
+      scroll = c(0, 0)
+    )
+  )
+  resolved <- camera_resolve(rec$camera, c(0, 0, 400, 300), 2)
+  expect_length(resolved, 2)
+  expect_equal(resolved[[2]]$zoom, 2)
+  expect_equal(resolved[[2]]$box, c(194, 124, 394, 274))
+  sampled <- list(files = path, index = 1L, vts = 1, n_ticks = 1L)
   out <- record_output_spec(rec, png_read_size(path))
   expect_no_warning(camera_filter(rec, sampled, out, png_read_size(path)))
 })
@@ -470,12 +483,17 @@ test_that("follow keyframes share the pointer glide and skip in-shot actions", {
   defer_record_stop(page)
   rec <- page_recorder(page)
   pz_camera(page, pz_frame("#a", zoom = 2), duration = 0)
+  resolved <- function() camera_resolve(rec$camera, c(0, 0, 640, 480), 2)
   pz_act_hover(page, "#a")
-  expect_length(rec$camera, 1)
+  expect_length(rec$camera, 2)
+  expect_length(resolved(), 1)
   start <- rec_vt(rec)
   pz_act_hover(page, "#b")
-  expect_length(rec$camera, 2)
-  move <- rec$camera[[2]]
+  expect_length(rec$camera, 3)
+  expect_length(resolved(), 2)
+  intent <- rec$camera[[3]]
+  expect_named(intent, c("start", "end", "target", "scroll", "reset", "follow"))
+  move <- resolved()[[2]]
   expect_true(move$follow)
   expect_equal(move$zoom, 640 / (move$box[3] - move$box[1]))
   expect_gte(move$start, start)
@@ -486,19 +504,21 @@ test_that("follow keyframes share the pointer glide and skip in-shot actions", {
     tolerance = 0.02
   )
   pz_act_hover(page, "#b")
-  expect_length(rec$camera, 2)
+  expect_length(rec$camera, 4)
+  expect_length(resolved(), 2)
   pz_stage(page, camera_follow = FALSE)
   pz_act_click(page, "#a")
-  expect_length(rec$camera, 2)
+  expect_length(rec$camera, 4)
   pz_stage(page, camera_follow = NULL, cursor = FALSE)
   pz_camera(page, pz_frame("#a", zoom = 2), duration = 0)
   before <- rec_vt(rec)
   pz_act_type(page, "hi", target = "#field")
-  expect_length(rec$camera, 4)
-  expect_true(rec$camera[[4]]$follow)
-  expect_equal(rec$camera[[4]]$end - rec$camera[[4]]$start, 0.5)
-  expect_gte(rec$camera[[4]]$start, before)
-  expect_lte(rec$camera[[4]]$end, rec_vt(rec))
+  expect_length(rec$camera, 6)
+  expect_length(resolved(), 4)
+  expect_true(rec$camera[[6]]$follow)
+  expect_equal(rec$camera[[6]]$end - rec$camera[[6]]$start, 0.5)
+  expect_gte(rec$camera[[6]]$start, before)
+  expect_lte(rec$camera[[6]]$end, rec_vt(rec))
   suppressWarnings(pz_record_stop(page))
 })
 
@@ -519,7 +539,18 @@ test_that("auto-scroll follow uses the resolved post-scroll target", {
   expect_true(move$follow)
   expect_gte(move$end - move$start, 0.5)
   expect_lte(move$end - move$start, 2)
-  expect_equal(move$box[2], 900 - 24, tolerance = 2)
+  expect_equal(move$target, c(490, 900, 570, 950), tolerance = 1e-6)
+  home <- c(0, 0, 640, 480)
+  resolved <- camera_resolve(rec$camera, home, 2)
+  shot <- tail(resolved, 1)[[1]]$box
+  padded <- move$target + c(-24, -24, 24, 24)
+  viewport <- home + rep(move$scroll, 2)
+  clamped <- pmin(
+    pmax(padded, viewport[c(1, 2, 1, 2)]),
+    viewport[c(3, 4, 3, 4)]
+  )
+  expect_true(all(shot[1:2] <= clamped[1:2]))
+  expect_true(all(shot[3:4] >= clamped[3:4]))
   suppressWarnings(pz_record_stop(page))
 })
 
@@ -545,7 +576,8 @@ test_that("first appearance follows during fade; home and reads do not", {
   pz_camera_reset(page)
   n <- length(rec$camera)
   pz_act_hover(page, "#a")
-  expect_length(rec$camera, n)
+  expect_length(rec$camera, n + 1)
+  expect_length(camera_resolve(rec$camera, c(0, 0, 640, 480), 2), n)
   suppressWarnings(pz_record_stop(page))
 
   page2 <- local_page(html, width = 640, height = 480, scale = 2)
@@ -577,16 +609,28 @@ test_that("selection and focused typing follow without a pointer glide", {
   pz_act_select_text(page, "far", target = "#far")
   expect_length(rec$camera, 2)
   expect_true(rec$camera[[2]]$follow)
+  expect_named(
+    rec$camera[[2]],
+    c("start", "end", "target", "scroll", "reset", "follow")
+  )
   expect_equal(rec$camera[[2]]$end - rec$camera[[2]]$start, 0.5)
   pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   scoped <- pz_find(page, "#far")
   pz_act_type(scoped, "new")
   expect_length(rec$camera, 4)
   expect_true(rec$camera[[4]]$follow)
+  expect_named(
+    rec$camera[[4]],
+    c("start", "end", "target", "scroll", "reset", "follow")
+  )
   pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   pz_act_type(page, "!")
   expect_length(rec$camera, 6)
   expect_true(rec$camera[[6]]$follow)
+  expect_named(
+    rec$camera[[6]],
+    c("start", "end", "target", "scroll", "reset", "follow")
+  )
   suppressWarnings(pz_record_stop(page))
 })
 
@@ -617,6 +661,10 @@ test_that("paused follow, manual camera, and reset moves are instant without pum
   )
   expect_length(rec$camera, 4)
   expect_true(rec$camera[[2]]$follow)
+  expect_named(
+    rec$camera[[2]],
+    c("start", "end", "target", "scroll", "reset", "follow")
+  )
   for (move in rec$camera[2:4]) {
     expect_equal(move$start, frozen)
     expect_equal(move$end, frozen)
@@ -819,22 +867,26 @@ test_that("follow tests the shot when the action lands", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
+  resolved <- function() camera_resolve(rec$camera, c(0, 0, 640, 480), 2)
   pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   # Landing after the move ends: the move already frames the target.
   pz_camera(page, pz_frame("#far", zoom = 2), duration = 0.3)
   pz_act_hover(page, "#far")
-  expect_length(rec$camera, 2)
+  expect_length(rec$camera, 3)
+  expect_length(resolved(), 2)
   # In the shot now, but the move pans away before the action lands.
   pz_camera(page, pz_frame("#far", zoom = 2), duration = 0)
   pz_camera(page, pz_frame("#near", zoom = 2), duration = 0.4)
   pz_act_hover(page, "#far")
-  expect_length(rec$camera, 5)
-  expect_true(rec$camera[[5]]$follow)
+  expect_length(rec$camera, 6)
+  expect_length(resolved(), 5)
+  expect_true(rec$camera[[6]]$follow)
   # Landing early in a long move toward the target: leave it alone.
   pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   pz_camera(page, pz_frame("#far", zoom = 2), duration = 3)
   pz_act_hover(page, "#far")
-  expect_length(rec$camera, 7)
+  expect_length(rec$camera, 9)
+  expect_length(resolved(), 7)
   suppressWarnings(pz_record_stop(page))
 })
 
@@ -1058,4 +1110,164 @@ test_that("camera home estimates use only the measured crop or live viewport", {
   rec$crop <- list(x = 20, y = 30, width = 100, height = 60)
   expect_equal(camera_home_estimate(rec, page), c(20, 30, 120, 90))
   expect_equal(camera_home_estimate(rec, NULL), c(20, 30, 120, 90))
+})
+
+camera_test_corners <- function(filter) {
+  vapply(
+    c("x0", "y0", "x3", "y3"),
+    function(key) {
+      as.numeric(sub(paste0(".*", key, "=([^:,]+).*"), "\\1", filter))
+    },
+    numeric(1),
+    USE.NAMES = FALSE
+  )
+}
+
+test_that("follow resolves against the final home rather than the live estimate", {
+  live <- c(0, 0, 800, 600)
+  final <- c(200, 100, 600, 500)
+  manual <- list(
+    start = 0,
+    end = 0,
+    box = c(350, 250, 450, 350),
+    zoom = 2,
+    reset = FALSE,
+    scroll = c(0, 0)
+  )
+  intent <- list(
+    start = 1,
+    end = 1.5,
+    target = c(560, 290, 590, 320),
+    scroll = c(0, 0),
+    reset = FALSE,
+    follow = TRUE
+  )
+  moves <- list(manual, intent)
+  live_moves <- camera_resolve(moves, live, 1)
+  final_moves <- camera_resolve(moves, final, 1)
+  expect_identical(final_moves[[1]], manual)
+  expect_equal(live_moves[[2]]$box, c(214, 150, 614, 450))
+  expect_equal(final_moves[[2]]$box, c(400, 200, 600, 400))
+  expect_equal(final_moves[[2]]$zoom, 2)
+  expect_false(identical(live_moves[[2]]$box, final_moves[[2]]$box))
+  padded <- intent$target + c(-24, -24, 24, 24)
+  clamped <- pmin(pmax(padded, final[c(1, 2, 1, 2)]), final[c(3, 4, 3, 4)])
+  expect_true(all(final_moves[[2]]$box[1:2] <= clamped[1:2]))
+  expect_true(all(final_moves[[2]]$box[3:4] >= clamped[3:4]))
+
+  intent$target <- c(530, 290, 550, 310)
+  expect_length(camera_resolve(list(manual, intent), live, 1), 1)
+  expect_length(camera_resolve(list(manual, intent), final, 1), 2)
+  intent$target <- c(390, 290, 410, 310)
+  expect_length(camera_resolve(list(manual, intent), final, 1), 1)
+
+  rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+  rec$camera_viewport_width <- 800
+  rec$camera <- moves
+  rec$scroll <- list(c(0, 0))
+  rec$crop <- list(
+    x = 200,
+    y = 100,
+    width = 400,
+    height = 400,
+    viewport_width = 800
+  )
+  size <- list(width = 800, height = 600)
+  out <- record_output_spec(rec, size)
+  sampled <- list(index = 1L, vts = 1.5, n_ticks = 1L)
+  corners <- camera_test_corners(suppressWarnings(camera_filter(
+    rec,
+    sampled,
+    out,
+    size
+  )))
+  expect_equal(corners, c(400, 200, 600, 400))
+  expect_true(all(corners[1:2] <= clamped[1:2]))
+  expect_true(all(corners[3:4] >= clamped[3:4]))
+})
+
+test_that("stop-time card framing keeps the followed target in the encoded shot", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}#card{position:absolute;left:200px;top:100px;width:400px;height:400px}#center{position:absolute;left:150px;top:150px;width:100px;height:100px}#edge{position:absolute;left:360px;top:190px;width:30px;height:30px}</style><div id="card"><div id="center"></div><button id="edge">edge</button></div>',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 800, height = 600, scale = 2)
+  pz_record_start(
+    page,
+    withr::local_tempfile(fileext = ".mp4"),
+    frame = pz_frame("#card", pad = 0),
+    hold = c(0, 0)
+  )
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  expect_null(rec$crop)
+  pz_camera(page, pz_frame("#center", zoom = 2), duration = 0)
+  pz_act_hover(page, "#edge")
+  move <- tail(rec$camera, 1)[[1]]
+  rec$crop <- record_crop_box(rec$frame_ctx, rec$frame)
+  size <- png_read_size(rec$files[[1]])
+  density <- size$width / rec$camera_viewport_width
+  out <- record_output_spec(rec, size)
+  sampled <- list(index = length(rec$scroll), vts = move$end, n_ticks = 1L)
+  corners <- camera_test_corners(camera_filter(rec, sampled, out, size)) /
+    density
+  expect_equal(corners, c(400, 200, 600, 400), tolerance = 1e-6)
+  expect_true(all(corners[1:2] <= c(560, 290)))
+  expect_true(all(corners[3:4] >= c(590, 320)))
+  suppressWarnings(pz_record_stop(page))
+})
+
+test_that("skipped typing follow adds no settle time before an unframed hold", {
+  skip_if_no_av()
+  html <- withr::local_tempfile(
+    lines = '<!doctype html><style>body{margin:0}input{position:absolute;left:300px;top:200px;width:80px;height:40px}</style><input id="field">',
+    fileext = ".html"
+  )
+  page <- local_page(html, width = 800, height = 600, scale = 2)
+  pz_stage(page, cursor = FALSE)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_camera(page, pz_frame("#field", zoom = 2), duration = 0)
+  pumped <- numeric()
+  testthat::with_mocked_bindings(
+    {
+      pz_act_type(page, "x", target = "#field")
+      pz_record_hold(page, 0.1)
+    },
+    pump_loop = function(loop, seconds, ...) pumped <<- c(pumped, seconds)
+  )
+  expect_length(rec$camera, 2)
+  expect_length(camera_resolve(rec$camera, c(0, 0, 800, 600), 2), 1)
+  expect_length(pumped, 0)
+  suppressWarnings(pz_record_stop(page))
+})
+
+test_that("follow heading checks use the last surviving move", {
+  home <- c(0, 0, 800, 600)
+  manual <- list(
+    start = 0,
+    end = 3,
+    box = c(560, 290, 590, 320),
+    zoom = 2,
+    scroll = c(0, 0),
+    reset = FALSE
+  )
+  first <- list(
+    start = 0.1,
+    end = 0.5,
+    target = c(560, 290, 590, 320),
+    scroll = c(0, 0),
+    reset = FALSE,
+    follow = TRUE
+  )
+  second <- first
+  second$start <- 0.6
+  second$end <- 1
+  reset <- list(start = 4, end = 4, reset = TRUE, scroll = c(0, 80))
+  expect_identical(
+    camera_resolve(list(manual, first, second, reset), home, 1),
+    list(manual, reset)
+  )
 })

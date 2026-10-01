@@ -157,7 +157,8 @@ camera_move <- function(
   density <- camera_density(rec, ctx)
   scroll <- page_geometry(ctx)
   scroll <- c(scroll$scroll_x, scroll$scroll_y)
-  from <- camera_at(rec$camera, now, home, density)
+  moves <- camera_resolve(rec$camera, home, density)
+  from <- camera_at(moves, now, home, density)
   from <- camera_viewport(
     as.numeric(from),
     scroll,
@@ -196,7 +197,12 @@ camera_settle <- function(page, rec) {
   if (!rec$active || rec$paused || !length(rec$camera)) {
     return(invisible())
   }
-  remaining <- rec$camera[[length(rec$camera)]]$end - rec_vt(rec)
+  moves <- camera_resolve(
+    rec$camera,
+    camera_home_estimate(rec, page),
+    camera_density(rec, page)
+  )
+  remaining <- moves[[length(moves)]]$end - rec_vt(rec)
   if (remaining > 0) {
     pump_loop(page$child_loop, remaining)
   }
@@ -206,7 +212,12 @@ camera_settle <- function(page, rec) {
 camera_follow_move <- function(ctx, rect, duration) {
   page <- ctx$page
   rec <- page_recorder(page)
-  if (is.null(rec) || !rec$active || !isTRUE(page_stage(page)$camera_follow)) {
+  if (
+    is.null(rec) ||
+      !rec$active ||
+      !length(rec$camera) ||
+      !isTRUE(page_stage(page)$camera_follow)
+  ) {
     return(FALSE)
   }
   now <- rec_vt(rec)
@@ -214,16 +225,7 @@ camera_follow_move <- function(ctx, rect, duration) {
   geometry <- page_geometry(ctx)
   scroll <- c(geometry$scroll_x, geometry$scroll_y)
   density <- camera_density(rec, ctx)
-  shot_at <- function(time) {
-    at <- camera_at(rec$camera, time, home, density)
-    camera_viewport(
-      as.numeric(at),
-      scroll,
-      home,
-      reset = isTRUE(attr(at, "reset"))
-    ) +
-      rep(scroll, 2)
-  }
+  moves <- camera_resolve(rec$camera, home, density)
   target <- c(
     rect[["x"]],
     rect[["y"]],
@@ -231,28 +233,66 @@ camera_follow_move <- function(ctx, rect, duration) {
     rect[["y"]] + rect[["height"]]
   ) +
     rep(scroll, 2)
-  arrival <- now + camera_effective_duration(rec, duration)
-  last_end <- if (length(rec$camera)) rec$camera[[length(rec$camera)]]$end
-  heading_to_target <- !is.null(last_end) &&
-    last_end > arrival &&
-    is.null(camera_follow_shot(shot_at(last_end), target, home, scroll))
-  if (heading_to_target) {
-    return(FALSE)
-  }
-  shot <- camera_follow_shot(shot_at(arrival), target, home, scroll)
-  if (is.null(shot)) {
-    return(FALSE)
-  }
   rec$camera[[length(rec$camera) + 1L]] <- list(
     start = now,
-    end = arrival,
-    box = shot,
-    zoom = (home[3] - home[1]) / (shot[3] - shot[1]),
-    reset = FALSE,
+    end = now + camera_effective_duration(rec, duration),
+    target = target,
     scroll = scroll,
+    reset = FALSE,
     follow = TRUE
   )
-  TRUE
+  length(camera_resolve(rec$camera, home, density)) > length(moves)
+}
+
+camera_resolve <- function(moves, home, density) {
+  resolved <- list()
+  for (move in moves) {
+    if (!isTRUE(move$follow)) {
+      resolved[[length(resolved) + 1L]] <- move
+      next
+    }
+    shot_at <- function(time) {
+      at <- camera_at(resolved, time, home, density)
+      camera_viewport(
+        as.numeric(at),
+        move$scroll,
+        home,
+        reset = isTRUE(attr(at, "reset"))
+      ) +
+        rep(move$scroll, 2)
+    }
+    last_end <- if (length(resolved)) resolved[[length(resolved)]]$end
+    heading_to_target <- !is.null(last_end) &&
+      last_end > move$end &&
+      is.null(camera_follow_shot(
+        shot_at(last_end),
+        move$target,
+        home,
+        move$scroll
+      ))
+    if (heading_to_target) {
+      next
+    }
+    shot <- camera_follow_shot(
+      shot_at(move$end),
+      move$target,
+      home,
+      move$scroll
+    )
+    if (is.null(shot)) {
+      next
+    }
+    resolved[[length(resolved) + 1L]] <- list(
+      start = move$start,
+      end = move$end,
+      box = shot,
+      zoom = (home[3] - home[1]) / (shot[3] - shot[1]),
+      scroll = move$scroll,
+      reset = FALSE,
+      follow = TRUE
+    )
+  }
+  resolved
 }
 
 camera_effective_duration <- function(rec, duration) {
@@ -440,10 +480,11 @@ camera_filter <- function(rec, sampled, out, png_size, call = caller_env()) {
     c(crop$x, crop$y, crop$x + crop$width, crop$y + crop$height)
   }
   home <- source / density
+  moves <- camera_resolve(rec$camera, home, density)
   corners <- matrix(0, nrow = sampled$n_ticks, ncol = 4)
   for (i in seq_len(sampled$n_ticks)) {
     at <- camera_at(
-      rec$camera,
+      moves,
       sampled$vts[[i]],
       home,
       density
