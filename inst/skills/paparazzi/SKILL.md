@@ -97,9 +97,10 @@ stopifnot(file.exists(video))
 - **Keep assertions in demos.** A recording is useful evidence only when the
   expected state is reached. The same expectations become testthat
   expectations inside `testthat::test_that()`.
-- **Give resources an owner.** A page opened from a path owns its server.
-  A page opened from a shared handle owns only its browser session. Stop the
-  shared handle after all pages close; register cleanup when starting it.
+- **Give resources an owner.** When opening a path starts a server, the page
+  owns that server. A page opened from a shared handle owns only its browser
+  session. Stop the shared handle after all pages close; register cleanup
+  when starting it.
 
 ## Reference index
 
