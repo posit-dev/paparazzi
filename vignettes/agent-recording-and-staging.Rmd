@@ -1,0 +1,15 @@
+---
+title: "Agent guide: Recording and staging"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Agent guide: Recording and staging}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<!-- The content lives in inst/skills/paparazzi/references/recording-and-staging.md; edit it there. -->
+
+```{r, echo = FALSE, results = "asis"}
+source(file.path(dirname(knitr::current_input(dir = TRUE)), "skill-source.R"))
+cat_skill_source("references/recording-and-staging.md")
+```
