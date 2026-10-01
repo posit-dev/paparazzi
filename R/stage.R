@@ -580,6 +580,45 @@ stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
   invisible(TRUE)
 }
 
+# The staged drag carry, shared by both drag dispatchers: the overlay
+# cursor glides source-to-drop (its CSS transition started WITHOUT
+# cursor_apply()'s pump, so this loop owns the pacing) while `step()`
+# dispatches the path's real input events -- held mouseMoved on the
+# mouse path, dragEnter/dragOver on the HTML5 path. About 30 Hz: each
+# event aims at the eased position (the glide's own ease, read off the
+# wall clock) half a step ahead, centering the pointer's lag behind the
+# drawn cursor, and the loop pumps only the step's remainder after the
+# dispatch's own round-trip, so a slow dispatch slows the rate instead
+# of drifting the path. The loop holds no state: a dispatch error
+# propagates, the transition simply finishes, and releasing the held
+# input stays the dispatchers' defers' job.
+stage_drag_carry <- function(ctx, from, to, step) {
+  page <- ctx$page
+  duration <- stage_glide_duration(from, to, page_stage(page)$cursor_speed)
+  cursor_apply(ctx, to, duration = duration, pressed = TRUE, pump = FALSE)
+  interval <- 1 / 30
+  start <- Sys.time()
+  repeat {
+    elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
+    at <- (elapsed + interval / 2) / duration
+    if (at >= 1) {
+      break
+    }
+    ease <- glide_ease_invert(at, glide_ease_x, glide_ease_y)
+    point <- c(
+      x = unname(from[["x"]] + (to[["x"]] - from[["x"]]) * ease),
+      y = unname(from[["y"]] + (to[["y"]] - from[["y"]]) * ease)
+    )
+    dispatched <- proc.time()[["elapsed"]]
+    step(point)
+    rest <- interval - (proc.time()[["elapsed"]] - dispatched)
+    if (rest > 0.005) {
+      pump_loop(page$child_loop, rest, interval = min(rest, 0.02))
+    }
+  }
+  invisible(TRUE)
+}
+
 # The staged pz_act_scroll(by =)/pz_act_scroll(to =): wheel the scope's
 # container (or the document) to the target scroll position with the
 # cursor over it, then verify and repair. The wheel point is hit-tested

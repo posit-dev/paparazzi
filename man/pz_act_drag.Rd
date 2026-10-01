@@ -41,9 +41,14 @@ there), and the drop is delivered to the destination as trusted
 
 While recording, the staging (\code{\link[=pz_stage]{pz_stage()}}) shows the press at the
 source and glides the cursor while holding from the source to the
-destination, so the drop lands as the cursor arrives. On the HTML5
-path the carry runs between the page's \code{dragstart} and the replayed
-\code{drop}, so \code{dragstart} styling stays visible through the carry.
+destination, streaming the path's real input events (held moves, or
+\code{dragenter}/\code{dragover} on the HTML5 path) along the glide, so
+pointer-following content tracks the cursor and intermediate
+elements see the drag pass. The drop lands as the cursor arrives.
+On the HTML5 path the carry runs between the page's \code{dragstart} and
+the replayed \code{drop}, so \code{dragstart} styling stays visible through
+the carry, and the real pointer stays by the source until the
+release, so the destination shows no hover during the carry.
 
 \code{to} names the element to drop onto; \code{by = c(x, y)} drops at that
 offset in pixels from the source's center. Supply exactly one.

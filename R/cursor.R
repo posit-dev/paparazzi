@@ -578,7 +578,9 @@ cursor_check_icon <- function(icon) {
 # holds the press scale-down through the move (a drag carry). Without a
 # recording every variant is a static jump. Updates the cursor state and
 # the new-document script, and pumps the child loop for the animation,
-# so the recorder's ticks capture it.
+# so the recorder's ticks capture it. With `pump = FALSE` the CSS
+# transition is started fire-and-forget and the caller owns the pacing
+# (the staged drag carry streams input events through the glide).
 cursor_apply <- function(
   ctx,
   point,
@@ -589,7 +591,8 @@ cursor_apply <- function(
   rect = NULL,
   destination = NULL,
   follow = FALSE,
-  pressed = FALSE
+  pressed = FALSE,
+  pump = TRUE
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -647,10 +650,10 @@ cursor_apply <- function(
   cur$y <- state$y
   cur$off_frame <- NULL
   cur$resting <- FALSE
-  if (state$duration > 0) {
+  if (pump && state$duration > 0) {
     pump_loop(page$child_loop, state$duration + 0.05)
   }
-  if (isTRUE(state$fade)) {
+  if (pump && isTRUE(state$fade)) {
     pump_loop(page$child_loop, 0.3)
   }
   cursor_register_init(ctx)

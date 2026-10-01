@@ -864,9 +864,14 @@ pz_act_scroll <- function(
 #'
 #' While recording, the staging ([pz_stage()]) shows the press at the
 #' source and glides the cursor while holding from the source to the
-#' destination, so the drop lands as the cursor arrives. On the HTML5
-#' path the carry runs between the page's `dragstart` and the replayed
-#' `drop`, so `dragstart` styling stays visible through the carry.
+#' destination, streaming the path's real input events (held moves, or
+#' `dragenter`/`dragover` on the HTML5 path) along the glide, so
+#' pointer-following content tracks the cursor and intermediate
+#' elements see the drag pass. The drop lands as the cursor arrives.
+#' On the HTML5 path the carry runs between the page's `dragstart` and
+#' the replayed `drop`, so `dragstart` styling stays visible through
+#' the carry, and the real pointer stays by the source until the
+#' release, so the destination shows no hover during the carry.
 #'
 #' `to` names the element to drop onto; `by = c(x, y)` drops at that
 #' offset in pixels from the source's center. Supply exactly one.
@@ -1681,13 +1686,15 @@ draggable_js <- "function() {
     (el.tagName === 'A' && el.hasAttribute('href'));
 }"
 
-# The mouse drag: press at the source, one move to the destination,
+# The mouse drag: press at the source, move to the destination,
 # release. While recording with a visible cursor the press scale-down
-# plays at the source and the cursor glides while holding BEFORE the
-# move, so pointer-following pages react as the cursor arrives; without
-# a recording everything runs straight through. A dispatch error between
-# press and release leaves the button held, so the release is
-# re-attempted on exit until the normal path completes it.
+# plays at the source and the carry streams held moves along the
+# cursor's glide, so pointer-following pages track the cursor through
+# the carry; the last move to the destination and the release land as
+# the cursor arrives. Without a recording everything runs straight
+# through. A dispatch error between press and release leaves the button
+# held, so the release is re-attempted on exit until the normal path
+# completes it.
 dispatch_mouse_drag <- function(
   ctx,
   action,
@@ -1745,7 +1752,19 @@ dispatch_mouse_drag <- function(
   )
   pressed <- TRUE
   if (staged) {
-    cursor_show_at(ctx, to, pressed = TRUE)
+    stage_drag_carry(ctx, from, to, function(point) {
+      dispatch_mouse(
+        ctx,
+        action,
+        target,
+        "mouseMoved",
+        point,
+        button = "left",
+        buttons = 1,
+        clickCount = 0,
+        call = call
+      )
+    })
   }
   dispatch_mouse(
     ctx,
@@ -1787,10 +1806,16 @@ dispatch_mouse_drag <- function(
 # then the captured data is replayed onto the destination as
 # dragEnter/dragOver/drop: trusted DnD events with the real payload.
 # While recording with a visible cursor, the carry is staged between the
-# intercepted dragstart and the replayed drop: the drag stays held
-# (interception still on, button still down, nothing dispatched) while
-# the cursor glides to the drop point, so the page's dragstart styling
-# shows through the carry and the drop lands as the cursor arrives.
+# intercepted dragstart and the replayed drop. The drag is started with
+# a short nudge toward the destination instead of the full move, so the
+# real pointer stays by the source and the drop row shows no hover
+# during the carry; the carry then streams dragEnter/dragOver along the
+# cursor's glide with interception still on and the button still held,
+# so intermediate elements see the drag pass and the page's dragstart
+# styling shows through the carry. Interception still goes off before
+# the release at the destination, and the replay lands as the cursor
+# arrives: the overlay cursor and the real pointer both end at the drop
+# point.
 drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
@@ -1863,17 +1888,36 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     clickCount = 1,
     call = call
   )
-  dispatch_mouse(
-    ctx,
-    "dragging",
-    els$description,
-    "mouseMoved",
-    to,
-    button = "left",
-    buttons = 1,
-    clickCount = 0,
-    call = call
-  )
+  if (staged) {
+    # A short nudge starts the drag without putting the real pointer on
+    # the destination; well past the browser's drag threshold.
+    delta <- c(to[["x"]] - from[["x"]], to[["y"]] - from[["y"]])
+    dist <- sqrt(sum(delta^2))
+    nudge <- if (dist > 0) from + delta / dist * min(12, dist) else from
+    dispatch_mouse(
+      ctx,
+      "dragging",
+      els$description,
+      "mouseMoved",
+      nudge,
+      button = "left",
+      buttons = 1,
+      clickCount = 0,
+      call = call
+    )
+  } else {
+    dispatch_mouse(
+      ctx,
+      "dragging",
+      els$description,
+      "mouseMoved",
+      to,
+      button = "left",
+      buttons = 1,
+      clickCount = 0,
+      call = call
+    )
+  }
   pz_poll(
     fn = function() !is.null(data),
     timeout = timeout,
@@ -1883,7 +1927,26 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   )
 
   if (staged) {
-    cursor_show_at(ctx, to, pressed = TRUE)
+    # Paired dragEnter/dragOver per step: the browser synthesizes the
+    # matching dragleave from the enter, so each row sees one
+    # enter/leave transition as the drag passes.
+    stage_drag_carry(ctx, from, to, function(point) {
+      for (type in c("dragEnter", "dragOver")) {
+        action_cdp(
+          ctx,
+          "dragging",
+          els$description,
+          call = call,
+          cmd = session$Input$dispatchDragEvent(
+            type = type,
+            x = point[["x"]],
+            y = point[["y"]],
+            data = data,
+            timeout_ = timeout
+          )
+        )
+      }
+    })
   }
   action_cdp(
     ctx,
