@@ -954,7 +954,7 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
 }
 
 record_pre_action_loader <- function(ctx) {
-  ctx$page$.__enclos_env__$private$pre_action_loader_ <-
+  ctx$page$pre_action_loader <-
     ctx$page$session$Page$getFrameTree(
       timeout_ = ctx$page$default_timeout
     )$frameTree$frame$loaderId

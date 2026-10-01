@@ -163,8 +163,7 @@ pz_nav_forward <- function(ctx, ...) {
 
 nav_settle_shiny <- function(page, wait, timeout) {
   if (identical(wait, "auto")) {
-    private <- page$.__enclos_env__$private
-    app <- private$owned_app_ %||% private$shared_app_
+    app <- page$app
     if (is.null(app) || !identical(app$backend, "shiny")) {
       return(invisible(page))
     }

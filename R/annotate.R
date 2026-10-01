@@ -306,7 +306,7 @@ annotate_recording <- function(page) {
 
 annotate_register_init <- function(ctx) {
   page <- ctx$page
-  if (!is.null(page$.__enclos_env__$private$staging_$annotate_init_id)) {
+  if (!is.null(page$staging$annotate_init_id)) {
     return(invisible(NULL))
   }
   session <- page$session
@@ -323,7 +323,7 @@ annotate_register_init <- function(ctx) {
     source = source,
     timeout_ = timeout
   )
-  page$.__enclos_env__$private$staging_$annotate_init_id <- res$identifier
+  page$staging$annotate_init_id <- res$identifier
   invisible(NULL)
 }
 

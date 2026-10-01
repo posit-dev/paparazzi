@@ -362,7 +362,7 @@ pz_wait_for_navigation <- function(
     settle = nav_settle_secs,
     timeout = timeout,
     snapshot = snapshot,
-    action_loader = ctx$page$.__enclos_env__$private$pre_action_loader_
+    action_loader = ctx$page$pre_action_loader
   )
   root <- wait_nav_reset(ctx)
   device_css_reapply(ctx$page)
@@ -540,7 +540,7 @@ stable_sample_js <- function(prop) {
 }
 
 wait_nav_reset <- function(ctx) {
-  ctx$page$.__enclos_env__$private$pre_action_loader_ <- NULL
+  ctx$page$pre_action_loader <- NULL
   ctx$page$release_object_group()
   record_nav_rebased(ctx$page)
   device_css_forget(ctx$page)

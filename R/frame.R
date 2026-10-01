@@ -498,11 +498,11 @@ check_offset <- function(
 }
 
 page_frame <- function(page) {
-  page$.__enclos_env__$private$staging_$frame
+  page$staging$frame
 }
 
 page_set_frame <- function(page, frame) {
-  page$.__enclos_env__$private$staging_$frame <- frame
+  page$staging$frame <- frame
   invisible(page)
 }
 
