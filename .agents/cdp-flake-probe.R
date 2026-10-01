@@ -104,7 +104,7 @@ run_probe <- function() {
     status <- if (!is.null(err_msg)) {
       paste("ERROR:", err_msg)
     } else if (is.character(val)) {
-      # wait_for() itself threw (closed session, interrupt, ...)
+      # wait_for() itself threw (e.g. closed session)
       paste("ERROR:", val)
     } else if (isTRUE(val) && dt < 0.5) {
       "instant"
