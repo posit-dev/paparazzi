@@ -840,7 +840,7 @@ expect_impl <- function(
   check_context(ctx, call = call)
   timeout <- resolve_timeout(timeout, ctx$page, call = call)
 
-  target_expr <- target_resolver_expr(target, call = call)
+  target_expr <- target_resolver(target, call = call)
   expr <- target_expr$fn
   target_desc <- target_expr$description
 
@@ -850,7 +850,7 @@ expect_impl <- function(
   if (is.null(target) && !is.null(scoped)) {
     target_desc <- scoped$description
     result <- expect_retry(
-      fn = function() check(scope_root(ctx, call = call)),
+      fn = function() check(scope_connected(ctx, call = call)),
       timeout = timeout,
       loop = ctx$page$child_loop
     )
@@ -862,7 +862,7 @@ expect_impl <- function(
           expr,
           target_desc,
           call,
-          root = scope_root(ctx, call = call)
+          root = scope_connected(ctx, call = call)
         )
         withr::defer(release_elements(els))
         check(els)
@@ -974,7 +974,7 @@ els_values <- function(
   res$result$value
 }
 
-els_call <- function(els, js, call = caller_env()) {
+els_values_flat <- function(els, js, call = caller_env()) {
   unlist(els_values(els, js, call = call))
 }
 
@@ -1078,7 +1078,7 @@ check_state <- function(js, not, seen) {
     if (els$count == 0L) {
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
-    n_ok <- sum(els_call(els, js))
+    n_ok <- sum(els_values_flat(els, js))
     pass <- if (not) n_ok == 0L else n_ok == els$count
     list(pass = pass, observed = paste0(n_ok, " of ", els$count, " ", seen))
   }

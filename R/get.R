@@ -33,8 +33,8 @@
 pz_get_count <- function(ctx, target = NULL, ...) {
   check_dots_empty()
   check_context(ctx)
-  resolved <- target_resolver_expr(target)
-  root <- scope_root(ctx)
+  resolved <- target_resolver(target)
+  root <- scope_connected(ctx)
   if (is.null(target) && !is.null(root)) {
     return(root$count)
   }
@@ -86,7 +86,7 @@ pz_get_text <- function(ctx, target = NULL, ..., raw = FALSE) {
     target = target,
     timeout = NULL,
     read = function(els, call) {
-      texts <- els_call(els, expect_text_js, call = call)
+      texts <- els_values_flat(els, expect_text_js, call = call)
       if (raw) texts else collapse_ws(texts)
     }
   )
@@ -257,7 +257,7 @@ pz_get_html <- function(ctx, target = NULL, ...) {
     ctx = ctx,
     target = target,
     timeout = NULL,
-    read = function(els, call) els_call(els, get_html_js, call = call)
+    read = function(els, call) els_values_flat(els, get_html_js, call = call)
   )
 }
 
@@ -302,7 +302,7 @@ pz_get_title <- function(ctx) {
 
 get_impl <- function(ctx, target, timeout, read, call = caller_env()) {
   if (is.null(target)) {
-    scoped <- scope_root(ctx, call = call)
+    scoped <- scope_connected(ctx, call = call)
     if (!is.null(scoped)) {
       return(read(scoped, call))
     }

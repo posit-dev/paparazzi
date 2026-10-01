@@ -234,7 +234,9 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
   }
 
   els <- action_elements(ctx, target)
-  if (is.null(target) && isTRUE(els_call(els, focus_held_selection_js))) {
+  if (
+    is.null(target) && isTRUE(els_values_flat(els, focus_held_selection_js))
+  ) {
     stage_follow_without_glide(ctx, action_target_rect(els))
     insert_text(ctx, els$description, text)
     stage_action_pause(ctx)
@@ -392,7 +394,7 @@ pz_act_focus <- function(ctx, target = NULL, ...) {
   record_pre_action_loader(ctx)
   els <- action_elements(ctx, target)
   el_scroll_into_view(els)
-  els_call(
+  els_values_flat(
     els,
     "function() { if (this.length) this[0].focus(); }"
   )
@@ -429,10 +431,10 @@ pz_act_blur <- function(ctx, ...) {
   check_context(ctx)
   check_dots_empty()
   record_pre_action_loader(ctx)
-  scoped <- scope_root(ctx)
+  scoped <- scope_connected(ctx)
   if (!is.null(scoped)) {
     check_scope_single(scoped)
-    els_call(
+    els_values_flat(
       scoped,
       "function() { if (this.length) this[0].blur(); }"
     )
@@ -508,7 +510,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
     doing = "working with"
   )
   if (identical(res$status, "contenteditable")) {
-    els_call(els, select_all_js)
+    els_values_flat(els, select_all_js)
     insert_text(ctx, els$description, arg$text)
     return(ctx_return(ctx))
   }
@@ -554,7 +556,7 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
   els <- action_elements(ctx, target)
   el_scroll_into_view(els)
   if (
-    !isTRUE(els_call(
+    !isTRUE(els_values_flat(
       els,
       "function() { const el = this[0]; return el.tagName === 'INPUT' && el.type === 'file'; }"
     ))
@@ -758,7 +760,7 @@ pz_act_scroll <- function(
 
   by <- if (!is.null(by)) check_offset(by, arg = "by") else NULL
   to <- if (!is.null(to)) parse_direction(to, arg = "to") else NULL
-  scoped <- scope_root(ctx)
+  scoped <- scope_connected(ctx)
   if (!is.null(scoped)) {
     check_scope_single(scoped)
   }
@@ -936,7 +938,7 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
     }
   }
 
-  if (isTRUE(els_call(els, draggable_js))) {
+  if (isTRUE(els_values_flat(els, draggable_js))) {
     drag_html5(ctx, els, from, to_point)
   } else {
     dispatch_mouse_drag(
@@ -960,7 +962,7 @@ record_pre_action_loader <- function(ctx) {
 
 action_elements <- function(ctx, target, frame = caller_env()) {
   if (is.null(target)) {
-    scoped <- scope_root(ctx, call = frame)
+    scoped <- scope_connected(ctx, call = frame)
     if (is.null(scoped)) {
       cli::cli_abort(
         c(

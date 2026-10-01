@@ -270,7 +270,7 @@ check_scope_single <- function(scoped, call = caller_env()) {
   }
 }
 
-scope_root <- function(ctx, call = caller_env()) {
+scope_connected <- function(ctx, call = caller_env()) {
   check_context(ctx, call = call)
   scoped <- scope_top(ctx)
   if (is.null(scoped)) {
@@ -459,7 +459,7 @@ find_narrow <- function(ctx, which, from_root, call) {
       call = call
     )
   }
-  scoped <- scope_root(ctx, call = call)
+  scoped <- scope_connected(ctx, call = call)
   if (is.null(scoped)) {
     cli::cli_abort(
       c(

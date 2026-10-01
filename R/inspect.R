@@ -91,13 +91,13 @@ pz_inspect <- function(
 }
 
 inspect_resolve_matches <- function(ctx, target, call = caller_env()) {
-  target_expr <- target_resolver_expr(target, call = call)
+  target_expr <- target_resolver(target, call = call)
   els <- loc_resolve_once(
     ctx,
     target_expr$fn,
     target_expr$description,
     call = call,
-    root = scope_root(ctx, call = call)
+    root = scope_connected(ctx, call = call)
   )
   withr::defer(release_elements(els))
 

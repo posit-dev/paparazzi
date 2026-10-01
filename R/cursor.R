@@ -85,7 +85,7 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL, icon = NULL) {
   point <- if (!is.null(target)) {
     cursor_target_point(ctx, target)
   } else {
-    scoped <- scope_root(ctx)
+    scoped <- scope_connected(ctx)
     if (!is.null(scoped)) {
       check_scope_single(scoped)
       stage_scroll_into_view(ctx, scoped)

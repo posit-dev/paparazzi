@@ -47,7 +47,7 @@ pz_set_shiny_input <- function(ctx, id, value, ..., wait = TRUE) {
     stop_input_type(value, "a non-missing atomic vector or list")
   }
   record_pre_action_loader(ctx)
-  scoped <- scope_root(ctx)
+  scoped <- scope_connected(ctx)
   scope <- if (is.null(scoped)) "document" else scoped$description
   id_json <- as.character(jsonlite::toJSON(id, auto_unbox = TRUE))
   value_json <- as.character(jsonlite::toJSON(

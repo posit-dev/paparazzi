@@ -196,7 +196,7 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
 }
 
 annotate_elements <- function(ctx, target, frame = caller_env()) {
-  scoped <- if (is.null(target)) scope_root(ctx, call = frame)
+  scoped <- if (is.null(target)) scope_connected(ctx, call = frame)
   if (!is.null(scoped)) {
     return(scoped)
   }

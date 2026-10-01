@@ -61,7 +61,7 @@ return out.length ? out : null;
   )
 }
 
-target_resolver_expr <- function(target, call = caller_env()) {
+target_resolver <- function(target, call = caller_env()) {
   if (is.null(target)) {
     return(list(
       fn = "function() { return [document.body]; }",
@@ -101,12 +101,12 @@ loc_resolve <- function(
   check_dots_empty()
   check_bool(from_root, call = call)
   multiple <- arg_match(multiple)
-  target_expr <- target_resolver_expr(target, call = call)
+  target_expr <- target_resolver(target, call = call)
   fn <- target_expr$fn
   description <- target_expr$description
   timeout <- resolve_timeout(timeout, ctx$page, call = call)
 
-  root <- if (from_root) NULL else scope_root(ctx, call = call)
+  root <- if (from_root) NULL else scope_connected(ctx, call = call)
 
   resolved <- NULL
   pz_poll(

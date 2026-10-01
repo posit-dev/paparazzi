@@ -243,7 +243,7 @@ pz_wait_for_stable <- function(
 
   sample_js <- stable_sample_js(prop)
   scoped <- scope_top(ctx)
-  target_expr <- target_resolver_expr(target)
+  target_expr <- target_resolver(target)
   if (!is.null(target) || is.null(scoped)) {
     release_elements(
       loc_resolve(ctx, target, timeout = timeout, multiple = "all")
@@ -251,13 +251,13 @@ pz_wait_for_stable <- function(
   }
   sample <- function() {
     els <- if (is.null(target) && !is.null(scoped)) {
-      scope_root(ctx)
+      scope_connected(ctx)
     } else {
       loc_resolve_once(
         ctx,
         target_expr$fn,
         target_expr$description,
-        root = scope_root(ctx)
+        root = scope_connected(ctx)
       )
     }
     if (!inherits(els, "paparazzi_pinned")) {
@@ -269,7 +269,7 @@ pz_wait_for_stable <- function(
     paste0(
       els$count,
       "\u0001",
-      paste(els_call(els, sample_js), collapse = "\u0001")
+      paste(els_values_flat(els, sample_js), collapse = "\u0001")
     )
   }
 

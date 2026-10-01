@@ -11,7 +11,7 @@ el_rects <- function(els, call = caller_env()) {
     ))
   }
   m <- matrix(
-    els_call(
+    els_values_flat(
       els,
       "function() {
         return this.flatMap((el) => {
@@ -41,7 +41,7 @@ el_scroll_into_view <- function(els, call = caller_env()) {
   }
   # The scroll is instant: CSS scroll-behavior: smooth would animate it,
   # and a geometry read right after would observe a mid-scroll position.
-  els_call(
+  els_values_flat(
     els,
     "function() { if (this.length) this[0].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' }); }",
     call = call

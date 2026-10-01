@@ -91,7 +91,7 @@ pz_screenshot <- function(ctx, path = NULL, ..., frame = NULL) {
   } else if (length(ctx$scope) == 0) {
     clip_viewport(ctx)
   } else {
-    scoped <- scope_root(ctx)
+    scoped <- scope_connected(ctx)
     clip_rects_union(ctx, el_rects(scoped))
   }
 

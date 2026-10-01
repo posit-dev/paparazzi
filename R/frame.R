@@ -615,7 +615,7 @@ frame_content_box <- function(ctx, spec, call = caller_env()) {
     withr::defer(release_elements(els))
     return(frame_target_box(ctx, els, spec, call = call))
   }
-  scoped <- scope_root(ctx, call = call)
+  scoped <- scope_connected(ctx, call = call)
   if (!is.null(scoped)) {
     return(frame_target_box(ctx, scoped, spec, call = call))
   }
@@ -627,7 +627,7 @@ frame_target_box <- function(ctx, els, spec, call = caller_env()) {
   if (!identical(spec$target_box, "annotated")) {
     return(box)
   }
-  painted <- els_call(
+  painted <- els_values_flat(
     els,
     paste0(
       "function() { return ",
