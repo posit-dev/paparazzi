@@ -286,6 +286,24 @@ test_that("recorded clear removes all nodes after mixed exit animations", {
   pz_record_stop(page)
 })
 
+test_that("recorded clear logs the caption clear before marks fade out", {
+  skip_if_not_installed("av")
+  page <- annotation_page()
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  pz_annotate(page, "#box", id = "fading", reveal = "fade")
+  pz_annotate_caption(page, "Caption")
+  rec <- page_recorder(page)
+  before <- rec_vt(rec)
+  pz_annotate_clear(page)
+  after <- rec_vt(rec)
+  cleared <- tail(rec$captions, 1)[[1]]
+  expect_null(cleared$caption)
+  expect_gte(cleared$vt, before)
+  expect_lt(cleared$vt, after - 0.05)
+  pz_record_stop(page)
+})
+
 test_that("paused recording skips fade on draw and clear", {
   skip_if_not_installed("av")
   page <- annotation_page()
