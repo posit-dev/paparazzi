@@ -3,6 +3,12 @@ silkscreen_fixture <- function() {
   test_path("fixtures", "fonts", "silkscreen-400.woff2")
 }
 
+bungee_fixture <- function() {
+  # Bungee 400 (latin subset), OFL 1.1 -- see bungee-OFL.txt. Much wider
+  # glyphs than Silkscreen; aliased under another family in some tests.
+  test_path("fixtures", "fonts", "bungee-400.woff2")
+}
+
 local_corrupt_font <- function(.env = parent.frame()) {
   path <- withr::local_tempfile(.local_envir = .env, fileext = ".woff2")
   writeBin(charToRaw("not a real font"), path)
@@ -250,23 +256,55 @@ test_that("captions render in the staged font face", {
   ))
 })
 
-test_that("key callouts follow the staged annotation font_family", {
+test_that("re-staging a face with a different source replaces it in the document", {
   page <- local_page()
-  pz_stage_fonts(page, pz_font_file("Silkscreen", silkscreen_fixture()))
-  groups <- list(list("Ctrl", "S"))
-  staged_png <- withr::local_tempfile(fileext = ".png")
-  fallback_png <- withr::local_tempfile(fileext = ".png")
+  silk <- pz_font_file("Silkscreen", silkscreen_fixture())
+  # Same family key, different bytes: stands in for a second source
+  bungee <- pz_font_file("Silkscreen", bungee_fixture())
+  face_count <- function() {
+    pz_js(
+      page,
+      "[...document.fonts].filter(f => f.family === 'Silkscreen' && f.weight === '400').length"
+    )
+  }
+  probe_width <- function() {
+    pz_js(
+      page,
+      paste0(
+        "(() => { const el = document.createElement('span');",
+        "el.textContent = 'Width probe';",
+        "el.style.cssText = \"position:absolute;visibility:hidden;font:20px 'Silkscreen'\";",
+        "document.body.appendChild(el); const w = el.offsetWidth;",
+        "el.remove(); return w; })()"
+      )
+    )
+  }
 
-  pz_stage_annotate(page, font_family = '"Silkscreen", sans-serif')
-  key_callout_render(page, groups, 400, 300, 1, 24, staged_png)
+  pz_stage_fonts(page, silk)
+  expect_equal(face_count(), 1)
+  silk_width <- probe_width()
 
-  pz_stage_annotate(page, font_family = NULL)
-  key_callout_render(page, groups, 400, 300, 1, 24, fallback_png)
+  pz_stage_fonts(page, bungee)
+  expect_equal(face_count(), 1)
+  expect_gt(abs(probe_width() - silk_width), 0)
 
-  expect_false(identical(
-    readBin(staged_png, "raw", file.size(staged_png)),
-    readBin(fallback_png, "raw", file.size(fallback_png))
-  ))
+  pz_stage_fonts(page, silk)
+  expect_equal(face_count(), 1)
+  expect_equal(probe_width(), silk_width)
+})
+
+test_that("load failures with braces in the family name stay literal", {
+  page <- local_page()
+  braced <- pz_font_file("Braced {Font}", local_corrupt_font())
+  expect_error(
+    pz_stage_fonts(page, braced, on_error = "stop"),
+    "Braced \\{Font\\}",
+    fixed = FALSE
+  )
+  expect_warning(
+    pz_stage_fonts(page, braced, on_error = "warn"),
+    "Braced \\{Font\\}"
+  )
 })
 
 test_that("Google Fonts fonts load remotely", {

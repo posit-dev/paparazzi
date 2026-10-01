@@ -71,7 +71,7 @@ pz_stage_fonts <- function(
   results <- fonts_ensure_session(page$session, fonts, page$default_timeout)
   ok <- vapply(results, is.null, logical(1))
   if (!all(ok)) {
-    messages <- unlist(results[!ok])
+    messages <- cli_escape_braces(unlist(results[!ok]))
     problems <- c(
       "Failed to load {sum(!ok)} font face{?s}:",
       rlang::set_names(messages, rep("x", length(messages)))
@@ -287,11 +287,25 @@ font_face_spec <- function(font) {
   spec <- list(family = font$family, weight = font$weight, style = font$style)
   if (!is.null(font$url)) {
     spec$url <- font$url
+    spec$id <- font$url
   }
   if (!is.null(font$data)) {
     spec$data <- font$data
+    spec$id <- paste0("file:", nchar(font$data), ":", substr(font$data, 1, 32))
   }
   spec
+}
+
+# Must match the key FONTS_ENSURE_JS builds per face.
+font_key <- function(font) {
+  tolower(paste(font$family, font$weight, font$style, sep = "|"))
+}
+
+# Failure messages carry user family names and URLs; cli would read
+# their braces as glue expressions.
+cli_escape_braces <- function(x) {
+  x <- gsub("{", "{{", x, fixed = TRUE)
+  gsub("}", "}}", x, fixed = TRUE)
 }
 
 # Loads every face into the session's current document and awaits the
@@ -340,8 +354,15 @@ fonts_ensure_page_session <- function(page, session) {
   if (!length(faces)) {
     return(invisible(NULL))
   }
-  results <- fonts_ensure_session(session, faces, page$default_timeout)
-  messages <- unlist(Filter(Negate(is.null), results))
+  # Two-phase: ask which faces the document lacks or holds with a
+  # different source id, and send full specs (with base64 bytes) only
+  # for those.
+  needed <- fonts_needed(session, faces, page$default_timeout)
+  if (!length(needed)) {
+    return(invisible(NULL))
+  }
+  results <- fonts_ensure_session(session, faces[needed], page$default_timeout)
+  messages <- cli_escape_braces(unlist(Filter(Negate(is.null), results)))
   if (length(messages)) {
     cli::cli_warn(c(
       "Failed to load staged fonts:",
@@ -351,13 +372,50 @@ fonts_ensure_page_session <- function(page, session) {
   invisible(NULL)
 }
 
+FONTS_NEEDED_JS <- paste0(
+  "(pairs) => {",
+  "const have = document.__paparazziFonts;",
+  "const out = [];",
+  "pairs.forEach((p, i) => {",
+  "const e = have && have.get(p[0]);",
+  "if (!e || e.id !== p[1]) out.push(i);",
+  "});",
+  "return out;",
+  "}"
+)
+
+# Zero-based JS indices of the faces the session's document still needs.
+fonts_needed <- function(session, fonts, timeout) {
+  pairs <- lapply(fonts, function(font) {
+    list(font_key(font), font_face_spec(font)$id)
+  })
+  res <- cdp_call(
+    session$Runtime$evaluate(
+      paste0(
+        "(",
+        FONTS_NEEDED_JS,
+        ")(",
+        jsonlite::toJSON(pairs, auto_unbox = TRUE),
+        ")"
+      ),
+      returnByValue = TRUE,
+      timeout_ = timeout
+    ),
+    timeout,
+    "checking staged fonts"
+  )
+  cdp_check_exception(res, "checking staged fonts")
+  unlist(res$result$value) + 1L
+}
+
 FONTS_ENSURE_JS <- paste0(
   "async (spec) => {",
   "const have = document.__paparazziFonts ||",
-  "(document.__paparazziFonts = new Set());",
+  "(document.__paparazziFonts = new Map());",
   "const jobs = spec.map((f) => {",
   "const key = (f.family + '|' + f.weight + '|' + f.style).toLowerCase();",
-  "if (have.has(key)) return Promise.resolve(null);",
+  "const entry = have.get(key);",
+  "if (entry && entry.id === f.id) return Promise.resolve(null);",
   "return (async () => {",
   "const faces = [];",
   "if (f.url) {",
@@ -385,11 +443,14 @@ FONTS_ENSURE_JS <- paste0(
   "faces.push(new FontFace(f.family, bytes.buffer,",
   "{weight: String(f.weight), style: f.style}));",
   "}",
-  "for (const face of faces) {",
+  # A re-staged face with a new source replaces the old one in place.
+  "if (entry) for (const old of entry.faces) document.fonts.delete(old);",
+  "const loads = faces.map((face) => {",
   "document.fonts.add(face);",
-  "await face.load();",
-  "}",
-  "have.add(key);",
+  "return face.load();",
+  "});",
+  "await Promise.all(loads);",
+  "have.set(key, {id: f.id, faces});",
   "return null;",
   "})().catch((e) => f.family + ': ' + (e && e.message ? e.message : String(e)));",
   "});",
