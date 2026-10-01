@@ -150,6 +150,7 @@ key_callout_render <- function(
   height,
   scale,
   bottom_offset,
+  family,
   path
 ) {
   data <- jsonlite::toJSON(
@@ -157,7 +158,7 @@ key_callout_render <- function(
       groups = lapply(groups, as.list),
       scale = scale,
       bottom = bottom_offset,
-      family = page_stage(page)$annotate_font_family
+      family = family %||% "sans-serif"
     ),
     auto_unbox = TRUE
   )
@@ -336,6 +337,7 @@ key_callout_windows <- function(rec, sampled) {
       end = (end - 1L) / rec$fps,
       fade_start = (fade - 1L) / rec$fps,
       style = events[[i]]$style,
+      font_family = events[[i]]$font_family,
       keys = events[[i]]$keys
     )
   }
@@ -411,6 +413,7 @@ key_callout_overlays <- function(rec, page, out, windows, captions, dir) {
       out$height,
       scale,
       bottom,
+      window$font_family,
       file.path(dir, name)
     )
     list(

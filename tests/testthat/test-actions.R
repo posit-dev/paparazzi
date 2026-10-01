@@ -1553,3 +1553,28 @@ test_that("press records original and resolved keys only while unpaused", {
   expect_length(rec$keypresses, 2L)
   expect_identical(rec$keypresses[[2]]$style, "mac")
 })
+
+test_that("key callouts keep the font_family staged at press time", {
+  skip_if_no_av()
+  page <- local_record_page()
+  # Silkscreen 400 (latin subset), OFL 1.1 -- see fixtures/fonts/
+  pz_stage_fonts(
+    page,
+    pz_font_file(
+      "Silkscreen",
+      test_path("fixtures", "fonts", "silkscreen-400.woff2")
+    )
+  )
+  pz_record_start(page, tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0.1))
+  defer_record_stop(page)
+
+  pz_stage_annotate(page, font_family = '"Silkscreen", sans-serif')
+  pz_act_press(page, "a", show_keys = "words")
+  # Changing the staged default after the press must not retroactively
+  # restyle the recorded callout
+  pz_stage_annotate(page, font_family = "monospace")
+
+  events <- page_recorder(page)$keypresses
+  expect_length(events, 1)
+  expect_equal(events[[1]]$font_family, '"Silkscreen", sans-serif')
+})
