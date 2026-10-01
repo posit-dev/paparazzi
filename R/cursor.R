@@ -282,15 +282,10 @@ pz_cursor_leave <- function(ctx, side = "right", icon = NULL) {
     duration = duration %||% 0,
     icon = icon %||% cur$icon
   )
-  # Set after cursor_apply(), which clears it: the cursor stays visible
-  # but off-frame, and the next action glides back in from this side.
   cur$off_frame <- side
   ctx_return(ctx)
 }
 
-# The sides-and-corners subset of the direction vocabulary, for
-# pz_stage(enter =), pz_cursor_show(from =), and pz_cursor_leave(side =).
-# Corners enter/leave past both edges at once.
 STAGE_DIRECTIONS <- list(
   c("top"),
   c("bottom"),
@@ -302,13 +297,6 @@ STAGE_DIRECTIONS <- list(
   c("bottom", "right")
 )
 
-# The cursor runtime state: a mutable environment in the page's reserved
-# private$staging_$cursor slot, created on first cursor use and reached
-# only through these accessors (the page_frame() pattern). Fields:
-# visibility ("auto"/"shown"/"hidden"), x/y (viewport CSS px, NULL until
-# placed), off_frame (NULL or the side tokens the cursor left through),
-# init_id (the new-document script identifier), page_enabled (Page
-# domain enabled for the init script).
 page_cursor <- function(page) {
   cur <- page$.__enclos_env__$private$staging_$cursor
   if (is.null(cur)) {
@@ -331,9 +319,6 @@ page_cursor_peek <- function(page) {
   page$.__enclos_env__$private$staging_$cursor
 }
 
-# Effective visibility: the setting FALSE hides always; an explicit
-# shown/hidden state wins; "auto" follows the recording (or cursor =
-# TRUE for stills).
 cursor_visible <- function(page) {
   stage <- page_stage(page)
   if (identical(stage$cursor, FALSE)) {
@@ -360,8 +345,6 @@ check_cursor_enabled <- function(ctx, call = caller_env()) {
   ctx_return(ctx)
 }
 
-# Where the cursor should appear with no target: its last position, or
-# the viewport center when it has never been placed.
 cursor_current_point <- function(ctx) {
   cur <- page_cursor_peek(ctx$page)
   if (!is.null(cur) && !is.null(cur$x)) {
@@ -371,8 +354,6 @@ cursor_current_point <- function(ctx) {
   c(x = v[1] / 2, y = v[2] / 2)
 }
 
-# The center of a resolved target, scrolled into view (staged while
-# recording, instantly otherwise).
 cursor_target_point <- function(ctx, target, call = caller_env()) {
   els <- loc_resolve(ctx, target, multiple = "error", call = call)
   withr::defer(release_elements(els))
@@ -392,9 +373,6 @@ cursor_target_point <- function(ctx, target, call = caller_env()) {
   )
 }
 
-# The glide's CSS ease, cubic-bezier(0.42,0,0.58,1): over the curve
-# parameter, .x is the time fraction and .y the eased progress. Both are
-# monotone, so each inverts by bisection.
 glide_ease_x <- function(v) {
   3 * (1 - v)^2 * v * 0.42 + 3 * (1 - v) * v^2 * 0.58 + v^3
 }
@@ -403,9 +381,6 @@ glide_ease_y <- function(v) {
   3 * (1 - v) * v^2 + v^3
 }
 
-# Invert the ease: bisect `fn` to `value`, then read `other` at the
-# solution. cursor_entry_time() maps progress to time; the staged drag
-# carry maps wall-clock time back to progress.
 glide_ease_invert <- function(value, fn, other) {
   lo <- 0
   hi <- 1
@@ -416,8 +391,6 @@ glide_ease_invert <- function(value, fn, other) {
   other((lo + hi) / 2)
 }
 
-# First eased time when the cursor anchor enters a viewport rect.
-# Clip in line-progress space, then invert the monotone CSS ease curve.
 cursor_entry_time <- function(start, end, rect) {
   lower <- 0
   upper <- 1
@@ -445,10 +418,6 @@ cursor_entry_time <- function(start, end, rect) {
   glide_ease_invert(progress, glide_ease_y, glide_ease_x)
 }
 
-# A point 40px past the named frame edge, at the target's coordinate on
-# the other axis: where an entering cursor starts and a leaving cursor
-# ends up. Corner directions offset both axes and ignore the target's
-# coordinates entirely.
 cursor_off_frame_point <- function(ctx, side, point) {
   v <- unlist(pz_js(ctx, "[window.innerWidth, window.innerHeight]"))
   margin <- 40
@@ -469,12 +438,6 @@ cursor_off_frame_point <- function(ctx, side, point) {
   c(x = unname(x), y = unname(y))
 }
 
-# Show the cursor at a point, choosing the entrance from the current
-# state: an explicit `from` side (or the enter setting on first show)
-# starts off-frame and glides in; first show without a side fades in;
-# otherwise glide from the last position. An explicit duration wins over
-# the computed glide. Everything collapses to a static jump when not
-# recording (handled in cursor_apply()).
 cursor_show_at <- function(
   ctx,
   point,
@@ -536,8 +499,6 @@ cursor_show_at <- function(
   ctx_return(ctx)
 }
 
-
-# Each keyword needs its own layer so glide keyframes can animate visibility.
 CURSOR_ART <- local({
   directory <- system.file("cursors", package = "paparazzi")
   manifest <- jsonlite::fromJSON(
@@ -573,16 +534,6 @@ cursor_check_icon <- function(icon) {
   arg_match(icon, values = names(CURSOR_ART))
 }
 
-# The one mover: draw the cursor at `point` (visible, shape
-# auto-detected from the element under the point), animating only while
-# recording -- a glide of `duration` seconds, an instant pre-position at
-# `from` first for frame entries, or a fade-in at the point. `pressed`
-# holds the press scale-down through the move (a drag carry). Without a
-# recording every variant is a static jump. Updates the cursor state and
-# the new-document script, and pumps the child loop for the animation,
-# so the recorder's ticks capture it. With `pump = FALSE` the CSS
-# transition is started fire-and-forget and the caller owns the pacing
-# (the staged drag carry streams input events through the glide).
 cursor_apply <- function(
   ctx,
   point,
@@ -617,8 +568,6 @@ cursor_apply <- function(
     c(x = cur$x, y = cur$y)
   }
   if (recording && duration > 0 && is.null(icon) && !is.null(start)) {
-    # No destination rect (an untargeted entrance): the intended
-    # destination IS the landing point, so the flip waits for it.
     at <- if (is.null(rect)) 1 else cursor_entry_time(start, point, rect)
     landing <- cursor_command(
       ctx,
@@ -663,9 +612,6 @@ cursor_apply <- function(
   ctx_return(ctx)
 }
 
-# Redraw the cursor at its recorded position with a new visibility or
-# press state. No movement; the opacity/scale transitions in the layer
-# animate the change while the caller pumps.
 cursor_draw <- function(ctx, visible, pressed = FALSE) {
   cur <- page_cursor(ctx$page)
   cursor_command(
@@ -685,10 +631,6 @@ cursor_draw <- function(ctx, visible, pressed = FALSE) {
   ctx_return(ctx)
 }
 
-# Resting: hidden in place while recording, but not hidden the way
-# pz_cursor_hide() is. The cursor still takes part in staging, so the
-# next move glides from here, and the glide's opacity transition fades
-# it back in as it starts. Nothing else redraws it until then.
 cursor_rest <- function(ctx) {
   page <- ctx$page
   cur <- page_cursor_peek(page)
@@ -702,8 +644,6 @@ cursor_rest <- function(ctx) {
   }
   cur$resting <- TRUE
   cursor_draw(ctx, visible = FALSE)
-  # Let the fade play before typing, as pz_cursor_hide() does, so short
-  # or instant typing followed by a move or stop still shows it.
   pump_loop(page$child_loop, 0.25)
   ctx_return(ctx)
 }
@@ -720,11 +660,6 @@ cursor_press <- function(ctx, pressed) {
   ctx_return(ctx)
 }
 
-# The "ring" click effect: a ring at `point` that expands and fades
-# out, drawn in the cursor layer while the caller pumps (the transition
-# is the clock, like the press scale). The cursor itself keeps its
-# scale. The state carries no position change and is not baked into the
-# new-document script, so the ring lives and dies within the click.
 cursor_ring <- function(ctx, point, color) {
   if (!cursor_drawn(ctx$page)) {
     return(ctx_return(ctx))
@@ -747,9 +682,6 @@ cursor_ring <- function(ctx, point, color) {
   ctx_return(ctx)
 }
 
-# One state application in the page. The JS is create-if-missing (boot
-# + apply in every call), so a page whose init script never ran -- or a
-# fresh document after navigation -- can always be driven forward.
 cursor_command <- function(ctx, state) {
   state$scale <- page_stage(ctx$page)$cursor_scale
   state$icons <- CURSOR_ART
@@ -757,15 +689,12 @@ cursor_command <- function(ctx, state) {
   pz_js(ctx, paste0("(", cursor_command_js, ")(", json, ")"), await = FALSE)
 }
 
-# Boot: the cursor layer under the existing overlay host's shadow root.
-# Two nested divs keep the transforms independent: .pz-glide carries the
-# translate (its transition is the glide), .pz-inner carries the size,
-# press scale, and fade opacity. The layer is position: fixed (pointer
-# coordinates are viewport-relative, unlike the inspect layer's document
-# coordinates) and counter-zoomed by 1 / zoom(documentElement), because
-# a CSS zoom on <html> would otherwise scale the layer away from the
-# pointer coordinate space; getBoundingClientRect and CDP pointer
-# coordinates both live in the zoomed (visual) space.
+# The layer is position: fixed (pointer coordinates are viewport-relative,
+# unlike the inspect layer's document coordinates) and counter-zoomed by
+# 1 / zoom(documentElement), because a CSS zoom on <html> would otherwise
+# scale the layer away from the pointer coordinate space;
+# getBoundingClientRect and CDP pointer coordinates both live in the zoomed
+# (visual) space.
 cursor_command_js <- paste0(
   "function(state) {",
   OVERLAY_HOST_JS,
@@ -912,11 +841,6 @@ cursor_command_js <- paste0(
   return icon;
 })"
 )
-# The new-document script: the same boot+apply with the last state baked
-# in, registered so a navigation re-injects the overlay at its last
-# position. Page.enable() is required for the script to run (probed on
-# http and file:// documents alike); re-registering (remove + add)
-# swaps the source, so every cursor state change keeps the script fresh.
 cursor_register_init <- function(ctx) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -949,7 +873,7 @@ cursor_register_init <- function(ctx) {
   )
   json <- jsonlite::toJSON(state, auto_unbox = TRUE, null = "null")
   # New-document scripts run before the document element exists, so the
-  # boot waits for it; the overlay then reappears at its last position.
+  # boot waits for it.
   source <- paste0(
     "(function() { const boot = function() { (",
     cursor_command_js,

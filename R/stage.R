@@ -118,8 +118,6 @@ pz_stage <- function(
   page <- ctx$page
   overrides <- page$.__enclos_env__$private$staging_$stage %||% list()
 
-  # missing() is the only way to leave a setting alone; an explicit
-  # NULL removes the override (back to the default), a value sets it.
   if (!missing(cursor)) {
     if (is.null(cursor)) {
       overrides[["cursor"]] <- NULL
@@ -218,8 +216,6 @@ pz_stage <- function(
   }
   page_set_stage(page, overrides)
 
-  # The cursor setting applies immediately: FALSE hides a drawn cursor;
-  # TRUE draws a static one (visible in stills) when there is none.
   stage <- page_stage(page)
   cur <- page_cursor_peek(page)
   if (identical(stage$cursor, FALSE)) {
@@ -371,9 +367,6 @@ pz_stage_annotate <- function(
   ctx_return(ctx)
 }
 
-# The settings list with defaults filled. The page stores only the
-# overrides pz_stage() and pz_stage_annotate() were given, so later
-# default changes reach pages that never set the field.
 STAGE_DEFAULTS <- list(
   cursor = NULL,
   cursor_speed = 500,
@@ -405,8 +398,6 @@ page_set_stage <- function(page, overrides) {
   invisible(page)
 }
 
-# "While recording": a recorder exists and is active. Paused still
-# counts -- the capture cadence is the recorder's concern.
 stage_recording <- function(page) {
   rec <- page_recorder(page)
   !is.null(rec) && isTRUE(rec$active)
@@ -417,12 +408,6 @@ stage_glide_duration <- function(from, to, speed) {
   min(max(0.25 + dist / speed, 0.5), 2)
 }
 
-# The pointer-action seam, called from el_pointer_point() once the
-# target's click point is known: while recording, the cursor gets to the
-# point the way its state says -- fade in on it (never shown), glide in
-# from the enter/off-frame side, or glide from its last position. Not
-# recording, a visible cursor (cursor = TRUE, or explicitly shown)
-# jumps to the point so stills track the real pointer.
 stage_move_cursor <- function(ctx, point) {
   page <- ctx$page
   follow <- isTRUE(attr(point, "camera_follow"))
@@ -437,8 +422,6 @@ stage_move_cursor <- function(ctx, point) {
     return(ctx_return(ctx))
   }
   if (is.null(attr(point, "rect"))) {
-    # The action seam supplies an actionable viewport point, not its
-    # resolved element; hit-testing that point recovers its visible rect.
     rect <- pz_js(
       ctx,
       paste0(
@@ -471,9 +454,6 @@ stage_follow_without_glide <- function(ctx, rect) {
   ctx_return(ctx)
 }
 
-# The scroll half of the el_pointer_point() seam. Recording: animated
-# wheel scrolling over the container; not recording: the established
-# instant scroll.
 stage_scroll_into_view <- function(
   ctx,
   els,
@@ -486,18 +466,6 @@ stage_scroll_into_view <- function(
   stage_wheel_into_view(ctx, els, duration = duration, call = call)
 }
 
-# The animated auto-scroll: real mouseWheel events with the cursor
-# over the container, instead of the instant scrollIntoView. Each round
-# probes the deltas that scrollIntoView(block: 'nearest') would apply
-# across EVERY scrollable ancestor of the element plus the viewport
-# (a target visible inside a container that is itself below the fold
-# still needs the outer containers scrolled), wheels the delta of the
-# OUTERMOST container that still has one, and re-probes; the outer clips
-# contain the inner ones, so the wheeled container is always on screen
-# when its wheel fires. A round that leaves every container's scroll
-# position unchanged (a page canceling wheel events) or exceeds the
-# round bound (a page fighting the scroll) falls back to the instant
-# scroll: the final state is always correct, animated or not.
 stage_wheel_into_view <- function(
   ctx,
   els,
@@ -519,10 +487,6 @@ stage_wheel_into_view <- function(
       return(invisible(els))
     }
     if (!isTRUE(probe$hit > 0)) {
-      # No point where a wheel would reach the container (a nested
-      # scroller covers the dispatch point and would consume it): the
-      # instant scroll runs BEFORE any wheel can change another
-      # container.
       return(el_scroll_into_view(els, call = call))
     }
     pos <- unlist(probe$pos)
@@ -531,8 +495,6 @@ stage_wheel_into_view <- function(
       (!is.null(prev) && identical(pos, prev)) ||
         rounds > 2L * probe$n + 3L
     ) {
-      # Stalled (no scroll position moved) or oscillating: the instant
-      # scroll guarantees the final state.
       return(el_scroll_into_view(els, call = call))
     }
     prev <- pos
@@ -545,10 +507,6 @@ stage_wheel_into_view <- function(
   }
 }
 
-# Wheel a scroll delta over `duration` seconds: ~100px steps, weights
-# from a cubic ease-in-out over the step index so the scroll eases like
-# a glide, a short pump between steps (the wheels land asynchronously,
-# and the recorder's ticks capture the intermediate positions).
 stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
   page <- ctx$page
   steps <- max(1L, ceiling(max(abs(dx), abs(dy)) / 100))
@@ -580,18 +538,6 @@ stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
   invisible(TRUE)
 }
 
-# The staged drag carry, shared by both drag dispatchers: the overlay
-# cursor glides source-to-drop (its CSS transition started WITHOUT
-# cursor_apply()'s pump, so this loop owns the pacing) while `step()`
-# dispatches the path's real input events -- held mouseMoved on the
-# mouse path, dragEnter/dragOver on the HTML5 path. About 30 Hz: each
-# event aims at the eased position (the glide's own ease, read off the
-# wall clock) half a step ahead, centering the pointer's lag behind the
-# drawn cursor, and the loop pumps only the step's remainder after the
-# dispatch's own round-trip, so a slow dispatch slows the rate instead
-# of drifting the path. The loop holds no state: a dispatch error
-# propagates, the transition simply finishes, and releasing the held
-# input stays the dispatchers' defers' job.
 stage_drag_carry <- function(ctx, from, to, step) {
   page <- ctx$page
   duration <- stage_glide_duration(from, to, page_stage(page)$cursor_speed)
@@ -627,14 +573,6 @@ stage_drag_carry <- function(ctx, from, to, step) {
   invisible(TRUE)
 }
 
-# The staged pz_act_scroll(by =)/pz_act_scroll(to =): wheel the scope's
-# container (or the document) to the target scroll position with the
-# cursor over it, then verify and repair. The wheel point is hit-tested
-# for the container first -- a nested scroller covering it would
-# consume the wheels and leave a state the instant path never produces
-# -- and when no suitable point exists the instant application runs
-# BEFORE any wheel fires. After the wheels, a miss (clamping,
-# canceling) still repairs instantly so the final position is exact.
 scroll_staged <- function(
   ctx,
   scoped,
@@ -643,16 +581,9 @@ scroll_staged <- function(
   duration = NULL,
   call = caller_env()
 ) {
-  # A wheel only lands on a container the cursor point is actually
-  # over; a scoped container outside the viewport is first brought
-  # into view -- the staged way while recording, like every other
-  # pre-action scroll (a no-op when it already is).
   if (!is.null(scoped)) {
     stage_scroll_into_view(ctx, scoped, duration = duration, call = call)
   }
-  # The container probe, with or without an aim (the target scroll
-  # position, which turns on the hit test); one function serves the
-  # pinned scoped set and the root's empty-array rooting.
   wheel_container <- function(aim = NULL) {
     if (!is.null(scoped)) {
       if (is.null(aim)) {
@@ -721,9 +652,6 @@ scroll_staged <- function(
   if (all(delta == 0)) {
     return(ctx_return(ctx))
   }
-  # A wheel at the container's center only reaches the container when
-  # the point is over it; no such point means the instant application
-  # runs before any wheel fires.
   if (!isTRUE(wheel_container(c(target$left, target$top))$hit > 0)) {
     apply_instant(probe)
     return(ctx_return(ctx))
@@ -734,8 +662,6 @@ scroll_staged <- function(
   wheel_duration <- duration %||%
     min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.5), 2)
   stage_wheel(ctx, point, delta[[1]], delta[[2]], wheel_duration, call = call)
-  # Verify and repair: wheels are best-effort (clamping, canceling),
-  # the recorded end state must match the instant path.
   actual <- wheel_container()
   if (abs(actual$top - target$top) > 2 || abs(actual$left - target$left) > 2) {
     apply_instant(actual)
@@ -743,9 +669,6 @@ scroll_staged <- function(
   ctx_return(ctx)
 }
 
-# The target scroll position for a by/to scroll, from the container
-# probe: by adds an offset, to aims at an edge/corner/center per the
-# direction tokens (an axis the tokens don't name keeps its position).
 scroll_wheel_target <- function(probe, by, to) {
   left <- probe$left
   top <- probe$top
@@ -777,12 +700,9 @@ scroll_wheel_target <- function(probe, by, to) {
   )
 }
 
-# The wheel-latching hit test, interpolated into the two probe functions
-# (it closes over their isScrollable): a wheel dispatched at (x, y)
-# scrolls the nearest scrollable ancestor of the element under the
-# point that can consume the delta, so it reaches `container` only
-# when no nearer scroller intervenes. elementFromPoint() passes
-# through the overlay's pointer-events: none. Returns 1/0.
+# A wheel dispatched at (x, y) scrolls the nearest scrollable ancestor
+# of the element under the point that can consume the delta, so it
+# reaches `container` only when no nearer scroller intervenes.
 wheel_hit_js <- "const wheelHit = (container, x, y, dx, dy) => {
   const canConsume = (c) =>
     (dy < 0 && c.scrollTop > 0) ||
@@ -798,15 +718,6 @@ wheel_hit_js <- "const wheelHit = (container, x, y, dx, dy) => {
   return 0;
 };"
 
-# The container probe for by/to scrolls: the current scope's scroll
-# container (the scope element or its nearest scrollable ancestor, the
-# document at the root -- the same walk scroll_apply_js does), its
-# viewport center for cursor placement, and its scroll position and
-# range. With an `aim` (the target scroll position, [left, top]) it
-# also hit-tests the center point for that delta, so a wheel is only
-# dispatched when it would reach the container. One function serves
-# both rootings: callFunctionOn on the pinned set as `this`, or
-# Runtime$evaluate with `this` an empty array.
 wheel_container_js <- paste0(
   "function(aim) {
   const isScrollable = (e) => {
@@ -858,19 +769,6 @@ wheel_container_js <- paste0(
 }"
 )
 
-# The scroll probe: for EVERY scrollable ancestor of the first element,
-# the delta that scrollIntoView(block/inline: 'nearest') would apply
-# to bring the next-inner box (the element itself, or the inner
-# container's clip) inside the container's clip -- the viewport
-# (scrollingElement) is always the outermost, so a target visible inside
-# a container that is below the fold still probes a nonzero outer
-# delta. Inner deltas are invariant under outer scrolls, so wheeling
-# outermost-first settles each level once. Returns the outermost
-# container's nonzero delta (0/0 when the element is in view in every
-# clip), that container's viewport center for cursor placement, the
-# scroll positions of the whole chain (the R driver's stall check),
-# and the chain length (its round bound). Computed without scrolling;
-# the R driver re-probes after wheeling.
 wheel_probe_js <- paste0(
   "function() {
   if (!this.length) return null;
@@ -938,9 +836,6 @@ wheel_probe_js <- paste0(
 }"
 )
 
-# pz_stage(pause =): a hold after each action while recording, skipped
-# otherwise (the SPEC matrix). Real time passes -- the recorded frames
-# capture the settled page.
 stage_action_pause <- function(ctx) {
   page <- ctx$page
   if (!stage_recording(page)) {
@@ -953,9 +848,6 @@ stage_action_pause <- function(ctx) {
   ctx_return(ctx)
 }
 
-# The record-stop hook (called from pz_record_stop()): an auto cursor
-# under cursor = NULL belongs to the recording, so it goes away when the
-# recording ends; an explicitly shown cursor or cursor = TRUE stays.
 stage_record_stopped <- function(ctx) {
   page <- ctx$page
   if (page$is_closed()) {
@@ -970,8 +862,6 @@ stage_record_stopped <- function(ctx) {
   ) {
     cursor_draw(ctx, visible = FALSE)
   } else if (isTRUE(cur$resting)) {
-    # A rest is a recording effect; a cursor that stays for stills is
-    # drawn again (cleared first so the navigation script draws it too).
     cur$resting <- FALSE
     cursor_draw(ctx, visible = cursor_visible(page))
   }
