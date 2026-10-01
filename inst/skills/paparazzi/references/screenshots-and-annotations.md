@@ -126,14 +126,13 @@ page |>
   pz_annotate_clear()
 ```
 
-`target_box = "annotated"` includes attached marks, callouts and spotlight
-cutouts on the target or its descendants. Use it to keep badges and bubbles
-inside a still's frame. Redactions and annotations on unrelated elements
-are excluded from this measurement.
+`target_box = "annotated"` grows the frame to include marks, callouts and
+spotlight cutouts on the target, so badges and bubbles stay in the shot.
+Redactions and annotations on other elements don't count.
 
-Marks persist until cleared. Give a mark an `id` to replace or clear it
-later; calls without one accumulate. Clear annotations between shots so
-each image shows only the explanation intended for it.
+Marks stay until cleared. Calls with the same `id` replace each other, and
+calls without one accumulate. Clear annotations between shots so each image
+shows only what it's meant to explain.
 
 ## Style new annotations
 
@@ -220,24 +219,21 @@ page |>
   pz_annotate_clear(id = "spotlight")
 ```
 
-Marks, badges, spotlight cutouts and redactions follow their targets and
-clip with the targets' overflow containers. A fully clipped target, or a
-hidden target without visible descendants, hides its annotation. Scroll the
-intended target into view and
-expect it before capturing. A callout hides when its target is fully
-clipped; for a partly clipped target its leader points at the visible part,
-while the bubble stays unclipped. Clipping is axis-aligned and follows
-`overflow`, with the standard clipping edge rather than a custom
-`overflow-clip-margin`.
+Marks, badges, spotlight cutouts and redactions follow their targets and are
+clipped by the targets' scrolling containers. An annotation hides while its
+target is scrolled out of view, removed, or hidden with no visible children,
+so scroll the target into view and expect it before capturing. A callout
+hides with a fully clipped target; when the target is partly visible, the
+leader points at the visible part and the bubble is never cut off. Clipping
+follows `overflow`, not a custom `overflow-clip-margin`.
 
 ## Cover private content before capture
 
-Use `pz_annotate_redact(method = "fill")` for secrets. The opaque cover
-follows the target's border box plus `pad`; target overflowing content
-itself or add padding to cover it. `method = "blur"` provides a visual blur
-for non-secret content. Apply redactions before starting a recording so
-its first frame is already covered. Recording and staging covers the
-recorder's lifecycle.
+Use `pz_annotate_redact(method = "fill")` for anything secret. The opaque
+cover spans the target's border box plus `pad`; to cover content that
+overflows the element, redact the overflowing element or add padding.
+`method = "blur"` suits content that only needs to look unreadable. Add
+redactions before starting a recording so the very first frame is covered.
 
 ```r
 page |>
@@ -251,19 +247,19 @@ page |>
   pz_annotate_clear(id = "private")
 ```
 
-Annotations belong to the current document and are removed on navigation.
-For a multi-page recording, prepare each document's redactions before
-resuming capture. `pz_annotate_clear()` with no `id` clears all annotations;
-`"spotlight"` and `"caption"` are reserved ids for those types.
+Annotations belong to the current document and are removed on navigation,
+so in a multi-page recording, redact each new page before resuming capture.
+`pz_annotate_clear()` with no `id` clears everything; `"spotlight"` and
+`"caption"` are reserved ids.
 
-## Load fonts before annotating
+## Stage fonts before annotating
 
-`pz_stage_fonts()` waits for font faces to load before returning. Declare
-remote faces with `pz_font_google()` or `pz_font_bunny()`, using the provider's
-family name, `weight` (400 is regular) and `style` (`"normal"` or `"italic"`).
-Chrome fetches the fonts, so remote staging needs network access and a page
-policy that permits it. Use CSS family strings with a generic fallback in
-`font_family`.
+`pz_stage_fonts()` loads font faces into the page and returns once they've
+loaded. Declare remote faces with `pz_font_google()` or `pz_font_bunny()`
+using the provider's family name, a `weight` (400 is regular) and a `style`
+(`"normal"` or `"italic"`). Chrome downloads them, so this needs network
+access. Then name the family in `font_family` as a CSS string with a generic
+fallback.
 
 ```r
 page |>
@@ -277,12 +273,12 @@ page |>
   pz_annotate_clear()
 ```
 
-For offline scripts, `pz_font_file()` reads a local `.woff2`, `.woff`, `.ttf`
-or `.otf` and passes its bytes directly to the page. This example uses the
-Open Sans file bundled with rmarkdown; use a licensed project font for your
-own app. Repeated staging adds faces and replaces matching family/weight/
-style combinations. Staged faces survive recordings and are re-added to a
-new document when annotations first need them after navigation.
+For offline work, `pz_font_file()` reads a local `.woff2`, `.woff`, `.ttf` or
+`.otf` file and hands its bytes to the page. This example borrows the Open
+Sans file that rmarkdown ships; use your project's own licensed font.
+Staging the same family, weight and style again replaces that face. Staged
+fonts last across recordings, and after navigation they're loaded into the
+new page before its first annotation.
 
 ```r
 font_path <- system.file(
@@ -304,11 +300,10 @@ pz_close(page)
 
 ## Include a screenshot in R Markdown
 
-In a knitted chunk, end with `pz_screenshot()` without a path. It returns a
-knitr image and writes a numbered PNG into the chunk's figure directory.
-The image is a terminal result; use explicit paths for intermediate
-screenshots that should keep a chain running. Put this block in an R Markdown
-chunk. `pz_local_page()` closes the page when the function returns the image.
+In a knitted chunk, end the chain with `pz_screenshot()` and no path. It
+returns a knitr image and writes the PNG into the chunk's figure directory.
+That ends the chain, so give any earlier screenshots a path. Here
+`pz_local_page()` closes the page when the function returns.
 
 ```r
 task_figure <- function() {

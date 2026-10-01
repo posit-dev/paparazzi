@@ -63,11 +63,12 @@ They persist across navigation and recordings, appear in stills, and remain
 through the last frame. `pz_annotate_clear(id = "caption")` clears one;
 clearing it here leaves later examples uncaptioned.
 
-The start frame is the **home frame**. `pz_camera()` takes encode-time shots
-within it; here `zoom = 2` frames the form at twice home zoom, and
-`pz_camera_reset()` returns to the home frame. Camera movement changes the
-video, not the browser viewport. `wait = TRUE` starts the next action after a move;
-the default `FALSE` overlaps them.
+The start frame is the **home frame**. `pz_camera()` moves to a shot within
+it, applied when the video is encoded: here `zoom = 2` frames the form at
+twice the home zoom, and `pz_camera_reset()` goes back to the home frame. The
+camera changes the video, not the browser viewport. With `wait = TRUE` the
+next action starts after the move finishes; the default, `FALSE`, overlaps
+them.
 
 Frames accept a `pz_frame()` spec or locator. `when = "start"` measures the
 recording crop at capture start; the default uses the final layout. Numeric
@@ -105,11 +106,11 @@ for (format in formats) {
 }
 ```
 
-`scale = 0.5` halves each dimension; values above 4 set output width in
-pixels (for example, `scale = 800`). `NULL` keeps the captured size. `fps`
-defaults to 15; poll aims for that rate and repeats the previous frame as
-needed. `method = "screencast"` captures on visual changes and can retain
-intermediate animation states.
+`scale = 0.5` halves each dimension; a value above 4 sets the output width in
+pixels (`scale = 800`), and `NULL` keeps the captured size. `fps` defaults to
+15. The default capture method polls at that rate, repeating the previous
+frame when nothing changed; `method = "screencast"` captures on visual
+changes instead and can catch more of an animation's in-between states.
 
 The `hold` argument to `pz_record_start()` adds seconds to the first and last
 frames; its default is `c(0.5, 1)`. `pz_record_hold(seconds)` adds a hold at a
@@ -169,16 +170,14 @@ pz_record(
 
 ## Stage pointer and typing actions
 
-`pz_stage()` stores presentation settings on the page. Staging animations run
-during an active, unpaused recording; the browser actions themselves run at
-normal speed outside a recording. Settings persist across recordings on that
-page. An omitted argument leaves its setting unchanged, and an explicit
-`NULL` restores its default.
+`pz_stage()` stores presentation settings on the page. They animate actions
+only during an active, unpaused recording; outside one, the same actions run
+at full speed. Settings last across recordings. An omitted argument leaves
+its setting alone, and an explicit `NULL` restores its default.
 
 ```r
 page |>
   pz_stage(
-    cursor = NULL,
     cursor_speed = 460,
     cursor_scale = 1.5,
     enter = "bottom",
@@ -192,24 +191,25 @@ page |>
   )
 ```
 
-`cursor = NULL` shows the cursor while recording, `TRUE` also draws it in
-stills, and `FALSE` hides it. `cursor_speed` is the glide and scroll speed in
-pixels per second; `cursor_scale` changes the cursor size relative to its
-original artwork. `enter` chooses where a cursor first appears, using a side
-or corner such as `"bottom"` or `"top left"`.
+By default the cursor shows only while recording; `cursor = TRUE` also
+draws it in stills, and `FALSE` hides it. `cursor_speed` is the glide and
+scroll speed in pixels per second, and `cursor_scale` sizes the cursor
+relative to its original artwork. `enter` picks where the cursor first
+appears, a side or corner such as `"bottom"` or `"top left"`.
 
-`typing = "natural"` enters characters with randomized delays; `"instant"`
-enters the string at once. `typing_speed` is measured in characters per
-second. `pause` adds a post-action hold in seconds while recording.
-`camera_follow` controls whether the camera follows pointer and typing
-targets. Actions and expectations determine the resulting browser state.
+`typing = "natural"` types one character at a time with randomized delays,
+and `"instant"` enters the whole string at once. `typing_speed` is in
+characters per second. `pause` holds for that many seconds after each action
+while recording. `camera_follow` decides whether a zoomed camera pans to
+follow pointer and typing targets.
 
-`show_keys` sets the default key display for `pz_act_press()`: `"none"`,
-`"words"`, `"mac"`, or `"both"`. `click_effect` sets the default click
-feedback: `"press"` scales the cursor while pressed, `"ripple"` draws a
-fading ring, and `"none"` adds no effect. `click_effect_color` supplies the
-CSS color for a ripple. Override click feedback with `pz_act_click(effect =,
-effect_color =)` and key display with `pz_act_press(show_keys =)`:
+`show_keys` sets how `pz_act_press()` displays keys: `"none"`, `"words"`,
+`"mac"` or `"both"`. `click_effect` sets the click feedback for
+`pz_act_click()`: `"press"` (the default) shrinks the cursor while pressed,
+`"ripple"` draws a fading ring instead, and `"none"` shows nothing.
+`click_effect_color` is the ripple's CSS color. Override them for a single
+call with `pz_act_click(effect =, effect_color =)` and
+`pz_act_press(show_keys =)`:
 
 ```r
 page |>
@@ -239,16 +239,15 @@ pz_record(
 )
 ```
 
-The explicit `NULL` values restore the staged typing, pause, and click
-defaults. The click call supplies a green ripple for this action. The Enter
-action shows a Mac keycap while submitting another task; each
-`pz_act_press()` call replaces the previous key callout.
+The `NULL` values put typing, pause and click feedback back to their
+defaults. The click then asks for a green ripple just for that action, and
+the Enter press shows a Mac keycap while it submits the second task. Each
+`pz_act_press()` replaces the previous key callout.
 
 ## Turn a tested script into a demo
 
-Verify the actions and expectations first, then stage and record the same
-helper. This example needs shiny. `pz_wait_for_shiny_idle()` lets the app
-finish its reactive update; the expectation checks the new task itself.
+Write the steps once as a function with its expectations, run it as a check,
+then stage the page and record the same function. This example needs shiny.
 
 ```r
 app <- pz_open(
@@ -283,8 +282,9 @@ app |> pz_expect_count(4, target = ".task")
 pz_close(app)
 ```
 
-Staging only animates while recording, so verification runs at full speed.
-Keep the helper's expectations in the demo to verify the state it shows.
+Staging only animates while recording, so the check runs at full speed, and
+the expectations that stay in the recorded function confirm that the demo
+reached the state it shows.
 
 ```r
 pz_close(page)
