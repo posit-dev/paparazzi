@@ -59,10 +59,10 @@
 #'   Callouts appear only in recordings.
 #' @param click_effect Click feedback shown by [pz_act_click()] while
 #'   recording: `"press"` (the default) scales the cursor down while
-#'   pressed, `"ripple"` draws an expanding ring that fades out at the
+#'   pressed, `"ring"` draws an expanding ring that fades out at the
 #'   click point instead of scaling, and `"none"` shows nothing.
 #'   Supply `NULL` to restore the default.
-#' @param click_effect_color CSS color of the `"ripple"` click effect.
+#' @param click_effect_color CSS color of the `"ring"` click effect.
 #'   The default is `"#e11d48"`. Supply `NULL` to restore the default.
 #'
 #' @return `ctx`, invisibly.
@@ -76,8 +76,8 @@
 #' # Staging settings stay on the page until you change them
 #' page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
 #'
-#' # Recorded clicks ripple in a custom color instead of pressing
-#' page |> pz_stage(click_effect = "ripple", click_effect_color = "#2563eb")
+#' # Recorded clicks show a custom-colored ring
+#' page |> pz_stage(click_effect = "ring", click_effect_color = "#2563eb")
 #'
 #' path <- file.path(tempdir(), "add-task.mp4")
 #' page |>
@@ -205,7 +205,7 @@ pz_stage <- function(
     overrides$click_effect <- if (is.null(click_effect)) {
       NULL
     } else {
-      arg_match(click_effect, c("press", "ripple", "none"))
+      arg_match(click_effect, c("press", "ring", "none"))
     }
   }
   if (!missing(click_effect_color)) {

@@ -55,11 +55,11 @@ NULL
 #' @param ... Checked empty; reserved for future use.
 #' @param effect Click feedback while recording: `NULL` (the default)
 #'   uses the page's [pz_stage()] `click_effect` setting. `"press"`
-#'   scales the cursor down while pressed, `"ripple"` draws an
+#'   scales the cursor down while pressed, `"ring"` draws an
 #'   expanding ring that fades out at the click point instead of
 #'   scaling, and `"none"` shows nothing. Without a recording no
 #'   effect is drawn.
-#' @param effect_color CSS color of the `"ripple"` effect. `NULL` (the
+#' @param effect_color CSS color of the `"ring"` effect. `NULL` (the
 #'   default) uses the page's [pz_stage()] `click_effect_color` setting.
 #'
 #' @return `ctx`, invisibly.
@@ -92,7 +92,7 @@ pz_act_click <- function(
   check_dots_empty()
   stage <- page_stage(ctx$page)
   effect <- effect %||% stage$click_effect
-  effect <- arg_match(effect, c("press", "ripple", "none"))
+  effect <- arg_match(effect, c("press", "ring", "none"))
   effect_color <- effect_color %||% stage$click_effect_color
   check_string(effect_color, allow_empty = FALSE)
   action_start(ctx)
@@ -1219,7 +1219,7 @@ dispatch_mouse <- function(
 # otherwise (the SPEC matrix).
 # `effect` is the resolved pz_act_click() click effect; callers that
 # share this focus-via-click (pz_act_type()) keep the default press
-# scale. "ripple" draws the ring instead of pressing, "none" draws
+# scale. "ring" draws the ring instead of pressing, "none" draws
 # nothing; the pumps still hold the beat either way.
 dispatch_click <- function(
   ctx,
@@ -1246,8 +1246,8 @@ dispatch_click <- function(
     pump_loop(ctx$page$child_loop, 0.15)
     if (identical(effect, "press")) {
       cursor_press(ctx, TRUE)
-    } else if (identical(effect, "ripple")) {
-      cursor_ripple(ctx, point, effect_color)
+    } else if (identical(effect, "ring")) {
+      cursor_ring(ctx, point, effect_color)
     }
     pump_loop(ctx$page$child_loop, 0.16)
   }
@@ -1279,7 +1279,7 @@ dispatch_click <- function(
     }
     pump_loop(
       ctx$page$child_loop,
-      if (identical(effect, "ripple")) 0.45 else 0.2
+      if (identical(effect, "ring")) 0.45 else 0.2
     )
   }
 }
