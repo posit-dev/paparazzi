@@ -163,6 +163,23 @@ The steps are the same ones we ran before, but the recording looks as though a p
 page |> pz_stage(enter = "bottom", pause = 0.3)
 ```
 
+Clicks are staged too. By default, the cursor shrinks briefly as it presses. In a small video that's hard to see, so `pz_act_click()` can also draw a ring that grows out from the click point and fades. Here the cursor checks Urgent with the default press, then unchecks it with `effect = "ring"`:
+
+```{r, fig.alt = "PLACEHOLDER: describe the rendered GIF."}
+page |>
+  pz_record(
+    format = "gif",
+    frame = pz_frame("#new-task", pad = 16),
+    code = {
+      page |>
+        pz_act_click("#task-urgent") |>
+        pz_act_click("#task-urgent", effect = "ring")
+    }
+  )
+```
+
+The ring is crimson unless you pass a CSS color as `effect_color`, and `effect = "none"` turns click feedback off. To change every click on the page, set `pz_stage(click_effect = "ring")`, and `click_effect_color` for the ring's color.
+
 ## Frame the shot
 
 The recording above shows the whole viewport, with empty space around the card. A **frame** crops a screenshot or recording to part of the page. `pz_frame()` describes one: the elements to fit, the padding around them, and optionally an aspect ratio. We'll fit the card's heading and task list, pad them by 24 pixels, and widen the result to 16:9, the shape of most video players and slides:
