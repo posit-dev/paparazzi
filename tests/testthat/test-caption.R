@@ -573,12 +573,23 @@ test_that("clearing all logs the caption clear before mark fades pump", {
     pz_annotate("#box", reveal = "fade") |>
     pz_annotate_caption("Hello")
   rec <- page_recorder(page)
-  before <- rec_vt(rec)
+  before <- length(rec$captions)
+  captions_at_pump <- NULL
+  clear_duration <- NULL
+  real_pump <- annotate_pump
+  local_mocked_bindings(
+    annotate_pump = function(ctx, duration) {
+      captions_at_pump <<- page_recorder(ctx$page)$captions
+      clear_duration <<- duration
+      real_pump(ctx, duration)
+    }
+  )
+
   pz_annotate_clear(page)
-  events <- rec$captions
-  last <- events[[length(events)]]
-  expect_null(last$caption)
-  expect_lt(last$vt - before, 0.2)
+  expect_gt(clear_duration, 0)
+  expect_length(captions_at_pump, before + 1L)
+  expect_null(captions_at_pump[[length(captions_at_pump)]]$caption)
+  expect_identical(rec$captions, captions_at_pump)
   pz_record_stop(page)
 })
 
