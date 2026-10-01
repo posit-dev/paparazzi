@@ -363,7 +363,13 @@ test_that("staged scoped fallback uses offsets and directions without root seria
   scroll_staged(ctx, scoped, by = c(-40, -50), to = NULL, duration = 0.01)
   expect_equal(position(), c(60, 150))
   scroll_staged(ctx, scoped, by = NULL, to = "center", duration = 0.01)
-  expect_equal(position(), c(200, 325))
+  expect_equal(
+    position(),
+    unlist(pz_js(
+      page,
+      "(() => { const s = document.getElementById('scroller'); return [(s.scrollWidth - s.clientWidth) / 2, (s.scrollHeight - s.clientHeight) / 2]; })()"
+    ))
+  )
   scroll_staged(ctx, scoped, by = NULL, to = c("left", "top"), duration = 0.01)
   expect_equal(position(), c(0, 0))
 })
