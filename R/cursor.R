@@ -147,7 +147,7 @@ pz_cursor_hide <- function(ctx, ...) {
   if (!is.null(cur$x)) {
     cursor_draw(ctx, visible = FALSE)
     if (stage_recording(ctx$page) && is.null(cur$off_frame)) {
-      pump_loop(ctx$page$child_loop, 0.25)
+      pump_loop(ctx$page$child_loop, CURSOR_FADE)
     }
   }
   ctx_return(ctx)
@@ -280,9 +280,9 @@ pz_cursor_leave <- function(ctx, side = "right", icon = NULL) {
     ctx,
     point,
     duration = duration %||% 0,
-    icon = icon %||% cur$icon
+    icon = icon %||% cur$icon,
+    off_frame = side
   )
-  cur$off_frame <- side
   ctx_return(ctx)
 }
 
@@ -373,8 +373,14 @@ cursor_target_point <- function(ctx, target, call = caller_env()) {
   )
 }
 
+GLIDE_EASE <- c(0.42, 0.58)
+
+CURSOR_FADE <- 0.25
+
 glide_ease_x <- function(v) {
-  3 * (1 - v)^2 * v * 0.42 + 3 * (1 - v) * v^2 * 0.58 + v^3
+  a <- GLIDE_EASE[[1]]
+  b <- GLIDE_EASE[[2]]
+  3 * (1 - v)^2 * v * a + 3 * (1 - v) * v^2 * b + v^3
 }
 
 glide_ease_y <- function(v) {
@@ -545,7 +551,8 @@ cursor_apply <- function(
   destination = NULL,
   follow = FALSE,
   pressed = FALSE,
-  pump = TRUE
+  pump = TRUE,
+  off_frame = NULL
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
@@ -600,7 +607,7 @@ cursor_apply <- function(
   cur$x <- state$x
   cur$y <- state$y
   cur$pressed <- pressed
-  cur$off_frame <- NULL
+  cur$off_frame <- off_frame
   cur$resting <- FALSE
   if (pump && state$duration > 0) {
     pump_loop(page$child_loop, state$duration + 0.05)
@@ -644,7 +651,7 @@ cursor_rest <- function(ctx) {
   }
   cur$resting <- TRUE
   cursor_draw(ctx, visible = FALSE)
-  pump_loop(page$child_loop, 0.25)
+  pump_loop(page$child_loop, CURSOR_FADE)
   ctx_return(ctx)
 }
 
@@ -817,11 +824,17 @@ cursor_command_js <- paste0(
   }
   if (state.from || state.fade) void glide.offsetWidth;
   glide.style.transition = state.duration > 0
-    ? 'transform ' + state.duration + 's cubic-bezier(0.42,0,0.58,1)'
+    ? 'transform ' + state.duration + 's cubic-bezier()",
+  GLIDE_EASE[[1]],
+  ",0,",
+  GLIDE_EASE[[2]],
+  r"(,1)'
     : 'none';
   glide.style.transform = 'translate(' + state.x + 'px,' + state.y + 'px)';
   inner.style.transition = state.anim
-    ? 'opacity 0.25s ease, transform 0.12s ease'
+    ? 'opacity )",
+  CURSOR_FADE,
+  r"(s ease, transform 0.12s ease'
     : 'none';
   inner.style.opacity = state.visible ? '1' : '0';
   inner.style.transform = 'scale(' + state.scale * (state.pressed ? 0.8 : 1) + ')';
