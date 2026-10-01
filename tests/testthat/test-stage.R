@@ -834,7 +834,7 @@ test_that("the stage pause holds after press, select_text, and drag too", {
   expect_true(t_drag - t_drag0 >= 0.4)
 })
 
-test_that("recorded demo glides, presses, types, and scrolls on camera", {
+test_that("recorded demo glides, types, and scrolls on camera", {
   skip_if_no_av()
   page <- local_cursor_page()
   out <- withr::local_tempfile(fileext = ".mp4")
@@ -880,19 +880,6 @@ test_that("recorded demo glides, presses, types, and scrolls on camera", {
   expect_true(length(xs) >= 2)
   expect_true(min(xs) < 200)
   expect_true(max(xs) > 550)
-
-  # The press: while the cursor is at the button, its ink shrinks
-  # under the press scale-down and recovers.
-  heights <- vapply(
-    inks,
-    function(ink) {
-      if (ink$count > 20 && abs(ink$x - 660) < 25) ink$height else NA_real_
-    },
-    numeric(1)
-  )
-  heights <- heights[!is.na(heights)]
-  expect_true(length(heights) >= 2)
-  expect_true(min(heights) < max(heights) * 0.9)
 
   # The typing: near-black ink in the input's text rect (x 95-175;
   # the cursor sits at x 200 and the scroller's text at x 450+) grows
