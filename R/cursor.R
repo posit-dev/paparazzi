@@ -875,7 +875,9 @@ cursor_command_js <- paste0(
   if (state.anim && state.ripple) {
     const ring = document.createElement('div');
     ring.className = 'pz-ripple';
-    ring.style.cssText = 'position:absolute;left:' + state.x + 'px;top:' + state.y + 'px;width:18px;height:18px;border:2px solid ' + state.ripple + ';border-radius:50%;pointer-events:none;opacity:0.85;transform:translate(-50%,-50%) scale(0.4);';
+    const size = 18 * state.scale;
+    ring.style.cssText = 'position:absolute;left:' + state.x + 'px;top:' + state.y + 'px;width:' + size + 'px;height:' + size + 'px;border:2px solid;border-radius:50%;pointer-events:none;opacity:0.85;transform:translate(-50%,-50%) scale(0.4);';
+    ring.style.borderColor = state.ripple;
     layer.appendChild(ring);
     void ring.offsetWidth;
     ring.style.transition = 'transform 0.45s ease-out, opacity 0.45s ease-out';
