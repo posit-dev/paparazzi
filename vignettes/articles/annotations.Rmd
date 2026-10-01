@@ -260,17 +260,17 @@ Per-call arguments with the same names override the staged values for that call.
 A screenshot's frame is measured from the target's elements. Badges and callouts paint *outside* those elements, so the default `target_box = "element"` can crop them off. `target_box = "annotated"` measures the elements plus their attached marks, callouts, and spotlight cutouts. Here's the difference on the same callout:
 
 ```{r frame-setup}
-page |> pz_annotate_callout("The list so far", target = "h1", side = "right")
+page |> pz_annotate_callout("Finished tasks", target = ".filters a[href='#done']", side = "right")
 ```
 
-```{r frame-element, fig.alt = "A tight crop of the Tasks heading alone; the callout next to it is cut off."}
-page |> pz_screenshot(frame = pz_frame("h1", pad = 16))
+```{r frame-element, fig.alt = "A tight crop of the Done filter link; the callout arrow beside it is visible but the bubble is cut off."}
+page |> pz_screenshot(frame = pz_frame(".filters a[href='#done']", pad = 24))
 ```
 
-```{r frame-annotated, fig.alt = "A crop of the Tasks heading that includes the full callout bubble to its right."}
+```{r frame-annotated, fig.alt = "A crop of the Done filter link that includes the full callout bubble to its right."}
 page |>
   pz_screenshot(
-    frame = pz_frame("h1", pad = 16, target_box = "annotated")
+    frame = pz_frame(".filters a[href='#done']", pad = 24, target_box = "annotated")
   )
 ```
 
