@@ -281,12 +281,22 @@ quarto_cli <- function() {
 quarto_start <- function(path, render, cli, timeout = 60, call = caller_env()) {
   for (attempt in seq_len(5)) {
     port <- random_port()
-    preview <- new_quarto(path, render, cli, port)
-    failure <- if (is.null(preview)) {
-      list(kind = "exited", port_taken = TRUE, log = character())
-    } else {
-      app_wait_failure(preview, timeout)
+    if (app_port_connectable(port)) {
+      # Some platforms allow a second bind, but requests would reach the first
+      # listener instead.
+      if (attempt < 5) {
+        next
+      }
+      app_startup_error(
+        list(kind = "exited", port_taken = TRUE, log = character()),
+        path,
+        timeout,
+        call,
+        engine = "Quarto preview"
+      )
     }
+    preview <- new_quarto(path, render, cli, port)
+    failure <- app_wait_failure(preview, timeout)
     if (is.null(failure)) {
       url <- quarto_browse_url(preview, port)
       if (length(url)) {
@@ -294,9 +304,7 @@ quarto_start <- function(path, render, cli, timeout = 60, call = caller_env()) {
       }
       return(preview)
     }
-    if (!is.null(preview)) {
-      preview$stop()
-    }
+    preview$stop()
     if (failure$port_taken && attempt < 5) {
       next
     }
@@ -326,9 +334,6 @@ quarto_browse_url <- function(preview, port, wait = 2) {
 
 new_quarto <- function(path, render, cli, port) {
   log_file <- tempfile(pattern = "paparazzi-quarto-", fileext = ".log")
-  if (app_port_connectable(port)) {
-    return(NULL)
-  }
   process <- processx::process$new(
     cli,
     args = c(
@@ -386,16 +391,9 @@ app_start <- function(
   max_attempts <- 5
   for (attempt in seq_len(max_attempts)) {
     port <- shiny_options$port %||% random_port()
-    config <- c(
-      list(appDir = app_dir),
-      shiny_options,
-      list(host = "127.0.0.1", port = port, launch.browser = FALSE)
-    )
-    config <- config[!duplicated(names(config), fromLast = TRUE)]
-    app <- new_app(config, port, envvars)
-    if (is.null(app)) {
-      # On some platforms a second bind
-      # can also succeed, but traffic would reach the other listener.
+    if (app_port_connectable(port)) {
+      # Some platforms allow a second bind, but requests would reach the first
+      # listener instead.
       if (attempt < max_attempts) {
         shiny_options$port <- NULL
         next
@@ -407,6 +405,13 @@ app_start <- function(
         call = call
       )
     }
+    config <- c(
+      list(appDir = app_dir),
+      shiny_options,
+      list(host = "127.0.0.1", port = port, launch.browser = FALSE)
+    )
+    config <- config[!duplicated(names(config), fromLast = TRUE)]
+    app <- new_app(config, port, envvars)
     failure <- app_wait_failure(app, timeout)
     if (is.null(failure)) {
       return(app)
@@ -525,9 +530,6 @@ new_app <- function(config, port, envvars) {
   config_file <- tempfile(pattern = "paparazzi-app-", fileext = ".rds")
   saveRDS(config, config_file)
   log_file <- tempfile(pattern = "paparazzi-app-", fileext = ".log")
-  if (app_port_connectable(port)) {
-    return(NULL)
-  }
   process <- processx::process$new(
     file.path(R.home("bin"), "Rscript"),
     args = c(

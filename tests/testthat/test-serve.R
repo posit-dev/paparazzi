@@ -168,6 +168,27 @@ test_that("a taken port triggers a retry on a new port", {
   expect_true(app_port_reachable(app$port))
 })
 
+test_that("new_app constructs even when its port already has a listener", {
+  skip_if_no_shiny()
+  taken_port <- free_port()
+  listener <- httpuv::startServer("127.0.0.1", taken_port, list())
+  withr::defer(httpuv::stopServer(listener))
+
+  app <- new_app(
+    list(
+      appDir = shiny_app_fixture_dir(),
+      host = "127.0.0.1",
+      port = taken_port,
+      launch.browser = FALSE
+    ),
+    taken_port,
+    NULL
+  )
+  withr::defer(if (inherits(app, "PaparazziServe")) app$stop())
+
+  expect_s3_class(app, "PaparazziServe")
+})
+
 test_that("a child that dies from a taken port exhausts its retries", {
   skip_if_no_shiny()
   err <- expect_error(
@@ -520,6 +541,47 @@ test_that("Quarto startup failures include logs and release the port", {
     regexp = "exited during startup"
   )
   expect_true(wait_until(function() !app_port_reachable(port)))
+})
+
+test_that("new_quarto constructs even when its port already has a listener", {
+  skip_if_not_installed("httpuv")
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "document.qmd")
+  file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+  taken <- random_port()
+  listener <- httpuv::startServer("127.0.0.1", taken, list())
+  withr::defer(httpuv::stopServer(listener))
+
+  preview <- new_quarto(path, FALSE, quarto_cli(), taken)
+  withr::defer(if (inherits(preview, "PaparazziServe")) preview$stop())
+
+  expect_s3_class(preview, "PaparazziServe")
+})
+
+test_that("Quarto preflight exhaustion reports no nonexistent child log", {
+  skip_if_not_installed("httpuv")
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "document.qmd")
+  file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+  taken <- random_port()
+  listener <- httpuv::startServer("127.0.0.1", taken, list())
+  withr::defer(httpuv::stopServer(listener))
+  local_mocked_bindings(random_port = function(...) taken)
+
+  err <- expect_error(
+    pz_serve_quarto(path),
+    class = "paparazzi_error_quarto_startup",
+    regexp = "could not bind a port"
+  )
+  expect_false(grepl("\n", conditionMessage(err), fixed = TRUE))
 })
 
 test_that("Quarto preflight retries a port takeover", {
