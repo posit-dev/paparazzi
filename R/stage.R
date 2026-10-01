@@ -586,39 +586,36 @@ scroll_staged <- function(
   if (!is.null(scoped)) {
     stage_scroll_into_view(ctx, scoped, duration = duration, call = call)
   }
-  wheel_container <- function(aim = NULL) {
+  wheel_container <- function() {
     if (!is.null(scoped)) {
-      if (is.null(aim)) {
-        els_values(scoped, wheel_container_js, call = call)
-      } else {
-        els_values(
-          scoped,
-          wheel_container_js,
-          args = list(list(value = c(aim[[1]], aim[[2]]))),
-          doing = "working with",
-          call = call
-        )
-      }
+      els_values(scoped, wheel_container_js, call = call)
+    } else {
+      pz_js(ctx, paste0("(", wheel_container_js, ").call([])"))
+    }
+  }
+  wheel_container_hit <- function(aim) {
+    if (!is.null(scoped)) {
+      els_values(
+        scoped,
+        wheel_container_hit_js,
+        args = list(list(value = c(aim[[1]], aim[[2]]))),
+        doing = "working with",
+        call = call
+      )
     } else {
       pz_js(
         ctx,
         paste0(
           "(",
-          wheel_container_js,
-          ").call([]",
-          if (is.null(aim)) "" else paste0(", ", jsonlite::toJSON(unname(aim))),
+          wheel_container_hit_js,
+          ").call([], ",
+          jsonlite::toJSON(unname(aim)),
           ")"
         )
       )
     }
   }
   apply_instant <- function(actual) {
-    arg <- scroll_arg_json(
-      by = if (!is.null(by)) {
-        c(target$left - actual$left, target$top - actual$top)
-      },
-      to = to
-    )
     if (!is.null(scoped)) {
       arg_list <- if (!is.null(by)) {
         list(
@@ -635,6 +632,12 @@ scroll_staged <- function(
         call = call
       )
     } else {
+      arg <- scroll_arg_json(
+        by = if (!is.null(by)) {
+          c(target$left - actual$left, target$top - actual$top)
+        },
+        to = to
+      )
       action_cdp(
         ctx,
         "scrolling",
@@ -654,7 +657,7 @@ scroll_staged <- function(
   if (all(delta == 0)) {
     return(ctx_return(ctx))
   }
-  if (!isTRUE(wheel_container(c(target$left, target$top))$hit > 0)) {
+  if (!isTRUE(wheel_container_hit(c(target$left, target$top)) > 0)) {
     apply_instant(probe)
     return(ctx_return(ctx))
   }
@@ -728,9 +731,7 @@ const wheelHit = (container, x, y, dx, dy) => {
   return 0;
 };"
 
-wheel_container_js <- paste0(
-  "function(aim) {
-  ",
+wheel_container_setup_js <- paste0(
   wheel_hit_js,
   "
   let container = null;
@@ -749,23 +750,33 @@ wheel_container_js <- paste0(
     : container.getBoundingClientRect();
   const x = Math.min(Math.max(cr.left + cr.width / 2, 1), window.innerWidth - 1);
   const y = Math.min(Math.max(cr.top + cr.height / 2, 1), window.innerHeight - 1);
-  let hit = 1;
-  if (aim) {
-    const dx = aim[0] - container.scrollLeft;
-    const dy = aim[1] - container.scrollTop;
-    if (dx !== 0 || dy !== 0) {
-      hit = wheelHit(container, x, y, dx, dy);
-    }
-  }
+"
+)
+
+wheel_container_js <- paste0(
+  "function() {
+",
+  wheel_container_setup_js,
+  "
   return {
     x: x,
     y: y,
     top: container.scrollTop,
     left: container.scrollLeft,
     maxTop: container.scrollHeight - container.clientHeight,
-    maxLeft: container.scrollWidth - container.clientWidth,
-    hit: hit
+    maxLeft: container.scrollWidth - container.clientWidth
   };
+}"
+)
+
+wheel_container_hit_js <- paste0(
+  "function(aim) {
+",
+  wheel_container_setup_js,
+  "
+  const dx = aim[0] - container.scrollLeft;
+  const dy = aim[1] - container.scrollTop;
+  return dx === 0 && dy === 0 ? 1 : wheelHit(container, x, y, dx, dy);
 }"
 )
 
