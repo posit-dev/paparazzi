@@ -306,6 +306,7 @@ test_that("static directories and single HTML files share the handle contract", 
   file.copy(html, file.path(dir, "index.html"))
 
   for (path in c(dir, html)) {
+    servers <- httpuv::listServers()
     server <- pz_serve_static(path)
     withr::defer(server$stop())
     expect_s3_class(server, "PaparazziServe")
@@ -322,30 +323,35 @@ test_that("static directories and single HTML files share the handle contract", 
     expect_invisible(server$stop())
     expect_no_error(server$stop())
     expect_false(server$is_running())
-    expect_false(app_port_reachable(server$port))
+    # A parallel worker can bind the freed port; observe our httpuv servers.
+    expect_identical(httpuv::listServers(), servers)
 
     owned <- local_page(path)
-    port <- owned$app$port
+    owned_server <- owned$app
     expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
     pz_nav_reload(owned)
     expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
     pz_close(owned)
-    expect_false(app_port_reachable(port))
+    expect_false(owned_server$is_running())
+    expect_identical(httpuv::listServers(), servers)
   }
 })
 
 test_that("static handles stop on scope exit and finalization", {
   skip_if_not_installed("httpuv")
-  port <- local({
+  servers <- httpuv::listServers()
+  local({
     server <- pz_serve_static(dirname(fixture_file()))
     withr::defer(server$stop())
-    server$port
+    expect_true(server$is_running())
   })
-  expect_false(app_port_reachable(port))
-  port <- pz_serve_static(fixture_file())$port
+  expect_identical(httpuv::listServers(), servers)
+  server <- pz_serve_static(fixture_file())
+  expect_length(httpuv::listServers(), length(servers) + 1L)
+  rm(server)
   gc()
   gc()
-  expect_false(app_port_reachable(port))
+  expect_identical(httpuv::listServers(), servers)
 })
 
 test_that("static inputs and reserved dots are validated", {
