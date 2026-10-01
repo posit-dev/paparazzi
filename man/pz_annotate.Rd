@@ -75,8 +75,11 @@ follow their elements as the page scrolls or changes layout, and appear
 in screenshots and recordings until cleared with \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}.
 Annotations belong to the current document; navigating away removes them.
 Marks and their badges are clipped by the target's overflow containers
-(axis-aligned clipping only, not a custom \code{overflow-clip-margin}). A mark
-hides while its target is disconnected, not rendered, \code{visibility: hidden} with no visible descendants, or entirely clipped.
+(axis-aligned clipping only, not a custom \code{overflow-clip-margin}). On sides
+where the target is not cut off, the clip leaves room for the mark's \code{pad}
+so its outline stays intact. A mark hides while its target is disconnected,
+not rendered, \code{visibility: hidden} with no visible descendants, or entirely
+clipped, even if its padding would reach into view.
 }
 \seealso{
 \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}, \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}

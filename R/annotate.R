@@ -8,9 +8,11 @@ NULL
 #' in screenshots and recordings until cleared with [pz_annotate_clear()].
 #' Annotations belong to the current document; navigating away removes them.
 #' Marks and their badges are clipped by the target's overflow containers
-#' (axis-aligned clipping only, not a custom `overflow-clip-margin`). A mark
-#' hides while its target is disconnected, not rendered, `visibility:
-#' hidden` with no visible descendants, or entirely clipped.
+#' (axis-aligned clipping only, not a custom `overflow-clip-margin`). On sides
+#' where the target is not cut off, the clip leaves room for the mark's `pad`
+#' so its outline stays intact. A mark hides while its target is disconnected,
+#' not rendered, `visibility: hidden` with no visible descendants, or entirely
+#' clipped, even if its padding would reach into view.
 #'
 #' @inheritParams pz_act_click
 #' @param target A selector, [pz_loc()] spec, or list of targets.

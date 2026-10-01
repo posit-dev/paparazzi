@@ -401,6 +401,25 @@ test_that("redaction paints only inside a scrolling ancestor as its target moves
   expect_equal(pixel(380, 175), rep(23 / 255, 3), tolerance = 0.03)
 })
 
+test_that("redaction padding stays clipped even when its target is uncut", {
+  page <- local_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.innerHTML = '<div style=\"position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white\">' +",
+      "'<div id=secret style=\"width:100px;height:100px\"></div></div>';",
+      "document.body.style.background = 'white';"
+    )
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_annotate_redact("#secret", pad = 4) |> pz_screenshot(path)
+  expect_png_pixel(page, path, 150, 150, rep(23, 3))
+  expect_png_pixel(page, path, 150, 98, rep(255, 3))
+  expect_png_pixel(page, path, 202, 150, rep(255, 3))
+  expect_png_pixel(page, path, 150, 202, rep(255, 3))
+  expect_png_pixel(page, path, 98, 150, rep(255, 3))
+})
+
 test_that("redaction intersects nested horizontal and vertical overflow clips", {
   skip_if_not_installed("png")
   page <- annotation_page()
@@ -602,6 +621,113 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
     at(baseline, hb[1] + 2, hb[2] - 6),
     tolerance = 0.03
   )
+})
+
+test_that("a fully visible new task keeps every padded outline edge", {
+  page <- local_page(pz_example("tasks"))
+  page |>
+    pz_act_type("Prepare release notes", target = "#task-title") |>
+    pz_act_click("#add-task")
+  target <- pz_loc(".task", has_text = "Prepare release notes")
+  rect <- unlist(pz_js(
+    page,
+    "(() => { const r = document.querySelector('.task').getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; })()"
+  ))
+  path <- withr::local_tempfile(fileext = ".png")
+  red <- c(255, 0, 0)
+
+  for (reveal in c("none", "draw")) {
+    page |>
+      pz_annotate(
+        target,
+        pad = 4,
+        stroke_width = 4,
+        color = "red",
+        reveal = reveal,
+        id = "new"
+      ) |>
+      pz_screenshot(path)
+    expect_png_pixel(page, path, mean(rect[c(1, 3)]), rect[2] - 2, red)
+    expect_png_pixel(page, path, rect[3] + 2, mean(rect[c(2, 4)]), red)
+    expect_png_pixel(page, path, mean(rect[c(1, 3)]), rect[4] + 2, red)
+    expect_png_pixel(page, path, rect[1] - 2, mean(rect[c(2, 4)]), red)
+  }
+})
+
+test_that("only the cut side of a partially visible mark loses its padding", {
+  page <- local_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.innerHTML = '<div style=\"position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white\">' +",
+      "'<div id=marked style=\"position:relative;width:100px;height:100px\"></div></div>';",
+      "document.body.style.background = 'white';"
+    )
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  red <- c(255, 0, 0)
+  white <- c(255, 255, 255)
+  cases <- list(
+    top = "top:-20px;height:120px",
+    right = "width:120px",
+    bottom = "height:120px",
+    left = "left:-20px;width:120px"
+  )
+  for (side in names(cases)) {
+    pz_js(
+      page,
+      paste0(
+        "document.getElementById('marked').style.cssText = ",
+        "'position:relative;width:100px;height:100px;",
+        cases[[side]],
+        "'"
+      )
+    )
+    page |>
+      pz_annotate(
+        "#marked",
+        pad = c(4, 6, 8, 10),
+        stroke_width = 4,
+        color = "red",
+        reveal = "none",
+        id = "mark"
+      ) |>
+      pz_screenshot(path)
+    expect_png_pixel(page, path, 150, 98, if (side == "top") white else red)
+    expect_png_pixel(page, path, 204, 150, if (side == "right") white else red)
+    expect_png_pixel(page, path, 150, 206, if (side == "bottom") white else red)
+    expect_png_pixel(page, path, 92, 150, if (side == "left") white else red)
+    expect_png_pixel(page, path, 150, 78, white)
+    expect_png_pixel(page, path, 224, 150, white)
+    expect_png_pixel(page, path, 150, 226, white)
+    expect_png_pixel(page, path, 72, 150, white)
+  }
+})
+
+test_that("a fully clipped target hides its mark even when padding overlaps", {
+  page <- local_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.innerHTML = '<div style=\"position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white\">' +",
+      "'<div id=marked style=\"position:relative;top:100px;width:100px;height:40px\"></div></div>';",
+      "document.body.style.background = 'white';"
+    )
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |>
+    pz_annotate(
+      "#marked",
+      pad = 4,
+      label = "Hidden",
+      stroke_width = 4,
+      color = "red",
+      reveal = "none"
+    ) |>
+    pz_screenshot(path)
+  expect_false(annotation_state(page)[[1]]$visible)
+  expect_png_pixel(page, path, 150, 198, c(255, 255, 255))
+  expect_png_pixel(page, path, 100, 190, c(255, 255, 255))
 })
 
 test_that("a mark clips at the edge of a scrolling overflow ancestor", {

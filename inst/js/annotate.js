@@ -298,14 +298,25 @@ function(root) {
         box.style.width = w + 'px';
         const h = Math.max(0, r.height + p[0] + p[2]);
         box.style.height = h + 'px';
+        if (entry.kind !== 'redact') {
+          if (r.right <= clip.left || r.left >= clip.right ||
+              r.bottom <= clip.top || r.top >= clip.bottom) {
+            box.style.display = 'none';
+            return;
+          }
+          // Preserve padding on uncut target sides without letting padding
+          // bring an entirely clipped target's mark back into view.
+          if (r.left >= clip.left) clip.left = Math.min(clip.left, left);
+          if (r.top >= clip.top) clip.top = Math.min(clip.top, top);
+          if (r.right <= clip.right) clip.right = Math.max(clip.right, left + w);
+          if (r.bottom <= clip.bottom) clip.bottom = Math.max(clip.bottom, top + h);
+        }
         if (Math.max(left, clip.left) >= Math.min(left + w, clip.right) ||
             Math.max(top, clip.top) >= Math.min(top + h, clip.bottom)) {
           box.style.display = 'none';
           return;
         }
-        // Inset to the ancestor clip itself: negative insets reach past the
-        // box to the container edges, so badges overhanging the box survive
-        // wherever the container would show them.
+        // Negative insets let badges overhang the mark within the clip region.
         const inset = v => Math.max(v, -1e5) + 'px';
         box.style.clipPath = `inset(${inset(clip.top - top)} ${inset(left + w - clip.right)} ${inset(top + h - clip.bottom)} ${inset(clip.left - left)})`;
         if (entry.kind === 'circle' || (entry.kind === 'box' && entry.reveal === 'draw')) {
