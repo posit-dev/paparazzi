@@ -1733,6 +1733,7 @@ test_that("pz_act_drag refuses a destination outside the viewport after scrollin
   # viewport; the drag errors instead of dropping on empty space.
   expect_error(
     pz_act_drag(page, "#tall-bottom", "#editor"),
+    regexp = "outside the viewport",
     class = "paparazzi_error_target"
   )
 })
@@ -1769,6 +1770,7 @@ test_that("pz_act_drag errors when the destination hides after the source's scro
   # drag errors instead of dropping at the zone's earlier point.
   expect_error(
     pz_act_drag(page, "#tall-bottom", "#vanishing-zone"),
+    regexp = "no longer visible",
     class = "paparazzi_error_target"
   )
   # Nothing was dispatched: the error fires before any press.

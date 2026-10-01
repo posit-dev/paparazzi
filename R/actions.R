@@ -915,7 +915,7 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
 }
 
 drag_destination_points <- function(ctx, source, dest, call = caller_env()) {
-  to_point <- el_actionable_point(ctx, dest, call = call)
+  el_actionable_point(ctx, dest, call = call)
   from <- el_pointer_point(ctx, source, call = call)
   probe <- els_values(dest, dest_point_js, call = call)
   if (isTRUE(probe$visible) && probe$width > 0 && probe$height > 0) {
@@ -949,7 +949,6 @@ drag_destination_points <- function(ctx, source, dest, call = caller_env()) {
         call = call
       )
     }
-    to_point <- drop
   } else {
     cli::cli_abort(
       c(
@@ -960,7 +959,7 @@ drag_destination_points <- function(ctx, source, dest, call = caller_env()) {
       call = call
     )
   }
-  list(from = from, to = to_point)
+  list(from = from, to = drop)
 }
 
 record_pre_action_loader <- function(ctx) {
