@@ -34,6 +34,56 @@ cursor_overlay_state <- function(page) {
   structure(unlist(v[1:3]), icon = v[[4]])
 }
 
+# Count PNG pixels where `color`'s dominant RGB channel dominates by
+# `margin`, for spotting the click ripple ring in recorded frames. A
+# dominance test (not per-channel distance) keeps ring pixels that have
+# faded partway toward the background. Same band and x_range cropping
+# as cursor_png_ink().
+cursor_png_color <- function(
+  page,
+  path,
+  color,
+  band = NULL,
+  dpr = page_dpr(page),
+  x_range = NULL,
+  margin = 40,
+  min_level = 100
+) {
+  rgb <- as.integer(grDevices::col2rgb(color))
+  dominant <- which.max(rgb) - 1L
+  others <- setdiff(0:2, dominant)
+  x0 <- if (is.null(x_range)) 0 else floor(x_range[[1]] * dpr)
+  x1 <- if (is.null(x_range)) NULL else ceiling(x_range[[2]] * dpr)
+  y0 <- if (is.null(band)) 0 else floor(band[[1]] * dpr)
+  y1 <- if (is.null(band)) NULL else ceiling(band[[2]] * dpr)
+  region <- paste(
+    x0,
+    y0,
+    if (is.null(x1)) "img.width" else x1 - x0,
+    if (is.null(y1)) "img.height" else y1 - y0,
+    sep = ", "
+  )
+  body <- paste0(
+    "const d = c.getImageData(",
+    region,
+    ").data;",
+    "let n = 0;",
+    "for (let p = 0; p < d.length; p += 4) {",
+    sprintf(
+      "  if (d[p + 3] > 200 && d[p + %d] >= %d && d[p + %d] - Math.max(d[p + %d], d[p + %d]) >= %d) n++;",
+      dominant,
+      min_level,
+      dominant,
+      others[[1]],
+      others[[2]],
+      margin
+    ),
+    "}",
+    "return n;"
+  )
+  as.numeric(png_canvas_eval(page, path, body))
+}
+
 cursor_overlay_scale <- function(page) {
   pz_js(
     page,

@@ -53,6 +53,14 @@ NULL
 #'   specs (a union matching any of them). `NULL` uses the current
 #'   scope; at the root context a target is required.
 #' @param ... Checked empty; reserved for future use.
+#' @param effect Click feedback while recording: `NULL` (the default)
+#'   uses the page's [pz_stage()] `click_effect` setting. `"press"`
+#'   scales the cursor down while pressed, `"ripple"` draws an
+#'   expanding ring that fades out at the click point instead of
+#'   scaling, and `"none"` shows nothing. Without a recording no
+#'   effect is drawn.
+#' @param effect_color CSS color of the `"ripple"` effect. `NULL` (the
+#'   default) uses the page's [pz_stage()] `click_effect_color` setting.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -73,16 +81,34 @@ NULL
 #' @inheritSection paparazzi-actions Acting on the page
 #'
 #' @export
-pz_act_click <- function(ctx, target = NULL, ...) {
+pz_act_click <- function(
+  ctx,
+  target = NULL,
+  ...,
+  effect = NULL,
+  effect_color = NULL
+) {
   check_context(ctx)
   check_dots_empty()
+  stage <- page_stage(ctx$page)
+  effect <- effect %||% stage$click_effect
+  effect <- arg_match(effect, c("press", "ripple", "none"))
+  effect_color <- effect_color %||% stage$click_effect_color
+  check_string(effect_color, allow_empty = FALSE)
   action_start(ctx)
   found <- action_elements(ctx, target)
   if (!found$pinned) {
     withr::defer(release_elements(found$els))
   }
   point <- el_pointer_point(ctx, found$els)
-  dispatch_click(ctx, "clicking", found$els$description, point)
+  dispatch_click(
+    ctx,
+    "clicking",
+    found$els$description,
+    point,
+    effect = effect,
+    effect_color = effect_color
+  )
   stage_action_pause(ctx)
   ctx_return(ctx)
 }
@@ -1188,7 +1214,19 @@ dispatch_mouse <- function(
 # short pause after the glide, plays the press scale-down around
 # pressed/released, and holds briefly after; all of it is skipped
 # otherwise (the SPEC matrix).
-dispatch_click <- function(ctx, action, target, point, call = caller_env()) {
+# `effect` is the resolved pz_act_click() click effect; callers that
+# share this focus-via-click (pz_act_type()) keep the default press
+# scale. "ripple" draws the ring instead of pressing, "none" draws
+# nothing; the pumps still hold the beat either way.
+dispatch_click <- function(
+  ctx,
+  action,
+  target,
+  point,
+  effect = "press",
+  effect_color = NULL,
+  call = caller_env()
+) {
   dispatch_mouse(
     ctx,
     action,
@@ -1203,7 +1241,11 @@ dispatch_click <- function(ctx, action, target, point, call = caller_env()) {
   staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
   if (staged) {
     pump_loop(ctx$page$child_loop, 0.15)
-    cursor_press(ctx, TRUE)
+    if (identical(effect, "press")) {
+      cursor_press(ctx, TRUE)
+    } else if (identical(effect, "ripple")) {
+      cursor_ripple(ctx, point, effect_color)
+    }
     pump_loop(ctx$page$child_loop, 0.16)
   }
   dispatch_mouse(
@@ -1229,8 +1271,13 @@ dispatch_click <- function(ctx, action, target, point, call = caller_env()) {
     call = call
   )
   if (staged) {
-    cursor_press(ctx, FALSE)
-    pump_loop(ctx$page$child_loop, 0.2)
+    if (identical(effect, "press")) {
+      cursor_press(ctx, FALSE)
+    }
+    pump_loop(
+      ctx$page$child_loop,
+      if (identical(effect, "ripple")) 0.45 else 0.2
+    )
   }
 }
 

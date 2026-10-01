@@ -4,7 +4,7 @@
 \alias{pz_act_click}
 \title{Click an element}
 \usage{
-pz_act_click(ctx, target = NULL, ...)
+pz_act_click(ctx, target = NULL, ..., effect = NULL, effect_color = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -14,6 +14,16 @@ specs (a union matching any of them). \code{NULL} uses the current
 scope; at the root context a target is required.}
 
 \item{...}{Checked empty; reserved for future use.}
+
+\item{effect}{Click feedback while recording: \code{NULL} (the default)
+uses the page's \code{\link[=pz_stage]{pz_stage()}} \code{click_effect} setting. \code{"press"}
+scales the cursor down while pressed, \code{"ripple"} draws an
+expanding ring that fades out at the click point instead of
+scaling, and \code{"none"} shows nothing. Without a recording no
+effect is drawn.}
+
+\item{effect_color}{CSS color of the \code{"ripple"} effect. \code{NULL} (the
+default) uses the page's \code{\link[=pz_stage]{pz_stage()}} \code{click_effect_color} setting.}
 }
 \value{
 \code{ctx}, invisibly.
