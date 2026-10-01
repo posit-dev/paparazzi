@@ -1340,14 +1340,6 @@ set_value_js <- "function(value) {
       'checked'
     ).set;
     setChecked.call(el, value.checked);
-    if (el.type === 'radio' && value.checked && el.name) {
-      const root = el.getRootNode();
-      root.querySelectorAll('input[type=radio]').forEach((r) => {
-        if (r !== el && r.name === el.name && r.form === el.form) {
-          setChecked.call(r, false);
-        }
-      });
-    }
     dispatch();
     return { status: 'ok' };
   }
