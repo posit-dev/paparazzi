@@ -399,11 +399,11 @@ test_that("the default press effect scales the cursor in recorded frames", {
   expect_lt(min(ink$counts), max(ink$counts) * 0.5)
 })
 
-test_that("the ripple effect draws a fading ring instead of scaling the cursor", {
+test_that("the ring effect draws a fading ring instead of scaling the cursor", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |>
-    pz_stage(click_effect = "ripple") |>
+    pz_stage(click_effect = "ring") |>
     pz_cursor_move("#btn", duration = 0)
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
@@ -429,7 +429,7 @@ test_that("the ripple effect draws a fading ring instead of scaling the cursor",
   )
   expect_gt(max(rings), 20)
 
-  # The ripple replaces the press scale: the cursor ink never shrinks
+  # The ring replaces the press scale: the cursor ink never shrinks
   # (its count dips only where the ring border crosses the arrow).
   ink <- click_frame_ink(page, frames)
   expect_gt(length(ink$counts), 0)
@@ -447,7 +447,7 @@ test_that("effect none draws nothing, and per-call effects override the stage", 
   page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
   page |> pz_act_click("#btn")
-  page |> pz_act_click("#btn", effect = "ripple", effect_color = "#16a34a")
+  page |> pz_act_click("#btn", effect = "ring", effect_color = "#16a34a")
   page |> pz_record_stop()
 
   frames <- recorded_click_frames(page, out)
@@ -467,7 +467,7 @@ test_that("effect none draws nothing, and per-call effects override the stage", 
     )
   }
   # The staged "none" click drew no ring in the staged (default) color,
-  # while the per-call ripple drew one in its own color (green: the
+  # while the per-call ring drew one in its own color (green: the
   # cropped region has no green content, unlike the steelblue button).
   expect_true(all(ring_count("#e11d48") <= 20))
   expect_gt(max(ring_count("#16a34a")), 20)

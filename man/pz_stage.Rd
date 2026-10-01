@@ -71,11 +71,11 @@ Callouts appear only in recordings.}
 
 \item{click_effect}{Click feedback shown by \code{\link[=pz_act_click]{pz_act_click()}} while
 recording: \code{"press"} (the default) scales the cursor down while
-pressed, \code{"ripple"} draws an expanding ring that fades out at the
+pressed, \code{"ring"} draws an expanding ring that fades out at the
 click point instead of scaling, and \code{"none"} shows nothing.
 Supply \code{NULL} to restore the default.}
 
-\item{click_effect_color}{CSS color of the \code{"ripple"} click effect.
+\item{click_effect_color}{CSS color of the \code{"ring"} click effect.
 The default is \code{"#e11d48"}. Supply \code{NULL} to restore the default.}
 }
 \value{
@@ -98,8 +98,8 @@ page <- pz_open(pz_example("tasks"))
 # Staging settings stay on the page until you change them
 page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
 
-# Recorded clicks ripple in a custom color instead of pressing
-page |> pz_stage(click_effect = "ripple", click_effect_color = "#2563eb")
+# Recorded clicks show a custom-colored ring
+page |> pz_stage(click_effect = "ring", click_effect_color = "#2563eb")
 
 path <- file.path(tempdir(), "add-task.mp4")
 page |>

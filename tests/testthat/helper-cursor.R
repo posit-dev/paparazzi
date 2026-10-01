@@ -35,7 +35,7 @@ cursor_overlay_state <- function(page) {
 }
 
 # Count PNG pixels where `color`'s dominant RGB channel dominates by
-# `margin`, for spotting the click ripple ring in recorded frames. A
+# `margin`, for spotting the click ring in recorded frames. A
 # dominance test (not per-channel distance) keeps ring pixels that have
 # faded partway toward the background. Same band and x_range cropping
 # as cursor_png_ink().

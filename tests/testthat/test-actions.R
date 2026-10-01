@@ -91,7 +91,7 @@ test_that("pz_act_click produces trusted mouse events in order", {
 test_that("pz_act_click validates effect and effect_color", {
   page <- local_cursor_page()
   expect_error(
-    pz_act_click(page, "#btn", effect = "ring"),
+    pz_act_click(page, "#btn", effect = "slide"),
     class = "rlang_error"
   )
   expect_error(
@@ -108,17 +108,17 @@ test_that("pz_act_click validates effect and effect_color", {
   )
 
   # A valid staged value does not excuse a bad per-call one.
-  pz_stage(page, click_effect = "ripple")
+  pz_stage(page, click_effect = "ring")
   expect_error(
-    pz_act_click(page, "#btn", effect = "ring"),
+    pz_act_click(page, "#btn", effect = "slide"),
     class = "rlang_error"
   )
 })
 
 test_that("click effects draw nothing without a recording", {
   page <- local_cursor_page()
-  page |> pz_act_click("#btn", effect = "ripple", effect_color = "#2563eb")
-  page |> pz_stage(click_effect = "ripple") |> pz_act_click("#btn")
+  page |> pz_act_click("#btn", effect = "ring", effect_color = "#2563eb")
+  page |> pz_stage(click_effect = "ring") |> pz_act_click("#btn")
   expect_equal(pz_js(page, "window.__log.clicks"), 2)
   expect_null(cursor_overlay_state(page))
 })
@@ -136,8 +136,8 @@ test_that("the click effect resolves per call and styles only pz_act_click", {
       calls <<- c(calls, list(list(kind = "press", pressed = pressed)))
       ctx_return(ctx)
     },
-    cursor_ripple = function(ctx, point, color) {
-      calls <<- c(calls, list(list(kind = "ripple", color = color)))
+    cursor_ring = function(ctx, point, color) {
+      calls <<- c(calls, list(list(kind = "ring", color = color)))
       ctx_return(ctx)
     }
   )
@@ -145,19 +145,19 @@ test_that("the click effect resolves per call and styles only pz_act_click", {
     vapply(calls, `[[`, character(1), "kind")
   }
 
-  # The staged "none": neither a press nor a ripple.
+  # The staged "none": neither a press nor a ring.
   page |> pz_act_click("#btn")
   expect_length(calls, 0)
 
   # A per-call effect overrides the staged value; the color falls back
   # to the staged one.
-  page |> pz_act_click("#btn", effect = "ripple")
+  page |> pz_act_click("#btn", effect = "ring")
   expect_length(calls, 1)
-  expect_identical(calls[[1]]$kind, "ripple")
+  expect_identical(calls[[1]]$kind, "ring")
   expect_identical(calls[[1]]$color, "#2563eb")
 
   calls <- list()
-  page |> pz_act_click("#btn", effect = "ripple", effect_color = "#123456")
+  page |> pz_act_click("#btn", effect = "ring", effect_color = "#123456")
   expect_identical(calls[[1]]$color, "#123456")
 
   calls <- list()

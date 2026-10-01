@@ -40,7 +40,7 @@ page |>
   pz_act_type("Water the basil", target = "#task-title") |>
   pz_act_click(
     "#add-task",
-    effect = "ripple",
+    effect = "ring",
     effect_color = "#2563eb"
   ) |>
   pz_expect_visible(basil) |>
@@ -186,7 +186,7 @@ page |>
     pause = 0.2,
     camera_follow = TRUE,
     show_keys = "mac",
-    click_effect = "ripple",
+    click_effect = "ring",
     click_effect_color = "#2563eb"
   )
 ```
@@ -206,8 +206,8 @@ follow pointer and typing targets.
 `show_keys` sets how `pz_act_press()` displays keys: `"none"`, `"words"`,
 `"mac"` or `"both"`. `click_effect` sets the click feedback for
 `pz_act_click()`: `"press"` (the default) shrinks the cursor while pressed,
-`"ripple"` draws a fading ring instead, and `"none"` shows nothing.
-`click_effect_color` is the ripple's CSS color. Override them for a single
+`"ring"` draws a fading ring instead, and `"none"` shows nothing.
+`click_effect_color` is the ring's CSS color. Override them for a single
 call with `pz_act_click(effect =, effect_color =)` and
 `pz_act_press(show_keys =)`:
 
@@ -226,7 +226,7 @@ pz_record(
       pz_act_type("Review the garden", target = "#task-title") |>
       pz_act_click(
         "#add-task",
-        effect = "ripple",
+        effect = "ring",
         effect_color = "#16a34a"
       ) |>
       pz_expect_visible(
@@ -240,7 +240,7 @@ pz_record(
 ```
 
 The `NULL` values put typing, pause, key display and click feedback back to
-their defaults. The click then asks for a green ripple just for that action, and
+their defaults. The click then asks for a green ring just for that action, and
 the Enter press shows a Mac keycap while it submits the second task. Each
 `pz_act_press()` replaces the previous key callout.
 
