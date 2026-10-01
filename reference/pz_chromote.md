@@ -33,6 +33,6 @@ session$Performance$enable()
 #> named list()
 metrics <- session$Performance$getMetrics()$metrics
 Filter(function(m) m$name == "Nodes", metrics)[[1]]$value
-#> [1] 274
+#> [1] 273
 pz_close(page)
 ```

@@ -7,9 +7,12 @@ in screenshots and recordings until cleared with
 Annotations belong to the current document; navigating away removes
 them. Marks and their badges are clipped by the target's overflow
 containers (axis-aligned clipping only, not a custom
-`overflow-clip-margin`). A mark hides while its target is disconnected,
-not rendered, `visibility: hidden` with no visible descendants, or
-entirely clipped.
+`overflow-clip-margin`). On sides where the target is not cut off, the
+clip leaves room for the mark's `pad` so its outline stays intact. A
+mark hides while its target is disconnected, not rendered,
+`visibility: hidden` with no visible descendants, or entirely clipped,
+even if its padding would reach into view. Zero-size targets on a
+clipping edge also stay hidden.
 
 ## Usage
 

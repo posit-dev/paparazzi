@@ -243,10 +243,13 @@ page |>
 ```
 
 Marks, badges, spotlight cutouts and redactions follow their targets and
-are clipped by the targets’ scrolling containers. An annotation hides
-while its target is scrolled out of view, removed, or hidden with no
-visible children, so scroll the target into view and expect it before
-capturing. A callout hides with a fully clipped target; when the target
+are clipped by the targets’ scrolling containers. Marks keep their
+padding on sides where the target is not cut off, so an outline stays
+intact even at a container edge. An annotation hides while its target is
+scrolled out of view, removed, or hidden with no visible children, so
+scroll the target into view and expect it before capturing. A fully
+clipped target shows no mark or badge, even if the padding would reach
+into view. A callout hides with a fully clipped target; when the target
 is partly visible, the leader points at the visible part and the bubble
 is never cut off. Clipping follows `overflow`, not a custom
 `overflow-clip-margin`.

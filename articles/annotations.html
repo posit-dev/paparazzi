@@ -147,8 +147,11 @@ they’re drawn, so clear them between examples:</p>
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>A mark is clipped wherever its target is. If a task row has scrolled
 out of the scrolling task list, its mark is cut off at the list’s edge
-instead of being drawn over whatever sits below the list. A mark also
-hides while its target is hidden or removed from the page.</p>
+instead of being drawn over whatever sits below the list. On sides where
+the target is not cut off, the outline keeps its padding, even if that
+takes it past the container’s edge. A fully clipped target shows no mark
+or badge, even if the padding would reach into view. A mark also hides
+while its target is hidden or removed from the page.</p>
 <div class="section level3">
 <h3 id="badges">Badges<a class="anchor" aria-label="anchor" href="#badges"></a>
 </h3>

@@ -306,10 +306,13 @@ page’s one spotlight.</p>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>, frame <span class="op">=</span> <span class="st">"main"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span>id <span class="op">=</span> <span class="st">"spotlight"</span><span class="op">)</span></span></code></pre></div>
 <p>Marks, badges, spotlight cutouts and redactions follow their targets
-and are clipped by the targets’ scrolling containers. An annotation
-hides while its target is scrolled out of view, removed, or hidden with
-no visible children, so scroll the target into view and expect it before
-capturing. A callout hides with a fully clipped target; when the target
+and are clipped by the targets’ scrolling containers. Marks keep their
+padding on sides where the target is not cut off, so an outline stays
+intact even at a container edge. An annotation hides while its target is
+scrolled out of view, removed, or hidden with no visible children, so
+scroll the target into view and expect it before capturing. A fully
+clipped target shows no mark or badge, even if the padding would reach
+into view. A callout hides with a fully clipped target; when the target
 is partly visible, the leader points at the visible part and the bubble
 is never cut off. Clipping follows <code>overflow</code>, not a custom
 <code>overflow-clip-margin</code>.</p>

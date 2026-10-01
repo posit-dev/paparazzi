@@ -77,8 +77,11 @@ page |> pz_annotate_clear()
 
 A mark is clipped wherever its target is. If a task row has scrolled out
 of the scrolling task list, its mark is cut off at the list’s edge
-instead of being drawn over whatever sits below the list. A mark also
-hides while its target is hidden or removed from the page.
+instead of being drawn over whatever sits below the list. On sides where
+the target is not cut off, the outline keeps its padding, even if that
+takes it past the container’s edge. A fully clipped target shows no mark
+or badge, even if the padding would reach into view. A mark also hides
+while its target is hidden or removed from the page.
 
 ### Badges
 
