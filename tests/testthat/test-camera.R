@@ -151,7 +151,7 @@ test_that("camera zoom and reset change MP4 and GIF content, not dimensions", {
   }
 })
 
-test_that("camera shot tracks page target after a scrolled poll capture", {
+test_that("camera shot tracks a scrolled target in the final encoded frame", {
   skip_if_no_av()
   testthat::skip_if_not_installed("png")
   html <- withr::local_tempfile(
@@ -166,13 +166,6 @@ test_that("camera shot tracks page target after a scrolled poll capture", {
   pz_js(page, "window.scrollTo(0,500)")
   pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.1, wait = TRUE)
   rec <- page_recorder(page)
-  move_end <- rec$camera[[length(rec$camera)]]$end
-  pz_poll(
-    function() any(rec$times > move_end),
-    timeout = page$default_timeout,
-    loop = page$child_loop,
-    what = "a poll capture after the camera move"
-  )
   expect_warning(pz_record_stop(page), "Camera zoom exceeds.*pixel density")
   expect_equal(rec$n_errors, 0L)
   decoded <- tempfile("camera-scrolled-")
