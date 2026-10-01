@@ -463,6 +463,27 @@ test_that("hidden and zero-size targets cannot leave spotlight holes", {
     c(0, 100 / 255, 1),
     tolerance = 0.04
   )
+  # Like redactions, a hidden target keeps its cutout while a descendant
+  # stays visible.
+  pz_js(
+    page,
+    paste0(
+      "(() => { const two = document.getElementById('two');",
+      "two.style.visibility = 'hidden';",
+      "two.insertAdjacentHTML('beforeend', '<span style=\"visibility:visible\">shown</span>'); })()"
+    )
+  )
+  pump_loop(page$child_loop, 0.07)
+  hole_display <- function() {
+    unlist(spotlight_layer(
+      page,
+      "[...layer.querySelector('.pz-spotlight mask').children].slice(1).map(h => h.style.display)"
+    ))
+  }
+  expect_identical(hole_display(), "")
+  pz_js(page, "document.querySelector('#two span').remove()")
+  pump_loop(page$child_loop, 0.07)
+  expect_identical(hole_display(), "none")
   pz_js(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=zero style=\"position:absolute;left:500px;top:200px;width:0;height:40px\"></div>')"

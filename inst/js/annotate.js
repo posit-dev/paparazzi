@@ -303,12 +303,11 @@ function(root) {
           box.style.display = 'none';
           return;
         }
-        // The badge overhangs the box above (and to the right when wider),
-        // so the clip reaches past the box on sides no ancestor clips.
-        const badge = entry.badges[i];
-        const overTop = badge ? badge[1] : 0;
-        const overRight = badge ? Math.max(0, badge[0] - w) : 0;
-        box.style.clipPath = `inset(${Math.max(-overTop, clip.top - top)}px ${Math.max(-overRight, left + w - clip.right)}px ${Math.max(0, top + h - clip.bottom)}px ${Math.max(0, clip.left - left)}px)`;
+        // Inset to the ancestor clip itself: negative insets reach past the
+        // box to the container edges, so badges overhanging the box survive
+        // wherever the container would show them.
+        const inset = v => Math.max(v, -1e5) + 'px';
+        box.style.clipPath = `inset(${inset(clip.top - top)} ${inset(left + w - clip.right)} ${inset(top + h - clip.bottom)} ${inset(clip.left - left)})`;
         if (entry.kind === 'circle' || (entry.kind === 'box' && entry.reveal === 'draw')) {
           const svg = box.querySelector('svg');
           const path = svg.firstChild;
@@ -357,12 +356,6 @@ function(root) {
     remove(id, false);
     nodes.forEach(node => layer.appendChild(node));
     entry.nodes = nodes;
-    // Badge text and font are fixed at draw, so the overhang is measured
-    // once; the sync loop reads it to keep unclipped badges paintable.
-    entry.badges = nodes.map(node => {
-      const span = node.querySelector('span');
-      return span ? [span.offsetWidth, span.offsetHeight] : null;
-    });
     if (entry.kind === 'callout') measureCallout(entry, opts);
     entries.set(id, entry);
     sync();
