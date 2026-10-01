@@ -906,6 +906,29 @@ test_that("the scope beats the staged target, which beats the viewport", {
   expect_null(spec$target)
 })
 
+test_that("resolved frame specs keep every field, so `$target` stays exact", {
+  page <- local_frame_page()
+  fields <- names(pz_frame())
+  expect_named(frame_fill(pz_frame()), fields, ignore.order = TRUE)
+  expect_named(
+    frame_fill(pz_frame(), defaults = frame_camera_defaults),
+    fields,
+    ignore.order = TRUE
+  )
+
+  pz_stage_frame(page, "#small", pad = 24)
+  scoped <- pz_find(page, "#card")
+  for (spec in list(
+    frame_effective(page, NULL),
+    frame_effective(page, pz_frame(pad = 8)),
+    frame_effective(scoped, NULL),
+    frame_effective(scoped, pz_frame(pad = 8))
+  )) {
+    expect_named(spec, fields, ignore.order = TRUE)
+  }
+  expect_null(frame_effective(scoped, NULL)$target)
+})
+
 test_that("a staged frame keeps its unset fields NULL", {
   page <- local_frame_page()
 
