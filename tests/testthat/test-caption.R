@@ -908,6 +908,44 @@ test_that("key callouts render in the family captured at press time", {
   ))
 })
 
+test_that("a throwing render script fails with a paparazzi error", {
+  page <- local_record_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  expect_error(
+    screen_render(
+      page,
+      400,
+      300,
+      path,
+      "(() => { throw new Error('boom'); })()"
+    ),
+    "boom",
+    class = "paparazzi_error_js"
+  )
+  expect_false(file.exists(path))
+})
+
+test_that("a shared render session serves multiple overlays", {
+  page <- local_record_page()
+  screen <- screen_open(page, 400, 300)
+  withr::defer(screen$close())
+  caption <- list(
+    text = "Note",
+    side = "bottom",
+    color = "white",
+    font_family = "sans-serif",
+    font_size = 20
+  )
+  first <- withr::local_tempfile(fileext = ".png")
+  second <- withr::local_tempfile(fileext = ".png")
+  height <- caption_render(page, caption, 400, 300, 1, first, session = screen)
+  expect_gt(height, 0)
+  expect_true(file.exists(first))
+  height <- caption_render(page, caption, 400, 300, 1, second, session = screen)
+  expect_gt(height, 0)
+  expect_true(file.exists(second))
+})
+
 test_that("key callout windows carry the font_family recorded at press time", {
   rec <- list(fps = 10)
   rec$keypresses <- list(list(

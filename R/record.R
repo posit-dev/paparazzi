@@ -1169,10 +1169,13 @@ record_encode <- function(rec, page = NULL, call = caller_env()) {
     caption_dir <- tempfile("paparazzi-caption-")
     dir.create(caption_dir)
     on.exit(unlink(caption_dir, recursive = TRUE), add = TRUE)
+    # One render session for every caption and keycap window in this encode.
+    screen <- screen_open(page, out$width, out$height)
+    on.exit(screen$close(), add = TRUE)
     captions <- if (mode == "vtt") {
       list()
     } else {
-      caption_overlays(rec, page, out, windows, caption_dir)
+      caption_overlays(rec, page, out, windows, caption_dir, screen)
     }
     keys <- key_callout_overlays(
       rec,
@@ -1180,7 +1183,8 @@ record_encode <- function(rec, page = NULL, call = caller_env()) {
       out,
       key_windows,
       captions,
-      caption_dir
+      caption_dir,
+      screen
     )
     out$vfilter <- screen_filter(rec, resampled, out, c(captions, keys))
   }

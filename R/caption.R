@@ -80,7 +80,15 @@ caption_clear <- function(page) {
   invisible(page)
 }
 
-caption_render <- function(page, caption, width, height, font_scale, path) {
+caption_render <- function(
+  page,
+  caption,
+  width,
+  height,
+  font_scale,
+  path,
+  session = NULL
+) {
   data <- js_literal(
     list(
       text = caption$text,
@@ -111,12 +119,22 @@ caption_render <- function(page, caption, width, height, font_scale, path) {
     "fontFamily:c.family,fontSize:c.size+'px',lineHeight:'1.35'});",
     "document.body.appendChild(el); return el.getBoundingClientRect().height; })()"
   )
-  screen_render(page, width, height, path, script)
+  screen_render(
+    page,
+    width,
+    height,
+    path,
+    script,
+    session = session,
+    what = "rendering a caption"
+  )
 }
 
-screen_render <- function(page, width, height, path, script) {
+# One blank tab per encode: font staging and metrics setup are per-session
+# work, so reusing the session across caption and keycap windows avoids
+# paying a target setup per window.
+screen_open <- function(page, width, height) {
   session <- page$session$new_session()
-  on.exit(session$close(), add = TRUE)
   # The blank tab has its own document.fonts; staged faces are re-added
   # there and awaited before the screenshot.
   fonts_ensure_page_session(page, session)
@@ -129,15 +147,43 @@ screen_render <- function(page, width, height, path, script) {
   session$Emulation$setDefaultBackgroundColorOverride(
     color = list(r = 0, g = 0, b = 0, a = 0)
   )
-  geometry <- session$Runtime$evaluate(
-    expression = script,
-    returnByValue = TRUE
+  session
+}
+
+screen_render <- function(
+  page,
+  width,
+  height,
+  path,
+  script,
+  session = NULL,
+  what = "rendering a screen overlay"
+) {
+  if (is.null(session)) {
+    session <- screen_open(page, width, height)
+    on.exit(session$close(), add = TRUE)
+  }
+  # A shared session accumulates earlier overlays in its body; every render
+  # starts from a clean one so its PNG shows only its own overlay.
+  script <- paste0("document.body.replaceChildren();", script)
+  timeout <- page$default_timeout
+  geometry <- cdp_call(
+    session$Runtime$evaluate(expression = script, returnByValue = TRUE),
+    timeout,
+    what
   )
-  result <- session$Page$captureScreenshot(
-    format = "png",
-    fromSurface = TRUE,
-    captureBeyondViewport = TRUE,
-    clip = list(x = 0, y = 0, width = width, height = height, scale = 1)
+  # Without this check a throwing render script yields a NULL height that
+  # fails obscurely downstream in vapply(numeric(1)).
+  cdp_check_exception(geometry, what)
+  result <- cdp_call(
+    session$Page$captureScreenshot(
+      format = "png",
+      fromSurface = TRUE,
+      captureBeyondViewport = TRUE,
+      clip = list(x = 0, y = 0, width = width, height = height, scale = 1)
+    ),
+    timeout,
+    what
   )
   writeBin(jsonlite::base64_dec(result$data), path)
   invisible(geometry$result$value)
@@ -151,7 +197,8 @@ key_callout_render <- function(
   scale,
   bottom_offset,
   family,
-  path
+  path,
+  session = NULL
 ) {
   data <- js_literal(
     list(
@@ -193,7 +240,15 @@ key_callout_render <- function(
     "row.appendChild(chord)});document.body.appendChild(row);",
     "return row.getBoundingClientRect().height})()"
   )
-  screen_render(page, width, height, path, script)
+  screen_render(
+    page,
+    width,
+    height,
+    path,
+    script,
+    session = session,
+    what = "rendering a keycap row"
+  )
 }
 
 caption_blend_still <- function(path, overlay) {
@@ -352,7 +407,7 @@ screen_scale <- function(rec, out) {
   out$width / home_width
 }
 
-caption_overlays <- function(rec, page, out, windows, dir) {
+caption_overlays <- function(rec, page, out, windows, dir, session = NULL) {
   scale <- screen_scale(rec, out)
   lapply(seq_along(windows), function(i) {
     window <- windows[[i]]
@@ -363,7 +418,8 @@ caption_overlays <- function(rec, page, out, windows, dir) {
       out$width,
       out$height,
       scale,
-      file.path(dir, name)
+      file.path(dir, name),
+      session = session
     )
     span <- window$end - window$start
     fades <- span >= 3 / rec$fps
@@ -383,7 +439,15 @@ caption_overlays <- function(rec, page, out, windows, dir) {
   })
 }
 
-key_callout_overlays <- function(rec, page, out, windows, captions, dir) {
+key_callout_overlays <- function(
+  rec,
+  page,
+  out,
+  windows,
+  captions,
+  dir,
+  session = NULL
+) {
   scale <- screen_scale(rec, out)
   lapply(seq_along(windows), function(i) {
     window <- windows[[i]]
@@ -413,7 +477,8 @@ key_callout_overlays <- function(rec, page, out, windows, captions, dir) {
       scale,
       bottom,
       window$font_family,
-      file.path(dir, name)
+      file.path(dir, name),
+      session = session
     )
     list(
       file = name,
