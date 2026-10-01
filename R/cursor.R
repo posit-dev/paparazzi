@@ -390,6 +390,30 @@ cursor_target_point <- function(ctx, target, call = caller_env()) {
   )
 }
 
+# The glide's CSS ease, cubic-bezier(0.42,0,0.58,1): over the curve
+# parameter, .x is the time fraction and .y the eased progress. Both are
+# monotone, so each inverts by bisection.
+glide_ease_x <- function(v) {
+  3 * (1 - v)^2 * v * 0.42 + 3 * (1 - v) * v^2 * 0.58 + v^3
+}
+
+glide_ease_y <- function(v) {
+  3 * (1 - v) * v^2 + v^3
+}
+
+# Invert the ease: bisect `fn` to `value`, then read `other` at the
+# solution. cursor_entry_time() maps progress to time; the staged drag
+# carry maps wall-clock time back to progress.
+glide_ease_invert <- function(value, fn, other) {
+  lo <- 0
+  hi <- 1
+  for (i in seq_len(55)) {
+    v <- (lo + hi) / 2
+    if (fn(v) < value) lo <- v else hi <- v
+  }
+  other((lo + hi) / 2)
+}
+
 # First eased time when the cursor anchor enters a viewport rect.
 # Clip in line-progress space, then invert the monotone CSS ease curve.
 cursor_entry_time <- function(start, end, rect) {
@@ -416,15 +440,7 @@ cursor_entry_time <- function(start, end, rect) {
   if (progress == 0 || progress == 1) {
     return(progress)
   }
-  lo <- 0
-  hi <- 1
-  for (i in seq_len(55)) {
-    v <- (lo + hi) / 2
-    y <- 3 * (1 - v) * v^2 + v^3
-    if (y < progress) lo <- v else hi <- v
-  }
-  v <- (lo + hi) / 2
-  3 * (1 - v)^2 * v * 0.42 + 3 * (1 - v) * v^2 * 0.58 + v^3
+  glide_ease_invert(progress, glide_ease_y, glide_ease_x)
 }
 
 # A point 40px past the named frame edge, at the target's coordinate on

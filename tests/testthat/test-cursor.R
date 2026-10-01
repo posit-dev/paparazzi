@@ -816,6 +816,26 @@ test_that("automatic glide switches icon on destination entry, not landing", {
   page |> pz_record_stop()
 })
 
+test_that("the glide ease inverts in both directions", {
+  # x is the time fraction, y the eased progress; each bisects back to
+  # the other's value at the same curve parameter.
+  for (v in seq(0.02, 0.98, by = 0.04)) {
+    expect_equal(
+      glide_ease_invert(glide_ease_x(v), glide_ease_x, glide_ease_y),
+      glide_ease_y(v),
+      tolerance = 1e-9
+    )
+    expect_equal(
+      glide_ease_invert(glide_ease_y(v), glide_ease_y, glide_ease_x),
+      glide_ease_x(v),
+      tolerance = 1e-9
+    )
+  }
+  # The midpoint of the glide's ease is the half-time, half-progress
+  # point of its symmetric control points.
+  expect_equal(glide_ease_invert(0.5, glide_ease_x, glide_ease_y), 0.5)
+})
+
 test_that("entry inversion follows the CSS easing and clips to the rect", {
   rect <- c(x = 60, y = 10, width = 20, height = 20)
   start <- c(x = 0, y = 20)
