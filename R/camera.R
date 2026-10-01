@@ -233,11 +233,10 @@ camera_follow_move <- function(ctx, rect, duration) {
     rep(scroll, 2)
   arrival <- now + camera_effective_duration(rec, duration)
   last_end <- if (length(rec$camera)) rec$camera[[length(rec$camera)]]$end
-  if (
-    !is.null(last_end) &&
-      last_end > arrival &&
-      is.null(camera_follow_shot(shot_at(last_end), target, home, scroll))
-  ) {
+  heading_to_target <- !is.null(last_end) &&
+    last_end > arrival &&
+    is.null(camera_follow_shot(shot_at(last_end), target, home, scroll))
+  if (heading_to_target) {
     return(FALSE)
   }
   shot <- camera_follow_shot(shot_at(arrival), target, home, scroll)

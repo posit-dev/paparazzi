@@ -566,12 +566,7 @@ record_knit_media <- function(path) {
       output_dir %||% getwd()
     )
   }
-  url <- gsub(
-    "%2F",
-    "/",
-    utils::URLencode(media_path, reserved = TRUE),
-    fixed = TRUE
-  )
+  url <- url_encode_path(media_path)
   if (knitr::is_html_output(excludes = c("markdown", "gfm", "epub", "epub2"))) {
     return(knitr::asis_output(paste0(
       '<video controls preload="metadata" src="',
@@ -583,6 +578,10 @@ record_knit_media <- function(path) {
     )))
   }
   knitr::asis_output(paste0("[Download recording](<", url, ">)"))
+}
+
+url_encode_path <- function(path) {
+  gsub("%2F", "/", utils::URLencode(path, reserved = TRUE), fixed = TRUE)
 }
 
 page_recorder <- function(page) {
