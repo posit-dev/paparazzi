@@ -1794,8 +1794,6 @@ dispatch_mouse_drag <- function(
   pressed <- FALSE
   if (staged) {
     cursor_press(ctx, FALSE)
-  }
-  if (staged) {
     pump_loop(ctx$page$child_loop, 0.2)
   }
 }
@@ -1897,36 +1895,25 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     clickCount = 1,
     call = call
   )
+  # Staged, a short nudge (well past the browser's drag threshold)
+  # starts the drag without putting the real pointer on the destination.
+  start_at <- to
   if (staged) {
-    # A short nudge starts the drag without putting the real pointer on
-    # the destination; well past the browser's drag threshold.
     delta <- c(to[["x"]] - from[["x"]], to[["y"]] - from[["y"]])
     dist <- sqrt(sum(delta^2))
-    nudge <- if (dist > 0) from + delta / dist * min(12, dist) else from
-    dispatch_mouse(
-      ctx,
-      "dragging",
-      els$description,
-      "mouseMoved",
-      nudge,
-      button = "left",
-      buttons = 1,
-      clickCount = 0,
-      call = call
-    )
-  } else {
-    dispatch_mouse(
-      ctx,
-      "dragging",
-      els$description,
-      "mouseMoved",
-      to,
-      button = "left",
-      buttons = 1,
-      clickCount = 0,
-      call = call
-    )
+    start_at <- if (dist > 0) from + delta / dist * min(12, dist) else from
   }
+  dispatch_mouse(
+    ctx,
+    "dragging",
+    els$description,
+    "mouseMoved",
+    start_at,
+    button = "left",
+    buttons = 1,
+    clickCount = 0,
+    call = call
+  )
   pz_poll(
     fn = function() !is.null(data),
     timeout = timeout,

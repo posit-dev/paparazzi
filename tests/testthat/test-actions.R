@@ -1215,18 +1215,8 @@ test_that("pz_act_drag moves a mouse-dragged element onto the destination", {
 
   # The fixture's box follows the pointer while held, so it ends
   # centered where the drag dropped it.
-  centers <- function(sel) {
-    pz_js(
-      page,
-      paste0(
-        "(() => { const r = document.querySelector('",
-        sel,
-        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
-      )
-    )
-  }
-  box <- centers("#dragbox")
-  zone <- centers("#dropzone")
+  box <- element_center(page, "#dragbox")
+  zone <- element_center(page, "#dropzone")
   expect_lt(abs(box[[1]] - zone[[1]]), 2)
   expect_lt(abs(box[[2]] - zone[[2]]), 2)
 
@@ -1256,18 +1246,8 @@ test_that("pz_act_drag moves a mouse-dragged element onto the destination", {
 
 test_that("pz_act_drag moves the cursor to the source before the destination", {
   page <- local_advanced_page()
-  center <- function(selector) {
-    unlist(pz_js(
-      page,
-      paste0(
-        "(() => { const r = document.querySelector('",
-        selector,
-        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
-      )
-    ))
-  }
-  source <- center("#dragbox")
-  destination <- center("#dropzone")
+  source <- element_center(page, "#dragbox")
+  destination <- element_center(page, "#dropzone")
   seen <- list()
   local_mocked_bindings(
     stage_move_cursor = function(ctx, point) {
@@ -1399,18 +1379,8 @@ test_that("pz_act_drag glides the cursor while holding a mouse drag when recordi
 
   # The page sees held moves streamed along the carry, so the box
   # follows the pointer through the glide and ends at the zone.
-  centers <- function(sel) {
-    unlist(pz_js(
-      page,
-      paste0(
-        "(() => { const r = document.querySelector('",
-        sel,
-        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
-      )
-    ))
-  }
-  box <- centers("#dragbox")
-  zone <- centers("#dropzone")
+  box <- element_center(page, "#dragbox")
+  zone <- element_center(page, "#dropzone")
   expect_lt(abs(box[[1]] - zone[[1]]), 2)
   expect_lt(abs(box[[2]] - zone[[2]]), 2)
   expect_true(recorded >= 1)
@@ -1434,18 +1404,8 @@ test_that("a recorded mouse drag streams held moves that follow the cursor", {
   defer_record_stop(page)
 
   page |> pz_cursor_move("#dragbox", duration = 0)
-  centers <- function(sel) {
-    unlist(pz_js(
-      page,
-      paste0(
-        "(() => { const r = document.querySelector('",
-        sel,
-        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
-      )
-    ))
-  }
-  from <- centers("#dragbox")
-  to <- centers("#dropzone")
+  from <- element_center(page, "#dragbox")
+  to <- element_center(page, "#dropzone")
   # Page-side rAF log of the box and the overlay cursor's rendered
   # position, read after the drag so sampling can't disturb the carry.
   pz_js(
@@ -1506,18 +1466,8 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
     )
   defer_record_stop(page)
 
-  center <- function(sel) {
-    unlist(pz_js(
-      page,
-      paste0(
-        "(() => { const r = document.querySelector('",
-        sel,
-        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
-      )
-    ))
-  }
-  from <- center(".task:nth-child(5)")
-  to <- center(".task:first-child")
+  from <- element_center(page, ".task:nth-child(5)")
+  to <- element_center(page, ".task:first-child")
   page |> pz_cursor_move(".task:nth-child(5)", duration = 0)
   # Event log and a hover/dragging/cursor sampler, both page-side and
   # read after the drag.
@@ -1717,18 +1667,8 @@ test_that("a mid-carry dispatch failure propagates and the drag still releases",
   expect_false(is.na(up))
   expect_gt(up, match("mousedown", types))
   pz_act_drag(page, "#dragbox", "#dropzone")
-  centers <- function(sel) {
-    unlist(pz_js(
-      page,
-      paste0(
-        "(() => { const r = document.querySelector('",
-        sel,
-        "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
-      )
-    ))
-  }
-  box <- centers("#dragbox")
-  zone <- centers("#dropzone")
+  box <- element_center(page, "#dragbox")
+  zone <- element_center(page, "#dropzone")
   expect_lt(abs(box[[1]] - zone[[1]]), 2)
   expect_lt(abs(box[[2]] - zone[[2]]), 2)
   pz_record_stop(page)

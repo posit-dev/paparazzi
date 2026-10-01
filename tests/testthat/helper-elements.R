@@ -9,3 +9,15 @@ elements_text <- function(els) {
     )$result$value
   )
 }
+
+# Viewport center of the first element matching `selector`, as c(x, y).
+element_center <- function(page, selector) {
+  unlist(pz_js(
+    page,
+    paste0(
+      "(() => { const r = document.querySelector('",
+      selector,
+      "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+    )
+  ))
+}
