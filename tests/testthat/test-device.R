@@ -66,7 +66,7 @@ test_that("a failed device change doesn't leak into later partial changes", {
   pz_device(page, width = 640, height = 560)
 
   with_mocked_bindings(
-    record_hold = function(page, code, call) stop("override failed"),
+    record_device_change = function(page, code, call) stop("override failed"),
     expect_error(pz_device(page, width = 800), "override failed")
   )
   pz_device(page, height = 500)

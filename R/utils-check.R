@@ -112,3 +112,22 @@ check_page <- function(
 is_pz_page <- function(x) {
   inherits(x, "PaparazziPage")
 }
+
+check_positive_number <- function(
+  x,
+  arg = caller_arg(x),
+  call = caller_env()
+) {
+  if (is.null(x)) {
+    return(NULL)
+  }
+  check_number_decimal(x, min = 0, arg = arg, call = call)
+  if (x <= 0) {
+    cli::cli_abort(
+      "{.arg {arg}} must be positive, not {x}.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  x
+}

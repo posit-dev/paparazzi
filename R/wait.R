@@ -543,10 +543,7 @@ wait_nav_reset <- function(ctx) {
   ctx$page$.__enclos_env__$private$pre_action_loader_ <- NULL
   ctx$page$release_object_group()
   record_nav_rebased(ctx$page)
-  state <- attr(ctx$page, "paparazzi_device")
-  if (!is.null(state)) {
-    state$css_zoom <- NULL
-  }
+  device_css_forget(ctx$page)
   if (length(ctx$scope) == 0) {
     ctx
   } else {

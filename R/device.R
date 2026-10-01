@@ -73,10 +73,10 @@ pz_device <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  width <- check_dimension(width, "width")
-  height <- check_dimension(height, "height")
-  scale <- check_dimension(scale, "scale")
-  zoom <- check_dimension(zoom, "zoom")
+  width <- check_positive_number(width, "width")
+  height <- check_positive_number(height, "height")
+  scale <- check_positive_number(scale, "scale")
+  zoom <- check_positive_number(zoom, "zoom")
   if (!is.null(mobile)) {
     check_bool(mobile)
   }
@@ -165,25 +165,6 @@ device_open <- function(page, dots) {
   invisible(page)
 }
 
-check_dimension <- function(
-  x,
-  arg = caller_arg(x),
-  call = caller_env()
-) {
-  if (is.null(x)) {
-    return(NULL)
-  }
-  check_number_decimal(x, min = 0, arg = arg, call = call)
-  if (x <= 0) {
-    cli::cli_abort(
-      "{.arg {arg}} must be positive, not {x}.",
-      class = "paparazzi_error_input",
-      call = call
-    )
-  }
-  x
-}
-
 device_state <- function(page) {
   state <- attr(page, "paparazzi_device")
   if (is.null(state)) {
@@ -194,8 +175,8 @@ device_state <- function(page) {
     state$mobile <- NULL
     state$zoom <- NULL
     state$zoom_method <- NULL
-    state$base_width <- NULL
-    state$base_height <- NULL
+    state$unzoomed_width <- NULL
+    state$unzoomed_height <- NULL
     state$overridden <- FALSE
     state$css_zoom <- NULL
     state$css_script <- NULL
@@ -231,7 +212,7 @@ device_apply_override <- function(page, state, call = caller_env()) {
 
   if (!viewport_zoom && !base_set) {
     if (isTRUE(state$overridden)) {
-      record_hold(
+      record_device_change(
         page,
         page$session$Emulation$clearDeviceMetricsOverride(
           timeout_ = page$default_timeout
@@ -244,14 +225,15 @@ device_apply_override <- function(page, state, call = caller_env()) {
   }
 
   if (
-    viewport_zoom && (is.null(state$base_width) || is.null(state$base_height))
+    viewport_zoom &&
+      (is.null(state$unzoomed_width) || is.null(state$unzoomed_height))
   ) {
     current <- device_viewport(page)
-    state$base_width <- state$width %||% current$width
-    state$base_height <- state$height %||% current$height
+    state$unzoomed_width <- state$width %||% current$width
+    state$unzoomed_height <- state$height %||% current$height
   }
-  eff_width <- state$width %||% state$base_width %||% 0
-  eff_height <- state$height %||% state$base_height %||% 0
+  eff_width <- state$width %||% state$unzoomed_width %||% 0
+  eff_height <- state$height %||% state$unzoomed_height %||% 0
   eff_scale <- state$scale %||% 2
   eff_mobile <- state$mobile %||% FALSE
   if (viewport_zoom) {
@@ -259,7 +241,7 @@ device_apply_override <- function(page, state, call = caller_env()) {
     eff_height <- eff_height / zoom
     eff_scale <- eff_scale * zoom
   }
-  record_hold(
+  record_device_change(
     page,
     page$session$Emulation$setDeviceMetricsOverride(
       width = round(eff_width),
@@ -287,10 +269,9 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
   ) {
     zoom
   }
-  if (
-    identical(desired, state$css_zoom) &&
-      (!is.null(desired) || is.null(state$css_script))
-  ) {
+  unchanged <- identical(desired, state$css_zoom)
+  orphan_script <- is.null(desired) && !is.null(state$css_script)
+  if (unchanged && !orphan_script) {
     return(invisible(page))
   }
   if (is.null(desired)) {
@@ -315,14 +296,15 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
     }
     state$css_zoom_saved <- NULL
   } else {
-    if (register || is.null(state$css_script)) {
-      if (is.null(state$css_script)) {
+    first_apply <- is.null(state$css_script)
+    if (register || first_apply) {
+      if (first_apply) {
         state$css_zoom_saved <- device_eval(
           page,
           "document.documentElement.style.zoom || ''"
         )
       }
-      if (!is.null(state$css_script)) {
+      if (!first_apply) {
         page$session$Page$removeScriptToEvaluateOnNewDocument(
           identifier = state$css_script,
           timeout_ = page$default_timeout
@@ -383,6 +365,14 @@ device_css_reapply <- function(page) {
   }
   device_apply_css_zoom(page, state, register = FALSE)
   invisible(TRUE)
+}
+
+device_css_forget <- function(page) {
+  state <- attr(page, "paparazzi_device")
+  if (!is.null(state)) {
+    state$css_zoom <- NULL
+  }
+  invisible(page)
 }
 
 # Emulated media features. CDP replaces the whole features set on every

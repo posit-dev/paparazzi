@@ -595,7 +595,7 @@ page_set_recorder <- function(page, rec) {
 
 # A timed-out wait fails the change rather than proceeding: the capture
 # may still be running in Chrome and would undo the change when it ends.
-record_hold <- function(page, code, call = caller_env()) {
+record_device_change <- function(page, code, call = caller_env()) {
   rec <- page_recorder(page)
   if (is.null(rec) || !rec$active) {
     return(code)
