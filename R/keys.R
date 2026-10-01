@@ -1,14 +1,8 @@
-# Key specs for pz_act_press(): "Mod+Mod+Key" strings like "Control+A" or
-# "Meta+Enter", parsed into Input.dispatchKeyEvent argument lists.
-
-# Canonical modifier order, also the order of the mask bits below.
 key_modifiers <- c("Alt", "Control", "Meta", "Shift")
 
 # The `modifiers` bitmask values Input.dispatchKeyEvent expects.
 key_modifier_bits <- c(Alt = 1L, Control = 2L, Meta = 4L, Shift = 8L)
 
-# Modifier tokens in a key spec match case-insensitively and normalize
-# to these names.
 key_modifier_names <- c(
   alt = "Alt",
   control = "Control",
@@ -17,13 +11,6 @@ key_modifier_names <- c(
   shift = "Shift"
 )
 
-# Key token -> CDP fields: `key`, `code`, and `keyCode` (sent as
-# windowsVirtualKeyCode). `text` is the character the key produces,
-# absent when it produces none. Uppercase letters and shifted symbols
-# carry `implied_shift` so key_parse() can add Shift to the modifiers,
-# following Playwright's USKeyboardLayout: "Control+A" is
-# Control+Shift+A. The table is small by design; new keys are one more
-# entry.
 key_table <- list(
   Enter = list(key = "Enter", code = "Enter", keyCode = 13L, text = "\r"),
   Tab = list(key = "Tab", code = "Tab", keyCode = 9L),
@@ -39,10 +26,7 @@ key_table <- list(
   ArrowUp = list(key = "ArrowUp", code = "ArrowUp", keyCode = 38L),
   ArrowRight = list(key = "ArrowRight", code = "ArrowRight", keyCode = 39L),
   ArrowDown = list(key = "ArrowDown", code = "ArrowDown", keyCode = 40L),
-  # Space and Enter are the named keys that produce a character.
   Space = list(key = " ", code = "Space", keyCode = 32L, text = " "),
-  # The modifier keys are pressable keys too (pz_act_press(ctx, "Control")
-  # presses and releases Control itself).
   Control = list(key = "Control", code = "ControlLeft", keyCode = 17L),
   Shift = list(key = "Shift", code = "ShiftLeft", keyCode = 16L),
   Alt = list(key = "Alt", code = "AltLeft", keyCode = 18L),
@@ -58,8 +42,6 @@ for (i in 1:12) {
   )
 }
 
-# Letters: "a" and "A" are separate entries; the uppercase form implies
-# Shift and shares the uppercase virtual key code.
 for (letter in letters) {
   upper <- toupper(letter)
   code <- paste0("Key", upper)
@@ -78,7 +60,6 @@ for (letter in letters) {
   )
 }
 
-# Digits and the symbols on the shifted digit row (Shift implied).
 digit_keys <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
 digit_symbols <- c("!", "@", "#", "$", "%", "^", "&", "*", "(", ")")
 
@@ -100,7 +81,6 @@ for (i in seq_along(digit_keys)) {
   )
 }
 
-# Remaining US punctuation: c(unshifted, shifted, code, keyCode).
 punctuation_keys <- list(
   c("-", "_", "Minus", "189"),
   c("=", "+", "Equal", "187"),
@@ -133,12 +113,6 @@ for (punctuation in punctuation_keys) {
   )
 }
 
-# Parse one key spec. Returns a list with:
-#   $modifiers     character: the full modifier set, implied Shift
-#                 included, in canonical order (Alt, Control, Meta, Shift)
-#   $modifier_keys character: only the modifiers written in the spec, in
-#                 spec order; these alone get their own down/up events
-#   $key           the key table entry's key/code/keyCode plus `text`
 key_parse <- function(spec, mod = NULL, call = caller_env()) {
   check_string(spec, arg = "key", call = call)
   if (!nzchar(spec)) {
@@ -152,8 +126,6 @@ key_parse <- function(spec, mod = NULL, call = caller_env()) {
     )
   }
 
-  # A one-character spec is the key itself, so "+" presses "+" rather
-  # than splitting into empty tokens.
   tokens <- if (nchar(spec) == 1L) {
     spec
   } else {
@@ -223,10 +195,6 @@ key_parse <- function(spec, mod = NULL, call = caller_env()) {
     )
   }
 
-  # Explicit Shift shifts the main character, following Playwright's
-  # USKeyboardLayout: the shifted sibling of the unshifted entry supplies
-  # key/text while code/keyCode stay put. Entries that are already
-  # shifted ("A", "!") and keys with no shifted form are untouched.
   if ("Shift" %in% explicit && is.null(entry$implied_shift)) {
     shifted <- key_shifted_sibling(entry)
     if (!is.null(shifted)) {
@@ -239,8 +207,6 @@ key_parse <- function(spec, mod = NULL, call = caller_env()) {
     }
   }
 
-  # An uppercase letter or shifted symbol implies Shift on the main
-  # events only; it never gets its own down/up.
   modifiers <- explicit
   if (isTRUE(entry$implied_shift)) {
     modifiers <- unique(c(modifiers, "Shift"))
@@ -258,8 +224,6 @@ key_parse <- function(spec, mod = NULL, call = caller_env()) {
   )
 }
 
-# The key_table entry produced when Shift is held with `entry`: the
-# shifted sibling sharing its code, or NULL when the key has none.
 key_shifted_sibling <- function(entry) {
   for (candidate in key_table) {
     if (
@@ -277,9 +241,6 @@ key_modifiers_mask <- function(modifiers) {
   sum(key_modifier_bits[modifiers], 0L)
 }
 
-# One Input.dispatchKeyEvent as a named argument list, ready to forward
-# with `session$Input$dispatchKeyEvent(!!!event)`. `text` is only ever
-# attached to a text-producing keyDown.
 key_cdp_event <- function(type, modifiers, entry, text = NULL) {
   event <- list(
     type = type,
@@ -294,18 +255,6 @@ key_cdp_event <- function(type, modifiers, entry, text = NULL) {
   event
 }
 
-#' The full CDP key event sequence for one parsed key spec
-#'
-#' One call per spec element: the explicit modifier keyDowns in spec order
-#' (rawKeyDown, cumulative mask), the main keyDown/keyUp, then the modifier
-#' keyUps in reverse; a modifier's keyUp no longer reports its own bit, like
-#' a real browser keyup (a Control keyup has ctrlKey false). The main keyDown
-#' is type "keyDown" with `text` only when the key produces a character
-#' and neither Control nor Meta is held; otherwise a "rawKeyDown" without
-#' text. Implied Shift (from "A" or "!") raises the mask on the main events
-#' only -- it never gets its own down/up events, exactly like Playwright.
-#'
-#' @noRd
 key_events <- function(parsed) {
   events <- list()
   mask <- 0L

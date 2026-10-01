@@ -80,8 +80,6 @@ pz_inspect <- function(
     if (identical(show, "browser")) {
       ctx$page$view()
     } else {
-      # Best-effort cleanup on every exit path: a capture timeout or an
-      # unwritable path must not leave outlines in the live page.
       withr::defer(try(overlay_clear(ctx), silent = TRUE))
       path <- path %||% tempfile(fileext = ".png")
       inspect_annotated_capture(ctx, scope_rects, target_rects, path)
@@ -92,12 +90,6 @@ pz_inspect <- function(
   ctx_return(ctx)
 }
 
-# Resolve the target once, without auto-waiting: one loc_resolve_once()
-# pass inside the current scope (behind the usual one-use detach probe),
-# then one callFunctionOn reading every match's tag, visibility, enabled
-# state, and box in a single CDP call. Returns the formatted rows for the
-# summary plus the viewport-relative rects (for the annotated capture's
-# clip) and document-relative rects (for the overlay outlines).
 inspect_resolve_matches <- function(ctx, target, call = caller_env()) {
   target_expr <- target_resolver_expr(target, call = call)
   els <- loc_resolve_once(
@@ -146,10 +138,7 @@ inspect_resolve_matches <- function(ctx, target, call = caller_env()) {
   )
 }
 
-# Per-match read: opening tag (attributes rendered, no children),
-# checkVisibility() with CSS checks (the pz_expect_visible() predicate),
-# enabled (:disabled also covers controls disabled by an ancestor
-# <fieldset disabled>), and the box.
+# :disabled also covers controls disabled by an ancestor <fieldset disabled>.
 inspect_match_js <- "function() {
   return this.map((el) => {
     const attrs = Array.from(el.attributes, (a) =>
@@ -166,9 +155,6 @@ inspect_match_js <- "function() {
   });
 }"
 
-# Viewport-relative rects shifted into document coordinates, for the
-# overlay outlines: the same shift clip_rects_union() applies to CDP
-# clips.
 inspect_doc_rects <- function(ctx, rects) {
   if (nrow(rects) == 0L) {
     return(list())
@@ -179,10 +165,6 @@ inspect_doc_rects <- function(ctx, rects) {
   })
 }
 
-# Viewport-relative rects of the top pinned scope's still-laid-out
-# elements, for the dashed outlines. No detach probe: the summary has
-# already reported staleness, and a released or detached set simply
-# draws nothing (zero-area rects are dropped).
 inspect_scope_rects <- function(ctx) {
   scoped <- scope_top(ctx)
   if (is.null(scoped) || is.null(scoped$object_id)) {
@@ -191,8 +173,6 @@ inspect_scope_rects <- function(ctx) {
   inspect_positive_rects(tryCatch(el_rects(scoped), error = function(e) NULL))
 }
 
-# Live boxes with positive area only: hidden matches have zero boxes and
-# would collapse the annotated capture's union clip.
 inspect_positive_rects <- function(rects) {
   if (is.null(rects) || nrow(rects) == 0L) {
     return(tibble::tibble(
@@ -205,9 +185,6 @@ inspect_positive_rects <- function(rects) {
   rects[rects$width > 0 & rects$height > 0, ]
 }
 
-# The one seam for recording/cursor state in the summary: recording
-# reads the recorder, cursor reads the staging state (peek only --
-# inspecting must not create cursor state).
 inspect_recording_state <- function(page) {
   rec <- page_recorder(page)
   recording <- if (is.null(rec) || !isTRUE(rec$active)) {
@@ -230,7 +207,6 @@ inspect_recording_state <- function(page) {
   list(recording = recording, cursor = cursor)
 }
 
-# ── Summary ─────────────────────────────────────────────────────────
 # The summary is composed as plain strings and emitted with cat_line():
 # scope and target descriptions carry user-derived selectors whose braces
 # would break cli templates, so page-derived content interpolates as
@@ -253,7 +229,6 @@ inspect_summary_print <- function(ctx, matches = NULL) {
     )
     return(invisible(NULL))
   }
-  # pz_js() converts a JS array to an R list (mixed types, so no unlist).
   v <- pz_js(
     ctx,
     "[location.href, window.innerWidth, window.innerHeight, window.devicePixelRatio, matchMedia('(prefers-color-scheme: dark)').matches]"
@@ -301,11 +276,6 @@ inspect_summary_print <- function(ctx, matches = NULL) {
   invisible(NULL)
 }
 
-# One scope entry per pinned set: its description and how many of its
-# elements are still in the page. The summary warns on stale scopes -- it
-# never aborts -- so every read is tolerant: a released object group
-# (a context that outlived a navigation) reads as gone, a partially
-# detached set reads as (live of pinned).
 inspect_scope_entries <- function(ctx) {
   entries <- character()
   warnings <- character()
@@ -369,10 +339,6 @@ inspect_scope_live <- function(pinned) {
   )
 }
 
-# Scope descriptions render their which-qualifier compactly in the
-# summary, matching the SPEC's example: "`.item` (which: last)" becomes
-# "`.item` last" (numeric which becomes #n). Display-only; the stored
-# description is unchanged.
 format_scope_entry <- function(description) {
   description <- sub(" \\(which: first\\)$", " first", description)
   description <- sub(" \\(which: last\\)$", " last", description)
@@ -426,17 +392,7 @@ inspect_short_tag <- function(tag, width = 60) {
   }
 }
 
-# ── Overlay outlines ────────────────────────────────────────────────
-# Outlines live under div#paparazzi-overlay-root with an open shadow
-# root; the resolver already excludes everything under that host id, and
-# the shadow DOM keeps the outlines out of querySelectorAll anyway.
-# Boxes are document-coordinate so they stay aligned with the
-# document-coordinate CDP clip. Drawing replaces the layer; clearing
-# removes it and leaves the host for reuse.
 overlay_draw <- function(ctx, scope_rects, target_rects) {
-  # Zero-area target matches can't be drawn, but each drawn rect keeps
-  # its original match number so badges agree with the console summary,
-  # which numbers every match including hidden ones.
   keep <- if (is.null(target_rects)) {
     integer()
   } else {
@@ -503,13 +459,6 @@ overlay_clear <- function(ctx) {
   invisible(TRUE)
 }
 
-# Hide-during-capture guard for pz_screenshot(): one JS call hides the
-# inspect outline layers (returning their previous inline displays, or
-# null when nothing is drawn -- the common case), the capture runs, one
-# call restores them. Only .pz-inspect layers hide: a visible cursor
-# (cursor = TRUE, or an explicit pz_cursor_show()) belongs in stills.
-# An empty-string previous display means the layer had no inline style,
-# so restoring sets display back to '' (the stylesheet default).
 overlay_hide <- function(ctx) {
   pz_js(
     ctx,
@@ -547,13 +496,6 @@ overlay_restore <- function(ctx, display) {
   invisible(TRUE)
 }
 
-# ── Annotated capture ───────────────────────────────────────────────
-# Call screenshot_capture() directly: pz_screenshot() hides inspect
-# outlines during capture. pz_inspect() defers clearing them, including
-# when capture fails.
-# The capture region follows pz_screenshot() conventions: the viewport
-# at the root, otherwise the union of scope and target rects padded so
-# outlines and badges aren't clipped.
 inspect_annotated_capture <- function(ctx, scope_rects, target_rects, path) {
   rects <- rbind(
     inspect_positive_rects(scope_rects),
@@ -578,7 +520,6 @@ inspect_annotated_capture <- function(ctx, scope_rects, target_rects, path) {
   invisible(path)
 }
 
-# Stage external images for viewers that only serve files in tempdir().
 inspect_show <- function(path) {
   viewer <- getOption("viewer")
   if (rlang::is_interactive() && is.function(viewer)) {
