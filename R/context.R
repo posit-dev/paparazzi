@@ -209,7 +209,6 @@ PaparazziPage <- R6::R6Class(
     shared_app_ = NULL,
     closed_ = FALSE,
     default_timeout_ = 10,
-    # Main-frame loaderId captured before the last user action.
     pre_action_loader_ = NULL,
     # A constant is safe because groups are per session, so it can't
     # collide across pages.

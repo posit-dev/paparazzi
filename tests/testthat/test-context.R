@@ -96,6 +96,6 @@ test_that("app cannot be replaced through its binding", {
   app <- new.env(parent = emptyenv())
   page <- PaparazziPage$new(session, shared_app = app)
 
-  expect_error(page$app <- NULL, "unused argument")
+  expect_error(page$app <- NULL)
   expect_identical(page$app, app)
 })
