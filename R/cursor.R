@@ -934,11 +934,6 @@ cursor_register_init <- function(ctx) {
   }
   if (!cur$page_enabled) {
     session$Page$enable(timeout_ = timeout)
-    session$Page$frameNavigated(callback_ = function(event) {
-      if (is.null(event$frame$parentId)) {
-        cur$pressed <- FALSE
-      }
-    })
     cur$page_enabled <- TRUE
   }
   state <- list(

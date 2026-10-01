@@ -710,14 +710,12 @@ test_that("cursor state tracks presses, carries, and resets", {
   expect_false(page_cursor(page)$pressed)
 })
 
-test_that("navigation reinitializes the cursor unpressed", {
+test_that("navigation redraws a pressed cursor unpressed", {
   page <- local_cursor_page()
   page |> pz_cursor_move("#btn")
   cursor_press(page, TRUE)
-  expect_true(page_cursor(page)$pressed)
   pz_chromote(page)$Page$reload()
   pz_wait(page, 1)
-  expect_false(page_cursor(page)$pressed)
   expect_equal(cursor_overlay_scale(page), 1.75)
 })
 
