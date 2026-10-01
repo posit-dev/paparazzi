@@ -160,12 +160,21 @@ test_that("camera shot tracks page target after a scrolled poll capture", {
   )
   page <- local_page(html, width = 640, height = 480, scale = 1)
   out <- withr::local_tempfile(fileext = ".mp4")
-  pz_record_start(page, out, fps = 10, hold = c(0, 0))
+  # A final hold maps the last output tick to the stop-time capture.
+  pz_record_start(page, out, fps = 10, hold = c(0, 0.2))
   defer_record_stop(page)
   pz_js(page, "window.scrollTo(0,500)")
-  pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.1)
-  pz_wait(page, 0.15)
-  suppressWarnings(pz_record_stop(page))
+  pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.1, wait = TRUE)
+  rec <- page_recorder(page)
+  move_end <- rec$camera[[length(rec$camera)]]$end
+  pz_poll(
+    function() any(rec$times > move_end),
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "a poll capture after the camera move"
+  )
+  expect_warning(pz_record_stop(page), "Camera zoom exceeds.*pixel density")
+  expect_equal(rec$n_errors, 0L)
   decoded <- tempfile("camera-scrolled-")
   withr::defer(unlink(decoded, recursive = TRUE))
   frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
