@@ -356,6 +356,128 @@ test_that("the press animation scales the cursor down", {
   expect_true(pressed$height > unpressed$height * 0.6)
 })
 
+# Ink metrics of the overlay cursor across recorded frames,
+# restricted to the button's band: a list of per-frame dark-pixel
+# counts and ink heights.
+click_frame_ink <- function(page, frames) {
+  inks <- lapply(frames, function(frame) {
+    cursor_png_ink(page, frame, band = c(300, 344), x_range = c(635, 700))
+  })
+  list(
+    counts = unlist(lapply(inks, `[[`, "count")),
+    heights = unlist(lapply(inks, `[[`, "height"))
+  )
+}
+
+recorded_click_frames <- function(page, out) {
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE), envir = parent.frame())
+  frames <- list.files(frames_dir, full.names = TRUE)
+  expect_gt(length(frames), 0)
+  frames
+}
+
+test_that("the default press effect scales the cursor in recorded frames", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  # Pre-positioned, so no entrance fade distorts the ink heights.
+  page |> pz_cursor_move("#btn", duration = 0)
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
+  defer_record_stop(page)
+  page |> pz_act_click("#btn")
+  page |> pz_record_stop()
+
+  frames <- recorded_click_frames(page, out)
+  ink <- click_frame_ink(page, frames)
+  expect_gt(length(ink$counts), 0)
+  # The press window never settles at 10fps (the 0.12s scale transition
+  # plus a sub-0.1s hold), but the fast scale-down blurs the cursor ink
+  # on the captured frames: the near-black count collapses while
+  # unpressed frames stay flat.
+  expect_gt(max(ink$counts), 20)
+  expect_lt(min(ink$counts), max(ink$counts) * 0.5)
+})
+
+test_that("the ripple effect draws a fading ring instead of scaling the cursor", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |>
+    pz_stage(click_effect = "ripple") |>
+    pz_cursor_move("#btn", duration = 0)
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
+  defer_record_stop(page)
+  page |> pz_act_click("#btn")
+  page |> pz_record_stop()
+
+  frames <- recorded_click_frames(page, out)
+  # The ring expands to roughly a 47px diameter around (660, 322) in the
+  # staged default color; the fixture has no reddish content.
+  rings <- vapply(
+    frames,
+    function(frame) {
+      cursor_png_color(
+        page,
+        frame,
+        "#e11d48",
+        band = c(290, 355),
+        x_range = c(620, 700)
+      )
+    },
+    numeric(1)
+  )
+  expect_gt(max(rings), 20)
+
+  # The ripple replaces the press scale: the cursor ink never shrinks
+  # (its count dips only where the ring border crosses the arrow).
+  ink <- click_frame_ink(page, frames)
+  expect_gt(length(ink$counts), 0)
+  expect_gte(min(ink$heights), max(ink$heights) * 0.95)
+  expect_gte(min(ink$counts), max(ink$counts) * 0.5)
+})
+
+test_that("effect none draws nothing, and per-call effects override the stage", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  page |>
+    pz_stage(click_effect = "none") |>
+    pz_cursor_move("#btn", duration = 0)
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
+  defer_record_stop(page)
+  page |> pz_act_click("#btn")
+  page |> pz_act_click("#btn", effect = "ripple", effect_color = "#16a34a")
+  page |> pz_record_stop()
+
+  frames <- recorded_click_frames(page, out)
+  ring_count <- function(color) {
+    vapply(
+      frames,
+      function(frame) {
+        cursor_png_color(
+          page,
+          frame,
+          color,
+          band = c(290, 355),
+          x_range = c(620, 700)
+        )
+      },
+      numeric(1)
+    )
+  }
+  # The staged "none" click drew no ring in the staged (default) color,
+  # while the per-call ripple drew one in its own color (green: the
+  # cropped region has no green content, unlike the steelblue button).
+  expect_true(all(ring_count("#e11d48") <= 20))
+  expect_gt(max(ring_count("#16a34a")), 20)
+
+  # Neither click scaled the cursor.
+  ink <- click_frame_ink(page, frames)
+  expect_gt(length(ink$counts), 0)
+  expect_gte(min(ink$heights), max(ink$heights) * 0.95)
+})
+
 test_that("all CSS cursor presets validate and select their own layer", {
   page <- local_cursor_page()
   keywords <- c(

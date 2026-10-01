@@ -844,6 +844,30 @@ test_that("without a recording the same chain runs straight to the final state",
   expect_null(cursor_overlay_state(page))
 })
 
+test_that("click_effect and click_effect_color stage, validate, and reset", {
+  page <- local_cursor_page()
+  expect_identical(page_stage(page)$click_effect, "press")
+  expect_identical(page_stage(page)$click_effect_color, "#e11d48")
+
+  for (effect in c("ripple", "none", "press")) {
+    pz_stage(page, click_effect = effect)
+    expect_identical(page_stage(page)$click_effect, effect)
+  }
+  expect_error(pz_stage(page, click_effect = "ring"), class = "rlang_error")
+
+  pz_stage(page, click_effect_color = "#2563eb")
+  expect_identical(page_stage(page)$click_effect_color, "#2563eb")
+  expect_error(
+    pz_stage(page, click_effect_color = ""),
+    "click_effect_color.*empty string"
+  )
+  expect_error(pz_stage(page, click_effect_color = 7), class = "rlang_error")
+
+  pz_stage(page, click_effect = NULL, click_effect_color = NULL)
+  expect_identical(page_stage(page)$click_effect, "press")
+  expect_identical(page_stage(page)$click_effect_color, "#e11d48")
+})
+
 test_that("show_keys defaults to none and restores its staged default", {
   page <- local_record_page()
   expect_identical(page_stage(page)$show_keys, "none")
