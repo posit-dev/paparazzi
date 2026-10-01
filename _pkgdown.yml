@@ -28,8 +28,6 @@ articles:
       - agent-pages-and-serving
       - agent-locators-and-scopes
       - agent-testing
-      - agent-screenshots-and-annotations
-      - agent-recording-and-staging
       - agent-shiny
 
 reference:

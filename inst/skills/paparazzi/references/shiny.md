@@ -1,14 +1,14 @@
 # Shiny
 
-Use this reference when the page is a Shiny app: start the app process, wait
-for reactive work, set bound inputs, and assert what a user sees. All examples
-below run in order. The bundled app needs the shiny package and Chromium.
+This reference covers Shiny apps: starting the app process, waiting for
+reactive work, setting bound inputs and checking what the user sees. The
+examples run in order and need the shiny package.
 
-## Open the app and own its process
+## Open the app
 
-Supply a Shiny app directory or runnable app file to `pz_open()`. It starts
-a separate R process, opens the app, and waits for Shiny readiness. A page
-opened this way owns the app process; `pz_close()` stops both.
+Give `pz_open()` a Shiny app directory or app file. It starts the app in a
+separate R process, opens it and waits until Shiny is ready. The page owns
+that process, so `pz_close()` stops both.
 
 ```r
 library(paparazzi)
@@ -18,22 +18,21 @@ page |>
   pz_expect_count(2, target = ".task")
 ```
 
-Readiness means the Shiny connection is open, the HTML element is not
-`shiny-busy`, and no output is `.recalculating`, continuously for at least
-200 milliseconds. App paths and Shiny handles use this wait automatically.
-For an already running app's URL, use `pz_open(url, wait = "shiny")` to get
-the same initial readiness check.
+"Ready" means the Shiny connection is open, the page isn't `shiny-busy`, and
+no output is `.recalculating`, all holding for at least 200 milliseconds.
+App paths and Shiny handles wait for this automatically; for an app that's
+already running, use `pz_open(url, wait = "shiny")`.
 
-The separate R process inherits the environment but not objects in the
-calling R session. Put app dependencies in its code, and pass configuration
-through `envvars` or `shiny_options` when starting the process. Both are
-accepted by `pz_open()` for app paths and by `pz_serve_shiny()`.
+The app process inherits environment variables but none of your R session's
+objects. Load what the app needs in its own code, and pass configuration
+with `envvars` or `shiny_options`, which both `pz_open()` and
+`pz_serve_shiny()` accept.
 
-## Assert the result of reactive work
+## Expect the result of reactive work
 
-A button click can trigger output work after the action returns. Assert the
-observable result, so the next step runs only once that result is present.
-This app deliberately delays list rendering; the expectation handles it.
+A click can start output work that finishes after the action returns.
+Expect the visible result so the next step waits for it. This app delays
+rendering the list on purpose, and the expectation absorbs the delay.
 
 ```r
 page |>
@@ -43,10 +42,9 @@ page |>
   pz_expect_visible(pz_loc(".task", has_text = "Buy milk"))
 ```
 
-For work where there is no particular value to check, wait for Shiny idle,
-then read or capture. `pz_wait_for_shiny_idle(timeout = NULL)` uses the page
-session timeout. It checks the connection and reactive settling, not just
-whether the HTML document has loaded.
+When there's no particular value to expect, wait for Shiny to go idle, then
+read or capture. `pz_wait_for_shiny_idle()` checks the connection and
+reactive work, not just whether the page has loaded.
 
 ```r
 page |>
@@ -56,18 +54,16 @@ page |>
 pz_get_text(page, target = "#summary")
 ```
 
-A value expectation is usually more informative than an idle wait when the
-expected output is known. Use idle for general settling and expectations to
-state the behavior the script relies on.
+When you know the expected output, an expectation is the better check: it
+states what the script relies on, and its failure says what was missing.
 
-## Choose between user actions and direct setters
+## Choose user actions or direct setters
 
-Use `pz_act_type()` and `pz_act_click()` for the user-facing path, particularly
-in recordings where staged typing and pointer motion explain the interaction.
-Use `pz_set_value()` for fast setup of standard form controls: it sets the
-value and dispatches input/change events. For widget-specific controls such
-as selectize and sliders, use `pz_set_shiny_input()` through the registered
-Shiny input binding so the visible widget and server input agree.
+`pz_act_type()` and `pz_act_click()` go through the page the way a user does,
+which is what a recording should show. `pz_set_value()` sets a standard form
+control and fires its input and change events, which is faster for setup.
+For widgets such as selectize inputs and sliders, `pz_set_shiny_input()` goes
+through the Shiny input binding, so the widget and the server agree.
 
 ```r
 page |>
@@ -80,23 +76,20 @@ plants <- pz_loc(".task", has_text = "Water the plants")
 stopifnot(identical(pz_get_attr(page, "data-priority", target = plants), "high"))
 ```
 
-`pz_set_shiny_input(ctx, id, value)` uses the complete DOM ID, including a
-module prefix, and searches within the current scope including its root.
-Pass the ID string, such as `"editor-priority"`, rather than a CSS selector.
-Values follow the binding's `setValue()` contract; date ranges accept a pair
-of ISO date strings, and date-valued sliders accept ISO date strings.
-Use actual values of the type expected by the widget.
+`pz_set_shiny_input(ctx, id, value)` takes the input's full DOM ID, including
+any module prefix (`"editor-priority"`), not a CSS selector. It looks inside
+the current scope, the scope element included. Values follow the binding's
+`setValue()`: date ranges take a pair of ISO date strings, as do date
+sliders.
 
-For buttons, use `pz_act_click()`; for file inputs, use `pz_set_files()` with
-local file paths. These operations take the browser control's path rather
-than the binding setter path. For text inputs reachable directly,
-`pz_set_value()` or `pz_act_type()` exercises DOM events naturally.
+Click buttons with `pz_act_click()` and fill file inputs with
+`pz_set_files()`.
 
-## Batch bound-input setup
+## Set several inputs at once
 
-By default, each `pz_set_shiny_input()` waits for idle. For several setup
-changes followed by one observable result, `wait = FALSE` dispatches the
-change immediately. End the batch with an idle wait or result expectation.
+Each `pz_set_shiny_input()` waits for Shiny to go idle. To set several inputs
+before one result, pass `wait = FALSE` and end with an idle wait or an
+expectation.
 
 ```r
 page |>
@@ -107,12 +100,11 @@ page |>
   pz_expect_text("6 tasks", target = "#summary", match = "exact")
 ```
 
-## Reacquire scopes around reactive outputs
+## Refind scopes around outputs
 
-Store lazy `pz_loc()` descriptions for outputs that Shiny replaces. After
-an input change, expect the new content and create a fresh scope for later
-operations. `pz_find()` pins specific DOM elements at find time, whereas a
-locator is resolved on each use.
+Shiny replaces output elements when it re-renders them, and a scope pins the
+element it found. Keep a `pz_loc()` spec for the output, expect the new
+content, then find it again (see Locators and scopes).
 
 ```r
 smoke <- pz_loc(".task", has_text = "Check smoke alarms")
@@ -124,12 +116,12 @@ pz_close(page)
 
 See Locators and scopes for immutable contexts and scope transitions.
 
-## Share an app process across pages
+## Share one app across pages
 
-Use `pz_serve_shiny()` when several pages need the same running app code.
-Pass the handle to each `pz_open()`. The pages get independent Shiny sessions;
-closing them leaves the shared app running. The handle owns that process and
-provides `$stop()`, `$logs()`, `$is_running()`, `$url` and `$port`.
+`pz_serve_shiny()` starts the app once for several pages. Each page opened
+from the handle gets its own Shiny session, and closing the pages leaves the
+app running. The handle owns the process and has `$stop()`, `$logs()`,
+`$is_running()`, `$url` and `$port`.
 
 ```r
 compare_layouts <- function() {
@@ -152,16 +144,15 @@ compare_layouts <- function() {
 compare_layouts()
 ```
 
-Register process cleanup immediately after startup. Read `$logs()` for app
-stdout and stderr while it runs or after stopping it. `shiny_options` is a
-list passed to `shiny::runApp()`; paparazzi manages the path, host and port.
-`envvars` is a named character vector of child-process overrides.
+Call `withr::defer(app$stop())` right after starting the app. `$logs()`
+returns the app's stdout and stderr, during or after the run.
+`shiny_options` is passed to `shiny::runApp()` (paparazzi sets the path, host
+and port), and `envvars` is a named character vector for the app process.
 
-## Test the user-visible contract
+## Test what the user sees
 
-`pz_local_page()` starts the app and binds cleanup to the test frame. Inside
-testthat, paparazzi expectations are test expectations. Start a fresh page
-for each test so the task state is independent.
+`pz_local_page()` starts the app and closes it when the test ends. Open a
+fresh page in each test so tests don't share task state.
 
 ```r
 testthat::test_that("a high-priority task is shown in the list", {
@@ -175,18 +166,16 @@ testthat::test_that("a high-priority task is shown in the list", {
 })
 ```
 
-For suites sharing one app handle, each test can call `pz_local_page(app)`;
-register handle cleanup at the suite's teardown scope. See Testing for
-assertion choices and diagnostics. paparazzi tests the rendered interface
-with CSS and browser actions; shinytest2 is an alternative when the main
-contract is saved snapshots of Shiny input and output values.
+When tests share one app handle, call `pz_local_page(app)` in each test and
+stop the handle in the suite's teardown. paparazzi tests the rendered page
+through the browser; shinytest2 suits tests built on snapshots of Shiny input
+and output values.
 
-## Turn a verified script into a demo
+## Turn a tested script into a demo
 
-Keep the same actions and expectations, set `pz_stage()` options before
-recording, and run the script inside `pz_record()`. Staged motion and typing
-animate while the recorder runs; the same test steps outside recording run
-at full speed. Choose direct setters for test setup and user actions for
-interactions the viewer should see. The Recording and staging reference will
-cover presentation details in phase 2; the skill overview contains a minimal
-working recording example.
+The same actions and expectations make a recording: call `pz_stage()`, then
+run the steps inside `pz_record()`. Staged cursor motion and typing only
+animate while recording, so the test still runs at full speed. Use direct
+setters for setup the viewer doesn't need to see, and user actions for the
+steps they should watch. The recording example in the skill overview shows
+the pattern.

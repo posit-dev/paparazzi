@@ -1,34 +1,32 @@
 ---
 name: paparazzi
-description: Use when testing, screenshotting or recording web pages, Shiny apps and Quarto documents from R with paparazzi. Read the targeted references for serving pages, selecting elements, writing browser tests and controlling Shiny inputs.
+description: Use when testing, screenshotting or recording web pages, Shiny apps or Quarto documents from R with the paparazzi package. Covers opening and serving pages, selecting elements, browser tests with testthat, and Shiny inputs.
 ---
 
 # paparazzi
 
-Use paparazzi to write R scripts that drive a Chromium browser, verify what
-users see, and capture the result as PNGs or videos. The same action and
-expectation chain can serve as a browser test and a recorded demonstration.
-Use it for static sites, running web applications, Shiny apps on disk, and
-Quarto documents or projects.
+paparazzi drives a headless Chromium browser from R. One chain of actions and
+expectations can be a browser test, a screenshot script or a recorded demo.
+It works with static sites, running web apps, Shiny apps on disk and Quarto
+documents.
 
-## Core loop
+## The core loop
 
-1. **Open** a URL, app path, document path or serving handle with `pz_open()`.
-   Set the viewport before acting so layout and media queries are reproducible.
-2. **Find** elements using CSS strings or reusable `pz_loc()` descriptions.
-   Assign the context returned by `pz_find()` to work inside a pinned scope.
-3. **Act and expect**: send input with `pz_act_*()` or set values with
-   `pz_set_*()`, then wait for the intended result with `pz_expect_*()`.
-4. **Capture** the verified state with `pz_screenshot()`, or put the interaction
-   inside `pz_record()` to capture the steps and their result.
-5. **Close** pages with `pz_close()`. For bounded work, `pz_with_page()` owns
-   cleanup on block exit; in tests, `pz_local_page()` owns cleanup on test exit.
+1. **Open** a page with `pz_open()`: a URL, an app or document path, or a
+   serving handle. Set the viewport when opening so the first render already
+   uses it.
+2. **Find** elements with CSS strings or `pz_loc()` specs. `pz_find()` returns
+   a new scoped context; assign it to work inside that scope.
+3. **Act, then expect.** Send input with `pz_act_*()` or `pz_set_*()`, then
+   wait for the result with a `pz_expect_*()` call.
+4. **Capture** the verified state with `pz_screenshot()`, or wrap the steps
+   in `pz_record()` to capture them as video.
+5. **Close** the page. `pz_with_page()` closes it when its code finishes, and
+   `pz_local_page()` closes it when the calling test or function exits.
 
-### Verify and capture a task
-
-This complete example uses the bundled static task tracker. Serving it over
-HTTP gives navigation the same origin and history behavior as a deployed site.
-Chrome or another Chromium browser and the httpuv R package are required.
+This script adds a task to the bundled task tracker, checks that it appears
+first, and saves a screenshot of the list. Serving the page over HTTP gives it
+the origin and history behavior of a deployed site.
 
 ```r
 library(paparazzi)
@@ -47,14 +45,11 @@ pz_with_page(server, function(page) {
     pz_screenshot(image, frame = pz_frame(".task-list", pad = 16))
 }, width = 1000, height = 720, color_scheme = "light")
 server$stop()
-stopifnot(file.exists(image))
 ```
 
-### Record the same interaction
-
-Staging controls the cursor, typing and pauses **while recording**. Put
-`pz_stage()` before `pz_record()`, then run ordinary actions and expectations
-inside the recording block. This GIF example requires gifski.
+To record the same interaction, stage the page first and run the chain
+inside `pz_record()`. Staging animates the cursor and typing only while a
+recording runs. This GIF needs the gifski package.
 
 ```r
 video <- tempfile(fileext = ".gif")
@@ -68,63 +63,56 @@ pz_with_page(pz_example("tasks"), function(page) {
       pz_record_hold(0.5)
   }, fps = 8, scale = 0.5)
 }, width = 800, height = 600)
-stopifnot(file.exists(video))
 ```
 
 ## Best practices
 
-- **Inspect before selecting.** Read the app's HTML or call `pz_get_elements()`
-  and `pz_inspect()` to identify controls. Prefer IDs, data attributes and
-  meaningful CSS classes; use `has_text` when the text identifies a row.
-- **Keep the root page and scoped contexts separate.** `row <- pz_find(page,
-  spec)` visibly returns a new context. Use `row` for row-local actions and
-  `page` for whole-page checks. The root remains unchanged.
-- **Use lazy specs across updates.** `pz_loc()` resolves when used. Keep specs
-  across reactive re-renders and navigation, then create fresh pinned scopes
-  with `pz_find()` once the new content is ready.
-- **Wait for the result you need.** Actions wait for their own target to be
-  ready. Follow an action with an expectation on its result before reading
-  values or taking screenshots. Expectations retry up to the timeout.
-- **Choose deterministic settings.** Set `width`, `height`, `color_scheme`,
-  and any relevant `locale` or `timezone` on `pz_open()`. Choose
-  `reduced_motion = TRUE` for stable stills; use normal motion for videos.
-- **Serve navigation workflows over HTTP.** Use `pz_serve_static()` for
-  rendered HTML, `pz_serve_quarto()` for source documents, and
-  `pz_serve_shiny()` for apps. HTTP supports browser back/forward caching.
-- **Capture deliberately.** Supply an explicit output `path` in scripts.
-  A screenshot with a path keeps a chain going; a screenshot without one is
-  an image result for an interactive session or knitted document.
-- **Keep assertions in demos.** A recording is useful evidence only when the
-  expected state is reached. The same expectations become testthat
-  expectations inside `testthat::test_that()`.
-- **Give resources an owner.** When opening a path starts a server, the page
-  owns that server. A page opened from a shared handle owns only its browser
-  session. Stop the shared handle after all pages close; register cleanup
-  when starting it.
+- **Read the page before choosing selectors.** Look at the app's HTML, or
+  call `pz_get_elements()` and `pz_inspect()`. Target IDs, data attributes
+  and meaningful classes; add `has_text` when text identifies a row.
+- **Keep the root page and scopes apart.** `row <- pz_find(page, spec)`
+  leaves `page` unchanged. Use `row` for row-level steps and `page` for
+  whole-page checks.
+- **Keep specs, refind scopes.** A `pz_loc()` spec is resolved each time it's
+  used, so it survives re-renders and navigation. After the page changes,
+  expect the new content, then call `pz_find()` again.
+- **Expect the result of every action.** An action waits for its own target,
+  not for what it causes. Follow it with an expectation on the outcome
+  before reading values or taking a screenshot. Expectations retry until
+  they pass or time out.
+- **Pin down the device.** Pass `width`, `height` and `color_scheme` to
+  `pz_open()`, plus `locale` and `timezone` when the page formats dates or
+  numbers. Use `reduced_motion = TRUE` for stills.
+- **Serve pages over HTTP when they navigate.** Use `pz_serve_static()` for
+  HTML files, `pz_serve_quarto()` for Quarto sources and `pz_serve_shiny()`
+  for apps.
+- **Give screenshots a path in scripts.** With a path, `pz_screenshot()`
+  writes the file and the chain continues. Without one it returns an image
+  for interactive use or knitted documents.
+- **Keep expectations in demos.** A recording that runs its expectations is
+  also evidence that the demo reached the state it shows.
+- **Know who owns each server.** A page opened from a path owns the server
+  it started, and closing the page stops it. A server handle you created is
+  yours to stop after its pages close.
 
-## Reference index
+## References
 
-Read only the topics relevant to the task. Each reference is also shipped as
-an `agent-*` package vignette with the same content.
+Read the reference that matches the task. Each one is also a package
+vignette named `agent-<topic>`.
 
-- [Pages and serving](references/pages-and-serving.md): opening targets,
-  device settings, HTTP navigation, server ownership and reliable cleanup.
-- [Locators and scopes](references/locators-and-scopes.md): reusable CSS
-  specs, text and position qualifiers, pinned contexts and scope transitions.
-- [Testing](references/testing.md): action/expectation loops, asynchronous
-  readiness, testthat integration and browser-state diagnostics.
-- [Screenshots and annotations](references/screenshots-and-annotations.md):
-  **coming in phase 2**; capture framing and visual marks for still images.
-- [Recording and staging](references/recording-and-staging.md):
-  **coming in phase 2**; recording lifecycles and presentation controls.
-- [Shiny](references/shiny.md): app processes, readiness, bound inputs,
-  module IDs, shared app handles and user-facing tests.
+- [Pages and serving](references/pages-and-serving.md): what `pz_open()`
+  accepts, device settings, HTTP servers, navigation and cleanup.
+- [Locators and scopes](references/locators-and-scopes.md): `pz_loc()` specs,
+  text and position filters, scoped contexts and moving between scopes.
+- [Testing](references/testing.md): choosing expectations, waiting on
+  conditions, testthat integration and inspecting failures.
+- [Shiny](references/shiny.md): app processes, Shiny readiness, setting bound
+  inputs, module IDs and sharing one app across pages.
 
-## Find and install the skill
+## Installing this skill
 
-btw discovers this skill automatically when `library(paparazzi)` attaches the
-package. To persist a copy in a project, use
-`btw::btw_skill_install_package("paparazzi")`. Other agents can locate the
-installed directory with `system.file("skills/paparazzi", package =
-"paparazzi")` and copy the entire directory, including `references/`, into
-their skill search path.
+btw finds this skill whenever paparazzi is attached.
+`btw::btw_skill_install_package("paparazzi")` copies it into a project's
+skills directory. For other agents, copy the whole directory returned by
+`system.file("skills/paparazzi", package = "paparazzi")`, including
+`references/`.

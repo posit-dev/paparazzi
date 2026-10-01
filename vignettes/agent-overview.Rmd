@@ -7,14 +7,14 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+<!-- The content lives in inst/skills/paparazzi/SKILL.md; edit it there. -->
+
 ```{r, echo = FALSE, results = "asis"}
-skill <- readLines("../inst/skills/paparazzi/SKILL.md")
-frontmatter_end <- which(skill == "---")[2]
-skill <- skill[-seq_len(frontmatter_end)]
-skill <- gsub(
-  "references/([a-z-]+)\\.md",
-  "agent-\\1.html",
-  skill
-)
-cat(skill, sep = "\n")
+skill_source <- readLines("../inst/skills/paparazzi/SKILL.md")
+if (identical(skill_source[1], "---")) {
+  skill_source <- skill_source[-seq_len(which(skill_source == "---")[2])]
+}
+skill_source <- skill_source[-match(TRUE, startsWith(skill_source, "# "))]
+skill_source <- gsub("references/([a-z-]+)\\.md", "agent-\\1.html", skill_source)
+cat(skill_source, sep = "\n")
 ```

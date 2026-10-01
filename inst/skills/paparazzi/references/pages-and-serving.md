@@ -1,15 +1,14 @@
 # Pages and serving
 
-Use this reference to choose an opening target, run local servers, set device
-emulation, navigate, and give every browser session and server a cleanup owner.
-All examples below run in order. They write files under R's temporary directory.
+This reference covers what to open, how to serve local files, device
+settings, navigation and cleanup. The examples run in order and write files
+under R's temporary directory.
 
-## Choose the opening target
+## Choose what to open
 
-`pz_open(x)` returns the root `PaparazziPage`, which starts a `|>` chain.
-It accepts a URL, local path, serving handle or existing ChromoteSession.
-For path-based opening, the page starts a server when needed and owns it.
-Closing that page stops the server as well as its browser session.
+`pz_open(x)` returns the root page, which starts a `|>` chain. When `x` is a
+path that needs a server, the page starts one and owns it, so closing the
+page stops the server too.
 
 | Target | Opening behavior |
 | --- | --- |
@@ -21,32 +20,28 @@ Closing that page stops the server as well as its browser session.
 | Serving handle | Open a browser page on the handle's URL |
 | ChromoteSession | Wrap the existing session without navigating |
 
-Shiny path detection comes before Quarto detection. A Shiny directory contains
-`app.R` or `server.R`; supply the app directory or a runnable app file.
-For an app already running elsewhere, use its HTTP URL with `wait = "shiny"`.
+Shiny detection runs before Quarto detection: a directory with `app.R` or
+`server.R` is a Shiny app. For an app that's already running, open its URL
+with `wait = "shiny"`.
 
-For a bounded read of the bundled static page, use the function form of
-`pz_with_page()`. Its callback receives the page and cleanup runs on exit,
-including when code raises an error. `pz_with_page()` returns the closed page
-invisibly; assign readings within the callback when retaining them.
+For a short task, `pz_with_page()` opens the page, passes it to a function
+and closes it afterward, even if the code errors. Put the checks inside the
+function.
 
 ```r
 library(paparazzi)
 
-heading <- NULL
 pz_with_page(pz_example("tasks"), function(page) {
-  heading <<- pz_get_text(page, target = "h1")
+  page |> pz_expect_text("Tasks", target = "h1", match = "exact")
 }, width = 1000, height = 720)
-stopifnot(identical(heading, "Tasks"))
 ```
 
 ## Serve static pages over HTTP
 
-Use `pz_serve_static()` for local HTML when links, history or navigation are
-part of the task. HTTP allows the browser's back/forward cache and gives
-relative links their usual site behavior. The server accepts a directory or
-an HTML file. For a file, it serves the containing directory and points the
-handle's URL at that file; neighboring assets are also available.
+Use `pz_serve_static()` for local HTML whenever links, history or navigation
+matter. Over HTTP, relative links resolve as on a real site and the browser's
+back/forward cache works. Give it a directory, or an HTML file to serve that
+file's directory with the handle's URL pointing at the file.
 
 ```r
 server <- pz_serve_static(pz_example("tasks"))
@@ -55,19 +50,17 @@ page |> pz_expect_url("http://127.0.0.1", match = "contains")
 server$is_running()
 ```
 
-Opening two pages from the same handle shares the server, not page state.
-The caller owns that server. Close every page and call `server$stop()` after
-all uses; `$stop()` is idempotent. For a single-use directory,
-`pz_open(directory)` instead gives server ownership to the page.
+Pages opened from the same handle share the server but nothing else. You own
+that server: close its pages, then call `server$stop()`, which is safe to
+call twice. For a one-off directory, `pz_open(directory)` lets the page own
+the server instead.
 
-## Set the viewport before capturing
+## Set the viewport when opening
 
-Named device arguments on `pz_open()` are forwarded to `pz_device()` before
-navigation, so the first render sees the intended media queries. Set the
-viewport to a known CSS size and the color scheme to a known preference.
-`scale` is the device pixel ratio; the PNG pixel dimensions reflect it.
-Setting width, height or mobile switches the default scale to 2 unless a
-scale is supplied explicitly.
+Device arguments to `pz_open()` are applied before the page loads, so the
+first render already sees them. `scale` is the device pixel ratio, which sets
+the PNG's pixel size. Once you set `width`, `height` or `mobile`, the scale
+defaults to 2 unless you give one.
 
 ```r
 phone <- pz_open(
@@ -82,12 +75,11 @@ phone |> pz_expect_visible(target = "#new-task")
 pz_close(phone)
 ```
 
-`pz_device()` changes only supplied settings. `NULL` leaves the device setting
-unchanged; use `zoom = 1` to return to normal zoom. `zoom_method = "viewport"`
-changes the effective CSS viewport, including media queries;
-`zoom_method = "css"` keeps media queries and applies CSS zoom to the document.
-Use `reduced_motion = TRUE` when still captures need stable animation state.
-Choose motion settings for the intended capture, and set them before recording.
+`pz_device()` changes only the settings you pass. `zoom = 1` returns to
+normal zoom. `zoom_method = "viewport"` shrinks the CSS viewport, so media
+queries respond; `zoom_method = "css"` zooms the document and leaves media
+queries alone. Set motion preferences before recording: `reduced_motion =
+TRUE` suits stills.
 
 ```r
 page |>
@@ -101,17 +93,16 @@ page |>
   pz_expect_visible(target = ".task-list")
 ```
 
-## Navigate and re-scope
+## Navigate, then refind scopes
 
-Navigation functions return a root context and release existing pinned
-scopes. Keep reusable `pz_loc()` descriptions across navigation, then call
-`pz_find()` again on the returned root to pin the new document's elements.
-`pz_nav_goto()` and `pz_nav_reload()` settle the document by default.
-`pz_nav_back()` and `pz_nav_forward()` settle load and return immediately at
-a history boundary.
+Navigation functions return the root context and release pinned scopes. Keep
+your `pz_loc()` specs and call `pz_find()` again on the new document.
+`pz_nav_goto()` and `pz_nav_reload()` wait for the document to settle.
+`pz_nav_back()` and `pz_nav_forward()` wait for the load, and return right
+away when there's no history in that direction.
 
-The task page's filters change the URL fragment. Verify the visible outcome
-after settling navigation because app-specific updates can occur afterward.
+The task page's filters change the URL fragment. After navigating, expect
+the visible result, since the app may update the page after the load.
 
 ```r
 base_url <- pz_get_url(page)
@@ -135,23 +126,19 @@ task_list <- pz_find(page, ".task-list")
 pz_get_count(task_list, target = ".task")
 ```
 
-For navigation triggered by a click, follow the action with
-`pz_wait_for_navigation()`, then assert the destination. It synchronizes with
-the navigation associated with the last action. For a known destination,
-`pz_expect_url()` can wait for that URL; a content expectation checks that the
-user-facing result is ready too. See Testing for a full two-document example.
+When a click starts a navigation, follow it with `pz_wait_for_navigation()`,
+then expect something on the destination page. Testing has a full
+two-page example.
 
 ## Preview a Quarto document
 
-`pz_serve_quarto()` runs the Quarto CLI for a `.qmd`, `.Rmd` or project
-containing `_quarto.yml`. The CLI must be on PATH or available through
-`QUARTO_PATH`. A standalone document is rendered on startup; `render = TRUE`
-requests a full render for preview. Use `render = FALSE` when intentionally
-reusing project execution results. Keep input resources stable during capture.
-For rendered HTML, choose `pz_serve_static()` instead.
+`pz_serve_quarto()` runs Quarto preview on a `.qmd`, an `.Rmd` or a project
+with `_quarto.yml`. Quarto must be on the PATH or set in `QUARTO_PATH`.
+`render = TRUE` renders the document fully before preview. For HTML that's
+already rendered, use `pz_serve_static()`.
 
-This creates a minimal source document with no executable code. It needs
-Quarto, but no application-specific files.
+This example writes a small document with no code chunks and checks its
+heading.
 
 ```r
 doc_dir <- tempfile("paparazzi-doc-")
@@ -175,23 +162,21 @@ preview$stop()
 unlink(doc_dir, recursive = TRUE)
 ```
 
-Quarto and Shiny handles expose `$logs()` and `$is_running()` for diagnostics.
-A static handle has the same interface and returns an empty log vector.
-For interactive documents, serve the application through Shiny rather than
-Quarto preview. See Shiny for process options and input bindings.
+Quarto, Shiny and static handles all have `$logs()` and `$is_running()`; a
+static handle's log is always empty. Serve interactive documents through
+Shiny instead of Quarto preview (see Shiny).
 
-## Finish with explicit resource ownership
+## Close the page, then stop the server
 
-The `page` above owns a browser session; `server` owns the HTTP service.
-Close the browser before stopping the service it uses.
+Here `page` owns a browser session and `server` owns the HTTP service. Close
+the page first.
 
 ```r
 pz_close(page)
 server$stop()
 ```
 
-In functions, register `withr::defer(server$stop())` immediately after creating
-a shared handle, and use `pz_with_page()` for each page. In tests,
-`pz_local_page()` binds page cleanup to the test's calling frame. Both cleanup
-helpers accept a page already opened elsewhere: using it in the block or test
-transfers responsibility for closing that page to the helper.
+Inside a function, call `withr::defer(server$stop())` right after creating a
+shared handle, and use `pz_with_page()` for each page. In tests, use
+`pz_local_page()`. Both also accept a page that's already open, and take over
+closing it.

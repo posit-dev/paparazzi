@@ -1,14 +1,15 @@
 # Locators and scopes
 
-Use this reference to select the intended elements and carry scope through a
-chain. A locator describes what to find; a scoped context pins what was found.
-The examples below share one page and run in order.
+This reference covers picking the right elements and carrying a scope
+through a chain. A **locator** (`pz_loc()`) describes what to find; a
+**scoped context** (from `pz_find()`) pins what was found. The examples share
+one page and run in order.
 
 ## Start from the page root
 
-Keep the root page as the stable starting point for independent chains.
-CSS strings are shorthand for `pz_loc(css)`. Use stable IDs for individual
-controls and meaningful classes or data attributes for collections.
+The root page is the starting point for independent chains. A CSS string is
+shorthand for `pz_loc(css)`. Target IDs for single controls, and classes or
+data attributes for collections.
 
 ```r
 library(paparazzi)
@@ -17,16 +18,16 @@ page |> pz_expect_count(7, target = ".task")
 pz_get_elements(page, target = "#new-task input")
 ```
 
-`pz_get_elements()` describes matched elements for inspection;
-`pz_get_text()`, `pz_get_value()`, `pz_get_attr()` and `pz_get_style()` read
-specific properties. Getters return values and end the context chain.
-Read after an expectation when an action has started an asynchronous update.
+`pz_get_elements()` describes the matches; `pz_get_text()`, `pz_get_value()`,
+`pz_get_attr()` and `pz_get_style()` read one property. Getters return values
+and end the chain, so after an action that updates the page asynchronously,
+expect the update before reading.
 
 ## Describe a reusable target
 
-`pz_loc()` is page-independent and lazy: resolution happens when an action,
-expectation or getter uses it. Keep the spec across sessions and DOM updates.
-The same description can be used by a test, screenshot and recording.
+A `pz_loc()` spec isn't tied to a page and is resolved each time an action,
+expectation or getter uses it. The same spec works across DOM updates,
+pages and sessions, and in a test, a screenshot and a recording alike.
 
 ```r
 passport <- pz_loc(".task", has_text = "passport")
@@ -35,11 +36,10 @@ page |> pz_expect_count(1, target = passport)
 pz_get_text(page, target = passport_title)
 ```
 
-`has_text` is a case-sensitive substring match on the element's text content.
-Whitespace is collapsed on both sides. Choose text that identifies the
-intended row, then target a control within it. `within` accepts a string or
-another fully qualified spec and restricts matches to descendants of the
-matching ancestors.
+`has_text` is a case-sensitive substring match on the element's text, with
+whitespace collapsed on both sides. Pick text that identifies the row, then
+target a control inside it. `within` takes a string or another spec and
+keeps only matches inside it.
 
 ```r
 passport_button <- pz_loc(".task-done", within = passport)
@@ -50,9 +50,9 @@ page |>
 
 ## Choose one match by position
 
-`which` is applied after CSS and text filtering. It accepts `"first"`,
-`"last"` or a positive 1-based integer. Use ordering when order is part of
-the interface's contract, such as newest-first tasks.
+`which` applies after the CSS and text filters, and takes `"first"`,
+`"last"` or a 1-based position. Use it when order is part of the interface,
+like a newest-first task list.
 
 ```r
 first_title <- pz_loc(".task-title", which = "first")
@@ -63,16 +63,14 @@ pz_get_text(page, target = last_title)
 pz_get_text(page, target = pz_loc(".task-title", within = second_task))
 ```
 
-A locator with an out-of-range position matches no element. Expectations
-provide retrying readiness checks for newly inserted matches. Match positions
-refer to the filtered set, so a position and `has_text` can be combined when
-that is the intended selection rule.
+Because positions count the filtered matches, `which` and `has_text` combine
+naturally. A position past the end matches nothing, and an expectation will
+wait for it to appear.
 
 ## Combine targets as a union
 
-A list of strings and specs matches the union of their elements. Use it to
-check or frame a collection of independent regions. A single CSS selector
-with multiple matches also describes a collection.
+A list of strings and specs matches every element any of them matches. Use
+it to check or frame several separate regions at once.
 
 ```r
 high_titles <- pz_loc(".task-title", within = ".task[data-priority='high']")
@@ -80,16 +78,16 @@ pz_get_text(page, target = high_titles)
 pz_get_count(page, target = list(".task.done", high_titles))
 ```
 
-Actions such as click and type need one actionable element. Narrow a
-collection to a specific locator or use `pz_find_first()`, `pz_find_last()`
-or `pz_find_nth()` when one position is the intended target. Expectations
-usually require every match to satisfy the condition; scope accordingly.
+Clicking and typing need a single element. Narrow a collection with a more
+specific locator, or with `pz_find_first()`, `pz_find_last()` or
+`pz_find_nth()`. Most expectations require every match to pass, so scope
+them to what you mean to check.
 
-## Assign the context returned by find
+## Assign the context `pz_find()` returns
 
-`pz_find()` eagerly resolves a target, waits for at least one match, pins the
-matched set and visibly returns a **new context**. It leaves its input context
-unchanged. Retain that returned context to run more than one scoped chain.
+`pz_find()` resolves its target right away, waits for at least one match,
+pins the matched elements and returns a **new context**. The context you
+passed in is unchanged, so assign the result to use the scope more than once.
 
 ```r
 task_list <- pz_find(page, ".task-list")
@@ -99,14 +97,13 @@ pz_get_text(passport_row, target = ".task-title")
 pz_get_count(page, target = ".task")
 ```
 
-Here `page` remains at the root, `task_list` is scoped to the list, and
-`passport_row` is scoped to its row. A later explicit `target` is looked up
-among descendants of the current scope. For calls that accept it,
-`target = NULL` refers to the scope itself. At the root, getters and
-expectations generally use the page body, while pointer actions need an
-explicit target.
+Now `page` is still the root, `task_list` is scoped to the list, and
+`passport_row` to one row. An explicit `target` is looked up inside the
+current scope, and `target = NULL` means the scope itself. At the root,
+getters and expectations default to the page body, but pointer actions need
+a target.
 
-Use this to click a control already selected as a scope:
+A scope can itself be the thing you click:
 
 ```r
 help_button <- pz_find(page, "#toggle-help")
@@ -116,9 +113,9 @@ page |> pz_expect_visible(target = "#help")
 
 ## Narrow a pinned set
 
-Finding a collection pins the whole matched set. The positional find helpers
-without a target slice that set immediately. With a target, they resolve the
-matching set in the current scope and pin the selected match.
+Finding a collection pins all of it. Without a target, the positional find
+helpers pick from that pinned set. With a target, they find matches in the
+current scope and pin the chosen one.
 
 ```r
 all_tasks <- pz_find(page, ".task")
@@ -130,8 +127,8 @@ pz_get_text(last_row, target = ".task-title")
 pz_get_text(second_row, target = ".task-title")
 ```
 
-For a positional find with a target, give position to the helper and use a
-spec without `which`. This keeps the selection rule in one place.
+When a positional find has a target, put the position in the helper and
+leave `which` out of the spec, so the rule lives in one place.
 
 ```r
 page |>
@@ -141,10 +138,10 @@ page |>
 
 ## Return to a broader scope
 
-`pz_find_pop()` returns a context one scope level up. `pz_find_reset()` returns
-a root context. Both leave the context passed to them unchanged.
-`from_root = TRUE` resolves a new find from the page root while pushing it
-onto the current stack; popping then returns to the previous scope.
+`pz_find_pop()` returns the context one scope up, and `pz_find_reset()`
+returns the root; neither changes the context you pass. `from_root = TRUE`
+finds from the page root but pushes onto the current scope stack, so a pop
+returns to where you were.
 
 ```r
 passport_row |>
@@ -162,13 +159,12 @@ task_list |>
   pz_expect_count(7, target = ".task")
 ```
 
-## Reacquire scopes after replacement
+## Refind scopes after the page changes
 
-Pinned scopes represent particular DOM elements. They stay useful while those
-elements remain attached, even when descendants change. For reactive output
-replacement or navigation, keep a lazy spec and acquire a new scope after
-asserting readiness. Navigation returns a root context and releases the prior
-pinned scopes.
+A scope pins specific DOM elements. It keeps working while they stay in the
+page, even if their children change. When an element is replaced, as with
+Shiny outputs or navigation, keep the spec, expect the new content, then
+find it again. Navigation also releases every pinned scope.
 
 ```r
 page |>
@@ -179,6 +175,5 @@ fresh_row |> pz_expect_exists(target = ".task-done")
 pz_close(page)
 ```
 
-For re-rendered Shiny outputs, see Shiny. For choosing an expectation before
-reading a property, see Testing. For HTTP history and page ownership, see
-Pages and serving.
+Shiny covers re-rendered outputs, Testing covers choosing expectations, and
+Pages and serving covers navigation and page ownership.

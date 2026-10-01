@@ -1,19 +1,19 @@
 # Testing
 
-Use paparazzi to verify user-visible behavior in a Chromium browser. Tests
-script the same actions used by screenshots and recordings; expectations
-synchronize each transition with the state that matters to the user.
+paparazzi tests check what a user sees in a real browser. A test runs the
+same actions a screenshot or recording would, and its expectations wait for
+each step's result before the next one starts.
 
 ## Test the action and its result
 
-Inside `testthat::test_that()`, each `pz_expect_*()` call counts as a testthat
-expectation. A failed expectation becomes a test failure. Outside testthat,
-it raises a `paparazzi_expectation_failure` with the target, last observed
-value and elapsed wait. Passing expectations return the context invisibly,
-so they belong directly in the action chain.
+Inside `testthat::test_that()`, every `pz_expect_*()` call is a testthat
+expectation, and a failure fails the test. Outside testthat, a failure is an
+error of class `paparazzi_expectation_failure` that reports the target, the
+last value seen and how long it waited. A passing expectation returns the
+context invisibly, so it sits in the middle of a chain.
 
-Use `pz_local_page()` inside the test. It closes the page when the test frame
-exits, including when a step fails. App paths also get server cleanup.
+Open the page with `pz_local_page()` so it closes when the test ends, pass or
+fail. Pages opened from an app path stop their server too.
 
 ```r
 library(paparazzi)
@@ -32,11 +32,11 @@ testthat::test_that("adding a task inserts its title first", {
 })
 ```
 
-The click waits for the Add button to be actionable. The text expectation
-waits for the asynchronous save to finish. These are separate readiness
-conditions: assert the resulting state before starting the next operation.
+The click waits until the Add button can be clicked; the text expectation
+waits for the save to finish. Those are two different conditions, so expect
+each step's result before starting the next.
 
-## Pick the observable contract
+## Choose the expectation that states the behavior
 
 Choose the expectation that states the behavior precisely:
 
@@ -55,11 +55,10 @@ Choose the expectation that states the behavior precisely:
 | Navigation reaches the destination | `pz_expect_url()`, `pz_expect_title()` |
 | App-specific DOM predicate holds | `pz_expect_js()` |
 
-Most element expectations require at least one match and every match to pass.
-`pz_expect_exists()` needs only one match. For a specific row, use `pz_loc()`
-with `has_text` or `within` rather than asserting a condition on all rows.
-Negative visibility includes an absent target; use existence to distinguish
-presence from visibility when that distinction is the contract.
+Most element expectations need at least one match, and every match must
+pass; `pz_expect_exists()` needs just one. To check one row, target it with
+`has_text` or `within`. `pz_expect_hidden()` also passes when the element is
+absent, so pair it with `pz_expect_exists()` when presence matters.
 
 ```r
 testthat::test_that("help starts hidden and can be opened", {
@@ -72,13 +71,12 @@ testthat::test_that("help starts hidden and can be opened", {
 })
 ```
 
-## Match text and values intentionally
+## Match text and values
 
-`pz_expect_text()` collapses whitespace on the observed and expected sides.
-The default `match = "contains"` checks substrings; `"exact"` checks equality;
-`"regex"` uses an R regular expression. A length-one expected string applies
-to every match. A vector of expected strings requires that many matches and
-compares them pairwise in document order.
+`pz_expect_text()` collapses whitespace on both sides. `match = "contains"`
+(the default) checks for a substring, `"exact"` for equality and `"regex"`
+for an R regular expression. One expected string applies to every match; a
+vector needs exactly that many matches and compares them in document order.
 
 ```r
 testthat::test_that("text entry updates the input value", {
@@ -90,22 +88,21 @@ testthat::test_that("text entry updates the input value", {
 })
 ```
 
-Getters end the context chain and return values: use normal testthat
-expectations for R-side comparisons. `pz_get_count()` reads once, including
-zero; a retrying `pz_expect_count()` is the synchronization step for a count
-that will change.
+Getters return plain values and end the chain, so compare them with ordinary
+testthat expectations. `pz_get_count()` reads once and can return zero; use
+`pz_expect_count()` when the count is about to change.
 
-## Use condition-based waits
+## Wait on conditions, not time
 
-Expectations retry until they pass or the timeout expires. `timeout = NULL`
-uses the page default, configured with `pz_open(timeout = ...)` or forwarded
-through `pz_local_page()`. `timeout = 0` checks once when the prior step has
-already established readiness.
+Expectations retry until they pass or time out. `timeout = NULL` uses the
+page's default, set with `pz_open(timeout = )` or through `pz_local_page()`.
+`timeout = 0` checks once, for when an earlier step already waited.
 
-When there is no specific value to assert, use `pz_wait_for_shiny_idle()` for
-reactive work, `pz_wait_for_stable()` for stable geometry or text, or
-`pz_wait_for_js()` for a browser predicate. `pz_wait()` pumps the browser's
-event loop during a deliberate fixed wait, including during recording.
+When there's no particular value to expect, wait on a condition instead:
+`pz_wait_for_shiny_idle()` for reactive work, `pz_wait_for_stable()` for
+settled layout or text, or `pz_wait_for_js()` for a JavaScript predicate.
+`pz_wait()` is a fixed wait that keeps the browser running, recordings
+included.
 
 ```r
 pz_with_page(pz_example("tasks"), function(page) {
@@ -116,17 +113,15 @@ pz_with_page(pz_example("tasks"), function(page) {
 })
 ```
 
-Use a timeout appropriate to the operation. The default page timeout is ten
-seconds; increasing it for a slow application is more useful than adding
-fixed pauses after every action. For a specific outcome, write the expectation
-on that outcome rather than waiting for unrelated page activity.
+The default page timeout is ten seconds. For a slow app, raise the timeout
+rather than adding fixed pauses.
 
-## Test full-document navigation over HTTP
+## Test navigation between documents
 
-Serve fixtures over HTTP so browser navigation and history use normal web
-semantics. This example creates two tiny pages with a real link and tests the
-click, settled navigation, destination content and return trip. It requires
-httpuv. The function owns the server; the test owns the browser page.
+Serve test pages over HTTP so links and history behave as they do on a real
+site. This example writes two small pages joined by a link, then tests the
+click, the destination and the way back. It needs httpuv. The function owns
+the server and the test owns the page.
 
 ```r
 check_navigation <- function() {
@@ -155,14 +150,14 @@ check_navigation <- function() {
 check_navigation()
 ```
 
-Navigation resets scopes to the root. Reuse specs, then find fresh contexts
-for the destination. See Locators and scopes for that distinction.
+Navigation resets scopes to the root, so find the destination's elements
+again (see Locators and scopes).
 
-## Inspect failures with values and captures
+## Inspect state when a test fails
 
-`pz_inspect()` reports page state. Getters make focused diagnostics available
-as R values. After reaching the expected state, an explicit screenshot path
-captures evidence without opening a viewer and leaves the context chainable.
+`pz_inspect()` prints the page's state, and getters return specific values
+to R. A screenshot with an explicit path saves evidence without opening a
+viewer, and the chain continues.
 
 ```r
 pz_with_page(pz_example("tasks"), function(page) {
@@ -175,9 +170,9 @@ pz_with_page(pz_example("tasks"), function(page) {
 })
 ```
 
-For app-specific predicates, `pz_expect_js()` takes a JavaScript function
-receiving each matching DOM element as its argument. At the root its target
-is the page body by default. Use a function that returns a boolean.
+For checks no built-in expectation covers, `pz_expect_js()` takes a
+JavaScript function that receives each matched element and returns `true` or
+`false`. At the root, the target defaults to the page body.
 
 ```r
 pz_with_page(pz_example("tasks"), function(page) {
@@ -186,8 +181,6 @@ pz_with_page(pz_example("tasks"), function(page) {
 })
 ```
 
-Run browser tests in an environment with Chrome or Chromium available to
-chromote. Keep each test's starting state independent by opening a new page.
-Shared Shiny server processes can save startup time while each page retains
-its own app session; see Shiny. Configure deterministic viewport and device
-preferences as described in Pages and serving.
+Browser tests need Chrome or Chromium where chromote can find it. Open a new
+page in each test so tests don't share state. A shared Shiny server can save
+startup time while each page still gets its own app session (see Shiny).
