@@ -469,6 +469,8 @@ test_that("follow zoom is not treated as an explicit softness request", {
   expect_equal(resolved[[2]]$box, c(194, 124, 394, 274))
   sampled <- list(files = path, index = 1L, vts = 1, n_ticks = 1L)
   out <- record_output_spec(rec, png_read_size(path))
+  # Follow intents carry no zoom request; softness warnings concern manual zoom.
+  expect_null(rec$camera[[2]]$zoom)
   expect_no_warning(camera_filter(rec, sampled, out, png_read_size(path)))
 })
 
@@ -1163,7 +1165,8 @@ test_that("follow resolves against the final home rather than the live estimate"
 
   rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
   rec$camera_viewport_width <- 800
-  rec$camera <- moves
+  intent$target <- c(560, 290, 590, 320)
+  rec$camera <- list(manual, intent)
   rec$scroll <- list(c(0, 0))
   rec$crop <- list(
     x = 200,
@@ -1175,12 +1178,8 @@ test_that("follow resolves against the final home rather than the live estimate"
   size <- list(width = 800, height = 600)
   out <- record_output_spec(rec, size)
   sampled <- list(index = 1L, vts = 1.5, n_ticks = 1L)
-  corners <- camera_test_corners(suppressWarnings(camera_filter(
-    rec,
-    sampled,
-    out,
-    size
-  )))
+  expect_warning(filter <- camera_filter(rec, sampled, out, size), "soft")
+  corners <- camera_test_corners(filter)
   expect_equal(corners, c(400, 200, 600, 400))
   expect_true(all(corners[1:2] <= clamped[1:2]))
   expect_true(all(corners[3:4] >= clamped[3:4]))
@@ -1246,28 +1245,44 @@ test_that("skipped typing follow adds no settle time before an unframed hold", {
 
 test_that("follow heading checks use the last surviving move", {
   home <- c(0, 0, 800, 600)
-  manual <- list(
+  initial <- list(
     start = 0,
-    end = 3,
-    box = c(560, 290, 590, 320),
+    end = 0,
+    box = c(150, 250, 250, 350),
+    zoom = 2,
+    scroll = c(0, 0),
+    reset = FALSE
+  )
+  manual <- list(
+    start = 1,
+    end = 4,
+    box = c(550, 250, 650, 350),
     zoom = 2,
     scroll = c(0, 0),
     reset = FALSE
   )
   first <- list(
-    start = 0.1,
-    end = 0.5,
-    target = c(560, 290, 590, 320),
+    start = 1.01,
+    end = 1.51,
+    target = c(360, 290, 380, 310),
     scroll = c(0, 0),
     reset = FALSE,
     follow = TRUE
   )
   second <- first
-  second$start <- 0.6
-  second$end <- 1
+  second$start <- 1.02
+  second$end <- 1.32
   reset <- list(start = 4, end = 4, reset = TRUE, scroll = c(0, 80))
-  expect_identical(
-    camera_resolve(list(manual, first, second, reset), home, 1),
-    list(manual, reset)
+  expect_length(camera_resolve(list(initial, manual, first), home, 1), 2)
+  resolved <- camera_resolve(
+    list(initial, manual, first, second, reset),
+    home,
+    1
   )
+  expect_length(resolved, 4)
+  expect_identical(resolved[1:2], list(initial, manual))
+  expect_equal(resolved[[3]]$box, c(4, 150, 404, 450))
+  expect_equal(resolved[[3]]$zoom, 2)
+  expect_true(resolved[[3]]$follow)
+  expect_identical(resolved[[4]], reset)
 })
