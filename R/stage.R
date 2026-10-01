@@ -422,26 +422,28 @@ stage_move_cursor <- function(ctx, point) {
     return(ctx_return(ctx))
   }
   if (is.null(attr(point, "rect"))) {
-    rect <- pz_js(
-      ctx,
-      paste0(
-        "(() => { const el = document.elementFromPoint(",
-        point[["x"]],
-        ",",
-        point[["y"]],
-        "); if (!el) return null; const r = el.getBoundingClientRect();",
-        " return [r.x, r.y, r.width, r.height]; })()"
-      )
-    )
-    if (!is.null(rect)) {
-      attr(point, "rect") <- set_names(
-        unlist(rect),
-        c("x", "y", "width", "height")
-      )
-    }
+    attr(point, "rect") <- point_hit_rect(ctx, point)
   }
   cursor_show_at(ctx, point, follow = follow)
   ctx_return(ctx)
+}
+
+point_hit_rect <- function(ctx, point) {
+  rect <- pz_js(
+    ctx,
+    paste0(
+      "(() => { const el = document.elementFromPoint(",
+      point[["x"]],
+      ",",
+      point[["y"]],
+      "); if (!el) return null; const r = el.getBoundingClientRect();",
+      " return [r.x, r.y, r.width, r.height]; })()"
+    )
+  )
+  if (is.null(rect)) {
+    return(NULL)
+  }
+  set_names(unlist(rect), c("x", "y", "width", "height"))
 }
 
 stage_follow_without_glide <- function(ctx, rect) {
@@ -489,12 +491,11 @@ stage_wheel_into_view <- function(
     if (!isTRUE(probe$hit > 0)) {
       return(el_scroll_into_view(els, call = call))
     }
-    pos <- unlist(probe$pos)
+    pos <- unlist(probe$positions)
     rounds <- rounds + 1L
-    if (
-      (!is.null(prev) && identical(pos, prev)) ||
-        rounds > 2L * probe$n + 3L
-    ) {
+    stalled <- !is.null(prev) && identical(pos, prev)
+    max_rounds <- 2L * probe$chainLength + 3L
+    if (stalled || rounds > max_rounds) {
       return(el_scroll_into_view(els, call = call))
     }
     prev <- pos
@@ -544,9 +545,10 @@ stage_drag_carry <- function(ctx, from, to, step) {
   cursor_apply(ctx, to, duration = duration, pressed = TRUE, pump = FALSE)
   start <- Sys.time()
   interval <- 1 / 30
+  lead <- interval / 2
   repeat {
     elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
-    at <- (elapsed + interval / 2) / duration
+    at <- (elapsed + lead) / duration
     if (at >= 1) {
       break
     }
@@ -703,7 +705,15 @@ scroll_wheel_target <- function(probe, by, to) {
 # A wheel dispatched at (x, y) scrolls the nearest scrollable ancestor
 # of the element under the point that can consume the delta, so it
 # reaches `container` only when no nearer scroller intervenes.
-wheel_hit_js <- "const wheelHit = (container, x, y, dx, dy) => {
+wheel_hit_js <- "const isScrollable = (e) => {
+  if (e === document.scrollingElement) return true;
+  const s = getComputedStyle(e);
+  if (!/(auto|scroll)/.test(s.overflow + ' ' + s.overflowX + ' ' + s.overflowY)) {
+    return false;
+  }
+  return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
+};
+const wheelHit = (container, x, y, dx, dy) => {
   const canConsume = (c) =>
     (dy < 0 && c.scrollTop > 0) ||
     (dy > 0 && c.scrollTop < c.scrollHeight - c.clientHeight) ||
@@ -720,16 +730,6 @@ wheel_hit_js <- "const wheelHit = (container, x, y, dx, dy) => {
 
 wheel_container_js <- paste0(
   "function(aim) {
-  const isScrollable = (e) => {
-    if (e === document.scrollingElement) {
-      return true;
-    }
-    const s = getComputedStyle(e);
-    if (!/(auto|scroll)/.test(s.overflow + ' ' + s.overflowX + ' ' + s.overflowY)) {
-      return false;
-    }
-    return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
-  };
   ",
   wheel_hit_js,
   "
@@ -773,14 +773,6 @@ wheel_probe_js <- paste0(
   "function() {
   if (!this.length) return null;
   const el = this[0];
-  const isScrollable = (e) => {
-    if (e === document.scrollingElement) return true;
-    const s = getComputedStyle(e);
-    if (!/(auto|scroll)/.test(s.overflow + ' ' + s.overflowX + ' ' + s.overflowY)) {
-      return false;
-    }
-    return e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth;
-  };
   ",
   wheel_hit_js,
   "
@@ -819,7 +811,7 @@ wheel_probe_js <- paste0(
     if (deltas[i].dx !== 0 || deltas[i].dy !== 0) { k = i; break; }
   }
   if (k === -1) {
-    return { dx: 0, dy: 0, hit: 1, x: 0, y: 0, pos: pos, n: chain.length };
+    return { dx: 0, dy: 0, hit: 1, x: 0, y: 0, positions: pos, chainLength: chain.length };
   }
   const cr = clip(chain[k]);
   const x = Math.min(Math.max(cr.left + cr.width / 2, 1), window.innerWidth - 1);
@@ -830,8 +822,8 @@ wheel_probe_js <- paste0(
     dx: deltas[k].dx,
     dy: deltas[k].dy,
     hit: wheelHit(chain[k], x, y, deltas[k].dx, deltas[k].dy),
-    pos: pos,
-    n: chain.length
+    positions: pos,
+    chainLength: chain.length
   };
 }"
 )
