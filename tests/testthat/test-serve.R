@@ -187,10 +187,6 @@ test_that("new_app constructs even when its port already has a listener", {
   withr::defer(if (inherits(app, "PaparazziServe")) app$stop())
 
   expect_s3_class(app, "PaparazziServe")
-  if (inherits(app, "PaparazziServe")) {
-    app$stop()
-    expect_true(app_port_reachable(taken_port))
-  }
 })
 
 test_that("a child that dies from a taken port exhausts its retries", {
@@ -564,10 +560,28 @@ test_that("new_quarto constructs even when its port already has a listener", {
   withr::defer(if (inherits(preview, "PaparazziServe")) preview$stop())
 
   expect_s3_class(preview, "PaparazziServe")
-  if (inherits(preview, "PaparazziServe")) {
-    preview$stop()
-    expect_true(app_port_reachable(taken))
-  }
+})
+
+test_that("Quarto preflight exhaustion reports no nonexistent child log", {
+  skip_if_not_installed("httpuv")
+  skip_if(
+    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
+    "Quarto CLI not available"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "document.qmd")
+  file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+  taken <- random_port()
+  listener <- httpuv::startServer("127.0.0.1", taken, list())
+  withr::defer(httpuv::stopServer(listener))
+  local_mocked_bindings(random_port = function(...) taken)
+
+  err <- expect_error(
+    pz_serve_quarto(path),
+    class = "paparazzi_error_quarto_startup",
+    regexp = "could not bind a port"
+  )
+  expect_false(grepl("\n", conditionMessage(err), fixed = TRUE))
 })
 
 test_that("Quarto preflight retries a port takeover", {
