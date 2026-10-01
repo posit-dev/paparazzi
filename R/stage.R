@@ -1,7 +1,7 @@
 # Staging: the per-page settings that make recorded runs watchable --
 # cursor visibility and glide speed, entrance side, natural typing, and
 # a hold after each action. Settings live on the page and persist across
-# recordings. Staging only animates WHILE RECORDING (stage_recording());
+# recordings. Staging only animates WHILE RECORDING (recorder_active());
 # without a recording the same chain runs straight to its final state,
 # except that a visible cursor (cursor = TRUE, or an explicit
 # pz_cursor_show()) is drawn statically for stills. Animation is
@@ -398,7 +398,7 @@ page_set_stage <- function(page, overrides) {
   invisible(page)
 }
 
-stage_recording <- function(page) {
+recorder_active <- function(page) {
   rec <- page_recorder(page)
   !is.null(rec) && isTRUE(rec$active)
 }
@@ -417,7 +417,7 @@ stage_move_cursor <- function(ctx, point) {
     }
     return(ctx_return(ctx))
   }
-  if (!stage_recording(page)) {
+  if (!recorder_active(page)) {
     cursor_apply(ctx, point)
     return(ctx_return(ctx))
   }
@@ -462,7 +462,7 @@ stage_scroll_into_view <- function(
   duration = NULL,
   call = caller_env()
 ) {
-  if (!stage_recording(ctx$page) || isTRUE(duration == 0)) {
+  if (!recorder_active(ctx$page) || isTRUE(duration == 0)) {
     return(el_scroll_into_view(els, call = call))
   }
   stage_wheel_into_view(ctx, els, duration = duration, call = call)
@@ -830,7 +830,7 @@ wheel_probe_js <- paste0(
 
 stage_action_pause <- function(ctx) {
   page <- ctx$page
-  if (!stage_recording(page)) {
+  if (!recorder_active(page)) {
     return(ctx_return(ctx))
   }
   pause <- page_stage(page)$pause

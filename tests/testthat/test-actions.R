@@ -131,7 +131,7 @@ test_that("the click effect resolves per call and styles only pz_act_click", {
 
   calls <- list()
   local_mocked_bindings(
-    stage_recording = function(page) TRUE,
+    recorder_active = function(page) TRUE,
     cursor_press = function(ctx, pressed) {
       calls <<- c(calls, list(list(kind = "press", pressed = pressed)))
       ctx_return(ctx)

@@ -301,7 +301,7 @@ annotate_pump <- function(ctx, duration) {
 }
 
 annotate_recording <- function(page) {
-  stage_recording(page) && !isTRUE(page_recorder(page)$paused)
+  recorder_active(page) && !isTRUE(page_recorder(page)$paused)
 }
 
 annotate_register_init <- function(ctx) {

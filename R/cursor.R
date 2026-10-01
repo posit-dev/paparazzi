@@ -146,7 +146,7 @@ pz_cursor_hide <- function(ctx, ...) {
   cur$resting <- FALSE
   if (!is.null(cur$x)) {
     cursor_draw(ctx, visible = FALSE)
-    if (stage_recording(ctx$page) && is.null(cur$off_frame)) {
+    if (recorder_active(ctx$page) && is.null(cur$off_frame)) {
       pump_loop(ctx$page$child_loop, CURSOR_FADE)
     }
   }
@@ -330,7 +330,7 @@ cursor_visible <- function(page) {
     visibility,
     shown = TRUE,
     hidden = FALSE,
-    auto = stage_recording(page) || isTRUE(stage$cursor)
+    auto = recorder_active(page) || isTRUE(stage$cursor)
   )
 }
 
@@ -556,7 +556,7 @@ cursor_apply <- function(
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
-  recording <- stage_recording(page)
+  recording <- recorder_active(page)
   state <- list(
     x = unname(point[["x"]]),
     y = unname(point[["y"]]),
@@ -630,7 +630,7 @@ cursor_draw <- function(ctx, visible, pressed = FALSE) {
       icon = cur$icon,
       pressed = pressed,
       duration = 0,
-      anim = stage_recording(ctx$page)
+      anim = recorder_active(ctx$page)
     )
   )
   cur$pressed <- pressed
@@ -642,7 +642,7 @@ cursor_rest <- function(ctx) {
   page <- ctx$page
   cur <- page_cursor_peek(page)
   if (
-    !stage_recording(page) ||
+    !recorder_active(page) ||
       !cursor_visible(page) ||
       is.null(cur$x) ||
       !is.null(cur$off_frame)
@@ -681,7 +681,7 @@ cursor_ring <- function(ctx, point, color) {
       icon = cur$icon,
       pressed = FALSE,
       duration = 0,
-      anim = stage_recording(ctx$page),
+      anim = recorder_active(ctx$page),
       ring = color
     )
   )

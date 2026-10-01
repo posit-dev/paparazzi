@@ -215,7 +215,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 
   if (is.null(target) && is.null(scope_top(ctx))) {
     if (
-      stage_recording(ctx$page) && isTRUE(page_stage(ctx$page)$camera_follow)
+      recorder_active(ctx$page) && isTRUE(page_stage(ctx$page)$camera_follow)
     ) {
       rect <- pz_js(
         ctx,
@@ -762,7 +762,7 @@ pz_act_scroll <- function(
   if (!is.null(scoped)) {
     check_scope_single(scoped)
   }
-  if (stage_recording(ctx$page) && !isTRUE(duration == 0)) {
+  if (recorder_active(ctx$page) && !isTRUE(duration == 0)) {
     scroll_staged(ctx, scoped, by, to, duration = duration)
     stage_action_pause(ctx)
     return(ctx_return(ctx))
@@ -1143,7 +1143,7 @@ dispatch_click <- function(
     clickCount = 0,
     call = call
   )
-  staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
   if (staged) {
     pump_loop(ctx$page$child_loop, 0.15)
     if (identical(effect, "press")) {
@@ -1190,7 +1190,7 @@ insert_text <- function(ctx, target, text, call = caller_env()) {
   page <- ctx$page
   stage <- page_stage(page)
   if (
-    stage_recording(page) &&
+    recorder_active(page) &&
       identical(stage$typing, "natural") &&
       nchar(text) > 1L
   ) {
@@ -1520,7 +1520,7 @@ dispatch_mouse_drag <- function(
   to,
   call = caller_env()
 ) {
-  staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
   pressed <- FALSE
   withr::defer({
     if (pressed) {
@@ -1620,7 +1620,7 @@ DRAG_START_NUDGE <- 12
 drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
-  staged <- stage_recording(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
   data <- NULL
   dereg <- session$Input$dragIntercepted(
     callback_ = function(msg) data <<- msg$data
