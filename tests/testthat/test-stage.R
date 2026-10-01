@@ -307,6 +307,97 @@ test_that("smooth scrolling uses real wheel events while recording", {
   page |> pz_record_stop()
 })
 
+test_that("staged root offsets and directions correct incomplete wheels", {
+  page <- local_cursor_page()
+  pz_js(page, "document.getElementById('spacer').style.width = '2000px'")
+  local_mocked_bindings(stage_wheel = function(...) invisible(TRUE))
+
+  scroll_staged(page, NULL, by = c(120, 300), to = NULL, duration = 0.01)
+  expect_equal(
+    unlist(pz_js(page, "[window.scrollX, window.scrollY]")),
+    c(120, 300)
+  )
+  scroll_staged(page, NULL, by = c(-40, -100), to = NULL, duration = 0.01)
+  expect_equal(
+    unlist(pz_js(page, "[window.scrollX, window.scrollY]")),
+    c(80, 200)
+  )
+  scroll_staged(
+    page,
+    NULL,
+    by = NULL,
+    to = c("right", "bottom"),
+    duration = 0.01
+  )
+  expect_equal(
+    unlist(pz_js(page, "[window.scrollX, window.scrollY]")),
+    unlist(pz_js(
+      page,
+      "[document.scrollingElement.scrollWidth - window.innerWidth, document.scrollingElement.scrollHeight - window.innerHeight]"
+    ))
+  )
+  scroll_staged(page, NULL, by = NULL, to = c("left", "top"), duration = 0.01)
+  expect_equal(unlist(pz_js(page, "[window.scrollX, window.scrollY]")), c(0, 0))
+})
+
+test_that("staged scoped fallback uses offsets and directions without root serialization", {
+  page <- local_cursor_page()
+  pz_js(page, "document.querySelector('#scroller > div').style.width = '600px'")
+  ctx <- pz_find(page, "#scroller")
+  scoped <- scope_connected(ctx)
+  local_mocked_bindings(
+    stage_wheel = function(...) invisible(TRUE),
+    scroll_arg_json = function(...) {
+      stop("root serialization used for scoped scroll")
+    }
+  )
+  position <- function() {
+    unlist(pz_js(
+      page,
+      "[document.getElementById('scroller').scrollLeft, document.getElementById('scroller').scrollTop]"
+    ))
+  }
+
+  scroll_staged(ctx, scoped, by = c(100, 200), to = NULL, duration = 0.01)
+  expect_equal(position(), c(100, 200))
+  scroll_staged(ctx, scoped, by = c(-40, -50), to = NULL, duration = 0.01)
+  expect_equal(position(), c(60, 150))
+  scroll_staged(ctx, scoped, by = NULL, to = "center", duration = 0.01)
+  expect_equal(position(), c(200, 325))
+  scroll_staged(ctx, scoped, by = NULL, to = c("left", "top"), duration = 0.01)
+  expect_equal(position(), c(0, 0))
+})
+
+test_that("a nested scroller obstructs a scoped wheel and stays untouched", {
+  page <- local_cursor_page()
+  pz_js(
+    page,
+    "(() => {
+    const outer = document.getElementById('scroller');
+    outer.style.position = 'fixed';
+    outer.firstElementChild.innerHTML = '<div id=inner-scroller style=\"position:sticky;top:0;width:200px;height:150px;overflow:auto\"><div style=\"height:1000px\"></div></div>';
+  })()"
+  )
+  ctx <- pz_find(page, "#scroller > div")
+  scroll_staged(
+    ctx,
+    scope_connected(ctx),
+    by = c(0, 200),
+    to = NULL,
+    duration = 0.01
+  )
+  expect_equal(
+    pz_js(page, "document.getElementById('scroller').scrollTop"),
+    200
+  )
+  expect_equal(
+    pz_js(page, "document.getElementById('inner-scroller').scrollTop"),
+    0
+  )
+  expect_equal(pz_js(page, "window.__log.wheels"), 0)
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+})
+
 test_that("pz_act_scroll duration overrides staged wheels for by, to, and target", {
   skip_if_no_av()
   page <- local_cursor_page()
