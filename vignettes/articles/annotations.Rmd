@@ -57,6 +57,8 @@ Here and below, each screenshot passes a [`pz_frame()`](../reference/pz_frame.ht
 page |> pz_annotate_clear()
 ```
 
+A mark is clipped wherever its target is. If a task row has scrolled out of the scrolling task list, its mark is cut off at the list's edge instead of being drawn over whatever sits below the list. A mark also hides while its target is hidden or removed from the page.
+
 ### Badges
 
 `label` adds a small badge to each mark. `label = TRUE` numbers the matches in document order, which is handy when a screenshot refers to "item 3":
@@ -96,7 +98,7 @@ page |> pz_annotate_clear()
 
 ## Callouts
 
-[`pz_annotate_callout()`](../reference/pz_annotate_callout.html) draws a bubble next to each matching element, repeating the same `text` for every match. `side` picks where the bubble goes: a cardinal side (`"top"`, `"right"`, `"bottom"`, `"left"`) or a diagonal like `"top right"`. The default, `NULL`, chooses the cardinal side with the most room. A bubble is kept inside the viewport even if that moves it off the requested side.
+[`pz_annotate_callout()`](../reference/pz_annotate_callout.html) draws a bubble next to each matching element, repeating the same `text` for every match. `side` picks where the bubble goes: a cardinal side (`"top"`, `"right"`, `"bottom"`, `"left"`) or a diagonal like `"top right"`. The default, `NULL`, chooses the cardinal side with the most room. A bubble is kept inside the viewport even if that moves it off the requested side. A callout hides while its target is hidden or scrolled out of view inside a scrolling container. If only part of the target is visible, the leader points at that part. The bubble itself is never cut off.
 
 A leader line runs from the bubble to the element, with an arrow at the element's end. `leader = FALSE` drops the line for a tooltip-style bubble, and `label` adds a badge just like on marks.
 
@@ -149,7 +151,7 @@ page |> pz_annotate_clear()
 
 ## Spotlight
 
-[`pz_annotate_spotlight()`](../reference/pz_annotate_spotlight.html) dims the whole page except for a rounded cutout around each target, so the reader's eye goes straight to what matters. `dim` sets the opacity of the black scrim from 0 (transparent) to 1 (black), defaulting to 0.6, and `pad` grows the cutouts. A list of targets gets one cutout each.
+[`pz_annotate_spotlight()`](../reference/pz_annotate_spotlight.html) dims the whole page except for a rounded cutout around each target, so the reader's eye goes straight to what matters. `dim` sets the opacity of the black scrim from 0 (transparent) to 1 (black), defaulting to 0.6, and `pad` grows the cutouts. A list of targets gets one cutout each. A cutout only opens over the visible part of its target, so a target scrolled out of a scrolling container gets no cutout.
 
 ```{r spotlight, fig.alt = "The task tracker dimmed to near-black, with bright cutouts around the title field and the Add button."}
 page |>
@@ -191,7 +193,7 @@ page |>
 page |> pz_annotate_clear()
 ```
 
-Use fill for real secrets: blur can leave short text partly legible, and a fill stays opaque even if you give it a translucent color. A redaction covers each element's border box plus `pad`, but not content overflowing the element, so redact the element that actually overflows or add padding. Redactions follow axis-aligned overflow clipping (not custom `overflow-clip-margin`) and hide if their target disconnects or stops rendering. Redactions draw instantly, so add them *before* starting a recording: frames captured earlier can already contain the text.
+Use fill for real secrets: blur can leave short text partly legible, and a fill stays opaque even if you give it a translucent color. A redaction covers each element's border box plus `pad`, but not content overflowing the element, so redact the element that actually overflows or add padding. Like marks, redactions are clipped by scrolling containers and hide if their target is hidden or removed. Clipping follows `overflow` but not a custom `overflow-clip-margin`. Redactions draw instantly, so add them *before* starting a recording: frames captured earlier can already contain the text.
 
 ## Captions
 
