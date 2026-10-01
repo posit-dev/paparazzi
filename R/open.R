@@ -87,7 +87,6 @@ pz_open <- function(
 
   if (inherits(x, "ChromoteSession")) {
     page <- PaparazziPage$new(session = x, timeout = timeout)
-    # Device settings apply before anything else touches the page.
     device_open(page, device_dots)
     if (identical(wait, "shiny")) {
       pz_wait_for_shiny_idle(page, timeout = page$default_timeout)
@@ -118,14 +117,9 @@ pz_open <- function(
     shared_app = shared_app
   )
   owned_app <- NULL
-  # If device settings, navigation, or the load wait fail, don't leak
-  # the browser this call just created. The wrap branch above must not
-  # register this: the caller owns that session.
   ok <- FALSE
   withr::defer(if (!ok) try(page$close(), silent = TRUE))
 
-  # Applied before navigating, so media queries and layout are right at
-  # first render.
   device_open(page, device_dots)
 
   navigated <- if (identical(wait, "shiny")) {
@@ -235,8 +229,6 @@ pz_close <- function(page) {
 pz_with_page <- function(x, code, ...) {
   page <- if (is_pz_page(x)) x else pz_open(x, ...)
   withr::defer(pz_close(page))
-  # Decide expression-vs-function from the quoted form: a braced block is
-  # always an expression, even when its value happens to be a function.
   expr <- substitute(code)
   value <- eval(expr, envir = parent.frame())
   is_block <- is.call(expr) && identical(expr[[1]], quote(`{`))
@@ -306,8 +298,6 @@ open_target_url <- function(x, call = caller_env()) {
       call = call
     )
   }
-  # file.exists() comes before the scheme regex: Windows drive paths like
-  # "C:/..." look like a URL scheme to it.
   if (file.exists(x)) {
     return(file_url(x))
   }
@@ -325,8 +315,6 @@ open_target_url <- function(x, call = caller_env()) {
   )
 }
 
-# Standalone app files: app.R and the runnable app-*.R/app_*.R and
-# *-app.R/*_app.R variants. ui.R/server.R require their containing directory.
 is_shiny_app_file <- function(name) {
   if (name %in% c("app.R", "app.r")) {
     return(TRUE)
@@ -341,7 +329,6 @@ file_url <- function(path) {
   enc <- map_chr(
     segs,
     function(seg) {
-      # Leave Windows drive letters ("C:") alone; encode everything else.
       if (grepl("^[A-Za-z]:$", seg)) {
         seg
       } else {
@@ -360,8 +347,6 @@ wait_for_load <- function(page, timeout, call = caller_env()) {
   deadline <- Sys.time() + timeout
   pz_poll(
     fn = function() {
-      # Give each readyState check only the remaining budget, so a stalled
-      # renderer can't stretch the load wait beyond its own timeout.
       remaining <- as.numeric(difftime(deadline, Sys.time(), units = "secs"))
       isTRUE(tryCatch(
         pz_js(
