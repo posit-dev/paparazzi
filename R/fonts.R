@@ -315,10 +315,7 @@ fonts_ensure_session <- function(session, fonts, timeout) {
   if (!length(fonts)) {
     return(list())
   }
-  spec <- jsonlite::toJSON(
-    lapply(fonts, font_face_spec),
-    auto_unbox = TRUE
-  )
+  spec <- js_literal(lapply(fonts, font_face_spec))
   res <- cdp_call(
     session$Runtime$evaluate(
       paste0("(", FONTS_ENSURE_JS, ")(", spec, ")"),
@@ -383,7 +380,7 @@ fonts_needed <- function(session, fonts, timeout) {
         "(",
         FONTS_NEEDED_JS,
         ")(",
-        jsonlite::toJSON(pairs, auto_unbox = TRUE),
+        js_literal(pairs),
         ")"
       ),
       returnByValue = TRUE,

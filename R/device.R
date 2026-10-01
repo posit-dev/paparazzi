@@ -290,7 +290,7 @@ device_apply_css_zoom <- function(page, state, register = TRUE) {
         page,
         paste0(
           "document.documentElement.style.zoom = ",
-          jsonlite::toJSON(saved, auto_unbox = TRUE)
+          js_literal(saved)
         )
       )
     }
