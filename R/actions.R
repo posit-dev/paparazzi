@@ -1,3 +1,11 @@
+# The pointer and keyboard actions. Input goes through CDP's Input
+# domain -- real trusted events, never JS .click() substitutes. The one
+# sanctioned exception is element focus()/blur() in pz_act_focus()/pz_act_blur()
+# (element-state methods, not input events; Playwright does the same).
+# Value and file setting is DOM state, not pointer input: the native
+# prototype setters plus dispatched events (pz_set_value()), and
+# DOM.setFileInputFiles (pz_set_files()).
+
 #' How actions work
 #'
 #' @description
