@@ -811,7 +811,8 @@ test_that("the stage pause holds after root typing without a target", {
 test_that("the stage pause holds after press, select_text, and drag too", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_stage(pause = 0.5)
+  pause <- 0.37
+  page |> pz_stage(pause = pause)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -831,17 +832,17 @@ test_that("the stage pause holds after press, select_text, and drag too", {
   )
 
   page |> pz_act_press("a")
-  expect_equal(tail(holds, 1), 0.5)
+  expect_equal(tail(holds, 1), pause)
   expect_equal(pz_get_value(page, target = "#name"), "a")
 
   holds <- numeric()
   page |> pz_act_select_text("Go", target = "#btn")
-  expect_equal(tail(holds, 1), 0.5)
+  expect_equal(tail(holds, 1), pause)
   expect_equal(pz_js(page, "window.getSelection().toString()"), "Go")
 
   holds <- numeric()
   page |> pz_act_drag("#plain", by = c(50, 0))
-  expect_equal(tail(holds, 1), 0.5)
+  expect_equal(tail(holds, 1), pause)
 
   page |> pz_record_stop()
 })

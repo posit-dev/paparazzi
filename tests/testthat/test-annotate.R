@@ -295,6 +295,13 @@ test_that("recorded clear removes all nodes after mixed exit animations", {
     loop = page$child_loop,
     what = "the mixed exit animations to remove all annotation nodes"
   )
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
+    ),
+    0
+  )
   pz_record_stop(page)
 })
 

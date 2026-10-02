@@ -1579,6 +1579,50 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
   pz_record_stop(page)
 })
 
+test_that("HTML5 carry checkpoints dispatch dragenter in path order", {
+  skip_if_no_av()
+  page <- local_page(pz_example("tasks"), width = 800, height = 900)
+  page |> pz_stage(pause = 0)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  pz_js(
+    page,
+    "window.__enteredRows = [];
+     document.addEventListener('dragenter', e => {
+       const row = e.target.closest('.task');
+       if (row) window.__enteredRows.push(row.querySelector('.task-title').textContent.trim());
+     });"
+  )
+  # Fixed checkpoints separate event dispatch from live capture cadence.
+  local_mocked_bindings(
+    stage_drag_carry = function(ctx, from, to, step) {
+      for (target in c(
+        ".task:nth-child(4)",
+        ".task:nth-child(3)",
+        ".task:nth-child(2)"
+      )) {
+        step(setNames(element_center(ctx, target), c("x", "y")))
+      }
+    }
+  )
+  pz_act_drag(page, ".task:nth-child(5)", ".task:first-child")
+  entered <- unlist(pz_js(page, "window.__enteredRows"))
+  intermediate <- c(
+    "Return library books",
+    "Book dentist appointment",
+    "File tax return"
+  )
+  expect_equal(unique(entered[entered %in% intermediate]), intermediate)
+  expect_equal(
+    pz_js(
+      page,
+      "document.querySelector('.task:first-child .task-title').textContent.trim()"
+    ),
+    "Water the plants"
+  )
+  pz_record_stop(page)
+})
+
 test_that("a failed staged mouse press does not dispatch a stray mouseup", {
   skip_if_no_av()
   page <- local_advanced_page()

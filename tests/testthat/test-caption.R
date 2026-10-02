@@ -593,6 +593,51 @@ test_that("clearing all logs the caption clear before mark fades pump", {
   pz_record_stop(page)
 })
 
+test_that("a two-tick caption burns only into its encoded output window", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  image <- file.path(dir, "white.png")
+  video <- file.path(dir, "caption.mp4")
+  png::writePNG(array(1, c(240, 320, 3)), image)
+  rec <- new_recorder(video, "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+  rec$files <- rep(image, 10)
+  rec$times <- (0:9) / 10
+  rec$vt_end <- 1
+  rec$camera_viewport_width <- 320
+  rec$captions <- list(
+    list(
+      vt = 0.3,
+      caption = list(
+        text = "BLINK",
+        side = "bottom",
+        color = "white",
+        font_family = "sans-serif",
+        font_size = 20
+      )
+    ),
+    list(vt = 0.42, caption = NULL)
+  )
+  record_encode(rec, page$page)
+
+  frames <- av_video_images_quiet(
+    video,
+    destdir = file.path(dir, "decoded"),
+    format = "png"
+  )
+  dark <- vapply(
+    frames,
+    function(frame) {
+      img <- png::readPNG(frame)
+      rows <- round(dim(img)[1] * 0.8):dim(img)[1]
+      any(img[rows, , 1] < 0.4)
+    },
+    logical(1)
+  )
+  expect_equal(unname(which(dark)), c(4L, 5L))
+})
+
 test_that("key callout windows replace and expire on output ticks", {
   rec <- new_recorder(
     tempfile(fileext = ".mp4"),
