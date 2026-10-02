@@ -1599,6 +1599,35 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
   pz_record_stop(page)
 })
 
+test_that("a failed staged HTML5 carry restores the resting cursor icon", {
+  skip_if_no_av()
+  page <- local_page(pz_example("tasks"), width = 800, height = 900)
+  page |> pz_stage(pause = 0)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+
+  source <- ".task:nth-child(5) .task-drag-handle"
+  target <- ".task:first-child .task-drag-handle"
+  page |> pz_cursor_move(source, duration = 0)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "grab")
+
+  local_mocked_bindings(
+    stage_drag_carry = function(ctx, from, to, step) {
+      cli::cli_abort("simulated carry failure")
+    }
+  )
+  expect_error(pz_act_drag(page, source, target), "simulated carry failure")
+  expect_false(page_cursor(page)$pressed)
+  expect_false(
+    pz_js(
+      page,
+      "document.querySelector('.task-list').classList.contains('dragging')"
+    )
+  )
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "grab")
+  pz_record_stop(page)
+})
+
 test_that("HTML5 carry checkpoints dispatch dragenter in path order", {
   skip_if_no_av()
   page <- local_page(pz_example("tasks"), width = 800, height = 900)

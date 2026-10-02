@@ -1660,8 +1660,31 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
         silent = TRUE
       )
     }
+    if (!is.null(data)) {
+      cur <- page_cursor(ctx$page)
+      try(
+        session$Input$dispatchDragEvent(
+          type = "dragCancel",
+          x = cur$x %||% from[["x"]],
+          y = cur$y %||% from[["y"]],
+          data = data,
+          timeout_ = timeout
+        ),
+        silent = TRUE
+      )
+    }
     if (isTRUE(page_cursor(ctx$page)$pressed)) {
-      try(cursor_press(ctx, FALSE), silent = TRUE)
+      cur <- page_cursor(ctx$page)
+      if (
+        staged && cursor_drawn(ctx$page) && !is.null(cur$x) && !is.null(cur$y)
+      ) {
+        try(
+          cursor_apply(ctx, c(x = cur$x, y = cur$y), pressed = FALSE),
+          silent = TRUE
+        )
+      } else {
+        try(cursor_press(ctx, FALSE), silent = TRUE)
+      }
     }
   })
 
@@ -1782,6 +1805,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
       )
     )
   }
+  data <- NULL
   # The swallowed release doesn't move the page-visible pointer, so a
   # trailing unheld move to the destination settles it there.
   if (staged) {
