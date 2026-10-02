@@ -232,7 +232,7 @@ test_that("stills sync box after immediate shift and hide inspect outlines", {
 })
 
 test_that("a recorded fade settles into captured frames and clears in reverse", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   skip_if_not_installed("png")
   page <- annotation_page()
   path <- withr::local_tempfile(fileext = ".mp4")
@@ -277,7 +277,7 @@ test_that("a recorded fade settles into captured frames and clears in reverse", 
 })
 
 test_that("recorded clear removes all nodes after mixed exit animations", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   page <- annotation_page()
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
@@ -311,7 +311,7 @@ test_that("recorded clear removes all nodes after mixed exit animations", {
 })
 
 test_that("recorded clear logs the caption clear before marks fade out", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   page <- annotation_page()
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
@@ -329,7 +329,7 @@ test_that("recorded clear logs the caption clear before marks fade out", {
 })
 
 test_that("paused recording skips fade on draw and clear", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   page <- annotation_page()
   path <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(path, fps = 10, hold = c(0, 0)) |> pz_record_pause()
@@ -1280,7 +1280,7 @@ test_that("blur changes text pixels and hides when target stops rendering", {
 })
 
 test_that("poll captures started after redaction returns are covered", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   skip_if_not_installed("png")
   page <- annotation_page()
   path <- withr::local_tempfile(fileext = ".mp4")
@@ -1449,7 +1449,7 @@ test_that("all reveals show sampled entry and reverse exit frames", {
 })
 
 test_that("a recorded wipe becomes visible in captured frames and clears", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   skip_if_not_installed("png")
   page <- annotation_page()
   path <- withr::local_tempfile(fileext = ".mp4")
@@ -1518,7 +1518,7 @@ test_that("draw leaves badge visible and removes it at start of reverse", {
 })
 
 test_that("default reveals animate entry and reverse clear during recording", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   page <- annotation_page()
   path <- withr::local_tempfile(fileext = ".mp4")
   pz_js(

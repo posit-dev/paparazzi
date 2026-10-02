@@ -432,7 +432,7 @@ test_that("arrow paints between bubble and target in a still", {
 })
 
 test_that("idle and paused callouts do not run reveal animations", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   page <- callout_page()
   page |> pz_annotate_callout("No animation", target = "#target", id = "tip")
   expect_identical(

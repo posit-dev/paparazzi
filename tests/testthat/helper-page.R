@@ -1,4 +1,5 @@
 skip_if_no_chrome <- function() {
+  testthat::skip_on_cran()
   testthat::skip_if(
     is.null(tryCatch(chromote::find_chrome(), error = function(e) NULL)),
     "Chrome not available"

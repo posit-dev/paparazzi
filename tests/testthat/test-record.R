@@ -385,7 +385,7 @@ test_that("named video resolves from final Quarto HTML", {
 
 test_that("knitted recordings return media only at completion", {
   skip_if_not_installed("knitr")
-  skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   skip_if_no_av()
   prior_format <- knitr::opts_knit$get("rmarkdown.pandoc.to")
   withr::defer(knitr::opts_knit$set(rmarkdown.pandoc.to = prior_format))
@@ -441,7 +441,7 @@ test_that("knitted recordings return media only at completion", {
 
 test_that("knitted recording chains stop at the end of their expression", {
   skip_if_not_installed("knitr")
-  skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   skip_if_no_av()
   prior_format <- knitr::opts_knit$get("rmarkdown.pandoc.to")
   withr::defer(knitr::opts_knit$set(rmarkdown.pandoc.to = prior_format))
@@ -545,7 +545,7 @@ test_that("interactive recordings without a path preview in the viewer", {
   expect_true(file.exists(file.path(dirname(viewed), basename(preview$value))))
 
   out <- withr::local_tempfile(fileext = ".gif")
-  skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   chain <- pz_record_start(page, out, fps = 5, hold = c(0, 0)) |>
     pz_wait(0.1)
   print(chain)
@@ -709,7 +709,7 @@ test_that("frames are resampled to the requested constant fps", {
 
 test_that("gif encodes via gifski", {
   page <- local_record_page()
-  testthat::skip_if_not_installed("gifski")
+  skip_if_no_gifski()
 
   out <- withr::local_tempfile(fileext = ".gif")
   page |> pz_record(out, pz_wait(page, 0.4), fps = 10, hold = c(0.2, 0.2))
@@ -724,7 +724,7 @@ test_that("gif encodes via gifski", {
 })
 
 test_that("framed GIFs give gifski losslessly cropped unique captures", {
-  testthat::skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   testthat::skip_if_not_installed("png")
   page <- local_record_page()
   pz_js(
@@ -794,7 +794,7 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
 })
 
 test_that("GIF frame crops preserve alpha and crop unique PNGs", {
-  testthat::skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   testthat::skip_if_not_installed("png")
   source <- withr::local_tempfile(fileext = ".png")
   image <- array(seq(0, 1, length.out = 5 * 5 * 4), c(5, 5, 4))
@@ -833,7 +833,7 @@ test_that("GIF frame crops preserve alpha and crop unique PNGs", {
 })
 
 test_that("unframed GIFs of odd size go to gifski uncropped", {
-  testthat::skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   testthat::skip_if_not_installed("png")
   source <- withr::local_tempfile(fileext = ".png")
   png::writePNG(array(0.5, c(5, 7, 3)), source)
@@ -2042,7 +2042,7 @@ test_that("screencast uses CSS-size frames and crops at their actual resolution"
 test_that("screencast encodes framed, scaled webm and gif outputs", {
   page <- local_record_page()
   skip_if_no_av()
-  testthat::skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   testthat::skip_if_not_installed("png")
 
   for (ext in c("webm", "gif")) {

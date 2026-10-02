@@ -284,6 +284,7 @@ test_that("the object group release turns stale contexts into detach errors", {
 })
 
 test_that("closing the page releases the object group", {
+  skip_if_no_chrome()
   page <- pz_open(elements_fixture_file())
   ctx <- pz_find(page, ".btn")
   object_id <- ctx$scope[[1]]$object_id

@@ -376,10 +376,7 @@ test_that("static inputs and reserved dots are validated", {
 
 test_that("Quarto document handles own independent processes and shared pages", {
   skip_if_no_chrome()
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
@@ -421,10 +418,7 @@ test_that("Quarto document handles own independent processes and shared pages", 
 
 test_that("pz_open owns a one-off Quarto document preview", {
   skip_if_no_chrome()
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
@@ -447,10 +441,7 @@ test_that("Quarto renders R Markdown with knitr", {
   skip_if_no_chrome()
   skip_if_not_installed("knitr")
   skip_if_not_installed("rmarkdown")
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.Rmd")
   writeLines(
@@ -477,10 +468,7 @@ test_that("Quarto renders R Markdown with knitr", {
 
 test_that("Quarto projects use their output URL", {
   skip_if_no_chrome()
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   writeLines(
     c("project:", "  type: website", "format: html"),
@@ -498,10 +486,7 @@ test_that("Quarto projects use their output URL", {
 })
 
 test_that("Quarto finalizers stop the process tree", {
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
@@ -539,10 +524,7 @@ test_that("Quarto paths, rendering, and dots are validated", {
 })
 
 test_that("Quarto startup failures include logs and release the port", {
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   path <- file.path(dir, "broken.qmd")
   writeLines(c("---", "format: nonexistent-format", "---", "Broken"), path)
@@ -558,10 +540,7 @@ test_that("Quarto startup failures include logs and release the port", {
 
 test_that("new_quarto constructs even when its port already has a listener", {
   skip_if_not_installed("httpuv")
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
@@ -577,10 +556,7 @@ test_that("new_quarto constructs even when its port already has a listener", {
 
 test_that("Quarto preflight exhaustion reports no nonexistent child log", {
   skip_if_not_installed("httpuv")
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
@@ -599,10 +575,7 @@ test_that("Quarto preflight exhaustion reports no nonexistent child log", {
 
 test_that("Quarto preflight retries a port takeover", {
   skip_if_not_installed("httpuv")
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
@@ -691,10 +664,7 @@ test_that("static file URLs encode literal percent signs and reserved characters
 })
 
 test_that("Quarto startup timeouts clean up the process tree", {
-  skip_if(
-    is.null(tryCatch(quarto_cli(), error = function(e) NULL)),
-    "Quarto CLI not available"
-  )
+  skip_if_no_quarto()
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)

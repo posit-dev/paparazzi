@@ -15,6 +15,10 @@
 1. **Internal helpers are undocumented by default.** No roxygen; an unusually
    complicated helper may have a short block ending in `@noRd`.
 1. **Test files mirror source files.** `R/foo.R` -> `tests/testthat/test-foo.R`.
+1. **Browser, Quarto, Shiny, and av/gifski tests skip on CRAN.** Use the
+   `skip_if_no_*()` helpers in `tests/testthat/helper-*.R`; they call
+   `skip_on_cran()`. Without `NOT_CRAN=true` (set by devtools/CI),
+   `setup-cran-guard.R` turns any missed skip into a hard failure.
 1. **Use `cli` for errors and messages:** `cli::cli_abort()` for errors,
    `cli::cli_inform()`/`cli::cat_line()` for output; cli markup (`{.arg}`,
    `{.val}`, `{.fn}`) over `sprintf()`.
