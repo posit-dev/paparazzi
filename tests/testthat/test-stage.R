@@ -415,7 +415,7 @@ test_that("a nested scroller obstructs a scoped wheel and stays untouched", {
   expect_equal(pz_js(page, "window.scrollY"), 0)
 })
 
-test_that("pz_act_scroll duration overrides staged wheels for by, to, and target", {
+test_that("pz_act_scroll forwards duration to staged wheels for by, to, and target", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |> pz_stage(cursor_speed = 500)
@@ -426,12 +426,12 @@ test_that("pz_act_scroll duration overrides staged wheels for by, to, and target
       hold = c(0, 0)
     )
 
+  # Native wheel delivery is covered separately; isolate duration forwarding.
   wheel_durations <- numeric()
-  original_wheel <- stage_wheel
   testthat::local_mocked_bindings(
     stage_wheel = function(ctx, point, dx, dy, duration, call = caller_env()) {
       wheel_durations <<- c(wheel_durations, duration)
-      original_wheel(ctx, point, dx, dy, duration, call = call)
+      invisible(TRUE)
     }
   )
 
