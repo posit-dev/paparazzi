@@ -1234,6 +1234,11 @@ test_that("recorded clicks reach above- and below-fold buttons at DPR 2", {
   })()"
   )
 
+  # Frames cover the visual viewport, which classic scrollbars (CI's
+  # headless Chrome) shrink below the 640x560 device size; measure it
+  # live instead of hardcoding 1280x1120.
+  viewport_size <- record_viewport_png_size(page)
+
   out <- withr::local_tempfile(fileext = ".mp4")
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   withr::defer(unlink(frames_dir, recursive = TRUE))
@@ -1246,12 +1251,14 @@ test_that("recorded clicks reach above- and below-fold buttons at DPR 2", {
   pz_record_stop(page)
 
   expect_equal(unlist(pz_js(page, "window.recordClicks")), targets)
-  files <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
+  files <- sort(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE))
   expect_gt(length(files), 0)
-  for (file in files) {
-    expect_equal(png_dimensions(file), c(1280L, 1120L))
-  }
-  expect_equal(recorded_video_info(out)$width, 1280)
+  expect_frame_files_size(files, viewport_size)
+  # yuv420p aligns the width down to a multiple of 4.
+  expect_equal(
+    recorded_video_info(out)$width,
+    floor(viewport_size[[1]] / 4) * 4
+  )
 })
 
 test_that("framed DPR-2 recordings retain viewport frames and click targets", {
@@ -1267,6 +1274,11 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
     return true;
   })()"
   )
+
+  # Frames cover the visual viewport at the device density, measured
+  # live so classic-scrollbar platforms (CI's headless Chrome) don't
+  # need the overlay-scrollbar size 1280x1120.
+  viewport_size <- record_viewport_png_size(page)
 
   out <- withr::local_tempfile(fileext = ".mp4")
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
@@ -1289,14 +1301,13 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
     unlist(pz_js(page, "window.recordClicks")),
     rep(c("task-title", "add-task"), 4)
   )
-  files <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
+  files <- sort(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE))
   expect_gt(length(files), 0)
-  for (file in files) {
-    expect_equal(png_dimensions(file), c(1280L, 1120L))
-  }
+  expect_frame_files_size(files, viewport_size)
   info <- recorded_video_info(out)
-  expect_lt(info$width, 1280)
-  expect_lt(info$height, 1120)
+  # The frame crop is smaller than the full viewport it came from.
+  expect_lt(info$width, viewport_size[[1]])
+  expect_lt(info$height, viewport_size[[2]])
 })
 
 test_that("a device hold skips capture ticks and clears on exit", {
@@ -1405,6 +1416,16 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
   skip_if_no_av()
   skip_if_not_installed("png")
   page <- local_record_page()
+  # Styled scrollbars exercise classic gutters on overlay-scrollbar platforms.
+  pz_js(
+    page,
+    "(() => {
+    const style = document.createElement('style');
+    style.textContent = '::-webkit-scrollbar { width: 15px; height: 15px }';
+    document.head.appendChild(style);
+    return true;
+  })()"
+  )
   pz_js(
     page,
     "(() => {
@@ -1412,6 +1433,7 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
     return true;
   })()"
   )
+  frames_in <- function() page_recorder(page)$files
 
   for (method in c("css", "viewport")) {
     pz_device(page, width = 640, height = 560, zoom = 2, zoom_method = method)
@@ -1421,10 +1443,21 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
     withr::defer(unlink(frames_dir, recursive = TRUE))
     pz_record_start(page, out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
     defer_record_stop(page)
-    pz_wait(page, 0.3)
-    before <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
+
+    viewport_size <- record_viewport_png_size(page)
+    pz_poll(
+      function() {
+        files <- frames_in()
+        length(files) > 0 &&
+          identical(png_dimensions(tail(files, 1)), viewport_size)
+      },
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a frame at the scrolled-back-to-top viewport"
+    )
+    before <- frames_in()
     expect_gt(length(before), 0)
-    expect_equal(png_dimensions(tail(before, 1)), c(1280L, 1120L))
+    expect_equal(png_dimensions(tail(before, 1)), viewport_size)
     expect_equal(
       as.numeric(png::readPNG(tail(before, 1))[10, 10, 1:3]),
       c(1, 0, 0)
@@ -1433,12 +1466,21 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
     pz_js(page, "window.scrollTo(650, 1100)")
     expect_gt(pz_js(page, "window.scrollX"), 0)
     expect_gt(pz_js(page, "window.scrollY"), 0)
-    pz_wait(page, 0.3)
-    scrolled <- setdiff(
-      list.files(frames_dir, pattern = "[.]png$", full.names = TRUE),
-      before
+    pz_poll(
+      function() {
+        new <- setdiff(frames_in(), before)
+        if (!length(new)) {
+          return(FALSE)
+        }
+        pixel <- as.numeric(png::readPNG(tail(new, 1))[10, 10, 1:3])
+        isTRUE(all.equal(pixel, c(0, 128 / 255, 0), tolerance = 1 / 255))
+      },
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a frame showing the scrolled viewport"
     )
-    expect_gt(length(scrolled), 0)
+    scrolled <- setdiff(frames_in(), before)
+    expect_equal(png_dimensions(tail(scrolled, 1)), viewport_size)
     expect_equal(
       as.numeric(png::readPNG(tail(scrolled, 1))[10, 10, 1:3]),
       c(0, 128 / 255, 0),
@@ -1446,27 +1488,66 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
     )
 
     pz_device(page, width = 800, height = 600)
+    resized_size <- record_viewport_png_size(page)
     pz_poll(
       function() {
-        resized <- setdiff(
-          list.files(frames_dir, pattern = "[.]png$", full.names = TRUE),
-          c(before, scrolled)
-        )
-        length(resized) > 0 &&
-          identical(png_dimensions(tail(resized, 1)), c(1600L, 1200L))
+        new <- setdiff(frames_in(), c(before, scrolled))
+        length(new) > 0 &&
+          identical(png_dimensions(tail(new, 1)), resized_size)
       },
       timeout = 5,
       loop = page$page$child_loop,
       what = "a frame at the resized viewport"
     )
-    resized <- setdiff(
-      list.files(frames_dir, pattern = "[.]png$", full.names = TRUE),
-      c(before, scrolled)
-    )
+    resized <- setdiff(frames_in(), c(before, scrolled))
     expect_gt(length(resized), 0)
-    expect_equal(png_dimensions(tail(resized, 1)), c(1600L, 1200L))
+    expect_equal(png_dimensions(tail(resized, 1)), resized_size)
     pz_record_stop(page)
   }
+})
+
+test_that("classic scrollbars shrink captured frames to the visual viewport", {
+  skip_if_no_av()
+  page <- local_record_page()
+  # Styled scrollbars exercise classic gutters on overlay-scrollbar platforms.
+  pz_js(
+    page,
+    "(() => {
+    const style = document.createElement('style');
+    style.textContent = '::-webkit-scrollbar { width: 15px; height: 15px }';
+    document.head.appendChild(style);
+    document.body.insertAdjacentHTML('beforeend', '<div style=\"position:absolute;left:0;top:0;width:3000px;height:3000px\"></div>');
+    return true;
+  })()"
+  )
+  pz_device(page, width = 640, height = 560)
+  # The fixture reserved gutter space: the visual viewport is smaller
+  # than the window on every scrollbar style.
+  expect_lt(
+    pz_js(page, "window.visualViewport.width"),
+    pz_js(page, "window.innerWidth")
+  )
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
+  pz_record_start(page, out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
+  defer_record_stop(page)
+  viewport_size <- record_viewport_png_size(page)
+  pz_poll(
+    function() {
+      files <- page_recorder(page)$files
+      length(files) > 0 &&
+        identical(png_dimensions(tail(files, 1)), viewport_size)
+    },
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "the first recording frames"
+  )
+  files <- page_recorder(page)$files
+  expect_gt(length(files), 0)
+  expect_frame_files_size(files, viewport_size)
+  pz_record_stop(page)
 })
 
 test_that("framed recordings reject viewport resizes and can record again", {

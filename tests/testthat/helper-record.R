@@ -6,6 +6,27 @@ local_record_page <- function(.env = parent.frame()) {
   local_page(record_fixture_file(), .env = .env)
 }
 
+# Classic scrollbars reduce the visual viewport; zoom changes its pixel density.
+record_viewport_png_size <- function(page) {
+  size <- unlist(pz_js(
+    page,
+    "[window.visualViewport.width, window.visualViewport.height]"
+  ))
+  as.integer(round(size * page_dpr(page)))
+}
+
+expect_frame_files_size <- function(files, size) {
+  dims <- matrix(
+    unlist(lapply(files, png_dimensions), use.names = FALSE),
+    ncol = 2,
+    byrow = TRUE
+  )
+  testthat::expect_equal(
+    dims,
+    matrix(size, nrow = length(files), ncol = 2, byrow = TRUE)
+  )
+}
+
 # Register after a keep_frames unlink defer: defers run LIFO, so the
 # recorder stops before its frames dir goes, even when the test fails
 # mid-recording. A late capture would otherwise write into the deleted dir.

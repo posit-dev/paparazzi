@@ -536,17 +536,25 @@ test_that("files whose names end in app.R variants open fine", {
 
 test_that("file_url percent-encodes special characters", {
   dir <- withr::local_tempdir()
-  weird <- file.path(dir, "my page #1?.html")
+  weird <- file.path(dir, "my page #1.html")
   file.create(weird)
   url <- file_url(weird)
   expect_match(url, "^file:///")
-  expect_match(url, "my%20page%20%231%3F.html", fixed = TRUE)
+  expect_match(url, "my%20page%20%231.html", fixed = TRUE)
   expect_no_match(url, "#")
 
   skip_if_no_chrome()
   page <- pz_open(url)
   withr::defer(pz_close(page))
   expect_match(pz_js(page, "location.protocol"), "file:")
+})
+
+test_that("file_url encodes question marks where filenames allow them", {
+  skip_on_os("windows")
+  dir <- withr::local_tempdir()
+  weird <- file.path(dir, "page?.html")
+  file.create(weird)
+  expect_match(file_url(weird), "page%3F.html", fixed = TRUE)
 })
 
 test_that("file_url encodes literal percent signs in file names", {
