@@ -190,7 +190,7 @@ invisibly and never stop a recording.
 
 ``` r
 if (FALSE) { # paparazzi:::examples_run("av")
-page <- pz_open(pz_example("tasks"), width = 800, height = 600)
+page <- pz_open(pz_example("tasks"), width = 800, height = 900)
 path <- file.path(tempdir(), "help.mp4")
 
 # Record the help panel opening, cropped to the page's card
