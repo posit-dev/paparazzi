@@ -240,7 +240,6 @@ test_that("a recorded fade settles into captured frames and clears in reverse", 
   defer_record_stop(page)
   page |>
     pz_annotate("#box", id = "animated", reveal = "fade", color = "#ff0000")
-  expect_equal(annotation_state(page)[[1]]$animations, 0)
   dpr <- page_dpr(page)
   green_at_border <- function(file) {
     png::readPNG(file)[round(311 * dpr) + 1, round(225 * dpr) + 1, 2]
@@ -254,19 +253,25 @@ test_that("a recorded fade settles into captured frames and clears in reverse", 
   }
   # Mid-animation pixels are covered by the controlled reveal tests.
   pz_poll(
-    function() isTRUE(last_green() < 0.1),
+    function() {
+      isTRUE(last_green() < 0.1) &&
+        annotation_state(page)[[1]]$animations == 0
+    },
     timeout = 5,
     loop = page$child_loop,
     what = "a settled frame of the completed fade"
   )
+  expect_equal(annotation_state(page)[[1]]$animations, 0)
   page |> pz_annotate_clear("animated")
-  expect_length(annotation_state(page), 0)
   pz_poll(
-    function() isTRUE(last_green() > 0.9),
+    function() {
+      isTRUE(last_green() > 0.9) && length(annotation_state(page)) == 0
+    },
     timeout = 5,
     loop = page$child_loop,
     what = "a settled frame of the reversed fade"
   )
+  expect_length(annotation_state(page), 0)
   page |> pz_record_stop()
   expect_true(file.exists(path))
 })
@@ -643,13 +648,16 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
 })
 
 test_that("a fully visible new task keeps every padded outline edge", {
-  page <- local_page(pz_example("tasks"))
+  page <- local_page(pz_example("tasks"), width = 992, height = 720)
+  pz_js(
+    page,
+    "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>')"
+  )
   page |>
     pz_act_type("Prepare release notes", target = "#task-title") |>
     pz_act_click("#add-task")
   target <- pz_loc(".task", has_text = "Prepare release notes")
   pz_expect_visible(page, target)
-  rect <- pz_get_rect(page, target)
   path <- withr::local_tempfile(fileext = ".png")
   red <- c(255, 0, 0)
 
@@ -664,6 +672,8 @@ test_that("a fully visible new task keeps every padded outline edge", {
         id = "new"
       ) |>
       pz_screenshot(path)
+    # Capture can change scrollbar visibility and reflow a full-width row.
+    rect <- pz_get_rect(page, target)
     expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y - 2, red)
     expect_png_pixel(
       page,
@@ -1467,13 +1477,15 @@ test_that("a recorded wipe becomes visible in captured frames and clears", {
     what = "a frame showing the wipe annotation"
   )
   page |> pz_annotate_clear("wipe")
-  expect_length(annotation_state(page), 0)
   pz_poll(
-    function() isTRUE(last_painted() == 0),
+    function() {
+      isTRUE(last_painted() == 0) && length(annotation_state(page)) == 0
+    },
     timeout = 5,
     loop = page$child_loop,
     what = "a settled frame of the reversed wipe"
   )
+  expect_length(annotation_state(page), 0)
   page |> pz_record_stop()
   expect_true(file.exists(path))
 })

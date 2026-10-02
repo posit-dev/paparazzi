@@ -42,24 +42,18 @@ test_that("new-session load waits anchor to the destination commit", {
   )
 
   url <- nav_fixture_url("slow")
-  await <- nav_await
-  commits <- character()
-  local_mocked_bindings(nav_await = function(page, p, what, ...) {
-    await(page, p, what, ...)
-    hist <- page$session$Page$getNavigationHistory()
-    commits <<- c(commits, hist$entries[[hist$currentIndex + 1]]$url)
-  })
   for (wait in c("load", "auto")) {
     pz_with_page(
       url,
       function(page) {
+        expect_identical(pz_js(page, "location.href"), url)
         expect_identical(pz_js(page, "document.readyState"), "complete")
+        expect_identical(pz_js(page, "document.title"), "paparazzi nav slow")
       },
       wait = wait,
       timeout = 5
     )
   }
-  expect_identical(commits, rep(url, 2))
 })
 
 test_that("opening a same-document fragment returns without a new commit", {

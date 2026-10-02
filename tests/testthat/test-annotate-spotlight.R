@@ -205,24 +205,47 @@ test_that("spotlight follows page and inner scroll, then hides disconnected hole
   holes <- function() {
     spotlight_layer(
       page,
-      "[...layer.querySelectorAll('.pz-spotlight mask rect')].slice(1).map(n => ({x:+n.getAttribute('x'),y:+n.getAttribute('y'),visible:n.style.display !== 'none'}))"
+      "(() => { const svg = layer.querySelector('.pz-spotlight'); const origin = svg.getBoundingClientRect(); return [...svg.querySelectorAll('mask rect')].slice(1).map(n => ({x:origin.left + +n.getAttribute('x'),y:origin.top + +n.getAttribute('y'),visible:n.style.display !== 'none'})); })()"
     )
+  }
+  aligned <- function() {
+    current <- holes()
+    rects <- list(pz_get_rect(page, "#one"), pz_get_rect(page, "#inner"))
+    all(vapply(
+      seq_along(rects),
+      function(i) {
+        current[[i]]$visible &&
+          abs(current[[i]]$x - rects[[i]]$x) < 0.5 &&
+          abs(current[[i]]$y - rects[[i]]$y) < 0.5
+      },
+      logical(1)
+    ))
   }
   # #inner starts scrolled out of #outer's box, so it gets no hole;
   # scroll it into view before measuring movement.
   expect_false(holes()[[2]]$visible)
   pz_js(page, "document.getElementById('outer').scrollTop = 100")
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    aligned,
+    timeout = 5,
+    loop = page$child_loop,
+    what = "spotlight holes aligned after the inner scroll"
+  )
   before <- holes()
   pz_js(
     page,
     "window.scrollTo(0, 50); document.getElementById('outer').scrollTop = 60; document.getElementById('one').style.left = '120px'"
   )
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    aligned,
+    timeout = 5,
+    loop = page$child_loop,
+    what = "spotlight holes aligned after page and inner scrolling"
+  )
   after <- holes()
   expect_equal(after[[1]]$x, before[[1]]$x + 20, tolerance = 0.5)
-  expect_equal(after[[1]]$y, before[[1]]$y, tolerance = 0.5)
-  expect_equal(after[[2]]$y, before[[2]]$y - 60 + 50, tolerance = 0.5)
+  expect_equal(after[[1]]$y, before[[1]]$y - 50, tolerance = 0.5)
+  expect_equal(after[[2]]$y, pz_get_rect(page, "#inner")$y, tolerance = 0.5)
   path <- withr::local_tempfile(fileext = ".png")
   img <- spotlight_image(page, path)
   expect_equal(
@@ -239,7 +262,15 @@ test_that("spotlight follows page and inner scroll, then hides disconnected hole
     page,
     "document.getElementById('inner').style.display = ''; document.getElementById('one').remove()"
   )
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    function() {
+      current <- holes()
+      !current[[1]]$visible && current[[2]]$visible
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the spotlight to follow disconnected and restored targets"
+  )
   expect_false(holes()[[1]]$visible)
   expect_true(holes()[[2]]$visible)
 })
