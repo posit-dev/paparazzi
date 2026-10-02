@@ -21,6 +21,19 @@ local_page <- function(x = fixture_file(), ..., .env = parent.frame()) {
   pz_local_page(x, ..., .env = .env)
 }
 
+local_task_page <- function(..., .env = parent.frame()) {
+  skip_if_no_chrome()
+  testthat::skip_if_not_installed("httpuv")
+  server <- pz_serve_static(pz_example("tasks"))
+  withr::defer(server$stop(), envir = .env)
+  page <- local_page(server, ..., .env = .env)
+  testthat::expect_true(pz_js(
+    page,
+    "Array.from(document.styleSheets).every(sheet => { void sheet.cssRules; return true; })"
+  ))
+  page
+}
+
 local_elements_page <- function(.env = parent.frame()) {
   local_page(elements_fixture_file(), .env = .env)
 }

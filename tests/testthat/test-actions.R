@@ -1458,7 +1458,7 @@ test_that("a recorded mouse drag streams held moves that follow the cursor", {
 
 test_that("a recorded HTML5 drag streams drag events along the carry", {
   skip_if_no_av()
-  page <- local_page(pz_example("tasks"), width = 800, height = 900)
+  page <- local_task_page(width = 800, height = 900)
   page |> pz_stage(pause = 0)
   page |>
     pz_record_start(
@@ -1601,7 +1601,7 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
 
 test_that("a failed staged HTML5 carry restores the resting cursor icon", {
   skip_if_no_av()
-  page <- local_page(pz_example("tasks"), width = 800, height = 900)
+  page <- local_task_page(width = 800, height = 900)
   page |> pz_stage(pause = 0)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
@@ -1630,7 +1630,7 @@ test_that("a failed staged HTML5 carry restores the resting cursor icon", {
 
 test_that("HTML5 carry checkpoints dispatch dragenter in path order", {
   skip_if_no_av()
-  page <- local_page(pz_example("tasks"), width = 800, height = 900)
+  page <- local_task_page(width = 800, height = 900)
   page |> pz_stage(pause = 0)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)

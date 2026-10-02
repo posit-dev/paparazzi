@@ -82,7 +82,7 @@ drag_preview_retained_checkpoint <- function(page) {
 
 test_that("the retained-pixel instrument distinguishes the task marker color", {
   skip_if_no_av()
-  page <- local_page(pz_example('tasks'), width = 800, height = 900)
+  page <- local_task_page(width = 800, height = 900)
   drag_preview_task_marker(page)
   out <- withr::local_tempfile(fileext = '.mp4')
   frames <- paste0(tools::file_path_sans_ext(out), '_frames')
@@ -131,11 +131,36 @@ drag_preview_counted_boot <- function(boot, replacement = NULL) {
     paste0(
       '\nconst original = exports.toPng; exports.toPng = (...args) => {',
       'window.__previewCaptures = (window.__previewCaptures || 0) + 1;',
+      'window.__previewFontEmbedCSS = args[1]?.fontEmbedCSS;',
       replacement,
       '};\nreturn ('
     ),
     js,
     fixed = TRUE
+  )
+}
+
+# Measure with the native getter even when a sheet's public getter is unreadable.
+# Throwing on insertion also catches mutations hidden by upstream error handling.
+drag_preview_stylesheet_guard <- function(page) {
+  pz_js(
+    page,
+    "(() => {
+      const nativeRules = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'cssRules').get;
+      window.__previewStyleSnapshot = () => ({
+        sheets: Array.from(document.styleSheets, sheet =>
+          Array.from(nativeRules.call(sheet), rule => rule.cssText)),
+        source: ['color', 'backgroundColor', 'fontFamily', 'fontSize', 'opacity', 'transform', 'filter']
+          .map(key => getComputedStyle(window.__previewSource)[key]),
+        title: getComputedStyle(window.__previewSource.querySelector('.task-title')).color
+      });
+      window.__previewInsertions = 0;
+      CSSStyleSheet.prototype.insertRule = () => {
+        window.__previewInsertions++;
+        throw new Error('Live stylesheet insertion during preview');
+      };
+      return true;
+    })()"
   )
 }
 
@@ -148,7 +173,7 @@ drag_preview_absent <- function(page) {
 
 test_that('disabled previews retain the original marker but never carry it', {
   skip_if_no_av()
-  page <- local_page(pz_example('tasks'), width = 800, height = 900)
+  page <- local_task_page(width = 800, height = 900)
   pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
   out <- withr::local_tempfile(fileext = '.mp4')
@@ -196,8 +221,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
     list(parked = TRUE, by = FALSE, geometry = TRUE)
   )
   capture <- function(case) {
-    page <- local_page(
-      pz_example('tasks'),
+    page <- local_task_page(
       width = 1000,
       height = 1100,
       scale = if (case$geometry) 2 else 1
@@ -477,7 +501,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
 })
 
 test_that('preview is named-only and validates a single nonmissing boolean', {
-  page <- local_page(pz_example('tasks'))
+  page <- local_task_page()
   for (value in list(NULL, NA, 1, 'yes', logical(), c(TRUE, FALSE))) {
     expect_error(pz_act_drag(
       page,
@@ -498,7 +522,7 @@ test_that('ineligible drags do not boot the preview or call the library', {
     page <- if (gate == 'mouse') {
       local_advanced_page()
     } else {
-      local_page(pz_example('tasks'))
+      local_task_page()
     }
     pz_stage(page, pause = 0)
     if (gate != 'mouse') {
@@ -549,7 +573,7 @@ test_that('ineligible drags do not boot the preview or call the library', {
 test_that('redaction rejects unsafe capture before the library while preserving the drop', {
   skip_if_no_av()
   check_redaction <- function(case) {
-    page <- local_page(pz_example('tasks'), width = 800, height = 900)
+    page <- local_task_page(width = 800, height = 900)
     pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     if (
@@ -646,7 +670,7 @@ test_that('redaction rejects unsafe capture before the library while preserving 
 test_that('optional capture, decode, show, move and settle failures warn once and keep the drop', {
   skip_if_no_av()
   check_failure <- function(method) {
-    page <- local_page(pz_example('tasks'), width = 800, height = 900)
+    page <- local_task_page(width = 800, height = 900)
     pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     pz_record_start(
@@ -737,7 +761,7 @@ test_that('optional capture, decode, show, move and settle failures warn once an
 test_that('real carry errors and interrupts propagate unchanged despite failing cleanup', {
   skip_if_no_av()
   check_unwind <- function(interrupted) {
-    page <- local_page(pz_example('tasks'), width = 800, height = 900)
+    page <- local_task_page(width = 800, height = 900)
     pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     pz_record_start(
@@ -802,7 +826,7 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
 
 test_that('failed interception disposes the prepared image without displaying it', {
   skip_if_no_av()
-  page <- local_page(pz_example('tasks'), width = 800, height = 900)
+  page <- local_task_page(width = 800, height = 900)
   pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
   pz_record_start(page, withr::local_tempfile(fileext = '.mp4'), hold = c(0, 0))
@@ -852,7 +876,7 @@ test_that('failed interception disposes the prepared image without displaying it
 
 test_that('a timed-out capture cannot display or retain the source after late completion', {
   skip_if_no_av()
-  page <- local_page(pz_example('tasks'), width = 800, height = 900)
+  page <- local_task_page(width = 800, height = 900)
   pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
   pz_record_start(page, withr::local_tempfile(fileext = '.mp4'), hold = c(0, 0))
@@ -919,7 +943,7 @@ test_that('a timed-out capture cannot display or retain the source after late co
 test_that('settling never guesses a replacement row or an unrendered source box', {
   skip_if_no_av()
   check_skip <- function(mutation) {
-    page <- local_page(pz_example('tasks'), width = 800, height = 900)
+    page <- local_task_page(width = 800, height = 900)
     pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     pz_js(
@@ -968,7 +992,7 @@ test_that('settling never guesses a replacement row or an unrendered source box'
 
 test_that('the unpaused production path records carry and a one-row-up settle', {
   skip_if_no_av()
-  page <- local_page(pz_example('tasks'), width = 800, height = 900)
+  page <- local_task_page(width = 800, height = 900)
   pz_stage(page, pause = 0, cursor_speed = 120)
   drag_preview_task_marker(page)
   out <- withr::local_tempfile(fileext = '.mp4')
@@ -1039,19 +1063,32 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
 
 test_that('a loaded local font and image survive the production drag carry', {
   skip_if_no_av()
-  page <- local_page(
-    pz_example('tasks'),
-    width = 800,
-    height = 900,
-    timeout = 5
-  )
+  page <- local_task_page(width = 800, height = 900, timeout = 5)
   pz_stage(page, pause = 0, cursor_speed = 120)
   drag_preview_task_marker(page)
-  pz_stage_fonts(
+  font <- pz_font_file(
+    'PreviewTest',
+    test_path('fixtures', 'fonts', 'silkscreen-400.woff2')
+  )
+  pz_stage_fonts(page, font)
+  # The staged FontFace is programmatic; also exercise readable grouped CSS.
+  pz_js(
     page,
-    pz_font_file(
-      'PreviewTest',
-      test_path('fixtures', 'fonts', 'silkscreen-400.woff2')
+    sprintf(
+      "(() => {
+        const style = document.createElement('style');
+        const dataURL = 'data:font/woff2;base64,%s';
+        style.textContent = '@media all { @font-face { font-family: PreviewTest; font-weight: 400; src: url(\"' + dataURL + '\") format(\"woff2\"); } }' +
+          '@media not all { @font-face { font-family: InactiveMediaPreviewFont; src: url(\"' + dataURL + '\"); } }' +
+          '@supports (display: paparazzi-invalid-display) { @font-face { font-family: InactiveSupportsPreviewFont; src: url(\"' + dataURL + '\"); } }';
+        document.head.appendChild(style);
+        const glyph = document.createElement('span');
+        glyph.textContent = 'HI';
+        glyph.style.cssText = 'position:absolute;left:120px;top:8px;font:400 16px/24px PreviewTest;color:rgb(250,90,20);pointer-events:none;';
+        window.__previewSource.appendChild(glyph);
+        return true;
+      })()",
+      gsub('[[:space:]]', '', font$data)
     )
   )
   expect_true(pz_js(
@@ -1059,6 +1096,7 @@ test_that('a loaded local font and image survive the production drag carry', {
     "(async () => {
       const title = window.__previewSource.querySelector('.task-title');
       title.style.fontFamily = 'PreviewTest';
+      await document.fonts.load('400 16px PreviewTest');
       await document.fonts.ready;
       return getComputedStyle(title).fontFamily === 'PreviewTest' &&
         document.fonts.check('400 16px PreviewTest') &&
@@ -1074,11 +1112,18 @@ test_that('a loaded local font and image survive the production drag carry', {
   withr::defer(unlink(frames, recursive = TRUE))
   pz_record_start(page, out, fps = 30, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
+  drag_preview_stylesheet_guard(page)
+  before <- pz_js(page, 'window.__previewStyleSnapshot()')
   original_boot <- drag_preview_boot_js
   original_carry <- stage_drag_carry
   carried <- NULL
   local_mocked_bindings(
-    drag_preview_boot_js = function() drag_preview_counted_boot(original_boot),
+    drag_preview_boot_js = function() {
+      drag_preview_counted_boot(
+        original_boot,
+        'return original(...args).then(png => { window.__previewPNG = png; return png; });'
+      )
+    },
     stage_drag_carry = function(ctx, from, to, step) {
       original_carry(ctx, from, to, function(point) {
         step(point)
@@ -1110,6 +1155,47 @@ test_that('a loaded local font and image survive the production drag carry', {
   expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
   expect_true(pz_js(
     page,
+    'window.__previewFontEmbedCSS.includes("@font-face") && window.__previewFontEmbedCSS.includes("data:font/woff2;base64,")'
+  ))
+  expect_equal(pz_js(page, 'window.__previewInsertions'), 0)
+  expect_equal(pz_js(page, 'window.__previewStyleSnapshot()'), before)
+  expect_true(pz_js(
+    page,
+    '!matchMedia("not all").matches && !CSS.supports("display: paparazzi-invalid-display") && !window.__previewFontEmbedCSS.includes("InactiveMediaPreviewFont") && !window.__previewFontEmbedCSS.includes("InactiveSupportsPreviewFont")'
+  ))
+  # Font-specific glyph dimensions in the raster, not just a loaded page face.
+  glyph <- pz_js(
+    page,
+    "(async () => {
+      const image = new Image(); image.src = window.__previewPNG; await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let left = canvas.width, top = canvas.height, right = -1, bottom = -1;
+      for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
+        const i = (y * canvas.width + x) * 4;
+        if (Math.abs(data[i] - 250) < 3 && Math.abs(data[i+1] - 90) < 3 && Math.abs(data[i+2] - 20) < 3) {
+          left = Math.min(left, x); right = Math.max(right, x);
+          top = Math.min(top, y); bottom = Math.max(bottom, y);
+        }
+      }
+      ctx.font = '400 16px PreviewTest';
+      const embedded = ctx.measureText('HI');
+      ctx.font = '400 16px monospace';
+      const fallback = ctx.measureText('HI');
+      return {width:(right-left+1)/devicePixelRatio, height:(bottom-top+1)/devicePixelRatio,
+        expectedWidth:embedded.actualBoundingBoxLeft + embedded.actualBoundingBoxRight,
+        expectedHeight:embedded.actualBoundingBoxAscent + embedded.actualBoundingBoxDescent,
+        fallbackWidth:fallback.actualBoundingBoxLeft + fallback.actualBoundingBoxRight};
+    })()"
+  )
+  expect_gt(glyph$width, 0)
+  expect_lt(abs(glyph$width - glyph$expectedWidth), 1.5)
+  expect_lt(abs(glyph$height - glyph$expectedHeight), 1.5)
+  expect_gt(abs(glyph$width - glyph$fallbackWidth), 3)
+  expect_true(pz_js(
+    page,
     'document.querySelectorAll(".task")[1] === window.__previewSource'
   ))
   expect_equal(
@@ -1124,14 +1210,187 @@ test_that('a loaded local font and image survive the production drag carry', {
   expect_true(file.exists(carried))
 })
 
+test_that('unsafe font stylesheets skip capture without mutations or changing the native drop', {
+  skip_if_no_av()
+  check_sheet <- function(case) {
+    page <- local_task_page(width = 800, height = 900)
+    pz_stage(page, pause = 0, cursor_speed = 120)
+    drag_preview_task_marker(page)
+    font <- pz_font_file(
+      'OpaquePreviewFont',
+      test_path('fixtures', 'fonts', 'silkscreen-400.woff2')
+    )
+    expect_true(pz_js(
+      page,
+      sprintf(
+        "(() => {
+          const style = document.createElement('style');
+          const caseName = %s;
+          const css = '.task { color: rgb(12,34,56); }';
+          if (caseName === 'import') {
+            style.textContent = '@import url(\"data:text/css,' + encodeURIComponent(css) + '\");';
+            return new Promise((resolve, reject) => {
+              style.onload = () => resolve(style.sheet.cssRules[0].type === CSSRule.IMPORT_RULE);
+              style.onerror = () => reject(new Error('Import fixture failed'));
+              document.head.appendChild(style);
+            });
+          }
+          style.textContent = css + (caseName === 'font-url' ?
+            '@media all { @font-face { font-family: UnusedPreviewFont; src: url(\"missing-preview-font.woff2\") format(\"woff2\"); } }' : '');
+          document.head.appendChild(style);
+          if (caseName === 'unreadable') {
+            Object.defineProperty(style.sheet, 'href', {value: 'data:text/css,' + encodeURIComponent('.task {color: rgb(210,30,60)}')});
+            Object.defineProperty(style.sheet, 'cssRules', {get() {
+              throw new DOMException('Unreadable fixture stylesheet', 'SecurityError');
+            }});
+          }
+          if (caseName === 'opaque-font') {
+            const face = new FontFace('OpaquePreviewFont', 'url(data:font/woff2;base64,' + %s + ')');
+            document.fonts.add(face);
+            window.__previewSource.querySelector('.task-title').style.fontFamily = 'OpaquePreviewFont';
+            return face.load().then(() => true);
+          }
+          return true;
+        })()",
+        jsonlite::toJSON(case, auto_unbox = TRUE),
+        jsonlite::toJSON(gsub('[[:space:]]', '', font$data), auto_unbox = TRUE)
+      )
+    ))
+    drag_preview_stylesheet_guard(page)
+    before <- pz_js(page, 'window.__previewStyleSnapshot()')
+    expect_equal(before$source[[1]], 'rgb(12, 34, 56)')
+    pz_record_start(
+      page,
+      withr::local_tempfile(fileext = '.mp4'),
+      hold = c(0, 0)
+    )
+    defer_record_stop(page)
+    original_boot <- drag_preview_boot_js
+    local_mocked_bindings(drag_preview_boot_js = function() {
+      drag_preview_counted_boot(original_boot)
+    })
+    warnings <- list()
+    withCallingHandlers(
+      pz_act_drag(
+        page,
+        '#preview-source .task-drag-handle',
+        '#preview-target .task-drag-handle'
+      ),
+      warning = function(w) {
+        warnings <<- c(warnings, list(w))
+        invokeRestart('muffleWarning')
+      }
+    )
+    expect_length(warnings, 1)
+    expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
+    expect_equal(pz_js(page, 'window.__previewCaptures || 0'), 0)
+    expect_equal(pz_js(page, 'window.__previewInsertions'), 0)
+    expect_equal(pz_js(page, 'window.__previewStyleSnapshot()'), before)
+    expect_true(pz_js(
+      page,
+      'document.querySelectorAll(".task")[1] === window.__previewSource'
+    ))
+    expect_equal(
+      unlist(pz_js(page, 'window.__previewEvents.map(e => e.type)')),
+      c('dragstart', 'drop', 'dragend')
+    )
+    expect_true(pz_js(
+      page,
+      'window.__previewEvents.every(e => e.trusted) && window.__previewEvents.find(e => e.type === "drop").payload === window.__previewSource.dataset.id'
+    ))
+    expect_true(drag_preview_absent(page))
+    expect_false(page_cursor(page)$pressed)
+    pz_record_stop(page)
+  }
+  for (case in c('unreadable', 'import', 'font-url', 'opaque-font')) {
+    check_sheet(case)
+  }
+})
+
+test_that('dragstart transforms and filters deliberately disable the captured preview, not the drop', {
+  skip_if_no_av()
+  check_footprint <- function(property) {
+    page <- local_task_page(width = 800, height = 900)
+    pz_stage(page, pause = 0, cursor_speed = 120)
+    drag_preview_task_marker(page)
+    pz_js(
+      page,
+      sprintf(
+        "document.addEventListener('dragstart', e => {
+          if (e.target === window.__previewSource) e.target.style.%s = '%s';
+        })",
+        property,
+        if (property == 'transform') 'translateX(1px)' else 'brightness(0.9)'
+      )
+    )
+    pz_record_start(
+      page,
+      withr::local_tempfile(fileext = '.mp4'),
+      hold = c(0, 0)
+    )
+    defer_record_stop(page)
+    original_boot <- drag_preview_boot_js
+    original_prepare <- drag_preview_prepare
+    local_mocked_bindings(
+      drag_preview_boot_js = function() {
+        drag_preview_counted_boot(original_boot)
+      },
+      drag_preview_prepare = function(state, els, from) {
+        original_prepare(state, els, from)
+        pz_js(
+          page,
+          paste0('window.__previewController = ', DRAG_PREVIEW_CONTROLLER_JS)
+        )
+      }
+    )
+    warnings <- list()
+    withCallingHandlers(
+      pz_act_drag(
+        page,
+        '#preview-source .task-drag-handle',
+        '#preview-target .task-drag-handle'
+      ),
+      warning = function(w) {
+        warnings <<- c(warnings, list(w))
+        invokeRestart('muffleWarning')
+      }
+    )
+    expect_length(warnings, 1)
+    expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
+    expect_match(
+      conditionMessage(warnings[[1]]),
+      'Unsupported drag preview footprint'
+    )
+    expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
+    expect_identical(pz_js(page, 'window.__previewFontEmbedCSS'), '')
+    expect_true(pz_js(
+      page,
+      'window.__previewController.source === null && window.__previewController.image === null'
+    ))
+    expect_true(pz_js(
+      page,
+      'document.querySelectorAll(".task")[1] === window.__previewSource'
+    ))
+    expect_equal(
+      unlist(pz_js(page, 'window.__previewEvents.map(e => e.type)')),
+      c('dragstart', 'drop', 'dragend')
+    )
+    expect_true(pz_js(
+      page,
+      'window.__previewEvents.every(e => e.trusted) && window.__previewEvents.find(e => e.type === "drop").payload === window.__previewSource.dataset.id'
+    ))
+    expect_true(drag_preview_absent(page))
+    expect_false(page_cursor(page)$pressed)
+    pz_record_stop(page)
+  }
+  for (property in c('transform', 'filter')) {
+    check_footprint(property)
+  }
+})
+
 test_that('a real missing local image disables capture without blocking the drag', {
   skip_if_no_av()
-  page <- local_page(
-    pz_example('tasks'),
-    width = 800,
-    height = 900,
-    timeout = 5
-  )
+  page <- local_task_page(width = 800, height = 900, timeout = 5)
   pz_stage(page, pause = 0, cursor_speed = 120)
   drag_preview_task_marker(page)
   expect_true(pz_js(

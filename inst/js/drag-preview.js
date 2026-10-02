@@ -70,6 +70,63 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
     safety(box);
     return box;
   };
+  // Explicit CSS bypasses the raster library's stylesheet import/insertion path.
+  // Read every sheet conservatively; never fetch or silently omit a font face.
+  const embeddedFontCSS = () => {
+    const faces = [];
+    const represented = [];
+    const family = value => value.trim().replace(/^(['"])(.*)\1$/, '$2');
+    const descriptors = {
+      style:'font-style', weight:'font-weight', stretch:'font-stretch',
+      unicodeRange:'unicode-range', variant:'font-variant',
+      featureSettings:'font-feature-settings', variationSettings:'font-variation-settings',
+      display:'font-display', ascentOverride:'ascent-override',
+      descentOverride:'descent-override', lineGapOverride:'line-gap-override'
+    };
+    const read = rules => {
+      for (const rule of rules) {
+        if (rule.type === CSSRule.IMPORT_RULE) throw new Error('Imported drag preview stylesheet');
+        if (rule.type === CSSRule.FONT_FACE_RULE) {
+          const src = rule.style.getPropertyValue('src');
+          let urls = 0;
+          const rest = src.replace(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^\s)]+))\s*\)/gi,
+            (_, double, single, bare) => {
+              if (!/^data:/i.test(double ?? single ?? bare)) {
+                throw new Error('Nonembedded drag preview font');
+              }
+              urls++;
+              return '';
+            }).replace(/(?:format|tech)\([^()]*\)/gi, '');
+          if (!urls || src.includes('\\') || !/^[\s,]*$/.test(rest)) {
+            throw new Error('Unsupported drag preview font source');
+          }
+          faces.push(rule.cssText);
+          represented.push(rule.style);
+        } else if (rule.type === CSSRule.MEDIA_RULE) {
+          if (matchMedia(rule.conditionText).matches) read(rule.cssRules);
+        } else if (rule.type === CSSRule.SUPPORTS_RULE) {
+          if (CSS.supports(rule.conditionText)) read(rule.cssRules);
+        } else if ('cssRules' in rule && rule.cssRules.length && rule.type !== CSSRule.KEYFRAMES_RULE) {
+          // Modern style rules expose an empty cssRules list. Other nonempty
+          // groups have applicability we do not establish; never flatten them.
+          throw new Error('Unsupported drag preview font grouping');
+        }
+      }
+    };
+    for (const sheet of document.styleSheets) read(sheet.cssRules);
+    // FontFace sources are opaque. Require a readable CSS counterpart rather
+    // than letting a registered programmatic face silently rasterize in fallback.
+    for (const face of document.fonts) {
+      const match = represented.some(style => family(style.fontFamily) === family(face.family) &&
+        Object.entries(descriptors).every(([key, property]) => {
+          const value = style.getPropertyValue(property) ||
+            (key === 'unicodeRange' ? 'U+0-10FFFF' : key === 'display' ? 'auto' : 'normal');
+          return face[key] === undefined || face[key] === value;
+        }));
+      if (!match) throw new Error('Opaque drag preview font without embedded CSS');
+    }
+    return faces.join('\n');
+  };
   let captured = null;
   let grab = null;
   let position = null;
@@ -83,7 +140,9 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
     async prepare() {
       captured = current();
       grab = {x:point.x - captured.left, y:point.y - captured.top};
+      const fontEmbedCSS = embeddedFontCSS();
       const png = await htmlToImage.toPng(controller.source, {
+        fontEmbedCSS,
         width:captured.width / captured.zoom, height:captured.height / captured.zoom,
         pixelRatio:(window.devicePixelRatio || 1) * captured.zoom,
         style:{zoom:'1', transform:'none', boxSizing:'border-box', margin:'0', position:'relative',
