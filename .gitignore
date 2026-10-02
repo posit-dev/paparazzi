@@ -5,3 +5,4 @@ paparazzi_*.tar.gz
 docs
 inst/doc
 .pi-loop.json
+/node_modules/

@@ -20,3 +20,7 @@
 ^AGENTS\.md$
 ^\.git$
 ^assets$
+^node_modules$
+^_dev$
+^tools$
+^package(-lock)?\.json$

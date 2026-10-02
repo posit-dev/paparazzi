@@ -1,0 +1,10 @@
+{
+  "name": "paparazzi-vendor-tooling",
+  "private": true,
+  "scripts": {
+    "vendor:html-to-image": "node tools/vendor-html-to-image.mjs"
+  },
+  "devDependencies": {
+    "html-to-image": "1.11.13"
+  }
+}

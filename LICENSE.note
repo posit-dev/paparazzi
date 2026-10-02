@@ -1,0 +1,8 @@
+paparazzi is licensed under the MIT License; see LICENSE.
+
+This package also includes the unmodified html-to-image 1.11.13 JavaScript
+library at inst/js/vendor/html-to-image/html-to-image-1.11.13.umd.js. That
+component is Copyright (c) 2017-2025 W.Y. and is separately licensed under the
+MIT License. Its complete license is at
+inst/js/vendor/html-to-image/LICENSE. Source and checksum details are in
+inst/js/vendor/html-to-image/PROVENANCE.md.

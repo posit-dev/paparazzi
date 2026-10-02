@@ -27,5 +27,10 @@ Authors:
   \item Garrick Aden-Buie \email{garrick@adenbuie.com} (\href{https://orcid.org/0000-0002-7111-0077}{ORCID})
 }
 
+Other contributors:
+\itemize{
+  \item W.Y. (Copyright holder of the bundled html-to-image JavaScript library) [copyright holder]
+}
+
 }
 \keyword{internal}
