@@ -4,9 +4,12 @@
 # ("detritus in the temp directory"). R's own tempdir() is fixed at process
 # startup, so this redirect only affects processes launched by the tests.
 # This file sorts first so its teardown runs last: the browser-close defer in
-# setup-chrome.R must run before this directory is removed.
+# setup-chrome.R must run before this directory is removed. With parallel
+# workers the removal is best-effort: testthat's teardown grace period can
+# kill a worker during a slow Chrome close, leaving files in that worker's
+# own tempdir() (not the check-level TMPDIR that --as-cran flags).
 .pz_subprocess_tmp <- file.path(tempdir(), "paparazzi-subprocess")
-dir.create(.pz_subprocess_tmp)
+dir.create(.pz_subprocess_tmp, showWarnings = FALSE)
 withr::local_envvar(
   .local_envir = testthat::teardown_env(),
   TMPDIR = .pz_subprocess_tmp,
