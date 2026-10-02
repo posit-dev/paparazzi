@@ -1,5 +1,8 @@
 # paparazzi 0.0.0.9000
 
+* Persistent captions remain visible on the last GIF frame when recordings
+  repeat captured frames, such as during `pz_record_hold()`.
+
 * Breaking: `pz_annotate_callout()`'s `arrow` argument is renamed `leader`.
   `TRUE` (the default) draws a shaft with an arrow at the target, `FALSE`
   leaves a tooltip-style bubble, and a named character vector sets a

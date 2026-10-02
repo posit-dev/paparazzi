@@ -513,7 +513,15 @@ screen_filter <- function(rec, sampled, out, overlays) {
   } else {
     sub("(^|,)format=yuv420p$", "", out$vfilter)
   }
-  chains <- paste0("[in]", if (nzchar(base)) base else "null", "[b0]")
+  # Composite on exact output ticks, then restore av's millisecond time base.
+  clock <- paste0("settb=1/", rec$fps)
+  chains <- paste0(
+    "[in]",
+    if (nzchar(base)) base else "null",
+    ",",
+    clock,
+    "[b0]"
+  )
   for (i in seq_along(overlays)) {
     item <- overlays[[i]]
     fades <- character(0)
@@ -545,12 +553,10 @@ screen_filter <- function(rec, sampled, out, overlays) {
       "movie=",
       item$file,
       ":loop=1,format=rgba,",
-      "loop=",
+      clock,
+      ",loop=",
       sampled$n_ticks,
-      ":size=1:start=0,",
-      "setpts=N/(",
-      rec$fps,
-      "*TB)",
+      ":size=1:start=0,setpts=N",
       if (length(fades)) paste0(",", paste(fades, collapse = ",")) else "",
       "[c",
       i,
@@ -574,7 +580,7 @@ screen_filter <- function(rec, sampled, out, overlays) {
   format <- if (identical(rec$format, "gif")) "rgb24" else "yuv420p"
   chains[[length(chains)]] <- paste0(
     chains[[length(chains)]],
-    ",format=",
+    ",settb=1/1000,format=",
     format
   )
   paste(chains, collapse = ";")

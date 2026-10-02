@@ -161,21 +161,86 @@ test_that("a caption left active stays visible on the last GIF frame", {
   skip_if_not_installed("png")
   page <- local_page(record_fixture_file(), width = 320, height = 240)
   out <- withr::local_tempfile(fileext = ".gif")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
   pz_annotate_caption(page, "PERSIST")
-  pz_record_start(page, out, fps = 10, hold = c(0, 0.2))
+  pz_record_start(page, out, fps = 10, hold = c(0, 0.2), keep_frames = TRUE)
   defer_record_stop(page)
-  pz_wait(page, 0.5)
+  rec <- page_recorder(page)
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a GIF capture before the output hold"
+  )
+  pz_record_hold(page, 0.5)
   pz_record_stop(page)
+  expect_frame_files_size(rec$files, record_viewport_png_size(page))
   decoded <- tempfile("caption-persist-gif-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
   frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
-  expect_gt(length(frames), 5)
+  expect_gt(length(frames), 0)
+  expect_equal(
+    recorded_video_info(out)$duration,
+    record_resample(rec)$n_ticks / rec$fps,
+    tolerance = 0.01
+  )
   first <- png::readPNG(frames[[1]])
   last <- png::readPNG(tail(frames, 1)[[1]])
-  x <- round(dim(last)[2] / 2)
   y <- round(dim(last)[1] * 0.8):dim(last)[1]
-  expect_true(any(first[y, x, 1] < 0.4))
-  expect_true(any(last[y, x, 1] < 0.4))
+  expect_true(any(first[y, , 1] < 0.4))
+  expect_true(any(last[y, , 1] < 0.4))
+})
+
+test_that("a persistent GIF caption survives repeated source frames", {
+  skip_if_no_av()
+  skip_if_not_installed("gifski")
+  skip_if_not_installed("png")
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  first <- file.path(dir, "first.png")
+  last <- file.path(dir, "last.png")
+  image <- array(1, c(240, 320, 3))
+  png::writePNG(image, first)
+  image[10, 10, ] <- c(0, 0, 1)
+  png::writePNG(image, last)
+  out <- file.path(dir, "persist.gif")
+  rec <- new_recorder(out, "gif", 10, NULL, c(0, 0.2), FALSE, NULL)
+  rec$files <- c(first, last)
+  rec$times <- c(0, 0.063)
+  rec$vt_end <- 0.063
+  rec$holds <- list(list(vt = 0.05, seconds = 0.5))
+  rec$camera_viewport_width <- 320
+  rec$captions <- list(list(
+    vt = 0,
+    caption = list(
+      text = "PERSIST",
+      side = "bottom",
+      color = "white",
+      font_family = "sans-serif",
+      font_size = 20
+    )
+  ))
+  expect_equal(record_resample(rec)$n_ticks, 8L)
+  record_encode(rec, page$page)
+
+  frames <- av_video_images_quiet(
+    out,
+    destdir = file.path(dir, "decoded"),
+    format = "png"
+  )
+  expect_gt(length(frames), 0L)
+  dark <- vapply(
+    frames,
+    function(frame) {
+      image <- png::readPNG(frame)
+      rows <- round(dim(image)[1] * 0.8):dim(image)[1]
+      any(image[rows, , 1] < 0.4)
+    },
+    logical(1)
+  )
+  expect_true(all(dark))
+  expect_equal(recorded_video_info(out)$duration, 0.8, tolerance = 0.01)
 })
 
 test_that("captioned still is transparent outside the pill and opaque inside", {
@@ -599,43 +664,49 @@ test_that("a two-tick caption burns only into its encoded output window", {
   page <- local_record_page()
   dir <- withr::local_tempdir()
   image <- file.path(dir, "white.png")
-  video <- file.path(dir, "caption.mp4")
   png::writePNG(array(1, c(240, 320, 3)), image)
-  rec <- new_recorder(video, "mp4", 10, NULL, c(0, 0), FALSE, NULL)
-  rec$files <- rep(image, 10)
-  rec$times <- (0:9) / 10
-  rec$vt_end <- 1
-  rec$camera_viewport_width <- 320
-  rec$captions <- list(
-    list(
-      vt = 0.3,
-      caption = list(
-        text = "BLINK",
-        side = "bottom",
-        color = "white",
-        font_family = "sans-serif",
-        font_size = 20
-      )
-    ),
-    list(vt = 0.42, caption = NULL)
-  )
-  record_encode(rec, page$page)
 
-  frames <- av_video_images_quiet(
-    video,
-    destdir = file.path(dir, "decoded"),
-    format = "png"
-  )
-  dark <- vapply(
-    frames,
-    function(frame) {
-      img <- png::readPNG(frame)
-      rows <- round(dim(img)[1] * 0.8):dim(img)[1]
-      any(img[rows, , 1] < 0.4)
-    },
-    logical(1)
-  )
-  expect_equal(unname(which(dark)), c(4L, 5L))
+  for (fps in c(10, 30, 60, 29.97)) {
+    video <- file.path(dir, paste0("caption-", fps, ".mp4"))
+    rec <- new_recorder(video, "mp4", fps, NULL, c(0, 0), FALSE, NULL)
+    rec$files <- rep(image, 10)
+    rec$times <- (0:9) / fps
+    rec$vt_end <- 10 / fps
+    rec$camera_viewport_width <- 320
+    rec$captions <- list(
+      list(
+        vt = 3 / fps,
+        caption = list(
+          text = "BLINK",
+          side = "bottom",
+          color = "white",
+          font_family = "sans-serif",
+          font_size = 20
+        )
+      ),
+      list(vt = 4.2 / fps, caption = NULL)
+    )
+    record_encode(rec, page$page)
+    info <- recorded_video_info(video)
+    expect_gte(info$duration, 9 / fps - 0.002)
+    expect_lte(info$duration, 11 / fps + 0.002)
+
+    frames <- av_video_images_quiet(
+      video,
+      destdir = file.path(dir, paste0("decoded-", fps)),
+      format = "png"
+    )
+    dark <- vapply(
+      frames,
+      function(frame) {
+        img <- png::readPNG(frame)
+        rows <- round(dim(img)[1] * 0.8):dim(img)[1]
+        any(img[rows, , 1] < 0.4)
+      },
+      logical(1)
+    )
+    expect_equal(unname(which(dark)), c(4L, 5L), info = paste("fps", fps))
+  }
 })
 
 test_that("key callout windows replace and expire on output ticks", {
@@ -783,7 +854,7 @@ test_that("keycap ticks clip fades without resurrecting replaced callouts", {
       )
     )
   )
-  expect_match(graph, "[in]scale=320:240[b0]", fixed = TRUE)
+  expect_match(graph, "[in]scale=320:240,settb=1/10[b0]", fixed = TRUE)
   expect_match(graph, "movie=caption-1.png:loop=1", fixed = TRUE)
   expect_match(graph, "movie=key-1.png:loop=1", fixed = TRUE)
   expect_lt(
