@@ -1,4 +1,5 @@
 skip_if_no_shiny <- function() {
+  testthat::skip_on_cran()
   testthat::skip_if_not_installed("shiny")
   testthat::skip_if_not_installed("httpuv")
 }

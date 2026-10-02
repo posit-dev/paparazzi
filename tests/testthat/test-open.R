@@ -369,7 +369,7 @@ test_that("pz_close closes the page behind a context", {
   expect_identical(closed, page)
   expect_true(page$is_closed())
 
-  skip_if_not_installed("av")
+  skip_if_no_av()
   page <- pz_open(fixture_file())
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, out, fps = 5, hold = c(0, 0)) |>
@@ -665,6 +665,7 @@ test_that("pz_local_page forwards ... to pz_open", {
 })
 
 test_that("open timeout defaults to ten seconds and rejects NULL", {
+  skip_if_no_chrome()
   expect_error(pz_open("about:blank", timeout = NULL), "timeout")
   page <- pz_local_page("about:blank")
   expect_equal(page$default_timeout, 10)

@@ -1213,7 +1213,7 @@ test_that("an explicitly hidden cursor stays hidden during recorded typing", {
 })
 
 test_that("recorded typing rests the cursor until the next move", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   page <- local_cursor_page()
   pz_stage(page, typing = "instant", pause = 0)
   line <- function(page) {

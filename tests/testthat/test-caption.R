@@ -157,7 +157,7 @@ test_that("a caption left active stays visible on the last MP4 frame", {
 
 test_that("a caption left active stays visible on the last GIF frame", {
   skip_if_no_av()
-  skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   skip_if_not_installed("png")
   page <- local_page(record_fixture_file(), width = 320, height = 240)
   out <- withr::local_tempfile(fileext = ".gif")
@@ -194,7 +194,7 @@ test_that("a caption left active stays visible on the last GIF frame", {
 
 test_that("a persistent GIF caption survives repeated source frames", {
   skip_if_no_av()
-  skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   skip_if_not_installed("png")
   page <- local_record_page()
   dir <- withr::local_tempdir()
@@ -265,7 +265,7 @@ test_that("captioned still is transparent outside the pill and opaque inside", {
 
 test_that("captioned GIF uses the same relative movie source after scaling", {
   skip_if_no_av()
-  skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   skip_if_not_installed("png")
   page <- local_record_page()
   dir <- withr::local_tempdir(pattern = "gif a'b ")
@@ -499,7 +499,7 @@ test_that("caption style is independent of badge style and survives navigation",
 
 test_that("GIF caption overlay can follow a camera move", {
   skip_if_no_av()
-  skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   page <- local_page(
     record_fixture_file(),
     width = 320,
@@ -867,7 +867,7 @@ test_that("keycap ticks clip fades without resurrecting replaced callouts", {
 test_that("keys burn into WebM VTT-only and uncaptioned GIF", {
   skip_if_no_av()
   skip_if_not_installed("png")
-  skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   page <- local_page(
     record_fixture_file(),
     width = 320,

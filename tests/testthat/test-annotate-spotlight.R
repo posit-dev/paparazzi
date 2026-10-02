@@ -383,7 +383,7 @@ test_that("spotlight validates its options and dim endpoints", {
 })
 
 test_that("paused spotlight and its clear are instant", {
-  skip_if_not_installed("av")
+  skip_if_no_av()
   page <- spotlight_page()
   path <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(path, fps = 10, hold = c(0, 0)) |> pz_record_pause()

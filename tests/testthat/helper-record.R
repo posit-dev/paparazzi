@@ -42,7 +42,13 @@ defer_record_stop <- function(page, .env = parent.frame()) {
 }
 
 skip_if_no_av <- function() {
+  testthat::skip_on_cran()
   testthat::skip_if_not_installed("av")
+}
+
+skip_if_no_gifski <- function() {
+  testthat::skip_on_cran()
+  testthat::skip_if_not_installed("gifski")
 }
 
 # av_video_images() forces verbose logging in its encoder. Capture that native

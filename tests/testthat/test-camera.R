@@ -121,7 +121,7 @@ test_that("camera calls are no-ops outside recording and reset with the recorder
 
 test_that("camera zoom and reset change MP4 and GIF content, not dimensions", {
   skip_if_no_av()
-  testthat::skip_if_not_installed("gifski")
+  skip_if_no_gifski()
   testthat::skip_if_not_installed("png")
   html <- withr::local_tempfile(
     lines = '<!doctype html><style>body{margin:0;background:white}#red,#blue{position:absolute;width:100px;height:100px}#red{left:100px;top:80px;background:red}#blue{left:500px;top:280px;background:blue}</style><div id="red"></div><div id="blue"></div>',
