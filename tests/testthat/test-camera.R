@@ -197,6 +197,15 @@ test_that("framed camera uses final home, scale and each method's capture densit
       hold = c(0.2, 0.2)
     )
     defer_record_stop(page)
+    rec <- page_recorder(page)
+    # The first encoded frame must predate the camera move: wait for an
+    # actual baseline capture instead of assuming one already landed.
+    pz_poll(
+      function() length(rec$files) >= 1L,
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a baseline frame before the camera move"
+    )
     pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.15)
     pz_wait(page, 0.25)
     pz_js(page, "document.getElementById('home').style.width = '480px'")

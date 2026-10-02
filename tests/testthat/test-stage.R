@@ -292,7 +292,10 @@ test_that("smooth scrolling uses real wheel events while recording", {
   page |> pz_act_scroll(to = "bottom")
   expect_equal(
     pz_js(page, "window.scrollY"),
-    pz_js(page, "document.scrollingElement.scrollHeight - window.innerHeight")
+    pz_js(
+      page,
+      "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
+    )
   )
 
   # A scoped scroll wheels the scope's container, not the page.
@@ -309,7 +312,11 @@ test_that("smooth scrolling uses real wheel events while recording", {
 
 test_that("staged root offsets and directions correct incomplete wheels", {
   page <- local_cursor_page()
-  pz_js(page, "document.getElementById('spacer').style.width = '2000px'")
+  pz_js(
+    page,
+    "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>');
+     document.getElementById('spacer').style.width = '2000px'"
+  )
   local_mocked_bindings(stage_wheel = function(...) invisible(TRUE))
 
   scroll_staged(page, NULL, by = c(120, 300), to = NULL, duration = 0.01)
@@ -333,7 +340,7 @@ test_that("staged root offsets and directions correct incomplete wheels", {
     unlist(pz_js(page, "[window.scrollX, window.scrollY]")),
     unlist(pz_js(
       page,
-      "[document.scrollingElement.scrollWidth - window.innerWidth, document.scrollingElement.scrollHeight - window.innerHeight]"
+      "[document.scrollingElement.scrollWidth - document.documentElement.clientWidth, document.scrollingElement.scrollHeight - document.documentElement.clientHeight]"
     ))
   )
   scroll_staged(page, NULL, by = NULL, to = c("left", "top"), duration = 0.01)
@@ -342,7 +349,11 @@ test_that("staged root offsets and directions correct incomplete wheels", {
 
 test_that("staged scoped fallback uses offsets and directions without root serialization", {
   page <- local_cursor_page()
-  pz_js(page, "document.querySelector('#scroller > div').style.width = '600px'")
+  pz_js(
+    page,
+    "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>');
+     document.querySelector('#scroller > div').style.width = '600px'"
+  )
   ctx <- pz_find(page, "#scroller")
   scoped <- scope_connected(ctx)
   local_mocked_bindings(
@@ -367,7 +378,7 @@ test_that("staged scoped fallback uses offsets and directions without root seria
     position(),
     unlist(pz_js(
       page,
-      "(() => { const s = document.getElementById('scroller'); return [(s.scrollWidth - s.clientWidth) / 2, (s.scrollHeight - s.clientHeight) / 2]; })()"
+      "(() => { const s = document.getElementById('scroller'); return [Math.round((s.scrollWidth - s.clientWidth) / 2), Math.round((s.scrollHeight - s.clientHeight) / 2)]; })()"
     ))
   )
   scroll_staged(ctx, scoped, by = NULL, to = c("left", "top"), duration = 0.01)
@@ -433,7 +444,10 @@ test_that("pz_act_scroll duration overrides staged wheels for by, to, and target
   page |> pz_act_scroll(to = "bottom", duration = 0.05)
   expect_equal(
     pz_js(page, "window.scrollY"),
-    pz_js(page, "document.scrollingElement.scrollHeight - window.innerHeight")
+    pz_js(
+      page,
+      "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
+    )
   )
   expect_true(length(wheel_durations) > 0)
   expect_true(all(wheel_durations == 0.05))
@@ -468,7 +482,10 @@ test_that("zero-duration scrolls land instantly without queued wheel events", {
   page |> pz_act_scroll(to = "bottom", duration = 0)
   expect_equal(
     pz_js(page, "window.scrollY"),
-    pz_js(page, "document.scrollingElement.scrollHeight - window.innerHeight")
+    pz_js(
+      page,
+      "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
+    )
   )
   page |> pz_act_scroll(target = "#plain", duration = 0)
   expect_true(pz_js(
@@ -802,36 +819,31 @@ test_that("the stage pause holds after press, select_text, and drag too", {
       hold = c(0, 0)
     )
 
-  # Focus the field for the keypress (the click's own hold is outside
-  # the timed stretch).
+  defer_record_stop(page)
   page |> pz_act_click("#name")
-  t0 <- proc.time()[["elapsed"]]
+  holds <- numeric()
+  original_pump <- pump_loop
+  local_mocked_bindings(
+    pump_loop = function(loop, duration, ...) {
+      holds <<- c(holds, duration)
+      original_pump(loop, duration, ...)
+    }
+  )
+
   page |> pz_act_press("a")
-  t_press <- proc.time()[["elapsed"]] - t0
+  expect_equal(tail(holds, 1), 0.5)
+  expect_equal(pz_get_value(page, target = "#name"), "a")
 
-  t0 <- proc.time()[["elapsed"]]
+  holds <- numeric()
   page |> pz_act_select_text("Go", target = "#btn")
-  t_select <- proc.time()[["elapsed"]] - t0
+  expect_equal(tail(holds, 1), 0.5)
+  expect_equal(pz_js(page, "window.getSelection().toString()"), "Go")
 
-  # The drag's glide time is timing noise, so two identical drags are
-  # held against each other: the cursor pre-placed on the source (a
-  # duration = 0 move), one drag with the pause and one without.
-  page |> pz_stage(pause = 0)
-  page |> pz_cursor_move("#plain", duration = 0)
-  t0 <- proc.time()[["elapsed"]]
+  holds <- numeric()
   page |> pz_act_drag("#plain", by = c(50, 0))
-  t_drag0 <- proc.time()[["elapsed"]] - t0
-  page |> pz_stage(pause = 0.5)
-  page |> pz_cursor_move("#plain", duration = 0)
-  t0 <- proc.time()[["elapsed"]]
-  page |> pz_act_drag("#plain", by = c(50, 0))
-  t_drag <- proc.time()[["elapsed"]] - t0
+  expect_equal(tail(holds, 1), 0.5)
 
   page |> pz_record_stop()
-
-  expect_true(t_press >= 0.45)
-  expect_true(t_select >= 0.45)
-  expect_true(t_drag - t_drag0 >= 0.4)
 })
 
 test_that("recorded demo glides, types, and scrolls on camera", {

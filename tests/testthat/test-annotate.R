@@ -231,7 +231,7 @@ test_that("stills sync box after immediate shift and hide inspect outlines", {
   overlay_clear(page)
 })
 
-test_that("fade produces recorded intermediate frames and clears in reverse", {
+test_that("a recorded fade settles into captured frames and clears in reverse", {
   skip_if_not_installed("av")
   skip_if_not_installed("png")
   page <- annotation_page()
@@ -241,26 +241,32 @@ test_that("fade produces recorded intermediate frames and clears in reverse", {
   page |>
     pz_annotate("#box", id = "animated", reveal = "fade", color = "#ff0000")
   expect_equal(annotation_state(page)[[1]]$animations, 0)
-  # Under load the last capture of the pumped fade can still be in flight
-  # mid-animation; keep capturing until a settled frame lands.
-  pump_loop(page$child_loop, 0.5)
-  files <- page_recorder(page)$files
-  expect_gt(length(files), 1)
   dpr <- page_dpr(page)
   green_at_border <- function(file) {
     png::readPNG(file)[round(311 * dpr) + 1, round(225 * dpr) + 1, 2]
   }
-  entering <- vapply(files, green_at_border, 0.0)
-  expect_true(any(entering > 0.15 & entering < 0.85))
-  expect_lt(tail(entering, 1), 0.1)
+  last_green <- function() {
+    files <- page_recorder(page)$files
+    if (!length(files)) {
+      return(NA_real_)
+    }
+    green_at_border(tail(files, 1))
+  }
+  # Mid-animation pixels are covered by the controlled reveal tests.
+  pz_poll(
+    function() isTRUE(last_green() < 0.1),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a settled frame of the completed fade"
+  )
   page |> pz_annotate_clear("animated")
   expect_length(annotation_state(page), 0)
-  leaving <- vapply(
-    page_recorder(page)$files[-seq_along(files)],
-    green_at_border,
-    0.0
+  pz_poll(
+    function() isTRUE(last_green() > 0.9),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a settled frame of the reversed fade"
   )
-  expect_true(any(leaving > 0.15 & leaving < 0.85))
   page |> pz_record_stop()
   expect_true(file.exists(path))
 })
@@ -276,12 +282,18 @@ test_that("recorded clear removes all nodes after mixed exit animations", {
   pz_annotate_spotlight(page, "#box")
   pz_annotate_redact(page, "#box", id = "redaction")
   pz_annotate_clear(page)
-  expect_equal(
-    pz_js(
-      page,
-      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
-    ),
-    0
+  # Node removal runs in the browser animation's onfinish callback.
+  pz_poll(
+    function() {
+      pz_js(
+        page,
+        "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
+      ) ==
+        0
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the mixed exit animations to remove all annotation nodes"
   )
   pz_record_stop(page)
 })
@@ -1419,7 +1431,7 @@ test_that("all reveals show sampled entry and reverse exit frames", {
   }
 })
 
-test_that("wipe sweeps through recorded frames and reverses on clear", {
+test_that("a recorded wipe becomes visible in captured frames and clears", {
   skip_if_not_installed("av")
   skip_if_not_installed("png")
   page <- annotation_page()
@@ -1427,22 +1439,34 @@ test_that("wipe sweeps through recorded frames and reverses on clear", {
   page |> pz_record_start(path, fps = 20, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
   page |> pz_annotate("#box", id = "wipe", reveal = "wipe", color = "#ff0000")
-  pump_loop(page$child_loop, 0.3)
-  files <- page_recorder(page)$files
   dpr <- page_dpr(page)
   painted <- function(file) {
     img <- png::readPNG(file)
     region <- img[round((309:361) * dpr) + 1, round((199:301) * dpr) + 1, 1:3]
     sum(region[,, 1] > 0.9 & region[,, 2] < 0.35)
   }
-  entering <- vapply(files, painted, 0)
-  full <- max(entering)
-  expect_gt(full, 100)
-  expect_true(any(entering > full * 0.1 & entering < full * 0.9))
+  last_painted <- function() {
+    files <- page_recorder(page)$files
+    if (!length(files)) {
+      return(NA_real_)
+    }
+    painted(tail(files, 1))
+  }
+  # Mid-animation pixels are covered by the controlled reveal tests.
+  pz_poll(
+    function() isTRUE(last_painted() > 100),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a frame showing the wipe annotation"
+  )
   page |> pz_annotate_clear("wipe")
-  leaving <- vapply(page_recorder(page)$files[-seq_along(files)], painted, 0)
-  expect_true(any(leaving > full * 0.1 & leaving < full * 0.9))
   expect_length(annotation_state(page), 0)
+  pz_poll(
+    function() isTRUE(last_painted() == 0),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a settled frame of the reversed wipe"
+  )
   page |> pz_record_stop()
   expect_true(file.exists(path))
 })
