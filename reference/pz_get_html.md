@@ -36,6 +36,6 @@ A character vector, one entry per match.
 ``` r
 page <- pz_open(pz_example("tasks"))
 pz_get_html(page, target = pz_loc(".task", which = "first"))
-#> [1] "<li class=\"task list-group-item d-flex align-items-center gap-2\" draggable=\"true\" data-priority=\"high\" data-id=\"1\">\n          <div class=\"flex-grow-1 overflow-hidden\"><span class=\"task-title d-block\">Renew passport</span></div>\n          <button type=\"button\" class=\"task-edit btn btn-sm btn-outline-secondary\">Edit</button>\n          <span class=\"task-priority badge text-bg-danger\">high</span>\n          <button type=\"button\" class=\"task-done btn btn-sm btn-outline-secondary\">Done</button>\n        </li>"
+#> [1] "<li class=\"task list-group-item d-flex align-items-center gap-2\" draggable=\"true\" data-priority=\"high\" data-id=\"1\">\n          <span class=\"task-drag-handle\" aria-hidden=\"true\">⠿</span>\n          <div class=\"flex-grow-1 overflow-hidden\"><span class=\"task-title d-block\">Renew passport</span></div>\n          <button type=\"button\" class=\"task-edit btn btn-sm btn-outline-secondary\">Edit</button>\n          <span class=\"task-priority badge text-bg-danger\">high</span>\n          <button type=\"button\" class=\"task-done btn btn-sm btn-outline-secondary\">Done</button>\n        </li>"
 pz_close(page)
 ```

@@ -113,6 +113,6 @@ page |>
 #>   7  <button type="button" class="task-done btn btn-sm btn-outli…
 #>      visible · enabled · at 760,552 · 55 × 31
 #> Recording  off · cursor hidden
-#> Annotated screenshot: /tmp/RtmpCVldzD/inspect.png
+#> Annotated screenshot: /tmp/Rtmpy3aq6U/inspect.png
 pz_close(page)
 ```

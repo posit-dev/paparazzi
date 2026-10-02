@@ -490,13 +490,13 @@ page |>
 #>   4  <button type="button" class="task-done btn btn-sm btn-outli…
 #>      visible · enabled · at 306,476 · 55 × 31
 #>   5  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      hidden · enabled · at 306,533 · 55 × 31
+#>      hidden · enabled · at 306,541 · 55 × 31
 #>   6  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      visible · enabled · at 306,581 · 55 × 31
+#>      visible · enabled · at 306,606 · 55 × 31
 #>   7  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      visible · enabled · at 306,629 · 55 × 31
+#>      visible · enabled · at 306,671 · 55 × 31
 #>   8  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      visible · enabled · at 306,677 · 55 × 31
+#>      visible · enabled · at 306,728 · 55 × 31
 #> Recording  off · cursor hidden
 ```
 
