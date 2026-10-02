@@ -1852,9 +1852,13 @@ test_that("screencast cuts paused paints and resumes event delivery", {
 
   pz_record_pause(page)
   before <- length(rec$files)
+  paused_vt <- rec_vt(rec)
   pz_wait(page, 0.4)
   expect_length(rec$files, before)
+  expect_equal(rec_vt(rec), paused_vt, tolerance = 0)
+  resume_started <- rec_now()
   pz_record_resume(page)
+  expect_lte(rec_vt(rec) - paused_vt, rec_now() - resume_started + 0.002)
   pz_poll(
     function() length(rec$files) > before,
     timeout = 5,
