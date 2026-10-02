@@ -21,12 +21,26 @@
     #attachment { flex: 1 1 10rem; max-width: 16rem; }
     .done .task-title { text-decoration: line-through; opacity: 0.6; }
     .task.done .task-done { visibility: hidden; }
-    .dragging { opacity: 0.4; }
+    .task { cursor: grab; }
+    .task[draggable="false"] { cursor: auto; }
+    .task[draggable="false"] .task-drag-handle { cursor: default; }
+    .task.dragging { opacity: 0.4; }
+    .task-drag-handle {
+      color: var(--bs-secondary-color);
+      cursor: grab;
+      flex: 0 0 auto;
+      font-size: 1.25rem;
+      line-height: 1;
+      user-select: none;
+    }
+    .task-list.dragging,
+    .task-list.dragging .task,
+    .task-list.dragging .task * { cursor: grabbing; }
     .hidden { display: none !important; }
     .task-edit { opacity: 0; }
     .task:hover .task-edit, .task:focus-within .task-edit { opacity: 1; }
     .task-title { overflow-wrap: anywhere; min-width: 0; }
-    .task-title[contenteditable="true"] { outline: 2px solid var(--bs-primary); }
+    .task-title[contenteditable="true"] { cursor: text; outline: 2px solid var(--bs-primary); }
   </style>
 </head>
 <body>
@@ -65,42 +79,49 @@
       <div class="task-list-frame border rounded-3 mb-3">
       <ul class="task-list list-group list-group-flush">
         <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="high">
+          <span class="task-drag-handle" aria-hidden="true">⠿</span>
           <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Renew passport</span></div>
           <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
           <span class="task-priority badge text-bg-danger">high</span>
           <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
         </li>
         <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="high">
+          <span class="task-drag-handle" aria-hidden="true">⠿</span>
           <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">File tax return</span></div>
           <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
           <span class="task-priority badge text-bg-danger">high</span>
           <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
         </li>
         <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="normal">
+          <span class="task-drag-handle" aria-hidden="true">⠿</span>
           <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Book dentist appointment</span></div>
           <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
           <span class="task-priority badge text-bg-secondary">normal</span>
           <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
         </li>
         <li class="task done list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="low">
+          <span class="task-drag-handle" aria-hidden="true">⠿</span>
           <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Return library books</span></div>
           <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
           <span class="task-priority badge text-bg-secondary">low</span>
           <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
         </li>
         <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="normal">
+          <span class="task-drag-handle" aria-hidden="true">⠿</span>
           <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Water the plants</span></div>
           <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
           <span class="task-priority badge text-bg-secondary">normal</span>
           <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
         </li>
         <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="low">
+          <span class="task-drag-handle" aria-hidden="true">⠿</span>
           <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Sort out the garage</span></div>
           <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
           <span class="task-priority badge text-bg-secondary">low</span>
           <button type="button" class="task-done btn btn-sm btn-outline-secondary">Done</button>
         </li>
         <li class="task list-group-item d-flex align-items-center gap-2" draggable="true" data-priority="normal">
+          <span class="task-drag-handle" aria-hidden="true">⠿</span>
           <div class="flex-grow-1 overflow-hidden"><span class="task-title d-block">Call the bank</span></div>
           <button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>
           <span class="task-priority badge text-bg-secondary">normal</span>
@@ -143,6 +164,7 @@
       li.dataset.priority = level;
       ensureId(li);
       li.innerHTML =
+        '<span class="task-drag-handle" aria-hidden="true">⠿</span>' +
         '<div class="flex-grow-1 overflow-hidden"><span class="task-title d-block"></span></div>' +
         '<button type="button" class="task-edit btn btn-sm btn-outline-secondary">Edit</button>' +
         '<span class="task-priority badge"></span>' +
@@ -243,11 +265,13 @@
     list.querySelectorAll(".task").forEach(ensureId);
     list.addEventListener("dragstart", (event) => {
       const li = event.target.closest(".task");
+      list.classList.add("dragging");
       li.classList.add("dragging");
       event.dataTransfer.setData("text/plain", ensureId(li));
       event.dataTransfer.effectAllowed = "move";
     });
     list.addEventListener("dragend", (event) => {
+      list.classList.remove("dragging");
       event.target.closest(".task")?.classList.remove("dragging");
     });
     list.addEventListener("dragover", (event) => event.preventDefault());

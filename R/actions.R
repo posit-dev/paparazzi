@@ -1729,6 +1729,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
   )
 
   if (staged) {
+    cursor_apply(ctx, from, pressed = TRUE)
     stage_drag_carry(ctx, from, to, function(point) {
       for (type in c("dragEnter", "dragOver")) {
         action_cdp(
@@ -1795,7 +1796,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
       clickCount = 0,
       call = call
     )
-    cursor_press(ctx, FALSE)
+    cursor_apply(ctx, to, pressed = FALSE)
     pump_loop(ctx$page$child_loop, 0.2)
   }
 }

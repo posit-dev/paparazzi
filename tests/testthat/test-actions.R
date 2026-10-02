@@ -1468,9 +1468,12 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
     )
   defer_record_stop(page)
 
-  from <- element_center(page, ".task:nth-child(5)")
-  to <- element_center(page, ".task:first-child")
-  page |> pz_cursor_move(".task:nth-child(5)", duration = 0)
+  drag_source <- ".task:nth-child(5) .task-drag-handle"
+  drop_target <- ".task:first-child .task-drag-handle"
+  from <- element_center(page, drag_source)
+  to <- element_center(page, drop_target)
+  page |> pz_cursor_move(drag_source, duration = 0)
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "grab")
   # Event log and a hover/dragging/cursor sampler, both page-side and
   # read after the drag.
   pz_js(
@@ -1493,6 +1496,12 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
       document.addEventListener('dragend', () => { window.__carryDone = true; }, true);
       const titles = (sel) => [...document.querySelectorAll(sel)]
         .map((li) => li.querySelector('.task-title').textContent.trim());
+      const overlay = document.getElementById('paparazzi-overlay-root')?.shadowRoot;
+      const visibleIcon = () => {
+        const icon = [...(overlay?.querySelectorAll('.pz-icon') || [])]
+          .find((svg) => getComputedStyle(svg).visibility === 'visible');
+        return icon ? icon.classList[1].slice('pz-icon-'.length) : null;
+      };
       (function sample() {
         const glide = document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-glide');
         let cursor = [-1, -1];
@@ -1503,14 +1512,15 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
         window.__carrySamples.push({
           cursor: cursor,
           hover: titles('.task:hover'),
-          dragging: titles('.task.dragging')
+          dragging: titles('.task.dragging'),
+          icon: visibleIcon()
         });
         if (!window.__carryDone) setTimeout(sample, 40);
       })();
       return true;
     })()"
   )
-  pz_act_drag(page, ".task:nth-child(5)", ".task:first-child")
+  pz_act_drag(page, drag_source, drop_target)
 
   # Mid-carry samples: the overlay cursor is travelling between source
   # and drop. The drop row never shows hover styling during the carry
@@ -1523,6 +1533,16 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
   cur <- t(vapply(samples, function(s) unlist(s$cursor), numeric(2)))
   seg <- to - from
   along <- as.vector(sweep(cur, 2, from) %*% seg) / sum(seg^2)
+  icons <- vapply(samples, function(s) s$icon %||% NA_character_, character(1))
+  dragging_source <- vapply(
+    samples,
+    function(s) "Water the plants" %in% unlist(s$dragging),
+    logical(1)
+  )
+  early_drag <- dragging_source & along >= 0 & along < 0.2
+  expect_true(any(early_drag))
+  expect_true(all(icons[early_drag] == "grabbing"))
+  expect_identical(attr(cursor_overlay_state(page), "icon"), "grab")
   mid <- along > 0.15 & along < 0.85 & cur[, 1] >= 0
   expect_gte(sum(mid), 1)
   mid_samples <- samples[mid]

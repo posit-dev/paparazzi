@@ -2,11 +2,13 @@
 #| include: false
 
 # Recording is slow and the GIF churns on every render, so re-record
-# only when the image is missing or the source has changed since.
-should_update <- identical(Sys.getenv("IN_INDEX", ""), "true") && {
-  img <- knitr::fig_chunk("hero", "gif", 1)
-  !file.exists(img) || file.mtime("man/fragments/hero.Rmd") > file.mtime(img)
-}
+# only when the image is missing or a recording source has changed since.
+should_update <- identical(Sys.getenv("IN_INDEX", ""), "true") &&
+  {
+    img <- knitr::fig_chunk("hero", "gif", 1)
+    !file.exists(img) ||
+      any(file.mtime(c("man/fragments/hero.Rmd", "inst/examples/tasks.html")) > file.mtime(img))
+  }
 ```
 
 ```{r hero, eval = should_update}
@@ -20,41 +22,39 @@ page <- pz_open(
   height = 720,
   color_scheme = "light"
 )
-page |> pz_stage(enter = "bottom", pause = 0.3)
 
-new_task <- pz_loc(".task", has_text = "Prepare release notes")
+task_release <- pz_loc(".task", has_text = "Prepare release notes")
+task_dentist <- pz_loc(".task", has_text = "Book dentist appointment")
 
-pz_record(
-  page,
-  frame = pz_frame(list("h1", ".task-list"), pad = 24, ratio = 16 / 9),
-  format = "gif",
-  scale = 800,
-  code = {
-    page |>
-      pz_annotate_caption("Add a task") |>
-      pz_camera("#new-task", wait = TRUE) |>
-      pz_act_type("Prepare release notes", target = "#task-title") |>
-      pz_act_click("#add-task") |>
-      pz_expect_visible(new_task) |>
-      pz_annotate(new_task, type = "box", pad = 4, id = "new") |>
-      pz_annotate_caption("New tasks go to the top of the list") |>
-      pz_record_hold(1.2) |>
-      pz_camera_reset() |>
-      pz_annotate_clear(id = "new") |>
-      pz_annotate_caption("Drag to reorder") |>
-      pz_act_drag(
-        new_task,
-        to = pz_loc(".task", has_text = "Book dentist appointment")
-      ) |>
-      pz_record_hold(1) |>
-      pz_annotate_caption("Check it off when you're done") |>
-      pz_find(new_task) |>
-      pz_act_click(".task-done") |>
-      pz_expect_class("done") |>
-      pz_cursor_leave() |>
-      pz_record_hold(1)
-  }
-)
+page |>
+  pz_stage(enter = "bottom", pause = 0.3) |>
+  pz_record_start(
+    frame = pz_frame(list("h1", ".task-list"), pad = 24, ratio = 16 / 9),
+    format = "gif",
+    scale = 800
+  ) |>
+  pz_annotate_caption("Add a task") |>
+  pz_camera("#new-task", wait = TRUE) |>
+  pz_act_type("Prepare release notes", target = "#task-title") |>
+  pz_act_click("#add-task") |>
+  pz_expect_visible(task_release) |>
+  pz_annotate(task_release, type = "box", pad = 4, id = "new") |>
+  pz_annotate_caption("New tasks go to the top of the list") |>
+  pz_record_hold(1.2) |>
+  pz_camera_reset() |>
+  pz_annotate_clear(id = "new") |>
+  pz_annotate_caption("Drag to reorder") |>
+  pz_act_drag(
+    pz_loc(".task-drag-handle", within = task_release),
+    to = pz_loc(".task-drag-handle", within = task_dentist)
+  ) |>
+  pz_record_hold(1) |>
+  pz_annotate_caption("Check it off when you're done") |>
+  pz_find(task_release) |>
+  pz_act_click(".task-done") |>
+  pz_expect_class("done") |>
+  pz_cursor_leave() |>
+  pz_record_hold(1)
 
 pz_close(page)
 ```

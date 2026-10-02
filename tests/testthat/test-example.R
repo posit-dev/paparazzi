@@ -20,6 +20,65 @@ test_that("pz_example() errors on unknown names", {
 })
 
 
+test_that("task rows show drag affordances and cursor states", {
+  page <- local_page(pz_example("tasks"))
+
+  expect_true(
+    pz_js(
+      page,
+      "Array.from(document.querySelectorAll('.task')).every((task) => task.querySelector('.task-drag-handle'))"
+    )
+  )
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('.task-drag-handle') ? getComputedStyle(document.querySelector('.task-drag-handle')).cursor : null"
+    ),
+    "grab"
+  )
+  expect_identical(
+    pz_js(page, "getComputedStyle(document.querySelector('.task')).cursor"),
+    "grab"
+  )
+
+  pz_js(
+    page,
+    "window.__dragCursors = []; document.addEventListener('dragover', (event) => { window.__dragCursors.push(getComputedStyle(event.target).cursor); }, true);"
+  )
+  pz_act_drag(page, ".task:nth-child(5)", ".task:first-child")
+  expect_true("grabbing" %in% unlist(pz_js(page, "window.__dragCursors")))
+  expect_identical(
+    pz_js(page, "getComputedStyle(document.querySelector('.task')).cursor"),
+    "grab"
+  )
+  expect_identical(
+    pz_get_text(page, ".task:first-child .task-title"),
+    "Water the plants"
+  )
+})
+
+test_that("new tasks get drag affordances", {
+  page <- local_page(pz_example("tasks"))
+  page |>
+    pz_act_type("Send documents", target = "#task-title") |>
+    pz_act_click("#add-task") |>
+    pz_expect_visible(pz_loc(".task", has_text = "Send documents"))
+
+  expect_true(
+    pz_js(
+      page,
+      "!!document.querySelector('.task:first-child .task-drag-handle')"
+    )
+  )
+  expect_identical(
+    pz_js(
+      page,
+      "document.querySelector('.task:first-child .task-drag-handle') ? getComputedStyle(document.querySelector('.task:first-child .task-drag-handle')).cursor : null"
+    ),
+    "grab"
+  )
+})
+
 test_that("walkthrough keeps both high-priority task titles in view", {
   page <- local_page(pz_example("tasks"), width = 800, height = 900)
   page |>
@@ -66,13 +125,31 @@ test_that("walkthrough keeps both high-priority task titles in view", {
 test_that("task titles can be edited, committed, and reverted", {
   page <- local_page(pz_example("tasks"))
   task <- pz_find(page, pz_loc(".task", has_text = "Renew passport"))
+  task |> pz_act_click(".task-edit")
+  expect_identical(
+    pz_js(
+      page,
+      "getComputedStyle(document.querySelector('.task-title[contenteditable=true]')).cursor"
+    ),
+    "text"
+  )
+  expect_identical(
+    pz_js(
+      page,
+      "getComputedStyle(document.querySelector('.task-drag-handle')).cursor"
+    ),
+    "default"
+  )
   task |>
-    pz_act_click(".task-edit") |>
     pz_find(".task-title") |>
     pz_act_select_text("passport") |>
     pz_act_type("driving licence") |>
     pz_act_press("Enter")
   expect_identical(pz_get_text(task, ".task-title"), "Renew driving licence")
+  expect_identical(
+    pz_js(page, "getComputedStyle(document.querySelector('.task')).cursor"),
+    "grab"
+  )
   expect_identical(
     pz_get_text(page, "#status"),
     "Renamed to \u201cRenew driving licence\u201d."
