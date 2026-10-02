@@ -1842,7 +1842,12 @@ test_that("screencast cuts paused paints and resumes event delivery", {
   )
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_wait(page, 0.35) # the fixture repaints its ticker every 100ms
+  pz_poll(
+    function() length(rec$files) >= 2L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "the ticker's screencast paint events"
+  )
   expect_gte(length(rec$files), 2L)
 
   pz_record_pause(page)
@@ -1850,14 +1855,20 @@ test_that("screencast cuts paused paints and resumes event delivery", {
   pz_wait(page, 0.4)
   expect_length(rec$files, before)
   pz_record_resume(page)
-  pz_wait(page, 0.35)
+  pz_poll(
+    function() length(rec$files) > before,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a screencast frame after resuming"
+  )
   expect_gt(length(rec$files), before)
   expect_equal(rec$n_errors, 0L)
   pz_record_hold(page, 0.2)
   pz_record_stop(page)
   expect_true(file.exists(out))
-  expect_gte(recorded_video_info(out)$duration, 1.0)
-  expect_lt(recorded_video_info(out)$duration, 2.0)
+  expected <- record_resample(rec)$n_ticks / rec$fps
+  expect_gte(recorded_video_info(out)$duration, expected - 1 / rec$fps - 0.002)
+  expect_lte(recorded_video_info(out)$duration, expected + 1 / rec$fps + 0.002)
 })
 
 test_that("resume captures a paused change on an idle page", {

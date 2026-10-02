@@ -139,9 +139,10 @@ test_that("Shiny idle deadline cleans page listeners and observer", {
   pz_js(
     page,
     paste0(
-      "window.__idleDisconnects = 0;",
+      "window.__idleDisconnects = 0; window.__idleObservers = 0;",
       "window.__idleObserver = MutationObserver;",
       "window.MutationObserver = class extends window.__idleObserver {",
+      "constructor(...args) { super(...args); window.__idleObservers++; }",
       "disconnect() { window.__idleDisconnects++; super.disconnect(); }",
       "};",
       "document.documentElement.classList.add('shiny-busy');"
@@ -151,12 +152,40 @@ test_that("Shiny idle deadline cleans page listeners and observer", {
     page,
     "window.MutationObserver = window.__idleObserver; document.documentElement.classList.remove('shiny-busy')"
   ))
-  expect_error(
-    pz_wait_for_shiny_idle(page, timeout = 0.35),
-    "Shiny idle",
-    class = "paparazzi_error_timeout"
+  original_js <- pz_js
+  # The fixture is already loaded; exercise the browser deadline, not preflight.
+  with_mocked_bindings(
+    {
+      expect_error(
+        pz_wait_for_shiny_idle(page, timeout = 0.35),
+        "Shiny idle",
+        class = "paparazzi_error_timeout"
+      )
+    },
+    wait_for_load = function(...) invisible(NULL),
+    pz_js = function(ctx, expr, ...) {
+      if (identical(expr, "!!window.Shiny")) {
+        return(TRUE)
+      }
+      original_js(ctx, expr, ...)
+    }
   )
-  expect_gte(pz_js(page, "window.__idleDisconnects"), 1)
+  pz_poll(
+    function() {
+      pz_js(
+        page,
+        "window.__idleObservers > 0 && window.__idleDisconnects >= window.__idleObservers"
+      )
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "Shiny idle observer cleanup after the deadline"
+  )
+  expect_gte(pz_js(page, "window.__idleObservers"), 1)
+  expect_equal(
+    pz_js(page, "window.__idleDisconnects"),
+    pz_js(page, "window.__idleObservers")
+  )
   expect_identical(pz_js(page, listeners), before)
   pz_js(page, "document.documentElement.classList.remove('shiny-busy')")
   expect_no_error(pz_wait_for_shiny_idle(page, timeout = 2))
