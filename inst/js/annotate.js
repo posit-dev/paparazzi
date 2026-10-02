@@ -420,6 +420,67 @@ function(root) {
   };
   layer.pz = {
     sync,
+    dragPreviewSafety(source, footprint) {
+      const unsafe = reason => ({safe:false, reason});
+      const validBox = r => r &&
+        ['left', 'top', 'right', 'bottom', 'width', 'height'].every(key =>
+          Number.isFinite(r[key])) && r.width > 0 && r.height > 0 &&
+        r.right > r.left && r.bottom > r.top;
+      if (!validBox(footprint)) return unsafe('invalid-footprint');
+      if (!(source instanceof Element) || !source.isConnected ||
+          source.getRootNode() !== document) return unsafe('unknown-source');
+      if (!layer.isConnected) return unsafe('unknown-state');
+      try {
+        let count = 0;
+        for (const entry of entries.values()) {
+          if (entry.kind !== 'redact') continue;
+          if (!['fill', 'blur'].includes(entry.method) ||
+              !Array.isArray(entry.pad) || entry.pad.length !== 4 ||
+              !entry.pad.every(Number.isFinite) ||
+              !Array.isArray(entry.elements) || !entry.elements.length ||
+              !Array.isArray(entry.nodes) || entry.nodes.length !== entry.elements.length) {
+            return unsafe('unknown-state');
+          }
+          count += entry.nodes.length;
+          for (let i = 0; i < entry.elements.length; i++) {
+            const el = entry.elements[i], node = entry.nodes[i];
+            if (!(el instanceof Element) || !el.isConnected ||
+                el.getRootNode() !== document || !node?.isConnected ||
+                node.parentNode !== layer || !node.classList.contains('pz-redaction')) {
+              return unsafe('unknown-state');
+            }
+          }
+        }
+        if (layer.querySelectorAll('.pz-redaction').length !== count) {
+          return unsafe('unknown-state');
+        }
+        sync();
+        for (const entry of entries.values()) {
+          if (entry.kind !== 'redact') continue;
+          for (let i = 0; i < entry.elements.length; i++) {
+            const el = entry.elements[i];
+            if (source === el || source.contains(el) || el.contains(source)) {
+              return unsafe('related-redaction');
+            }
+            const clip = clipRegion(el);
+            if (clip === null) continue;
+            const node = entry.nodes[i];
+            if (node.style.display === 'none') continue;
+            const r = node.getBoundingClientRect();
+            if (!validBox(r)) return unsafe('unknown-state');
+            const left = Math.max(r.left, clip.left), top = Math.max(r.top, clip.top);
+            const right = Math.min(r.right, clip.right), bottom = Math.min(r.bottom, clip.bottom);
+            if (left < footprint.right && right > footprint.left &&
+                top < footprint.bottom && bottom > footprint.top) {
+              return unsafe('overlapping-redaction');
+            }
+          }
+        }
+        return {safe:true, reason:'safe'};
+      } catch (_) {
+        return unsafe('unknown-state');
+      }
+    },
     paintedRects(elements) {
       sync();
       let union = null;
@@ -658,7 +719,7 @@ function(root) {
         return box;
       });
       return register(opts.id, {elements:[...elements], pad:opts.pad,
-        reveal:'none', kind:'redact'}, nodes, opts).id;
+        reveal:'none', kind:'redact', method:opts.method}, nodes, opts).id;
     }
   };
   return layer;

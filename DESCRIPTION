@@ -69,6 +69,7 @@ Collate:
     'utils-purrr.R'
     'cursor.R'
     'device.R'
+    'drag-preview.R'
     'example.R'
     'expect.R'
     'fonts.R'

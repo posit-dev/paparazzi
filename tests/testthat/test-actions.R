@@ -1791,6 +1791,16 @@ test_that("without a recording both drag paths stay instant", {
 
 test_that("pz_act_drag validates its input and errors on multiple matches", {
   page <- local_advanced_page()
+  for (preview in list(NULL, NA, 1, "true", c(TRUE, FALSE))) {
+    expect_error(
+      pz_act_drag(page, "#draggable", "#dropzone", preview = preview),
+      "preview"
+    )
+  }
+  expect_error(
+    pz_act_drag(page, "#draggable", "#dropzone", FALSE),
+    "must be empty"
+  )
   expect_error(pz_act_drag(page, "#dragbox"), class = "paparazzi_error_input")
   expect_error(
     pz_act_drag(page, "#dragbox", "#dropzone", by = c(10, 10)),

@@ -830,6 +830,22 @@ pz_act_scroll <- function(
 #' the carry, and the real pointer stays by the source until the
 #' release, so the destination shows no hover during the carry.
 #'
+#' With `preview = TRUE`, an active, unpaused recording with a visible cursor
+#' also carries a static image of the HTML5 source, captured before `dragstart`
+#' styling. A handle inside a draggable element previews that element. After
+#' the drop, the image briefly settles to the same source node's new bounds,
+#' if it survives with a supported, unchanged size. The page's source is never
+#' hidden or replaced. This is not the browser's native drag image and does not
+#' reproduce custom `DataTransfer.setDragImage()` feedback.
+#'
+#' Source-related or overlapping paparazzi redactions, uncertain redaction
+#' state, and unsupported source geometry or content references disable the
+#' preview with a warning. Sources containing SVG `<use>` references or iframes
+#' are not captured. Provably separate redactions permit preview capture.
+#' Capture and other optional preview failures also warn without changing the
+#' drag. Use `preview = FALSE` to disable capture, carry imagery, and settling.
+#' Unrecorded, paused, hidden-cursor, and ordinary mouse drags do no preview work.
+#'
 #' `to` names the element to drop onto; `by = c(x, y)` drops at that
 #' offset in pixels from the source's center. Supply exactly one.
 #'
@@ -842,6 +858,8 @@ pz_act_scroll <- function(
 #'   the absolute destination. Supply exactly one of `to` or `by`.
 #' @param by Offset in pixels from the source's center, `c(x, y)` (or a
 #'   single number for both axes). `NULL` disables the offset mode.
+#' @param preview Whether to show a static source image during recorded HTML5
+#'   drags and a brief post-drop settling animation. Must be named.
 #'
 #' @return `ctx`, invisibly.
 #'
@@ -863,9 +881,17 @@ pz_act_scroll <- function(
 #' @inheritSection paparazzi-actions Acting on the page
 #'
 #' @export
-pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
+pz_act_drag <- function(
+  ctx,
+  target,
+  to = NULL,
+  ...,
+  by = NULL,
+  preview = TRUE
+) {
   check_context(ctx)
   check_dots_empty()
+  check_bool(preview)
   record_pre_action_loader(ctx)
   to_dest <- !is.null(to)
   by_offset <- !is.null(by)
@@ -900,7 +926,7 @@ pz_act_drag <- function(ctx, target, to = NULL, ..., by = NULL) {
   }
 
   if (isTRUE(els_values_flat(els, draggable_js))) {
-    drag_html5(ctx, els, from, to_point)
+    drag_html5(ctx, els, from, to_point, preview = preview)
   } else {
     dispatch_mouse_drag(
       ctx,
@@ -1628,10 +1654,18 @@ dispatch_mouse_drag <- function(
 
 DRAG_START_NUDGE <- 12
 
-drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
+drag_html5 <- function(
+  ctx,
+  els,
+  from,
+  to,
+  call = caller_env(),
+  preview = TRUE
+) {
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
   staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
+  drag_preview <- drag_preview_create(ctx, preview)
   data <- NULL
   dereg <- session$Input$dragIntercepted(
     callback_ = function(msg) data <<- msg$data
@@ -1688,6 +1722,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     }
   })
 
+  withr::defer(drag_preview_dispose(drag_preview))
   action_cdp(
     ctx,
     "dragging",
@@ -1706,6 +1741,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
     clickCount = 0,
     call = call
   )
+  drag_preview_prepare(drag_preview, els, from)
   if (staged) {
     pump_loop(ctx$page$child_loop, 0.15)
     cursor_press(ctx, TRUE)
@@ -1753,7 +1789,9 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
 
   if (staged) {
     cursor_apply(ctx, from, pressed = TRUE)
+    drag_preview_show(drag_preview, from)
     stage_drag_carry(ctx, from, to, function(point) {
+      drag_preview_move(drag_preview, point)
       for (type in c("dragEnter", "dragOver")) {
         action_cdp(
           ctx,
@@ -1771,6 +1809,7 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
       }
     })
   }
+  drag_preview_move(drag_preview, to)
   action_cdp(
     ctx,
     "dragging",
@@ -1821,8 +1860,10 @@ drag_html5 <- function(ctx, els, from, to, call = caller_env()) {
       call = call
     )
     cursor_apply(ctx, to, pressed = FALSE)
-    pump_loop(ctx$page$child_loop, 0.2)
+    duration <- drag_preview_settle(drag_preview)
+    pump_loop(ctx$page$child_loop, max(0.2, duration / 1000 + 0.05))
   }
+  drag_preview_dispose(drag_preview)
 }
 
 check_file_paths <- function(files, call = caller_env()) {

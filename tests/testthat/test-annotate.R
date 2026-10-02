@@ -383,6 +383,230 @@ test_that("redaction fills every match immediately and hides after disconnection
   expect_length(annotation_state(page), 0)
 })
 
+annotation_drag_safety <- function(
+  page,
+  source = "document.getElementById('box')",
+  footprint = "source.getBoundingClientRect()"
+) {
+  pz_js(
+    page,
+    paste0(
+      "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+      "const source = ",
+      source,
+      ";",
+      "return layer.pz.dragPreviewSafety(source, ",
+      footprint,
+      "); })()"
+    )
+  )
+}
+
+test_that("drag previews reject redacted sources and ancestors for fill and blur", {
+  page <- annotation_page()
+  pz_js(
+    page,
+    "document.getElementById('box').innerHTML = '<div id=child style=width:20px;height:20px></div>'"
+  )
+  for (method in c("fill", "blur")) {
+    page |> pz_annotate_redact("#box", id = "secret", method = method)
+    expect_identical(
+      annotation_drag_safety(page),
+      list(safe = FALSE, reason = "related-redaction")
+    )
+    expect_identical(
+      annotation_drag_safety(page, "document.getElementById('child')"),
+      list(safe = FALSE, reason = "related-redaction")
+    )
+  }
+})
+
+test_that("drag previews reject hidden redacted descendants before capture", {
+  page <- annotation_page()
+  pz_js(
+    page,
+    "document.getElementById('box').innerHTML = '<div id=secret style=width:20px;height:20px></div>'"
+  )
+  page |> pz_annotate_redact("#secret")
+  pz_js(page, "document.getElementById('secret').style.display = 'none'")
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = FALSE, reason = "related-redaction")
+  )
+})
+
+test_that("unrelated fill and blur masks permit drag previews without changing entries", {
+  page <- annotation_page()
+  for (method in c("fill", "blur")) {
+    page |> pz_annotate_redact("#fixed", id = "secret", method = method)
+    expect_identical(
+      annotation_drag_safety(page),
+      list(safe = TRUE, reason = "safe")
+    )
+    expect_equal(
+      pz_js(
+        page,
+        "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
+      ),
+      1
+    )
+  }
+  page |> pz_annotate_clear()
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = TRUE, reason = "safe")
+  )
+})
+
+test_that("drag safety synchronizes padded mask overlap with the supplied footprint", {
+  page <- annotation_page()
+  pz_js(
+    page,
+    "document.getElementById('fixed').style.cssText = 'position:fixed;left:310px;top:310px;width:20px;height:50px'"
+  )
+  page |> pz_annotate_redact("#fixed", pad = 15)
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = FALSE, reason = "overlapping-redaction")
+  )
+  pz_js(page, "document.getElementById('fixed').style.left = '400px'")
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = TRUE, reason = "safe")
+  )
+  expect_identical(
+    annotation_drag_safety(
+      page,
+      footprint = "{left:200,top:310,right:410,bottom:360,width:210,height:50}"
+    ),
+    list(safe = FALSE, reason = "overlapping-redaction")
+  )
+})
+
+test_that("drag previews fail closed for missing, disconnected and cross-root sources", {
+  page <- annotation_page()
+  page |> pz_annotate_redact("#fixed")
+  box <- "{left:200,top:310,right:300,bottom:360,width:100,height:50}"
+  expect_identical(
+    annotation_drag_safety(page, "null", box),
+    list(safe = FALSE, reason = "unknown-source")
+  )
+  pz_js(
+    page,
+    "window.__source = document.getElementById('box'); window.__source.remove()"
+  )
+  expect_identical(
+    annotation_drag_safety(page, "window.__source", box),
+    list(safe = FALSE, reason = "unknown-source")
+  )
+  pz_js(
+    page,
+    "document.getElementById('fixed').attachShadow({mode:'open'}).innerHTML = '<div id=source style=width:20px;height:20px></div>'"
+  )
+  expect_identical(
+    annotation_drag_safety(
+      page,
+      "document.getElementById('fixed').shadowRoot.getElementById('source')",
+      box
+    ),
+    list(safe = FALSE, reason = "unknown-source")
+  )
+})
+
+test_that("drag previews fail closed for stale masks, targets and unsupported methods", {
+  page <- annotation_page()
+  page |> pz_annotate_redact("#fixed", id = "secret")
+  pz_js(
+    page,
+    "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').remove()"
+  )
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = FALSE, reason = "unknown-state")
+  )
+  page |> pz_annotate_redact("#fixed", id = "secret")
+  pz_js(page, "document.getElementById('fixed').remove()")
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = FALSE, reason = "unknown-state")
+  )
+  page |> pz_annotate_clear()
+  pz_js(
+    page,
+    paste0(
+      "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.redact(",
+      "[document.getElementById('outer')], {id:'invalid',pad:[0,0,0,0],method:'pixelate',color:null,animate:false})"
+    )
+  )
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = FALSE, reason = "unknown-state")
+  )
+})
+
+test_that("drag previews fail closed for cross-root redactions and untracked masks", {
+  page <- annotation_page()
+  page |> pz_annotate_redact("#fixed")
+  pz_js(
+    page,
+    paste0(
+      "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+      "const shadow = document.getElementById('fixed').attachShadow({mode:'open'});",
+      "shadow.innerHTML = '<div style=width:20px;height:20px></div>';",
+      "layer.pz.redact([shadow.firstChild], {id:'shadow',pad:[0,0,0,0],method:'fill',color:null,animate:false}); })()"
+    )
+  )
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = FALSE, reason = "unknown-state")
+  )
+  page |> pz_annotate_clear("shadow")
+  pz_js(
+    page,
+    paste0(
+      "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+      "layer.appendChild(layer.querySelector('.pz-redaction').cloneNode(true)); })()"
+    )
+  )
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = FALSE, reason = "unknown-state")
+  )
+})
+
+test_that("drag safety uses the painted clip rather than the whole padded mask", {
+  page <- annotation_page()
+  pz_js(
+    page,
+    paste0(
+      "document.getElementById('fixed').style.cssText = 'position:fixed;left:310px;top:310px;width:20px;height:50px;overflow:hidden';",
+      "document.getElementById('fixed').innerHTML = '<div id=secret style=width:20px;height:50px></div>'"
+    )
+  )
+  page |> pz_annotate_redact("#secret", pad = 20)
+  expect_identical(
+    annotation_drag_safety(page),
+    list(safe = TRUE, reason = "safe")
+  )
+})
+
+test_that("drag safety rejects invalid footprints", {
+  page <- annotation_page()
+  page |> pz_annotate_redact("#fixed")
+  for (box in c(
+    "null",
+    "{left:0,top:0,right:1,bottom:1,width:Infinity,height:1}",
+    "{left:0,top:0,right:1,bottom:1,width:1,height:NaN}",
+    "{left:0,top:0,right:1,bottom:1,width:0,height:1}",
+    "{left:0,top:0,right:1,bottom:1,width:1,height:-1}"
+  )) {
+    expect_identical(
+      annotation_drag_safety(page, footprint = box),
+      list(safe = FALSE, reason = "invalid-footprint")
+    )
+  }
+})
+
 test_that("redaction paints only inside a scrolling ancestor as its target moves", {
   skip_if_not_installed("png")
   page <- annotation_page()

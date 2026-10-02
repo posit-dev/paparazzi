@@ -1,5 +1,11 @@
 # paparazzi 0.0.0.9000
 
+* `pz_act_drag()` gains named-only `preview = TRUE`: recorded HTML5 drags with
+  a visible cursor carry a static source image and briefly settle to the same
+  surviving source after drop. Unsafe or uncertain paparazzi redactions and
+  optional preview failures warn and preserve the drag. `preview = FALSE`
+  disables both the image and settling.
+
 * Persistent captions remain visible on the last GIF frame when recordings
   repeat captured frames, such as during `pz_record_hold()`.
 
