@@ -2,6 +2,10 @@
 
 ## paparazzi 0.0.0.9000
 
+- Persistent captions remain visible on the last GIF frame when
+  recordings repeat captured frames, such as during
+  [`pz_record_hold()`](https://posit-dev.github.io/paparazzi/reference/pz_record_hold.md).
+
 - Breaking:
   [`pz_annotate_callout()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_callout.md)’s
   `arrow` argument is renamed `leader`. `TRUE` (the default) draws a
