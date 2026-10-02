@@ -23,24 +23,28 @@ no post-commit hook. Use `roborev review <sha>`, then
     `@noRd`.
 4.  **Test files mirror source files.** `R/foo.R` -\>
     `tests/testthat/test-foo.R`.
-5.  **Use `cli` for errors and messages:**
+5.  **Browser, Quarto, Shiny, and av/gifski tests skip on CRAN.** Use
+    the `skip_if_no_*()` helpers in `tests/testthat/helper-*.R`; they
+    call `skip_on_cran()`. Without `NOT_CRAN=true` (set by devtools/CI),
+    `setup-cran-guard.R` turns any missed skip into a hard failure.
+6.  **Use `cli` for errors and messages:**
     [`cli::cli_abort()`](https://cli.r-lib.org/reference/cli_abort.html)
     for errors,
     [`cli::cli_inform()`](https://cli.r-lib.org/reference/cli_abort.html)/[`cli::cat_line()`](https://cli.r-lib.org/reference/cat_line.html)
     for output; cli markup (`{.arg}`, `{.val}`, `{.fn}`) over
     [`sprintf()`](https://rdrr.io/r/base/sprintf.html).
-6.  **Validate user input with rlang’s `check_*()` functions**
+7.  **Validate user input with rlang’s `check_*()` functions**
     (`check_bool()`, `check_string()`, `check_number_*()`,
     `check_data_frame()`); use `stop_input_type()` where no `check_*()`
     fits; hand-rolled classed errors only when the class is needed. Use
     paparazzi’s own checkers in `R/utils-check.R`
     (e.g. `check_character()`, `check_page()`) where they fit; extend
     that file as new shared checkers come up.
-7.  **Test scope:** On feature branches, run tests mirroring changed
+8.  **Test scope:** On feature branches, run tests mirroring changed
     sources and cross-module seams named in the kata task; a full run is
     optional at the implementer’s discretion. Run `btw pkg test` on main
     as the merge gate; filtered tests may miss integration breaks.
-8.  **Serialize competing Chrome-heavy runs:** use
+9.  **Serialize competing Chrome-heavy runs:** use
     `.agents/chrome-lock.sh` when test runs across worktrees might
     overlap and overload Chrome. Don’t lock browser-free or isolated
     runs. Judge test results by reported FAIL/WARN, not exit code or
