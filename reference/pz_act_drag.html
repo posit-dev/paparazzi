@@ -21,6 +21,25 @@ On the HTML5 path the carry runs between the page's dragstart and
 the replayed drop, so dragstart styling stays visible through
 the carry, and the real pointer stays by the source until the
 release, so the destination shows no hover during the carry.
+With preview = TRUE, an active, unpaused recording with a visible cursor
+also carries a static image of the HTML5 source, captured before dragstart
+styling. A handle inside a draggable element previews that element. After
+the drop, the image briefly settles to the same source node's new bounds,
+if it survives with a supported, unchanged size. The page's source is never
+hidden or replaced. This is not the browser's native drag image and does not
+reproduce custom DataTransfer.setDragImage() feedback.
+Source-related or overlapping paparazzi redactions, uncertain redaction
+state, and unsupported source geometry or content references disable the
+preview with a warning. Sources containing SVG &amp;lt;use&amp;gt; references or iframes
+are not captured. Preview capture also skips documents with imported or
+unreadable stylesheets, unsupported CSS rule groups, nonembedded font source
+URLs, or registered fonts without a readable embedded CSS representation.
+Provably separate redactions permit preview capture. If local file:// pages
+have unreadable stylesheets, serve them over HTTP with pz_serve_static() and
+open the server handle with pz_open().
+Capture and other optional preview failures also warn without changing the
+drag. Use preview = FALSE to disable capture, carry imagery, and settling.
+Unrecorded, paused, hidden-cursor, and ordinary mouse drags do no preview work.
 to names the element to drop onto; by = c(x, y) drops at that
 offset in pixels from the source's center. Supply exactly one."><meta property="og:description" content="Auto-waits for the source to be actionable: visible, non-empty, and
 receiving pointer events at its center (not covered by another element).
@@ -44,6 +63,25 @@ On the HTML5 path the carry runs between the page's dragstart and
 the replayed drop, so dragstart styling stays visible through
 the carry, and the real pointer stays by the source until the
 release, so the destination shows no hover during the carry.
+With preview = TRUE, an active, unpaused recording with a visible cursor
+also carries a static image of the HTML5 source, captured before dragstart
+styling. A handle inside a draggable element previews that element. After
+the drop, the image briefly settles to the same source node's new bounds,
+if it survives with a supported, unchanged size. The page's source is never
+hidden or replaced. This is not the browser's native drag image and does not
+reproduce custom DataTransfer.setDragImage() feedback.
+Source-related or overlapping paparazzi redactions, uncertain redaction
+state, and unsupported source geometry or content references disable the
+preview with a warning. Sources containing SVG &amp;lt;use&amp;gt; references or iframes
+are not captured. Preview capture also skips documents with imported or
+unreadable stylesheets, unsupported CSS rule groups, nonembedded font source
+URLs, or registered fonts without a readable embedded CSS representation.
+Provably separate redactions permit preview capture. If local file:// pages
+have unreadable stylesheets, serve them over HTTP with pz_serve_static() and
+open the server handle with pz_open().
+Capture and other optional preview failures also warn without changing the
+drag. Use preview = FALSE to disable capture, carry imagery, and settling.
+Unrecorded, paused, hidden-cursor, and ordinary mouse drags do no preview work.
 to names the element to drop onto; by = c(x, y) drops at that
 offset in pixels from the source's center. Supply exactly one."><meta property="og:image" content="https://posit-dev.github.io/paparazzi/logo.png"><script defer src="https://cdn.jsdelivr.net/gh/posit-dev/supported-by-posit/js/badge.min.js" data-max-height="43" data-light-bg="#666f76" data-light-fg="#f9f9f9"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -116,13 +154,32 @@ On the HTML5 path the carry runs between the page's <code>dragstart</code> and
 the replayed <code>drop</code>, so <code>dragstart</code> styling stays visible through
 the carry, and the real pointer stays by the source until the
 release, so the destination shows no hover during the carry.</p>
+<p>With <code>preview = TRUE</code>, an active, unpaused recording with a visible cursor
+also carries a static image of the HTML5 source, captured before <code>dragstart</code>
+styling. A handle inside a draggable element previews that element. After
+the drop, the image briefly settles to the same source node's new bounds,
+if it survives with a supported, unchanged size. The page's source is never
+hidden or replaced. This is not the browser's native drag image and does not
+reproduce custom <code>DataTransfer.setDragImage()</code> feedback.</p>
+<p>Source-related or overlapping paparazzi redactions, uncertain redaction
+state, and unsupported source geometry or content references disable the
+preview with a warning. Sources containing SVG <code>&lt;use&gt;</code> references or iframes
+are not captured. Preview capture also skips documents with imported or
+unreadable stylesheets, unsupported CSS rule groups, nonembedded font source
+URLs, or registered fonts without a readable embedded CSS representation.
+Provably separate redactions permit preview capture. If local <code>file://</code> pages
+have unreadable stylesheets, serve them over HTTP with <code><a href="pz_serve_static.html">pz_serve_static()</a></code> and
+open the server handle with <code><a href="pz_open.html">pz_open()</a></code>.
+Capture and other optional preview failures also warn without changing the
+drag. Use <code>preview = FALSE</code> to disable capture, carry imagery, and settling.
+Unrecorded, paused, hidden-cursor, and ordinary mouse drags do no preview work.</p>
 <p><code>to</code> names the element to drop onto; <code>by = c(x, y)</code> drops at that
 offset in pixels from the source's center. Supply exactly one.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pz_act_drag</span><span class="op">(</span><span class="va">ctx</span>, <span class="va">target</span>, to <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span>, by <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pz_act_drag</span><span class="op">(</span><span class="va">ctx</span>, <span class="va">target</span>, to <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span>, by <span class="op">=</span> <span class="cn">NULL</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -152,6 +209,11 @@ the absolute destination. Supply exactly one of <code>to</code> or <code>by</cod
 <dt id="arg-by">by<a class="anchor" aria-label="anchor" href="#arg-by"></a></dt>
 <dd><p>Offset in pixels from the source's center, <code>c(x, y)</code> (or a
 single number for both axes). <code>NULL</code> disables the offset mode.</p></dd>
+
+
+<dt id="arg-preview">preview<a class="anchor" aria-label="anchor" href="#arg-preview"></a></dt>
+<dd><p>Whether to show a static source image during recorded HTML5
+drags and a brief post-drop settling animation. Must be named.</p></dd>
 
 </dl></div>
     <div class="section level2">

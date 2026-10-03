@@ -31,3 +31,8 @@ Authors:
 
 - Garrick Aden-Buie <garrick@adenbuie.com>
   ([ORCID](https://orcid.org/0000-0002-7111-0077))
+
+Other contributors:
+
+- W.Y. (Copyright holder of the bundled html-to-image JavaScript
+  library) \[copyright holder\]
