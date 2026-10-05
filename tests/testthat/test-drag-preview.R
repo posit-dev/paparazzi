@@ -117,41 +117,56 @@ drag_preview_retained_checkpoint <- function(page, verify = NULL, timeout = 3) {
     interval = 0.02
   )
   expect_gt(length(page_recorder(page)$files), before)
-  if (!result$pass && length(page_recorder(page)$files) > before) {
-    testthat::fail('the retained frame never matched the expected content')
+  if (!result$pass) {
+    if (length(page_recorder(page)$files) > before) {
+      testthat::fail('the retained frame never matched the expected content')
+    } else {
+      # No frame arrived and expect_gt above records it; NA keeps downstream
+      # calls (file.exists, readBin) failing instead of passing vacuously.
+      return(NA_character_)
+    }
   }
   result$path
 }
 
-# Pump until the live preview image rests (or has detached), so frames the
-# recorder delivers after pz_act_drag() returns include the settled position.
-drag_preview_wait_settled <- function(page, resting, timeout = 3) {
-  point <- unlist(resting)
-  pz_poll(
+# Pump until a retained frame from `from` onward shows the marker at `point`.
+# DOM state is not enough: the preview image detaches as soon as the settle
+# finishes, and the screencast frames queued behind that moment only drain
+# while the child loop is pumped.
+drag_preview_wait_retained_at <- function(
+  page,
+  point,
+  from = 1L,
+  tolerance = 1.5,
+  timeout = 3
+) {
+  scanned <- from - 1L
+  at_rest <- drag_preview_marker_at(page, point, tolerance = tolerance)
+  result <- expect_retry(
     function() {
-      tryCatch(
-        isTRUE(pz_js(
-          page,
-          paste0(
-            "(() => { const p = ",
-            DRAG_PREVIEW_CONTROLLER_JS,
-            "; if (!p || !p.image || !p.image.isConnected) return true;",
-            "const r = p.image.getBoundingClientRect();",
-            "return Math.abs(r.x - ",
-            point[['x']],
-            ") <= 1.5 &&",
-            "Math.abs(r.y - ",
-            point[['y']],
-            ") <= 1.5; })()"
-          )
-        )),
-        error = function(e) FALSE
+      files <- page_recorder(page)$files
+      start <- max(scanned + 1L, from)
+      new_files <- if (start <= length(files)) {
+        files[start:length(files)]
+      } else {
+        character(0)
+      }
+      scanned <<- length(files)
+      list(
+        pass = any(vapply(
+          new_files,
+          function(path) at_rest(path),
+          logical(1)
+        ))
       )
     },
     timeout = timeout,
     loop = page$child_loop,
-    what = "the drag preview to settle at rest"
+    interval = 0.02
   )
+  if (!result$pass) {
+    testthat::fail('no retained frame showed the marker at the rest position')
+  }
   invisible(TRUE)
 }
 
@@ -1131,8 +1146,9 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
     '#preview-target .task-drag-handle'
   ))
   # Frames delivered after the action must include the settled position;
-  # pumping here also drains the screencast events queued during the settle.
-  drag_preview_wait_settled(page, resting)
+  # polling retained frames here also drains the screencast events queued
+  # behind the settle.
+  drag_preview_wait_retained_at(page, resting, from = first_settle_frame)
   rec <- page_recorder(page)
   action_files <- rec$files
   boxes <- lapply(action_files, function(path) {
