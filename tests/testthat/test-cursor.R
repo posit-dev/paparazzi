@@ -1227,9 +1227,29 @@ test_that("an explicitly hidden cursor stays hidden during recorded typing", {
       "});"
     )
   )
-  page |>
-    pz_cursor_hide() |>
-    pz_act_type("abc", target = "#task-title")
+  page |> pz_cursor_hide()
+  # The hide fades the overlay over CURSOR_FADE seconds and the hide pump
+  # leaves no margin, so the first keystroke can race the fade on a loaded
+  # runner; poll for the settled opacity before typing.
+  expect_retry(
+    function() {
+      list(
+        pass = identical(
+          pz_js(
+            page,
+            paste0(
+              "getComputedStyle(document.getElementById('paparazzi-overlay-root')",
+              ".shadowRoot.querySelector('.pz-inner')).opacity"
+            )
+          ),
+          "0"
+        )
+      )
+    },
+    timeout = 2,
+    loop = page$child_loop
+  )
+  page |> pz_act_type("abc", target = "#task-title")
 
   opacities <- unlist(pz_js(page, "window.__cursorInputOpacity"))
   expect_length(opacities, 3)
