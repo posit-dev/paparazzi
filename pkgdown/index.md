@@ -57,11 +57,8 @@ on a small task-tracker page that ships with paparazzi:
 ``` r
 library(paparazzi)
 
-server <- pz_serve_static(pz_example("tasks"))
-withr::defer(server$stop())
-
 page <- pz_open(
-  server,
+  pz_example("tasks"),
   width = 1000,
   height = 720,
   color_scheme = "light"
