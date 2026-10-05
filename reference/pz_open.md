@@ -114,7 +114,7 @@ is used as-is.
 # HTTP-only behavior
 page <- pz_open(pz_example("tasks"))
 pz_get_url(page)
-#> [1] "http://127.0.0.1:4831/tasks.html"
+#> [1] "http://127.0.0.1:5845/tasks.html"
 pz_close(page)
 
 # Named arguments in `...` set up the device before the page loads
