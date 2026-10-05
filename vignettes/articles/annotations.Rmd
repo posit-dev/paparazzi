@@ -197,7 +197,7 @@ Use fill for real secrets: blur can leave short text partly legible, and a fill 
 
 ## Captions
 
-[`pz_annotate_caption()`](../reference/pz_annotate_caption.html) adds a caption in screen space: a dark panel floating at the `side = "bottom"` (the default) or `"top"` edge of the capture. It's not attached to an element. It persists through navigation and across recordings, and it's composited onto stills. Newlines are preserved.
+[`pz_annotate_caption()`](../reference/pz_annotate_caption.html) adds a caption in screen space: a dark panel floating at the `side = "bottom"` (the default) or `"top"` edge of the capture. The default side comes from the page's staged `caption_side` (see [styling defaults](#styling-defaults)); a per-call `side` overrides it. It's not attached to an element. It persists through navigation and across recordings, and it's composited onto stills. Newlines are preserved.
 
 ```{r caption, fig.alt = "The task tracker with a dark caption panel centered along the bottom edge, reading: Seven tasks, two clicks from done."}
 page |> pz_annotate_caption("Seven tasks, two clicks from done")
@@ -227,7 +227,7 @@ Only the circle remains: the second `id = "mark"` call replaced the box. During 
 
 ## Styling defaults
 
-Every annotation defaults to the page's staged color, stroke width, font family, and badge size, and every callout to the staged bubble colors and distance. Change them for all later annotations with [`pz_stage_annotate()`](../reference/pz_stage_annotate.html), and pass `NULL` to restore a default (crimson `#e11d48`, 3 pixel lines, sans-serif, 14 pixel text, and callouts with white text on `#171717`, 24 pixels away or 8 without a line):
+Every annotation defaults to the page's staged color, stroke width, font family, and badge size, every callout to the staged bubble colors and distance, and every caption to the staged `caption_side`. Change them for all later annotations with [`pz_stage_annotate()`](../reference/pz_stage_annotate.html), and pass `NULL` to restore a default (crimson `#e11d48`, 3 pixel lines, sans-serif, 14 pixel text, captions at the bottom, and callouts with white text on `#171717`, 24 pixels away or 8 without a line):
 
 ```{r stage-style, fig.alt = "The Add button boxed in blue with a large monospace A badge."}
 page |>
