@@ -19,7 +19,7 @@ test_that("the console summary matches the spec format", {
   expect_length(got$out, 4L)
   expect_match(got$out[[1]], "^── paparazzi page ─+$")
   expect_identical(nchar(got$out[[1]]), getOption("width"))
-  expect_match(got$out[[2]], "^URL        file:")
+  expect_match(got$out[[2]], "^URL        .*/inspect\\.html$")
   inner <- unlist(pz_js(
     page,
     "[window.innerWidth, window.innerHeight, window.devicePixelRatio]"
@@ -285,7 +285,7 @@ test_that("print() shows the summary without the target section or visuals", {
   got <- inspect_capture(function() print(page))
   expect_length(got$out, 4L)
   expect_match(got$out[[1]], "^── paparazzi page ─+$")
-  expect_match(got$out[[2]], "^URL        file:")
+  expect_match(got$out[[2]], "^URL        .*/inspect\\.html$")
   expect_match(got$out[[3]], "^Device     ")
   expect_identical(got$out[[4]], "Recording  off · cursor hidden")
   expect_false(any(grepl("^Scope ", got$out)))
