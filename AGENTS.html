@@ -72,6 +72,19 @@
 <strong>Serialize competing Chrome-heavy runs:</strong> use <code>.agents/chrome-lock.sh</code> when test runs across worktrees might overlap and overload Chrome. Don’t lock browser-free or isolated runs. Judge test results by reported FAIL/WARN, not exit code or variable PASS counts.</li>
 </ol></div>
 <div class="section level2">
+<h2 id="browser-test-reliability">Browser Test Reliability<a class="anchor" aria-label="anchor" href="#browser-test-reliability"></a></h2>
+<ol style="list-style-type: decimal"><li>
+<strong>Poll for the asserted condition; never pump a fixed duration and then assert arrival.</strong> Reserve fixed <code>pump_loop()</code> windows for idle time; when later assertions require something to have arrived, poll with <code>expect_retry()</code>/<code>pz_poll()</code> until the condition itself holds.</li>
+<li>
+<strong>Verify frame content, not frame arrival.</strong> A frame captured before a DOM change can land after it. When an assertion reads a retained frame that must reflect state the test just created, assert the marker box’s position or presence in that frame.</li>
+<li>
+<strong>Wait on retained frames, not live DOM.</strong> DOM state doesn’t mean the recorder captured it, and “element detached” is true exactly when the awaited thing just finished.</li>
+<li>
+<strong>Timeouts fail loudly.</strong> When a poll gives up, return <code>NA_character_</code> or call <code><a href="https://testthat.r-lib.org/reference/fail.html" class="external-link">testthat::fail()</a></code> naming what never happened; never NULL or empty, which <code><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists()</a></code> and <code>all(logical(0))</code> turn into silent passes.</li>
+<li>
+<strong>Assert the schedule; poll the applied state.</strong> Keyframe text and animation structure can be asserted directly; computed style near an animation boundary must be polled, not sampled once.</li>
+</ol></div>
+<div class="section level2">
 <h2 id="agent-skill-and-vignettes">Agent Skill and Vignettes<a class="anchor" aria-label="anchor" href="#agent-skill-and-vignettes"></a></h2>
 <p>The <code>agents*.Rmd</code> vignettes are thin wrappers that embed <code>inst/skills/paparazzi/</code> files at render time (<code>vignettes/skill-source.R</code>); edit skill content in the skill directory, never in the vignettes. <code>skill-source.R</code> rewrites <code>references/&lt;topic&gt;.md</code> links to <code>agents-&lt;topic&gt;.html</code>, so reference topic names must match the vignette names. When adding, renaming or removing a topic, update the <code>references/*.md</code> file, its entry in SKILL.md’s References list, the matching <code>agents-*.Rmd</code> wrapper, and <code>_pkgdown.yml</code> together.</p>
 </div>
