@@ -9,7 +9,9 @@
 #' @inheritParams pz_act_click
 #' @param text Nonempty caption text. Newlines are preserved.
 #' @param ... Checked empty.
-#' @param side `"bottom"` (the default) or `"top"`.
+#' @param side Placement: `"top"` or `"bottom"` (the default). `NULL` (the
+#'   default) uses the staged `caption_side` from [pz_stage_annotate()]
+#'   (initially `"bottom"`).
 #' @param color Text color; defaults to `"white"`, independent of the
 #'   staged annotation accent.
 #' @param font_family CSS font family. `NULL` uses the page's
@@ -25,7 +27,7 @@ pz_annotate_caption <- function(
   ctx,
   text,
   ...,
-  side = "bottom",
+  side = NULL,
   color = "white",
   font_family = NULL,
   font_size = 20
@@ -33,6 +35,7 @@ pz_annotate_caption <- function(
   check_context(ctx)
   check_dots_empty()
   check_string(text, allow_empty = FALSE)
+  side <- side %||% page_stage(ctx$page)$caption_side %||% "bottom"
   side <- arg_match(side, c("bottom", "top"))
   check_string(color, allow_empty = FALSE)
   check_positive_css_px(font_size)

@@ -88,6 +88,20 @@ test_that("captions persist as page state and clearing is selective", {
   expect_null(page_caption(page))
 })
 
+test_that("staged caption_side is the default and per-call side overrides it", {
+  page <- local_record_page()
+  pz_annotate_caption(page, "First")
+  expect_equal(page_caption(page)$side, "bottom")
+  page |> pz_stage_annotate(caption_side = "top")
+  pz_annotate_caption(page, "Second")
+  expect_equal(page_caption(page)$side, "top")
+  pz_annotate_caption(page, "Third", side = "bottom")
+  expect_equal(page_caption(page)$side, "bottom")
+  page |> pz_stage_annotate(caption_side = NULL)
+  pz_annotate_caption(page, "Fourth")
+  expect_equal(page_caption(page)$side, "bottom")
+})
+
 test_that("WebVTT on GIF is rejected at start", {
   page <- local_record_page()
   for (mode in c("vtt", "both")) {

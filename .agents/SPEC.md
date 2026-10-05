@@ -525,7 +525,7 @@ pz_annotate_callout(ctx, text, ..., target = NULL, side = NULL, leader = TRUE, l
                     font_family = NULL, font_size = NULL)
 pz_annotate_spotlight(ctx, target = NULL, ..., pad = 0, dim = 0.6, reveal = c("fade", "none"))
 pz_annotate_redact(ctx, target = NULL, ..., method = c("fill", "blur"), pad = 0, id = NULL, color = NULL)
-pz_annotate_caption(ctx, text, ..., side = "bottom", color = "white", font_family = NULL, font_size = 20)
+pz_annotate_caption(ctx, text, ..., side = NULL, color = "white", font_family = NULL, font_size = 20)
 pz_annotate_clear(ctx, id = NULL, ...)
 ```
 
@@ -546,7 +546,7 @@ pz_annotate_clear(ctx, id = NULL, ...)
 
 #### Captions and keystroke callouts
 
-- **Captions:** screen-space. At encode (or still) time, a separate Chrome target renders each caption as a transparent PNG at output resolution, styled with CSS. Page webfonts don't carry over, so the font family is passed explicitly. The encoder composites it over its time window: one av filtergraph after the camera for MP4, WebM and GIF (GIF renders PNG ticks through it before gifski), and an R alpha blend for stills. The caption is a declarative page-level slot that persists across navigation and recordings. A caption still active at recording stop remains fully visible through the last frame in MP4, WebM, and GIF; an explicit clear or replacement retains its fade-out. The default look is a translucent dark pill with white text, centered, at most about 80% of the output width, wrapping. Style defaults are caption-specific: `color = "white"` is independent of the annotation accent, `font_size = 20` is a caption built-in default, and `font_family = NULL` follows the `pz_stage_annotate()` font family. `pz_record_start(captions = c("burn", "vtt", "both"))` defaults to `"burn"`; `"vtt"` and `"both"` write `<name>.vtt` next to the video, which knitr can wire up as a `<track>` (kata ks7r), and are an error for GIF.
+- **Captions:** screen-space. At encode (or still) time, a separate Chrome target renders each caption as a transparent PNG at output resolution, styled with CSS. Page webfonts don't carry over, so the font family is passed explicitly. The encoder composites it over its time window: one av filtergraph after the camera for MP4, WebM and GIF (GIF renders PNG ticks through it before gifski), and an R alpha blend for stills. The caption is a declarative page-level slot that persists across navigation and recordings. A caption still active at recording stop remains fully visible through the last frame in MP4, WebM, and GIF; an explicit clear or replacement retains its fade-out. The default look is a translucent dark pill with white text, centered, at most about 80% of the output width, wrapping. Style defaults are caption-specific: `color = "white"` is independent of the annotation accent, `font_size = 20` is a caption built-in default, and `font_family = NULL` follows the `pz_stage_annotate()` font family. The side follows the staged `pz_stage_annotate(caption_side =)`, initially `"bottom"`; a per-call `side` overrides it. `pz_record_start(captions = c("burn", "vtt", "both"))` defaults to `"burn"`; `"vtt"` and `"both"` write `<name>.vtt` next to the video, which knitr can wire up as a `<track>` (kata ks7r), and are an error for GIF.
 - **Keystroke callouts:** `pz_act_press(show_keys = NULL)`, with the page default `pz_stage(show_keys = "none")`. Values are `c("none", "words", "mac", "both")`: `"words"` shows Ctrl, Shift, Alt and Meta keycaps; `"mac"` shows ⌃ ⌥ ⇧ ⌘; `"both"` renders `Mod` as "Ctrl / ⌘". They're screen-space, shown bottom-center and stacked above any caption. A callout appears at the press, holds about 1 s after the last key, then fades over 0.25 s, all computed at encode. They're recording-only, and `pz_act_type()` has no `show_keys` argument.
 - **`Mod` modifier:** `pz_act_press("Mod+K")` presses Meta when the browser reports a Mac platform, and Control otherwise.
 
@@ -829,7 +829,7 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 | Function | Signature | Name |
 |---|---|---|
 | `pz_stage()` | `(ctx, ..., cursor = NULL, cursor_speed = NULL, cursor_scale = NULL, enter = NULL, typing = NULL, typing_speed = NULL, pause = NULL, camera_follow = NULL, show_keys = NULL)` | confirmed |
-| `pz_stage_annotate()` | `(ctx, ..., color = NULL, fill = NULL, text_color = NULL, stroke_width = NULL, distance = NULL, font_family = NULL, font_size = NULL)` | confirmed |
+| `pz_stage_annotate()` | `(ctx, ..., color = NULL, fill = NULL, text_color = NULL, stroke_width = NULL, distance = NULL, font_family = NULL, font_size = NULL, caption_side = NULL)` | confirmed |
 | `pz_cursor_show()` | `(ctx, target = NULL, ..., from = NULL, icon = NULL)` | confirmed |
 | `pz_cursor_hide()` | `(ctx, ...)` | confirmed |
 | `pz_cursor_move()` | `(ctx, target, ..., duration = NULL, icon = NULL, offset = c(0, 0))` | confirmed |

@@ -13,7 +13,8 @@ pz_stage_annotate(
   stroke_width = NULL,
   distance = NULL,
   font_family = NULL,
-  font_size = NULL
+  font_size = NULL,
+  caption_side = NULL
 )
 }
 \arguments{
@@ -49,6 +50,10 @@ and resolves to its family with a sans-serif fallback.}
 
 \item{font_size}{Badge font size in CSS pixels. The default is 14.
 Supply \code{NULL} to restore the default.}
+
+\item{caption_side}{Default side for new \code{\link[=pz_annotate_caption]{pz_annotate_caption()}} captions:
+\code{"bottom"} (the default) or \code{"top"}. Supply \code{NULL} to restore the
+default.}
 }
 \value{
 \code{ctx}, invisibly.

@@ -274,6 +274,9 @@ pz_stage <- function(
 #'   and resolves to its family with a sans-serif fallback.
 #' @param font_size Badge font size in CSS pixels. The default is 14.
 #'   Supply `NULL` to restore the default.
+#' @param caption_side Default side for new [pz_annotate_caption()] captions:
+#'   `"bottom"` (the default) or `"top"`. Supply `NULL` to restore the
+#'   default.
 #'
 #' @return `ctx`, invisibly.
 #' @seealso [pz_stage()], [pz_stage_frame()], [pz_annotate()]
@@ -302,7 +305,8 @@ pz_stage_annotate <- function(
   stroke_width = NULL,
   distance = NULL,
   font_family = NULL,
-  font_size = NULL
+  font_size = NULL,
+  caption_side = NULL
 ) {
   check_context(ctx)
   check_dots_empty()
@@ -363,6 +367,13 @@ pz_stage_annotate <- function(
       overrides$annotate_font_size <- font_size
     }
   }
+  if (!missing(caption_side)) {
+    overrides$caption_side <- if (is.null(caption_side)) {
+      NULL
+    } else {
+      arg_match(caption_side, c("bottom", "top"))
+    }
+  }
   page_set_stage(page, overrides)
   ctx_return(ctx)
 }
@@ -385,7 +396,8 @@ STAGE_DEFAULTS <- list(
   annotate_stroke_width = 3,
   annotate_distance = NULL,
   annotate_font_family = "sans-serif",
-  annotate_font_size = 14
+  annotate_font_size = 14,
+  caption_side = NULL
 )
 
 page_stage <- function(page) {

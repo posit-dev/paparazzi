@@ -127,6 +127,10 @@ test_that("pz_stage_annotate rejects invalid styles at assignment", {
     "font_family.*empty string"
   )
   expect_error(pz_stage_annotate(page, font_size = 0), class = "rlang_error")
+  expect_error(
+    pz_stage_annotate(page, caption_side = "left"),
+    class = "rlang_error"
+  )
   expect_error(pz_stage_annotate(page, bogus = 1), class = "rlang_error")
   expect_identical(page_stage(page), STAGE_DEFAULTS)
 })

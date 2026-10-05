@@ -8,7 +8,7 @@ pz_annotate_caption(
   ctx,
   text,
   ...,
-  side = "bottom",
+  side = NULL,
   color = "white",
   font_family = NULL,
   font_size = 20
@@ -21,7 +21,9 @@ pz_annotate_caption(
 
 \item{...}{Checked empty.}
 
-\item{side}{\code{"bottom"} (the default) or \code{"top"}.}
+\item{side}{Placement: \code{"top"} or \code{"bottom"} (the default). \code{NULL} (the
+default) uses the staged \code{caption_side} from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}
+(initially \code{"bottom"}).}
 
 \item{color}{Text color; defaults to \code{"white"}, independent of the
 staged annotation accent.}
