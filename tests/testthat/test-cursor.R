@@ -965,8 +965,16 @@ test_that("untargeted entrances keep the start icon until landing", {
   ) +
     0.1
   expect_lt(abs(boundary - 100), 0.2)
-  expect_setequal(visible(), "pz-icon-pointer")
-  expect_identical(page_cursor(page)$icon, "pointer")
+  # The flip applies at 100% of the entrance animation, which can land a
+  # frame after the glide pump's 50ms grace on a slow runner; wait for the
+  # flip instead of sampling computed style once.
+  expect_retry(
+    function() list(pass = setequal(visible(), 'pz-icon-pointer')),
+    timeout = 2,
+    loop = page$child_loop
+  )
+  expect_setequal(visible(), 'pz-icon-pointer')
+  expect_identical(page_cursor(page)$icon, 'pointer')
   page |> pz_record_stop()
 })
 
