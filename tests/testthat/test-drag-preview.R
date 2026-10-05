@@ -72,12 +72,87 @@ drag_preview_marker_box <- function(
   )
 }
 
-drag_preview_retained_checkpoint <- function(page) {
-  rec <- page_recorder(page)
-  before <- length(rec$files)
-  pump_loop(page$child_loop, 0.16)
-  expect_gt(length(rec$files), before)
-  tail(rec$files, 1)
+# Verifiers for drag_preview_retained_checkpoint(): does a retained frame show
+# the marker in `color` at `point`, anywhere, or nowhere at all?
+drag_preview_marker_at <- function(
+  page,
+  point,
+  color = c(8, 200, 80),
+  tolerance = 2
+) {
+  point <- unlist(point)
+  function(path) {
+    box <- drag_preview_marker_box(page, path, color = color)
+    !is.null(box) &&
+      max(abs(unlist(box[c('x', 'y')]) - point[c('x', 'y')])) <= tolerance
+  }
+}
+
+drag_preview_marker_present <- function(page, color = c(8, 200, 80)) {
+  function(path) !is.null(drag_preview_marker_box(page, path, color = color))
+}
+
+drag_preview_marker_absent <- function(page, color = c(8, 200, 80)) {
+  function(path) is.null(drag_preview_marker_box(page, path, color = color))
+}
+
+# Capture a retained frame that is fresh, not merely new: pump the child loop
+# until the recorder writes a frame beyond `before` and, when `verify` is set,
+# until that frame's content matches, so a slow runner cannot hand back a
+# frame captured before the DOM state the caller just created.
+drag_preview_retained_checkpoint <- function(page, verify = NULL, timeout = 3) {
+  before <- length(page_recorder(page)$files)
+  fresh <- function() {
+    files <- page_recorder(page)$files
+    if (length(files) <= before) {
+      return(list(pass = FALSE))
+    }
+    path <- tail(files, 1)
+    list(pass = is.null(verify) || isTRUE(verify(path)), path = path)
+  }
+  result <- expect_retry(
+    fresh,
+    timeout = timeout,
+    loop = page$child_loop,
+    interval = 0.02
+  )
+  expect_gt(length(page_recorder(page)$files), before)
+  if (!result$pass && length(page_recorder(page)$files) > before) {
+    testthat::fail('the retained frame never matched the expected content')
+  }
+  result$path
+}
+
+# Pump until the live preview image rests (or has detached), so frames the
+# recorder delivers after pz_act_drag() returns include the settled position.
+drag_preview_wait_settled <- function(page, resting, timeout = 3) {
+  point <- unlist(resting)
+  pz_poll(
+    function() {
+      tryCatch(
+        isTRUE(pz_js(
+          page,
+          paste0(
+            "(() => { const p = ",
+            DRAG_PREVIEW_CONTROLLER_JS,
+            "; if (!p || !p.image || !p.image.isConnected) return true;",
+            "const r = p.image.getBoundingClientRect();",
+            "return Math.abs(r.x - ",
+            point[['x']],
+            ") <= 1.5 &&",
+            "Math.abs(r.y - ",
+            point[['y']],
+            ") <= 1.5; })()"
+          )
+        )),
+        error = function(e) FALSE
+      )
+    },
+    timeout = timeout,
+    loop = page$child_loop,
+    what = "the drag preview to settle at rest"
+  )
+  invisible(TRUE)
 }
 
 test_that("the retained-pixel instrument distinguishes the task marker color", {
@@ -89,7 +164,10 @@ test_that("the retained-pixel instrument distinguishes the task marker color", {
   withr::defer(unlink(frames, recursive = TRUE))
   pz_record_start(page, out, fps = 30, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
-  path <- drag_preview_retained_checkpoint(page)
+  path <- drag_preview_retained_checkpoint(
+    page,
+    verify = drag_preview_marker_present(page)
+  )
   marker <- pz_js(
     page,
     "(() => { const r = document.querySelector('#preview-marker').getBoundingClientRect(); return {x:r.x,y:r.y,width:r.width,height:r.height}; })()"
@@ -107,7 +185,10 @@ test_that("the retained-pixel instrument distinguishes the task marker color", {
     page,
     "document.querySelector('#preview-marker').style.background = 'rgb(220,20,180)'"
   )
-  changed <- drag_preview_retained_checkpoint(page)
+  changed <- drag_preview_retained_checkpoint(
+    page,
+    verify = drag_preview_marker_present(page, color = c(220, 20, 180))
+  )
   expect_null(drag_preview_marker_box(page, changed))
   expect_false(is.null(drag_preview_marker_box(
     page,
@@ -181,7 +262,10 @@ test_that('disabled previews retain the original marker but never carry it', {
   withr::defer(unlink(frames, recursive = TRUE))
   pz_record_start(page, out, fps = 30, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
-  original <- drag_preview_retained_checkpoint(page)
+  original <- drag_preview_retained_checkpoint(
+    page,
+    verify = drag_preview_marker_present(page)
+  )
   expect_false(is.null(drag_preview_marker_box(page, original)))
   carried <- NULL
   local_mocked_bindings(
@@ -192,7 +276,10 @@ test_that('disabled previews retain the original marker but never carry it', {
       point <- (from + to) / 2 + c(x = 80, y = 0)
       cursor_apply(ctx, point, pressed = TRUE)
       step(point)
-      carried <<- drag_preview_retained_checkpoint(ctx)
+      carried <<- drag_preview_retained_checkpoint(
+        ctx,
+        verify = drag_preview_marker_absent(ctx)
+      )
     }
   )
   expect_no_warning(pz_act_drag(
@@ -275,7 +362,10 @@ test_that('retained carry and settle pixels follow the same task row for to and 
       return {x:r.x,y:r.y,width:r.width,height:r.height,dx:m.x-r.x,dy:m.y-r.y,mw:m.width,mh:m.height};
     })()"
     )
-    original <- drag_preview_retained_checkpoint(page)
+    original <- drag_preview_retained_checkpoint(
+      page,
+      verify = drag_preview_marker_present(page)
+    )
     expect_false(is.null(drag_preview_marker_box(page, original)))
     carried <- mid <- endpoint <- NULL
     carry_expected <- settle_expected <- settle_start <- final <- target <- NULL
@@ -306,7 +396,10 @@ test_that('retained carry and settle pixels follow the same task row for to and 
               x = initial$x + point[['x']] - from[['x']] + initial$dx,
               y = initial$y + point[['y']] - from[['y']] + initial$dy
             )
-            carried <<- drag_preview_retained_checkpoint(ctx)
+            carried <<- drag_preview_retained_checkpoint(
+              ctx,
+              verify = drag_preview_marker_at(ctx, carry_expected)
+            )
           }
         })
         expect_true(sampled)
@@ -355,7 +448,10 @@ test_that('retained carry and settle pixels follow the same task row for to and 
           )
         )
         settle_expected <<- unlist(box) + c(x = initial$dx, y = initial$dy)
-        mid <<- drag_preview_retained_checkpoint(page)
+        mid <<- drag_preview_retained_checkpoint(
+          page,
+          verify = drag_preview_marker_at(page, settle_expected)
+        )
         pz_js(
           page,
           paste0(
@@ -364,7 +460,13 @@ test_that('retained carry and settle pixels follow the same task row for to and 
             '; p.image.getAnimations()[0].currentTime = 180; })()'
           )
         )
-        endpoint <<- drag_preview_retained_checkpoint(page)
+        endpoint <<- drag_preview_retained_checkpoint(
+          page,
+          verify = drag_preview_marker_at(
+            page,
+            final + c(x = initial$dx, y = initial$dy)
+          )
+        )
         pz_js(
           page,
           paste0(DRAG_PREVIEW_CONTROLLER_JS, '.image.getAnimations()[0].play()')
@@ -441,7 +543,10 @@ test_that('retained carry and settle pixels follow the same task row for to and 
       drop[[1]]$payload,
       pz_js(page, 'window.__previewSource.dataset.id')
     )
-    cleaned <- drag_preview_retained_checkpoint(page)
+    cleaned <- drag_preview_retained_checkpoint(
+      page,
+      verify = drag_preview_marker_absent(page)
+    )
     expect_null(drag_preview_marker_box(page, cleaned))
     rec <- page_recorder(page)
     pz_record_stop(page)
@@ -1025,6 +1130,9 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
     '#preview-source .task-drag-handle',
     '#preview-target .task-drag-handle'
   ))
+  # Frames delivered after the action must include the settled position;
+  # pumping here also drains the screencast events queued during the settle.
+  drag_preview_wait_settled(page, resting)
   rec <- page_recorder(page)
   action_files <- rec$files
   boxes <- lapply(action_files, function(path) {
@@ -1055,7 +1163,10 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
     c('File tax return', 'Renew passport', 'Book dentist appointment')
   )
   expect_true(drag_preview_absent(page))
-  cleaned <- drag_preview_retained_checkpoint(page)
+  cleaned <- drag_preview_retained_checkpoint(
+    page,
+    verify = drag_preview_marker_absent(page)
+  )
   expect_null(drag_preview_marker_box(page, cleaned))
   pz_record_stop(page)
   expect_true(file.exists(out))
@@ -1132,7 +1243,10 @@ test_that('a loaded local font and image survive the production drag carry', {
             point[['y']] > from[['y']] + 25 &&
             point[['y']] < to[['y']] - 25
         ) {
-          carried <<- drag_preview_retained_checkpoint(ctx)
+          carried <<- drag_preview_retained_checkpoint(
+            ctx,
+            verify = drag_preview_marker_present(ctx)
+          )
         }
       })
     }
@@ -1646,7 +1760,10 @@ test_that('content-box captures preserve the measured border box and far-edge pi
                 sentinel:window.htmlToImage === controller.source.pageLibrary};
             })()"
           )
-          carried <<- drag_preview_retained_checkpoint(ctx)
+          carried <<- drag_preview_retained_checkpoint(
+            ctx,
+            verify = drag_preview_marker_present(ctx)
+          )
         }
       })
     }
