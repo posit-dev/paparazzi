@@ -37,6 +37,26 @@
    lock browser-free or isolated runs. Judge test results by reported
    FAIL/WARN, not exit code or variable PASS counts.
 
+## Browser Test Reliability
+
+1. **Poll for the asserted condition; never pump a fixed duration and then
+   assert arrival.** Reserve fixed `pump_loop()` windows for idle time; when
+   later assertions require something to have arrived, poll with
+   `expect_retry()`/`pz_poll()` until the condition itself holds.
+1. **Verify frame content, not frame arrival.** A frame captured before a DOM
+   change can land after it. When an assertion reads a retained frame that
+   must reflect state the test just created, assert the marker box's position
+   or presence in that frame.
+1. **Wait on retained frames, not live DOM.** DOM state doesn't mean the
+   recorder captured it, and "element detached" is true exactly when the
+   awaited thing just finished.
+1. **Timeouts fail loudly.** When a poll gives up, return `NA_character_` or
+   call `testthat::fail()` naming what never happened; never NULL or empty,
+   which `file.exists()` and `all(logical(0))` turn into silent passes.
+1. **Assert the schedule; poll the applied state.** Keyframe text and
+   animation structure can be asserted directly; computed style near an
+   animation boundary must be polled, not sampled once.
+
 ## Agent Skill and Vignettes
 
 The `agents*.Rmd` vignettes are thin wrappers that embed
