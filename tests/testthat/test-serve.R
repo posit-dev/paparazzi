@@ -632,6 +632,79 @@ test_that(".html files fall back to file:// without httpuv", {
   expect_null(serve_kind(fixture_file()))
 })
 
+test_that("pz_serve_static() validates root", {
+  root <- withr::local_tempdir()
+  dir.create(file.path(root, "sub"))
+  file.create(file.path(root, "sub", "my page.html"))
+  outside <- withr::local_tempdir()
+
+  expect_error(
+    pz_serve_static(root, root = root),
+    "only supported",
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_serve_static(file.path(root, "sub", "my page.html"), root = outside),
+    "inside",
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_serve_static(
+      file.path(root, "sub", "my page.html"),
+      root = "does/not/exist"
+    ),
+    "existing directory",
+    class = "paparazzi_error_input"
+  )
+})
+
+test_that("pz_serve_static() serves a custom root and points the URL at the file", {
+  skip_if_not_installed("httpuv")
+  root <- withr::local_tempdir()
+  dir.create(file.path(root, "sub"))
+  writeLines("<p>hi</p>", file.path(root, "sub", "my page.html"))
+
+  server <- pz_serve_static(file.path(root, "sub", "my page.html"), root = root)
+  withr::defer(server$stop())
+  expect_match(server$url, "/sub/my%20page[.]html$")
+  expect_true(server$is_running())
+
+  same_root <- pz_serve_static(
+    file.path(root, "sub", "my page.html"),
+    root = file.path(root, "sub")
+  )
+  withr::defer(same_root$stop())
+  expect_match(same_root$url, "/my%20page[.]html$")
+})
+
+test_that("a custom root resolves assets outside the page's directory", {
+  skip_if_no_chrome()
+  skip_if_not_installed("httpuv")
+  root <- withr::local_tempdir()
+  dir.create(file.path(root, "deps"))
+  dir.create(file.path(root, "reference"))
+  writeLines("body { color: red; }", file.path(root, "deps", "styles.css"))
+  writeLines(
+    paste(
+      "<html><head>",
+      '<link rel="stylesheet" href="../deps/styles.css">',
+      "</head><body><h1>Styled page</h1></body></html>"
+    ),
+    file.path(root, "reference", "index.html")
+  )
+
+  server <- pz_serve_static(
+    file.path(root, "reference", "index.html"),
+    root = root
+  )
+  withr::defer(server$stop())
+  expect_match(server$url, "/reference/index[.]html$")
+
+  page <- local_page(server)
+  status <- pz_js(page, "fetch('../deps/styles.css').then(r => r.status)")
+  expect_identical(status, 200L)
+})
+
 test_that("static servers retry when the port is taken", {
   skip_if_not_installed("httpuv")
   dir <- withr::local_tempdir()

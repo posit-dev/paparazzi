@@ -4,12 +4,18 @@
 \alias{pz_serve_static}
 \title{Serve static files over HTTP}
 \usage{
-pz_serve_static(path, ...)
+pz_serve_static(path, ..., root = NULL)
 }
 \arguments{
 \item{path}{A path to a directory or an \code{.html} file.}
 
 \item{...}{Reserved; must be empty.}
+
+\item{root}{The directory to serve as the server root. Defaults to the
+file's directory for an \code{.html} file. Only supported when \code{path} is a
+file, which must live inside \code{root}; the handle URL points at \code{path}
+relative to \code{root}. Use it when the page references assets outside its
+own directory, such as \code{../deps/styles.css}.}
 }
 \value{
 A \code{PaparazziServe} handle with \verb{$url}, \verb{$port}, \verb{$stop()},

@@ -103,6 +103,11 @@ pz_serve_shiny <- function(
 #' Other files in that directory are also accessible over HTTP.
 #'
 #' @param path A path to a directory or an `.html` file.
+#' @param root The directory to serve as the server root. Defaults to the
+#'   file's directory for an `.html` file. Only supported when `path` is a
+#'   file, which must live inside `root`; the handle URL points at `path`
+#'   relative to `root`. Use it when the page references assets outside its
+#'   own directory, such as `../deps/styles.css`.
 #' @param ... Reserved; must be empty.
 #' @return A `PaparazziServe` handle with `$url`, `$port`, `$stop()`,
 #'   `$is_running()`, and `$logs()`. Static servers have no captured logs:
@@ -119,7 +124,7 @@ pz_serve_shiny <- function(
 #' pz_close(page)
 #' server$stop()
 #' @export
-pz_serve_static <- function(path, ...) {
+pz_serve_static <- function(path, ..., root = NULL) {
   check_dots_empty()
   check_string(path)
   if (
@@ -131,7 +136,33 @@ pz_serve_static <- function(path, ...) {
       class = "paparazzi_error_input"
     )
   }
-  serve_static(normalizePath(path, winslash = "/", mustWork = TRUE))
+  is_file <- !dir.exists(path)
+  if (!is.null(root)) {
+    check_string(root)
+    if (!is_file) {
+      cli::cli_abort(
+        "{.arg root} is only supported when {.arg path} is an {.file .html} file.",
+        class = "paparazzi_error_input"
+      )
+    }
+    if (!dir.exists(root)) {
+      cli::cli_abort(
+        "{.arg root} must be an existing directory.",
+        class = "paparazzi_error_input"
+      )
+    }
+  }
+  path <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  if (!is.null(root)) {
+    root <- normalizePath(root, winslash = "/", mustWork = TRUE)
+    if (!startsWith(path, paste0(root, "/"))) {
+      cli::cli_abort(
+        "{.arg path} must be inside {.arg root}.",
+        class = "paparazzi_error_input"
+      )
+    }
+  }
+  serve_static(path, root = root, call = caller_env())
 }
 
 #' Serve a document or project with Quarto
@@ -226,9 +257,15 @@ httpuv_available <- function() {
   requireNamespace("httpuv", quietly = TRUE)
 }
 
-serve_static <- function(x, call = caller_env()) {
+serve_static <- function(x, root = NULL, call = caller_env()) {
   rlang::check_installed("httpuv", reason = "to serve static files.")
-  dir <- if (dir.exists(x)) x else dirname(x)
+  dir <- if (!is.null(root)) {
+    root
+  } else if (dir.exists(x)) {
+    x
+  } else {
+    dirname(x)
+  }
   for (attempt in seq_len(5)) {
     port <- random_port()
     server <- tryCatch(
@@ -257,10 +294,18 @@ serve_static <- function(x, call = caller_env()) {
   }
   url <- paste0("http://127.0.0.1:", port, "/")
   if (!dir.exists(x)) {
-    url <- paste0(
-      url,
-      utils::URLencode(basename(x), reserved = TRUE, repeated = TRUE)
+    rel <- if (is.null(root)) basename(x) else substring(x, nchar(root) + 2L)
+    # URLencode(reserved = TRUE) escapes "/", so encode path segments one at
+    # a time and rejoin them.
+    rel <- paste(
+      vapply(
+        strsplit(rel, "/", fixed = TRUE)[[1]],
+        function(part) utils::URLencode(part, reserved = TRUE, repeated = TRUE),
+        character(1)
+      ),
+      collapse = "/"
     )
+    url <- paste0(url, rel)
   }
   PaparazziServe$new(
     process = NULL,
