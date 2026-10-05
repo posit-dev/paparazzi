@@ -35,7 +35,7 @@ pz_annotate_caption <- function(
   check_context(ctx)
   check_dots_empty()
   check_string(text, allow_empty = FALSE)
-  side <- side %||% page_stage(ctx$page)$caption_side %||% "bottom"
+  side <- side %||% page_stage(ctx$page)$caption_side
   side <- arg_match(side, c("bottom", "top"))
   check_string(color, allow_empty = FALSE)
   check_positive_css_px(font_size)

@@ -1,5 +1,10 @@
 # paparazzi 0.0.0.9000
 
+* `pz_stage_annotate()` gains `caption_side`, the page default for the side
+  of new `pz_annotate_caption()` captions. `"bottom"` remains the default
+  and a per-call `side` still overrides it; `pz_annotate_caption()`'s `side`
+  argument now defaults to `NULL`, meaning the staged value.
+
 * `pz_serve_static()` gains `root`, the directory to serve as the server
   root for an `.html` file. Use it when the page references assets outside
   its own directory, such as `../deps/styles.css`; the handle URL points at

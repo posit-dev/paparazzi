@@ -59,9 +59,11 @@ completion or after a `code` error, then rethrows that error.
 The first caption labels the form; the second replaces it after the task
 appears, fading the outgoing caption during recording. Captions use screen
 space at the top or bottom; color, font family, and size are configurable.
-They persist across navigation and recordings, appear in stills, and remain
-through the last frame. `pz_annotate_clear(id = "caption")` clears one;
-clearing it here leaves later examples uncaptioned.
+The default side is staged with `pz_stage_annotate(caption_side =)`, and the
+per-call `side` above overrides it. Captions persist across navigation and
+recordings, appear in stills, and remain through the last frame.
+`pz_annotate_clear(id = "caption")` clears one; clearing it here leaves
+later examples uncaptioned.
 
 The start frame is the **home frame**. `pz_camera()` moves to a shot within
 it, applied when the video is encoded: here `zoom = 2` frames the form at

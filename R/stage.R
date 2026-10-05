@@ -368,10 +368,10 @@ pz_stage_annotate <- function(
     }
   }
   if (!missing(caption_side)) {
-    overrides$caption_side <- if (is.null(caption_side)) {
-      NULL
+    if (is.null(caption_side)) {
+      overrides[["caption_side"]] <- NULL
     } else {
-      arg_match(caption_side, c("bottom", "top"))
+      overrides$caption_side <- arg_match(caption_side, c("bottom", "top"))
     }
   }
   page_set_stage(page, overrides)
@@ -397,7 +397,7 @@ STAGE_DEFAULTS <- list(
   annotate_distance = NULL,
   annotate_font_family = "sans-serif",
   annotate_font_size = 14,
-  caption_side = NULL
+  caption_side = "bottom"
 )
 
 page_stage <- function(page) {
