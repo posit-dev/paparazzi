@@ -119,6 +119,22 @@ test_that("camera calls are no-ops outside recording and reset with the recorder
   pz_record_stop(page)
 })
 
+# The zoom must appear between unzoomed ends: locate zoomed frames by their
+# content rather than frame-count arithmetic, which encoder jitter can shift.
+camera_zoom_spans_unzoomed_ends <- function(frames, red_at_blue) {
+  zoomed <- vapply(frames, red_at_blue, numeric(1))
+  expect_lt(zoomed[[1]], 0.2)
+  expect_gt(max(zoomed), 0.7)
+  expect_lt(zoomed[[length(zoomed)]], 0.2)
+  zoomed_idx <- which(zoomed > 0.7)
+  expect_gt(length(zoomed_idx), 0L)
+  if (length(zoomed_idx)) {
+    expect_gt(min(zoomed_idx), 1L)
+    expect_lt(max(zoomed_idx), length(zoomed))
+  }
+  invisible(zoomed)
+}
+
 test_that("camera zoom and reset change MP4 and GIF content, not dimensions", {
   skip_if_no_av()
   skip_if_no_gifski()
@@ -146,7 +162,7 @@ test_that("camera zoom and reset change MP4 and GIF content, not dimensions", {
     expect_gte(length(frames), 8)
     red_at_blue <- function(file) png::readPNG(file)[330, 550, 1]
     expect_lt(red_at_blue(frames[[1]]), 0.2)
-    expect_gt(red_at_blue(frames[[length(frames) %/% 2]]), 0.7)
+    camera_zoom_spans_unzoomed_ends(frames, red_at_blue)
     expect_lt(red_at_blue(tail(frames, 1)), 0.2)
   }
 })
@@ -222,7 +238,7 @@ test_that("framed camera uses final home, scale and each method's capture densit
       png::readPNG(file)[round(size[2] * 0.88), round(size[1] * 0.74), 1]
     }
     expect_lt(red_at_blue(frames[[1]]), 0.2)
-    expect_gt(red_at_blue(frames[[length(frames) %/% 2]]), 0.7)
+    camera_zoom_spans_unzoomed_ends(frames, red_at_blue)
     expect_lt(red_at_blue(tail(frames, 1)), 0.2)
   }
 })
