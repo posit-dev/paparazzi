@@ -1035,14 +1035,26 @@ test_that("a quick restart does not double the capture chain", {
   out2 <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out2, fps = 2, hold = c(0, 0))
   rec <- page_recorder(page)
-  pz_wait(page, 1.2)
+  start <- Sys.time()
+  # Pump the 1.2s observation window, but require two ticks within it: a
+  # stalled pump must not fail the lower bound.
+  pz_poll(
+    function() {
+      rec$ticks >= 2L &&
+        as.numeric(difftime(Sys.time(), start, units = "secs")) >= 1.2
+    },
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "two capture ticks within the observation window"
+  )
+  elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
   ticks <- rec$ticks
   page |> pz_record_stop()
 
-  # one chain at 2 fps over 1.2s: a tick every 0.5s, so 3 or so; a
-  # second chain left over from the first recording would double it
+  # one chain at 2 fps ticks every 0.5s; a second chain left over from the
+  # first recording would double the rate
   expect_gte(ticks, 2L)
-  expect_lte(ticks, 4L)
+  expect_lte(ticks, ceiling(elapsed / 0.35))
 })
 
 test_that("closing the page tears down the recorder synchronously", {
@@ -1160,8 +1172,16 @@ test_that("a framed recording survives a navigation by framing the viewport", {
     pz_record_start(out, fps = 10, hold = c(0, 0), frame = pz_frame())
   pz_wait(page, 0.2)
   root <- pz_nav_goto(page, nav_fixture_url("b"))
-  # Frames keep being captured on the new document.
-  pz_wait(root, 0.3)
+  # Frames keep being captured on the new document: require frames that
+  # completed after the navigation settled, not a total count that frames
+  # captured before it can satisfy.
+  before <- length(page_recorder(root)$files)
+  pz_poll(
+    function() length(page_recorder(root)$files) >= before + 2L,
+    timeout = root$page$default_timeout,
+    loop = root$page$child_loop,
+    what = "frames captured after the navigation"
+  )
   expect_no_error(pz_record_stop(root))
 
   info <- recorded_video_info(out)
@@ -1748,10 +1768,15 @@ test_that("screencast records real Chrome PNG events and acknowledges later fram
   rec <- page_recorder(page)
   pz_wait(page, 0.3)
   before <- length(rec$files)
+  expect_gte(before, 1L)
   # A fresh paint must arrive even after the initial event has been acked.
   pz_js(page, "document.getElementById('box').style.background = 'red'")
-  pz_wait(page, 0.35)
-  expect_gte(before, 1L)
+  pz_poll(
+    function() length(rec$files) > before,
+    timeout = page$page$default_timeout,
+    loop = page$page$child_loop,
+    what = "a screencast frame after the paint"
+  )
   expect_gt(length(rec$files), before)
   expect_equal(rec$ticks, 0L) # events, not the poll capture chain
   expect_equal(rec$n_errors, 0L)
@@ -1780,8 +1805,12 @@ test_that("screencast holds the last frame on an idle page", {
   pz_record_start(page, out, method = "screencast", hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_wait(page, 0.4)
-  expect_gte(length(rec$files), 1L)
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = page$page$default_timeout,
+    loop = page$page$child_loop,
+    what = "the first screencast frame"
+  )
   before <- length(rec$files)
   pz_wait(page, 0.4)
   expect_length(rec$files, before)
@@ -1824,6 +1853,8 @@ test_that("screencast immediate stop captures the final page state", {
       c(1, 0, 0),
       tolerance = 0.05
     )
+  } else {
+    testthat::fail("the immediate stop captured no frames")
   }
   expect_true(file.exists(out))
 })
@@ -2000,11 +2031,15 @@ test_that("screencast uses CSS-size frames and crops at their actual resolution"
       keep_frames = TRUE
     )
     defer_record_stop(page)
-    pz_wait(page, 0.4)
     rec <- page_recorder(page)
+    pz_poll(
+      function() length(rec$files) >= 1L,
+      timeout = page$page$default_timeout,
+      loop = page$page$child_loop,
+      what = "a frame to measure the crop scale"
+    )
     # The PNG dimensions, not the page's DPR, determine the crop scale.
     event_files <- rec$files
-    expect_gte(length(event_files), 1L)
     event_sizes <- lapply(event_files, png_dimensions)
     pz_record_stop(page)
     files <- sort(list.files(
@@ -2092,8 +2127,12 @@ test_that("screencast stops cleanly and can restart on the same page", {
   before <- length(current$files)
   record_screencast_frame(page$page, old, list(sessionId = 1L))
   expect_length(current$files, before)
-  pz_wait(page, 0.3)
-  expect_gte(length(current$files), 1L)
+  pz_poll(
+    function() length(current$files) >= 1L,
+    timeout = page$page$default_timeout,
+    loop = page$page$child_loop,
+    what = "a frame from the restarted screencast"
+  )
   pz_record_stop(page)
   expect_true(file.exists(second))
   expect_equal(current$n_errors, 0L)
