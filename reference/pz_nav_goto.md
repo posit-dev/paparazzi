@@ -77,11 +77,11 @@ pz_get_count(page, target = ".task:not(.hidden)")
 
 page |> pz_nav_forward()
 pz_get_url(page)
-#> [1] "http://127.0.0.1:4896/tasks.html#done"
+#> [1] "http://127.0.0.1:3642/tasks.html#done"
 
 # Reloading keeps the URL, fragment included
 page |> pz_nav_reload()
 pz_get_url(page)
-#> [1] "http://127.0.0.1:4896/tasks.html#done"
+#> [1] "http://127.0.0.1:3642/tasks.html#done"
 pz_close(page)
 ```

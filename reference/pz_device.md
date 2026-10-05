@@ -125,6 +125,6 @@ pz_get_style(page, "background-color", target = "body")
 #> # A tibble: 1 × 2
 #>   `background-color` element 
 #>   <chr>              <list>  
-#> 1 rgb(33, 37, 41)    <pz_ctx>
+#> 1 rgb(255, 255, 255) <pz_ctx>
 pz_close(page)
 ```
