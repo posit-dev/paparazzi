@@ -801,9 +801,10 @@ test_that("automatic glide switches icon on destination entry, not landing", {
       "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').map(e => e.classList[1])"
     ))
   }
+  # Sample well short of the switch boundary (the entry fraction of the
+  # glide, ~1.15s here): wall time overshoots the pump and the animation
+  # clock jitters, so a sample stacked up to the boundary flakes.
   pump_loop(page$child_loop, 0.7)
-  expect_identical(visible(), "pz-icon-default")
-  pump_loop(page$child_loop, 0.45)
   expect_identical(visible(), "pz-icon-default")
   # The flip applies at the entry boundary; the animation clock can lag the
   # pump past it, so poll for the applied state instead of sampling once.
@@ -836,7 +837,9 @@ test_that("automatic glide switches icon on destination entry, not landing", {
       anim = TRUE
     )
   )
-  pump_loop(page$child_loop, 0.7)
+  # The return glide enters its rect at ~0.31 of the ease (~0.62s); pump
+  # well short of that boundary for the pre-entry sample.
+  pump_loop(page$child_loop, 0.3)
   expect_identical(visible(), "pz-icon-pointer")
   expect_retry(
     function() list(pass = identical(visible(), "pz-icon-default")),
