@@ -609,6 +609,8 @@ test_that("automatic serving detection prioritizes Shiny, then Quarto, then stat
   expect_null(serve_kind(file.path(dir, "ui.R")))
   expect_null(serve_kind(file.path(dir, "server.R")))
   expect_identical(serve_kind(shiny_app_fixture_file()), "shiny")
+  # Mocked so the assertion is deterministic where httpuv isn't installed.
+  local_mocked_bindings(httpuv_available = function() TRUE)
   # pz_open() serves .html files over HTTP when httpuv is available; other
   # files keep opening as file://.
   expect_identical(serve_kind(fixture_file()), "static")

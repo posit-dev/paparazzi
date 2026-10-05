@@ -1,4 +1,6 @@
 test_that("pz_open serves a local HTML file over HTTP and pz_close stops the server", {
+  skip_if_no_chrome()
+  testthat::skip_if_not_installed("httpuv")
   page <- local_page()
   expect_s3_class(page, "PaparazziPage")
   expect_s3_class(page, "PaparazziContext")
@@ -579,6 +581,7 @@ test_that("file_url encodes literal percent signs in file names", {
 
 test_that("print() works on open and closed pages", {
   skip_if_no_chrome()
+  testthat::skip_if_not_installed("httpuv")
   page <- pz_open(fixture_file())
   expect_output(print(page), "── paparazzi page")
   expect_output(print(page), "URL        http://127\\.0\\.0\\.1:")
