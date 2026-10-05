@@ -138,7 +138,19 @@ test_that("caption burn overlays two windows after a camera move, with quoted pa
   withr::defer(unlink(decoded, recursive = TRUE))
   frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   expect_gt(length(frames), 5)
-  first <- png::readPNG(frames[[3]])
+  # Locate a captioned frame by content, relative to the cleared last frame:
+  # the fixture's own dark pixels sit in the band too, and fixed indices
+  # mislabel the caption windows when capture ticks lag the wall-clock holds.
+  caption_ink <- function(file) {
+    img <- png::readPNG(file)
+    rows <- round(dim(img)[1] * 0.8):dim(img)[1]
+    sum(img[rows, , 1] < 0.4)
+  }
+  ink <- vapply(frames, caption_ink, 0.0)
+  captioned <- which(ink > ink[[length(ink)]] + 50)
+  expect_gt(length(captioned), 0L)
+  expect_lt(max(captioned), length(frames))
+  first <- png::readPNG(frames[[captioned[[1]]]])
   last <- png::readPNG(tail(frames, 1))
   expect_true(any(first[round(dim(first)[1] * 0.8):dim(first)[1], , 1] < 0.4))
   last_rows <- round(dim(last)[1] * 0.8):dim(last)[1]
@@ -799,9 +811,22 @@ test_that("decoded keycaps stack above a burned bottom caption", {
   withr::defer(unlink(decoded, recursive = TRUE))
   files <- av_video_images_quiet(path, destdir = decoded, format = "png")
   expect_gt(length(files), 12)
-  active <- png::readPNG(files[[5]])
-  expired <- png::readPNG(files[[length(files) - 2L]])
-  center <- round(dim(active)[2] / 2)
+  # Classify frames by content: the press lands within a wall-clock window
+  # that encoder jitter can shift, so fixed frame indices mislabel states.
+  expired <- png::readPNG(tail(files, 1))
+  upper <- seq_len(round(dim(expired)[1] * 0.6))
+  center <- round(dim(expired)[2] / 2)
+  ink <- vapply(
+    files,
+    function(file) {
+      img <- png::readPNG(file)
+      sum(img[upper, center, 1] < expired[upper, center, 1] - 0.15)
+    },
+    0.0
+  )
+  keycap_frame <- which.max(ink)
+  expect_gt(ink[[keycap_frame]], 5)
+  active <- png::readPNG(files[[keycap_frame]])
   caption_rows <- which(
     expired[, center, 1] < 0.5 &
       seq_len(dim(expired)[1]) > dim(expired)[1] * 0.65
@@ -899,7 +924,19 @@ test_that("keys burn into WebM VTT-only and uncaptioned GIF", {
   dest <- tempfile("key-webm-")
   withr::defer(unlink(dest, recursive = TRUE))
   frames <- av_video_images_quiet(video, destdir = dest, format = "png")
-  active <- png::readPNG(frames[[4]])
+  # Classify by content: fixed indices mislabel the press window when the
+  # encoder jitters; VTT captions do not burn, so bottom-band ink is keycaps.
+  dark <- vapply(
+    frames,
+    function(file) {
+      img <- png::readPNG(file)
+      sum(img[round(dim(img)[1] * 0.78):dim(img)[1], , 1] < 0.4)
+    },
+    0.0
+  )
+  keycap_frame <- which.max(dark)
+  expect_gt(dark[[keycap_frame]], 20)
+  active <- png::readPNG(frames[[keycap_frame]])
   expect_true(any(
     active[round(dim(active)[1] * 0.78):dim(active)[1], , 1] < 0.4
   ))
