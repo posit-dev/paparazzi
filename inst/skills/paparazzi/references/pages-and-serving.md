@@ -52,7 +52,8 @@ page |> pz_expect_url("http://127.0.0.1", match = "contains")
 `pz_serve_static()` creates a handle you can share across pages. For an
 HTML file, pass `root` to serve a wider directory while still navigating
 to the file, such as a pkgdown or Quarto subpage referencing
-`../site_libs/`. Pages opened from the same handle share the server but
+`../site_libs/`. The file must live inside `root`, and `root` can't be
+the filesystem root. Pages opened from the same handle share the server but
 nothing else. You own that server: close its pages, then call
 `server$stop()`, which is safe to call twice.
 

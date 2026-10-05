@@ -8,7 +8,9 @@
 * `pz_serve_static()` gains `root`, the directory to serve as the server
   root for an `.html` file. Use it when the page references assets outside
   its own directory, such as `../deps/styles.css`; the handle URL points at
-  the file relative to `root`.
+  the file relative to `root`. `root` is only supported for files, must be
+  an existing directory containing the file, and can't be the filesystem
+  root.
 
 * `pz_open()` serves `.html` files over HTTP with `pz_serve_static()` when
   httpuv is installed, so pages get HTTP-only behavior such as the browser's

@@ -564,7 +564,7 @@ pz_open(
 )
 ```
 
-- `x` can be a URL, a Shiny app path, a `.qmd`/`.Rmd` file or Quarto project directory, a static directory/`.html` file, a serving handle, another local file (opened as `file://`), or an existing `ChromoteSession`.
+- `x` can be a URL, a Shiny app path, a `.qmd`/`.Rmd` file or Quarto project directory, a static directory/`.html` file, a serving handle, another local file (opened as `file://`), or an existing `ChromoteSession`. An `.html` file is served over HTTP with `pz_serve_static()` when httpuv is installed (as `file://` otherwise), with the file's directory as the server root; pages referencing assets outside that directory, such as `../deps/styles.css`, need an explicit `file://` URL or a `pz_serve_static()` handle on the right root.
 - Path detection checks Shiny directories/named app files first, then Quarto documents/projects, then static directories/HTML files. A directory with `app.R` or `server.R` wins over `_quarto.yml`. One-off servers belong to the page; shared handles do not.
 - Shiny app objects are not supported; they error with advice to supply an app path to `pz_serve_shiny()` or pass a running app's URL. No serialization, no process inversion.
 - `wait = "auto"` uses `"shiny"` (connected and idle) for Shiny apps and `"load"` otherwise.
@@ -586,7 +586,7 @@ All three serving functions return a `PaparazziServe` handle with `$url`, `$port
 - `pz_serve_quarto(path, ..., render = FALSE)` owns a `quarto preview` process for `.qmd`, `.Rmd` (via knitr), and project directories. It needs the CLI, found through `QUARTO_PATH` or `Sys.which("quarto")`, not the quarto R package. Handles own independent processes, so multiple previews can run at once.
 - `render = FALSE` passes `--no-render`; Quarto still renders standalone documents on startup. Projects use preview preparation and cached execution results. `TRUE` passes `--render all`.
 - Quarto input watching and automatic navigation are disabled; resource changes can still reload pages. Interactive `runtime: shiny` / `server: shiny` documents are outside the supported scope.
-- `pz_serve_static(path, ...)` serves a directory or `.html` file through `httpuv::runStaticServer(background = TRUE)`. For a file, its directory is served and the URL points to the file. Its logs are empty.
+- `pz_serve_static(path, ..., root = NULL)` serves a directory or `.html` file through `httpuv::runStaticServer(background = TRUE)`. For a file, its directory is served and the URL points to the file. `root` (files only) serves a wider directory while still navigating to the file: `path` must live inside `root` (both resolved with `normalizePath()`, so symlinks resolve first, and `root` can't be the filesystem root), and the handle URL points at `path` relative to `root`. Its logs are empty.
 - App stdout/stderr go to a temp log file (no undrained pipes), readable with `app$logs()`.
 - Shutdown: interrupt, wait, kill. Runs on close, on error in block forms, and from a finalizer as a last resort.
 - Ports come from a base-R picker using `serverSocket()` (R >= 4.0), not httpuv. If the app dies because the port was taken, retry with a new port.
@@ -716,7 +716,7 @@ Every function takes `ctx` first and returns it invisibly unless noted. The `pz_
 | `pz_local_page()` | `(x, ..., .env = parent.frame())` → page | confirmed |
 | `pz_serve_shiny()` | `(app, ..., envvars = NULL, shiny_options = list(), timeout = 10)` → app handle with `$stop()`, `$logs()` | confirmed |
 | `pz_serve_quarto()` | `(path, ..., render = FALSE)` → serving handle | confirmed |
-| `pz_serve_static()` | `(path, ...)` → serving handle | confirmed |
+| `pz_serve_static()` | `(path, ..., root = NULL)` → serving handle | confirmed |
 | `pz_nav_goto()` | `(ctx, url, ..., wait = "auto")` | confirmed |
 | `pz_nav_reload()` | `(ctx, ..., wait = "auto")` | confirmed |
 | `pz_nav_back()` | `(ctx, ...)` | confirmed |
@@ -849,10 +849,10 @@ Implemented (kata `1a3m`).
 | `pz_annotate_callout()` | `(ctx, text, ..., target = NULL, side = NULL, leader = TRUE, label = NULL, reveal = c("pop", "fade", "draw", "slide", "wipe", "none"), id = NULL, color = NULL, fill = NULL, text_color = NULL, stroke_width = NULL, distance = NULL, font_family = NULL, font_size = NULL)` | confirmed |
 | `pz_annotate_spotlight()` | `(ctx, target = NULL, ..., pad = 0, dim = 0.6, reveal = c("fade", "none"))` | confirmed |
 | `pz_annotate_redact()` | `(ctx, target = NULL, ..., method = c("fill", "blur"), pad = 0, id = NULL, color = NULL)` | confirmed |
-| `pz_annotate_caption()` | `(ctx, text, ..., side = "bottom", color = "white", font_family = NULL, font_size = 20)` | confirmed |
+| `pz_annotate_caption()` | `(ctx, text, ..., side = NULL, color = "white", font_family = NULL, font_size = 20)` | confirmed |
 | `pz_annotate_clear()` | `(ctx, id = NULL, ...)` | confirmed |
 
-Arguments added to existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))` and `pz_stage_frame(target_box =)`, `pz_act_press(show_keys = NULL)`, and `pz_stage(camera_follow = NULL, show_keys = NULL)`. Annotation style defaults are set with `pz_stage_annotate()`.
+Arguments added to existing functions: `pz_record_start(captions = c("burn", "vtt", "both"))`, `pz_frame(target_box = c("element", "annotated"))` and `pz_stage_frame(target_box =)`, `pz_act_press(show_keys = NULL)`, `pz_stage(camera_follow = NULL, show_keys = NULL)`, and `pz_serve_static(root = NULL)`. Annotation style defaults are set with `pz_stage_annotate()`.
 
 ### Escape hatches and debugging
 
