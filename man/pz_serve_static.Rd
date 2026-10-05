@@ -13,9 +13,11 @@ pz_serve_static(path, ..., root = NULL)
 
 \item{root}{The directory to serve as the server root. Defaults to the
 file's directory for an \code{.html} file. Only supported when \code{path} is a
-file, which must live inside \code{root}; the handle URL points at \code{path}
-relative to \code{root}. Use it when the page references assets outside its
-own directory, such as \code{../deps/styles.css}.}
+file, which must live inside \code{root} (both are resolved with
+\code{\link[=normalizePath]{normalizePath()}}, so symlinks are resolved first, and \code{root} can't be
+the filesystem root); the handle URL
+points at \code{path} relative to \code{root}. Use it when the page references
+assets outside its own directory, such as \code{../deps/styles.css}.}
 }
 \value{
 A \code{PaparazziServe} handle with \verb{$url}, \verb{$port}, \verb{$stop()},

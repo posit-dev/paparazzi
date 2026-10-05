@@ -658,6 +658,19 @@ test_that("pz_serve_static() validates root", {
   )
 })
 
+test_that("pz_serve_static() rejects the filesystem root", {
+  skip_if_not_installed("httpuv")
+  file <- file.path(tempdir(), "root-test.html")
+  file.create(file)
+  withr::defer(unlink(file))
+
+  expect_error(
+    pz_serve_static(file, root = "/"),
+    "filesystem root",
+    class = "paparazzi_error_input"
+  )
+})
+
 test_that("pz_serve_static() serves a custom root and points the URL at the file", {
   skip_if_not_installed("httpuv")
   root <- withr::local_tempdir()

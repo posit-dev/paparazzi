@@ -105,9 +105,11 @@ pz_serve_shiny <- function(
 #' @param path A path to a directory or an `.html` file.
 #' @param root The directory to serve as the server root. Defaults to the
 #'   file's directory for an `.html` file. Only supported when `path` is a
-#'   file, which must live inside `root`; the handle URL points at `path`
-#'   relative to `root`. Use it when the page references assets outside its
-#'   own directory, such as `../deps/styles.css`.
+#'   file, which must live inside `root` (both are resolved with
+#'   [normalizePath()], so symlinks are resolved first, and `root` can't be
+#'   the filesystem root); the handle URL
+#'   points at `path` relative to `root`. Use it when the page references
+#'   assets outside its own directory, such as `../deps/styles.css`.
 #' @param ... Reserved; must be empty.
 #' @return A `PaparazziServe` handle with `$url`, `$port`, `$stop()`,
 #'   `$is_running()`, and `$logs()`. Static servers have no captured logs:
@@ -155,6 +157,14 @@ pz_serve_static <- function(path, ..., root = NULL) {
   path <- normalizePath(path, winslash = "/", mustWork = TRUE)
   if (!is.null(root)) {
     root <- normalizePath(root, winslash = "/", mustWork = TRUE)
+    # normalizePath() keeps the trailing slash only for the filesystem root,
+    # which httpuv::runStaticServer() refuses to serve.
+    if (grepl("/$", root)) {
+      cli::cli_abort(
+        "{.arg root} can't be the filesystem root.",
+        class = "paparazzi_error_input"
+      )
+    }
     if (!startsWith(path, paste0(root, "/"))) {
       cli::cli_abort(
         "{.arg path} must be inside {.arg root}.",
