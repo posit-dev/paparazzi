@@ -345,10 +345,22 @@ test_that("the press animation scales the cursor down", {
   expect_equal(cursor_overlay_scale(page), 1.75)
 
   cursor_press(page, TRUE)
-  pump_loop(page$child_loop, 0.2)
-  shot2 <- withr::local_tempfile(fileext = ".png")
-  page |> pz_screenshot(shot2)
-  pressed <- cursor_png_ink(page, shot2, band = c(280, 370))
+  # The shrink is a 0.12s transition that starts once the press state is
+  # rendered; poll the applied pixels instead of sampling after a fixed pump.
+  pressed <- NULL
+  result <- expect_retry(
+    function() {
+      shot2 <- withr::local_tempfile(fileext = ".png")
+      page |> pz_screenshot(shot2)
+      pressed <<- cursor_png_ink(page, shot2, band = c(280, 370))
+      list(pass = pressed$height < unpressed$height * 0.9)
+    },
+    timeout = 2,
+    loop = page$child_loop
+  )
+  if (!result$pass) {
+    testthat::fail("the pressed cursor ink never shrank below 0.9x")
+  }
   expect_equal(cursor_overlay_scale(page), 1.4)
 
   expect_true(pressed$count > 20)
@@ -793,7 +805,13 @@ test_that("automatic glide switches icon on destination entry, not landing", {
   expect_identical(visible(), "pz-icon-default")
   pump_loop(page$child_loop, 0.45)
   expect_identical(visible(), "pz-icon-default")
-  pump_loop(page$child_loop, 0.55)
+  # The flip applies at the entry boundary; the animation clock can lag the
+  # pump past it, so poll for the applied state instead of sampling once.
+  expect_retry(
+    function() list(pass = identical(visible(), "pz-icon-pointer")),
+    timeout = 2,
+    loop = page$child_loop
+  )
   expect_identical(visible(), "pz-icon-pointer")
   pump_loop(page$child_loop, 0.35)
   cursor_command(
@@ -820,7 +838,11 @@ test_that("automatic glide switches icon on destination entry, not landing", {
   )
   pump_loop(page$child_loop, 0.7)
   expect_identical(visible(), "pz-icon-pointer")
-  pump_loop(page$child_loop, 1)
+  expect_retry(
+    function() list(pass = identical(visible(), "pz-icon-default")),
+    timeout = 2,
+    loop = page$child_loop
+  )
   expect_identical(visible(), "pz-icon-default")
   page |> pz_record_stop()
 })
@@ -1122,7 +1144,7 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   page |> pz_record_stop()
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
-  frames <- tail(list.files(frames_dir, full.names = TRUE), 3)
+  frames <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
   inks <- lapply(frames, function(frame) {
     cursor_png_ink(page, frame, band = c(300, 344), x_range = c(640, 710))
   })
