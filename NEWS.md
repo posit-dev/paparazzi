@@ -1,5 +1,12 @@
 # paparazzi 0.0.0.9000
 
+* `pz_open()` serves `.html` files over HTTP with `pz_serve_static()` when
+  httpuv is installed, so pages get HTTP-only behavior such as the browser's
+  back/forward cache; `pz_close()` stops the one-off server. The file's
+  directory is the server root, so pages referencing assets outside it need
+  an explicit `file://` URL. Without httpuv, `.html` files still open as
+  `file://`.
+
 * `pz_act_drag()` gains named-only `preview = TRUE`: recorded HTML5 drags with
   a visible cursor carry a static source image and briefly settle to the same
   surviving source after drop. Unsafe or uncertain paparazzi redactions and

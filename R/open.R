@@ -11,7 +11,10 @@
 #'   * a `.qmd` or `.Rmd` file, or a Quarto project directory;
 #'   * a directory of static files, served over HTTP;
 #'   * an `.html` file, served over HTTP when the httpuv package is
-#'     installed (as `file://` otherwise);
+#'     installed (as `file://` otherwise). The file's directory is the
+#'     server root, so pages that reference assets outside it, such as
+#'     `../deps/styles.css`, need an explicit `file://` URL or a handle
+#'     from [pz_serve_static()] on the right root;
 #'   * any other existing local file, opened as `file://` (use
 #'     [pz_serve_static()] to serve a page over HTTP);
 #'   * a handle from [pz_serve_shiny()], [pz_serve_quarto()], or

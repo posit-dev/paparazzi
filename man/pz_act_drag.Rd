@@ -67,9 +67,10 @@ preview with a warning. Sources containing SVG \verb{<use>} references or iframe
 are not captured. Preview capture also skips documents with imported or
 unreadable stylesheets, unsupported CSS rule groups, nonembedded font source
 URLs, or registered fonts without a readable embedded CSS representation.
-Provably separate redactions permit preview capture. If local \verb{file://} pages
-have unreadable stylesheets, serve them over HTTP with \code{\link[=pz_serve_static]{pz_serve_static()}} and
-open the server handle with \code{\link[=pz_open]{pz_open()}}.
+Provably separate redactions permit preview capture. If a local \verb{file://}
+page has unreadable stylesheets, serve it over HTTP with \code{\link[=pz_serve_static]{pz_serve_static()}}
+and open the server handle with \code{\link[=pz_open]{pz_open()}}; \code{pz_open()} serves \code{.html}
+files over HTTP on its own when httpuv is installed.
 Capture and other optional preview failures also warn without changing the
 drag. Use \code{preview = FALSE} to disable capture, carry imagery, and settling.
 Unrecorded, paused, hidden-cursor, and ordinary mouse drags do no preview work.

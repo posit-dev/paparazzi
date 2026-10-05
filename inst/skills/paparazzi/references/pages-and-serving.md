@@ -16,7 +16,8 @@ page stops the server too.
 | Shiny app directory or runnable app file | Start a background R app process |
 | `.qmd`, `.Rmd`, or directory with `_quarto.yml` | Start Quarto preview |
 | Other directory | Serve static files over HTTP |
-| Other existing file, including HTML | Open the file directly |
+| `.html` file | Serve the file over HTTP when httpuv is installed, as `file://` otherwise |
+| Other existing file | Open the file directly |
 | Serving handle | Open a browser page on the handle's URL |
 | ChromoteSession | Wrap the existing session without navigating |
 
@@ -38,22 +39,19 @@ pz_with_page(pz_example("tasks"), function(page) {
 
 ## Serve static pages over HTTP
 
-Use `pz_serve_static()` for local HTML whenever links, history or navigation
-matter. Over HTTP, relative links resolve as on a real site and the browser's
-back/forward cache works. Give it a directory, or an HTML file to serve that
-file's directory with the handle's URL pointing at the file.
+Local HTML benefits from HTTP whenever links, history or navigation matter:
+relative links resolve as on a real site and the browser's back/forward cache
+works. `pz_open()` serves `.html` files itself when httpuv is installed, with
+the file's directory as the server root.
 
 ```r
-server <- pz_serve_static(pz_example("tasks"))
-page <- pz_open(server, width = 1000, height = 720)
+page <- pz_open(pz_example("tasks"), width = 1000, height = 720)
 page |> pz_expect_url("http://127.0.0.1", match = "contains")
-server$is_running()
 ```
 
-Pages opened from the same handle share the server but nothing else. You own
-that server: close its pages, then call `server$stop()`, which is safe to
-call twice. For a one-off directory, `pz_open(directory)` lets the page own
-the server instead.
+`pz_serve_static()` creates a handle you can share across pages. Pages opened
+from the same handle share the server but nothing else. You own that server:
+close its pages, then call `server$stop()`, which is safe to call twice.
 
 ## Set the viewport when opening
 
@@ -135,7 +133,7 @@ two-page example.
 `pz_serve_quarto()` runs Quarto preview on a `.qmd`, an `.Rmd` or a project
 with `_quarto.yml`. Quarto must be on the PATH or set in `QUARTO_PATH`.
 `render = TRUE` renders the document fully before preview. For HTML that's
-already rendered, use `pz_serve_static()`.
+already rendered, open it with `pz_open()`.
 
 This example writes a small document with no code chunks and checks its
 heading.

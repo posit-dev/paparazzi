@@ -22,7 +22,10 @@ pz_open(
 \item a \code{.qmd} or \code{.Rmd} file, or a Quarto project directory;
 \item a directory of static files, served over HTTP;
 \item an \code{.html} file, served over HTTP when the httpuv package is
-installed (as \verb{file://} otherwise);
+installed (as \verb{file://} otherwise). The file's directory is the
+server root, so pages that reference assets outside it, such as
+\code{../deps/styles.css}, need an explicit \verb{file://} URL or a handle
+from \code{\link[=pz_serve_static]{pz_serve_static()}} on the right root;
 \item any other existing local file, opened as \verb{file://} (use
 \code{\link[=pz_serve_static]{pz_serve_static()}} to serve a page over HTTP);
 \item a handle from \code{\link[=pz_serve_shiny]{pz_serve_shiny()}}, \code{\link[=pz_serve_quarto]{pz_serve_quarto()}}, or

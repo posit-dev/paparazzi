@@ -25,15 +25,15 @@ documents.
    `pz_local_page()` closes it when the calling test or function exits.
 
 This script adds a task to the bundled task tracker, checks that it appears
-first, and saves a screenshot of the list. Serving the page over HTTP gives it
-the origin and history behavior of a deployed site.
+first, and saves a screenshot of the list. Opening the HTML example serves it
+over HTTP when httpuv is installed, giving it the origin and history behavior
+of a deployed site.
 
 ```r
 library(paparazzi)
 
-server <- pz_serve_static(pz_example("tasks"))
 image <- tempfile(fileext = ".png")
-pz_with_page(server, function(page) {
+pz_with_page(pz_example("tasks"), function(page) {
   page |>
     pz_act_type("Repot the fern", target = "#task-title") |>
     pz_act_click("#add-task") |>
@@ -44,7 +44,6 @@ pz_with_page(server, function(page) {
     ) |>
     pz_screenshot(image, frame = pz_frame(".task-list", pad = 16))
 }, width = 1000, height = 720, color_scheme = "light")
-server$stop()
 ```
 
 To record the same interaction, stage the page first and run the chain
@@ -83,9 +82,10 @@ pz_with_page(pz_example("tasks"), function(page) {
 - **Pin down the device.** Pass `width`, `height` and `color_scheme` to
   `pz_open()`, plus `locale` and `timezone` when the page formats dates or
   numbers. Use `reduced_motion = TRUE` for stills.
-- **Serve pages over HTTP when they navigate.** Use `pz_serve_static()` for
-  HTML files, `pz_serve_quarto()` for Quarto sources and `pz_serve_shiny()`
-  for apps.
+- **Serve pages over HTTP when they navigate.** `pz_open()` serves HTML
+  files and directories over HTTP itself when httpuv is installed; call
+  `pz_serve_static()` explicitly for a shared server or a custom root,
+  `pz_serve_quarto()` for Quarto sources and `pz_serve_shiny()` for apps.
 - **Give screenshots a path in scripts.** With a path, `pz_screenshot()`
   writes the file and the chain continues. Without one it returns an image
   for interactive use or knitted documents.
