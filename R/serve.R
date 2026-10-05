@@ -111,7 +111,8 @@ pz_serve_shiny <- function(
 #'   `$stop()` is idempotent; use `withr::defer(server$stop())` for cleanup.
 #'   A finalizer stops the server as a last resort.
 #' @examplesIf paparazzi:::examples_run("httpuv", site = TRUE)
-#' # Serve the example page over HTTP instead of opening it as file://
+#' # pz_open() serves HTML files over HTTP on its own; pz_serve_static()
+#' # creates a handle you can share across pages instead
 #' server <- pz_serve_static(pz_example("tasks"))
 #' page <- pz_open(server)
 #' pz_get_url(page)
@@ -212,7 +213,17 @@ serve_kind <- function(x) {
   if (grepl("[.](qmd|rmd)$", x, ignore.case = TRUE)) {
     return("quarto")
   }
+  # pz_serve_static() only accepts .html files, so the pz_open() fallback for
+  # other files stays file://. Without httpuv, HTML files fall back to file://
+  # as well rather than prompting for an install.
+  if (grepl("[.]html$", x, ignore.case = TRUE) && httpuv_available()) {
+    return("static")
+  }
   NULL
+}
+
+httpuv_available <- function() {
+  requireNamespace("httpuv", quietly = TRUE)
 }
 
 serve_static <- function(x, call = caller_env()) {

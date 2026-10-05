@@ -923,9 +923,9 @@ test_that("pz_expect_url matches contains, exact, and regex", {
   page <- local_state_page()
   pz_expect_url(page, "state.html")
   pz_expect_url(page, pz_get_url(page), match = "exact")
-  pz_expect_url(page, "^file://", match = "regex")
-  # file:// URLs contain no http://.
-  pz_expect_url(page, "http://", not = TRUE)
+  pz_expect_url(page, "state[.]html$", match = "regex")
+  # Fixture pages never load external hosts.
+  pz_expect_url(page, "example.com", not = TRUE)
 })
 
 test_that("pz_expect_url failure uses the classed format", {

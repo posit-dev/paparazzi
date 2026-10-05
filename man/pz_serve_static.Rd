@@ -26,7 +26,8 @@ Other files in that directory are also accessible over HTTP.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run("httpuv", site = TRUE)) withAutoprint(\{ # examplesIf}
-# Serve the example page over HTTP instead of opening it as file://
+# pz_open() serves HTML files over HTTP on its own; pz_serve_static()
+# creates a handle you can share across pages instead
 server <- pz_serve_static(pz_example("tasks"))
 page <- pz_open(server)
 pz_get_url(page)

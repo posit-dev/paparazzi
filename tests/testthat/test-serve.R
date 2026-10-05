@@ -609,8 +609,11 @@ test_that("automatic serving detection prioritizes Shiny, then Quarto, then stat
   expect_null(serve_kind(file.path(dir, "ui.R")))
   expect_null(serve_kind(file.path(dir, "server.R")))
   expect_identical(serve_kind(shiny_app_fixture_file()), "shiny")
-  # pz_open() opens .html files as file://; only directories are served.
-  expect_null(serve_kind(fixture_file()))
+  # pz_open() serves .html files over HTTP when httpuv is available; other
+  # files keep opening as file://.
+  expect_identical(serve_kind(fixture_file()), "static")
+  file.create(file.path(dir, "page.htm"))
+  expect_null(serve_kind(file.path(dir, "page.htm")))
   doc <- file.path(dir, "document.Rmd")
   file.create(doc)
   expect_identical(serve_kind(doc), "quarto")
@@ -620,6 +623,11 @@ test_that("automatic serving detection prioritizes Shiny, then Quarto, then stat
   )
   expect_null(serve_kind(42))
   expect_null(serve_kind("does/not/exist"))
+})
+
+test_that(".html files fall back to file:// without httpuv", {
+  local_mocked_bindings(httpuv_available = function() FALSE)
+  expect_null(serve_kind(fixture_file()))
 })
 
 test_that("static servers retry when the port is taken", {
