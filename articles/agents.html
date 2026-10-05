@@ -114,14 +114,14 @@ it when its code finishes, and <code><a href="../reference/pz_with_page.html">pz
 when the calling test or function exits.</li>
 </ol>
 <p>This script adds a task to the bundled task tracker, checks that it
-appears first, and saves a screenshot of the list. Serving the page over
-HTTP gives it the origin and history behavior of a deployed site.</p>
+appears first, and saves a screenshot of the list. Opening the HTML
+example serves it over HTTP when httpuv is installed, giving it the
+origin and history behavior of a deployed site.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/paparazzi/">paparazzi</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">server</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_serve_static.html">pz_serve_static</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">image</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/pz_with_page.html">pz_with_page</a></span><span class="op">(</span><span class="va">server</span>, <span class="kw">function</span><span class="op">(</span><span class="va">page</span><span class="op">)</span> <span class="op">{</span></span>
+<span><span class="fu"><a href="../reference/pz_with_page.html">pz_with_page</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">page</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add-task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -131,8 +131,7 @@ HTTP gives it the origin and history behavior of a deployed site.</p>
 <span>      match <span class="op">=</span> <span class="st">"exact"</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="va">image</span>, frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">".task-list"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span>, width <span class="op">=</span> <span class="fl">1000</span>, height <span class="op">=</span> <span class="fl">720</span>, color_scheme <span class="op">=</span> <span class="st">"light"</span><span class="op">)</span></span>
-<span><span class="va">server</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">}</span>, width <span class="op">=</span> <span class="fl">1000</span>, height <span class="op">=</span> <span class="fl">720</span>, color_scheme <span class="op">=</span> <span class="st">"light"</span><span class="op">)</span></span></code></pre></div>
 <p>To record the same interaction, stage the page first and run the
 chain inside <code><a href="../reference/pz_record.html">pz_record()</a></code>. Staging animates the cursor and
 typing only while a recording runs. This GIF needs the gifski
@@ -181,8 +180,10 @@ Expectations retry until they pass or time out.</li>
 <code>timezone</code> when the page formats dates or numbers. Use
 <code>reduced_motion = TRUE</code> for stills.</li>
 <li>
-<strong>Serve pages over HTTP when they navigate.</strong> Use
-<code><a href="../reference/pz_serve_static.html">pz_serve_static()</a></code> for HTML files,
+<strong>Serve pages over HTTP when they navigate.</strong>
+<code><a href="../reference/pz_open.html">pz_open()</a></code> serves HTML files and directories over HTTP
+itself when httpuv is installed; call <code><a href="../reference/pz_serve_static.html">pz_serve_static()</a></code>
+explicitly for a shared server or a custom root,
 <code><a href="../reference/pz_serve_quarto.html">pz_serve_quarto()</a></code> for Quarto sources and
 <code><a href="../reference/pz_serve_shiny.html">pz_serve_shiny()</a></code> for apps.</li>
 <li>

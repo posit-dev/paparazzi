@@ -124,14 +124,20 @@ server too.</p>
 <td>Serve static files over HTTP</td>
 </tr>
 <tr class="odd">
-<td>Other existing file, including HTML</td>
-<td>Open the file directly</td>
+<td>
+<code>.html</code> file</td>
+<td>Serve the file over HTTP when httpuv is installed, as
+<code>file://</code> otherwise</td>
 </tr>
 <tr class="even">
+<td>Other existing file</td>
+<td>Open the file directly</td>
+</tr>
+<tr class="odd">
 <td>Serving handle</td>
 <td>Open a browser page on the handle’s URL</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>ChromoteSession</td>
 <td>Wrap the existing session without navigating</td>
 </tr>
@@ -154,21 +160,22 @@ the checks inside the function.</p>
 <div class="section level2">
 <h2 id="serve-static-pages-over-http">Serve static pages over HTTP<a class="anchor" aria-label="anchor" href="#serve-static-pages-over-http"></a>
 </h2>
-<p>Use <code><a href="../reference/pz_serve_static.html">pz_serve_static()</a></code> for local HTML whenever links,
-history or navigation matter. Over HTTP, relative links resolve as on a
-real site and the browser’s back/forward cache works. Give it a
-directory, or an HTML file to serve that file’s directory with the
-handle’s URL pointing at the file.</p>
+<p>Local HTML benefits from HTTP whenever links, history or navigation
+matter: relative links resolve as on a real site and the browser’s
+back/forward cache works. <code><a href="../reference/pz_open.html">pz_open()</a></code> serves
+<code>.html</code> files itself when httpuv is installed, with the
+file’s directory as the server root.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_serve_static.html">pz_serve_static</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_open.html">pz_open</a></span><span class="op">(</span><span class="va">server</span>, width <span class="op">=</span> <span class="fl">1000</span>, height <span class="op">=</span> <span class="fl">720</span><span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_expect_url.html">pz_expect_url</a></span><span class="op">(</span><span class="st">"http://127.0.0.1"</span>, match <span class="op">=</span> <span class="st">"contains"</span><span class="op">)</span></span>
-<span><span class="va">server</span><span class="op">$</span><span class="fu">is_running</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>Pages opened from the same handle share the server but nothing else.
-You own that server: close its pages, then call
-<code>server$stop()</code>, which is safe to call twice. For a one-off
-directory, <code>pz_open(directory)</code> lets the page own the server
-instead.</p>
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_open.html">pz_open</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span>, width <span class="op">=</span> <span class="fl">1000</span>, height <span class="op">=</span> <span class="fl">720</span><span class="op">)</span></span>
+<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_expect_url.html">pz_expect_url</a></span><span class="op">(</span><span class="st">"http://127.0.0.1"</span>, match <span class="op">=</span> <span class="st">"contains"</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/pz_serve_static.html">pz_serve_static()</a></code> creates a handle you can share across
+pages. For an HTML file, pass <code>root</code> to serve a wider
+directory while still navigating to the file, such as a pkgdown or
+Quarto subpage referencing <code>../site_libs/</code>. The file must
+live inside <code>root</code>, and <code>root</code> can’t be the
+filesystem root. Pages opened from the same handle share the server but
+nothing else. You own that server: close its pages, then call
+<code>server$stop()</code>, which is safe to call twice.</p>
 </div>
 <div class="section level2">
 <h2 id="set-the-viewport-when-opening">Set the viewport when opening<a class="anchor" aria-label="anchor" href="#set-the-viewport-when-opening"></a>
@@ -250,8 +257,8 @@ destination page. Testing has a full two-page example.</p>
 <code>.qmd</code>, an <code>.Rmd</code> or a project with
 <code>_quarto.yml</code>. Quarto must be on the PATH or set in
 <code>QUARTO_PATH</code>. <code>render = TRUE</code> renders the
-document fully before preview. For HTML that’s already rendered, use
-<code><a href="../reference/pz_serve_static.html">pz_serve_static()</a></code>.</p>
+document fully before preview. For HTML that’s already rendered, open it
+with <code><a href="../reference/pz_open.html">pz_open()</a></code>.</p>
 <p>This example writes a small document with no code chunks and checks
 its heading.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">

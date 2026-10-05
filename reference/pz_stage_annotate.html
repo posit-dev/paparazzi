@@ -80,7 +80,8 @@ callout chrome only, not mark badges.</p>
 <span>  stroke_width <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  distance <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  font_family <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  font_size <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  font_size <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  caption_side <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -137,6 +138,12 @@ and resolves to its family with a sans-serif fallback.</p></dd>
 <dt id="arg-font-size">font_size<a class="anchor" aria-label="anchor" href="#arg-font-size"></a></dt>
 <dd><p>Badge font size in CSS pixels. The default is 14.
 Supply <code>NULL</code> to restore the default.</p></dd>
+
+
+<dt id="arg-caption-side">caption_side<a class="anchor" aria-label="anchor" href="#arg-caption-side"></a></dt>
+<dd><p>Default side for new <code><a href="pz_annotate_caption.html">pz_annotate_caption()</a></code> captions:
+<code>"bottom"</code> (the default) or <code>"top"</code>. Supply <code>NULL</code> to restore the
+default.</p></dd>
 
 </dl></div>
     <div class="section level2">

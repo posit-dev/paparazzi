@@ -346,9 +346,11 @@ already contain the text.</p>
 <p><a href="../reference/pz_annotate_caption.html"><code>pz_annotate_caption()</code></a>
 adds a caption in screen space: a dark panel floating at the
 <code>side = "bottom"</code> (the default) or <code>"top"</code> edge of
-the capture. It’s not attached to an element. It persists through
-navigation and across recordings, and it’s composited onto stills.
-Newlines are preserved.</p>
+the capture. The default side comes from the page’s staged
+<code>caption_side</code> (see <a href="#styling-defaults">styling
+defaults</a>); a per-call <code>side</code> overrides it. It’s not
+attached to an element. It persists through navigation and across
+recordings, and it’s composited onto stills. Newlines are preserved.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_caption.html">pz_annotate_caption</a></span><span class="op">(</span><span class="st">"Seven tasks, two clicks from done"</span><span class="op">)</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
@@ -387,12 +389,13 @@ instantly.</p>
 <h2 id="styling-defaults">Styling defaults<a class="anchor" aria-label="anchor" href="#styling-defaults"></a>
 </h2>
 <p>Every annotation defaults to the page’s staged color, stroke width,
-font family, and badge size, and every callout to the staged bubble
-colors and distance. Change them for all later annotations with <a href="../reference/pz_stage_annotate.html"><code>pz_stage_annotate()</code></a>,
+font family, and badge size, every callout to the staged bubble colors
+and distance, and every caption to the staged <code>caption_side</code>.
+Change them for all later annotations with <a href="../reference/pz_stage_annotate.html"><code>pz_stage_annotate()</code></a>,
 and pass <code>NULL</code> to restore a default (crimson
-<code>#e11d48</code>, 3 pixel lines, sans-serif, 14 pixel text, and
-callouts with white text on <code>#171717</code>, 24 pixels away or 8
-without a line):</p>
+<code>#e11d48</code>, 3 pixel lines, sans-serif, 14 pixel text, captions
+at the bottom, and callouts with white text on <code>#171717</code>, 24
+pixels away or 8 without a line):</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_stage_annotate.html">pz_stage_annotate</a></span><span class="op">(</span></span>

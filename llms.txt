@@ -60,11 +60,8 @@ on a small task-tracker page that ships with paparazzi:
 
 library(paparazzi)
 
-server <- pz_serve_static(pz_example("tasks"))
-withr::defer(server$stop())
-
 page <- pz_open(
-  server,
+  pz_example("tasks"),
   width = 1000,
   height = 720,
   color_scheme = "light"
@@ -75,28 +72,29 @@ task_dentist <- pz_loc(".task", has_text = "Book dentist appointment")
 
 page |>
   pz_stage(enter = "bottom", pause = 0.3) |>
+  pz_stage_annotate(caption_side = "top") |>
   pz_record_start(
     frame = pz_frame(list("h1", ".task-list"), pad = 24, ratio = 16 / 9),
     format = "gif",
     scale = 800
   ) |>
-  pz_annotate_caption("Add a task", side = "top") |>
+  pz_annotate_caption("Add a task") |>
   pz_camera("#new-task", wait = TRUE) |>
   pz_act_type("Prepare release notes", target = "#task-title") |>
   pz_act_click("#add-task") |>
   pz_expect_visible(task_release) |>
   pz_annotate(task_release, type = "box", pad = 4, id = "new") |>
-  pz_annotate_caption("New tasks go to the top of the list", side = "top") |>
+  pz_annotate_caption("New tasks go to the top of the list") |>
   pz_record_hold(1.2) |>
   pz_camera_reset() |>
   pz_annotate_clear(id = "new") |>
-  pz_annotate_caption("Drag to reorder", side = "top") |>
+  pz_annotate_caption("Drag to reorder") |>
   pz_act_drag(
     pz_loc(".task-drag-handle", within = task_release),
     to = pz_loc(".task-drag-handle", within = task_dentist)
   ) |>
   pz_record_hold(1) |>
-  pz_annotate_caption("Check it off when you're done", side = "top") |>
+  pz_annotate_caption("Check it off when you're done") |>
   pz_find(task_release) |>
   pz_act_click(".task-done") |>
   pz_expect_class("done") |>

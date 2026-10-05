@@ -142,8 +142,10 @@ a <code>code</code> error, then rethrows that error.</p>
 <p>The first caption labels the form; the second replaces it after the
 task appears, fading the outgoing caption during recording. Captions use
 screen space at the top or bottom; color, font family, and size are
-configurable. They persist across navigation and recordings, appear in
-stills, and remain through the last frame.
+configurable. The default side is staged with
+<code>pz_stage_annotate(caption_side =)</code>, and the per-call
+<code>side</code> above overrides it. Captions persist across navigation
+and recordings, appear in stills, and remain through the last frame.
 <code>pz_annotate_clear(id = "caption")</code> clears one; clearing it
 here leaves later examples uncaptioned.</p>
 <p>The start frame is the <strong>home frame</strong>.

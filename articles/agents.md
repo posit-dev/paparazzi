@@ -30,16 +30,16 @@ on disk and Quarto documents.
     closes it when the calling test or function exits.
 
 This script adds a task to the bundled task tracker, checks that it
-appears first, and saves a screenshot of the list. Serving the page over
-HTTP gives it the origin and history behavior of a deployed site.
+appears first, and saves a screenshot of the list. Opening the HTML
+example serves it over HTTP when httpuv is installed, giving it the
+origin and history behavior of a deployed site.
 
 ``` r
 
 library(paparazzi)
 
-server <- pz_serve_static(pz_example("tasks"))
 image <- tempfile(fileext = ".png")
-pz_with_page(server, function(page) {
+pz_with_page(pz_example("tasks"), function(page) {
   page |>
     pz_act_type("Repot the fern", target = "#task-title") |>
     pz_act_click("#add-task") |>
@@ -50,7 +50,6 @@ pz_with_page(server, function(page) {
     ) |>
     pz_screenshot(image, frame = pz_frame(".task-list", pad = 16))
 }, width = 1000, height = 720, color_scheme = "light")
-server$stop()
 ```
 
 To record the same interaction, stage the page first and run the chain
@@ -100,9 +99,12 @@ pz_with_page(pz_example("tasks"), function(page) {
   [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md),
   plus `locale` and `timezone` when the page formats dates or numbers.
   Use `reduced_motion = TRUE` for stills.
-- **Serve pages over HTTP when they navigate.** Use
+- **Serve pages over HTTP when they navigate.**
+  [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+  serves HTML files and directories over HTTP itself when httpuv is
+  installed; call
   [`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md)
-  for HTML files,
+  explicitly for a shared server or a custom root,
   [`pz_serve_quarto()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_quarto.md)
   for Quarto sources and
   [`pz_serve_shiny()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_shiny.md)

@@ -50,7 +50,7 @@ page <- pz_open(
 )
 page
 #> ── paparazzi page ──────────────────────────────────────────────────────────────
-#> URL        file:///home/runner/work/_temp/Library/paparazzi/examples/tasks.html
+#> URL        http://127.0.0.1:4023/tasks.html
 #> Device     1000 × 720 @2x · light
 #> Recording  off · cursor hidden
 ```
@@ -421,7 +421,7 @@ task_list <- pz_find(page, ".task-list")
 task_list
 #> ── paparazzi scope ─────────────────────────────────────────────────────────────
 #> Scope      root › `.task-list` (1)
-#> URL        file:///home/runner/work/_temp/Library/paparazzi/examples/tasks.html
+#> URL        http://127.0.0.1:4023/tasks.html
 #> Device     1000 × 720 @2x · light
 #> Recording  off · cursor hidden
 ```
@@ -478,7 +478,7 @@ page |>
   pz_inspect(".task-done", show = "none")
 #> ── paparazzi scope ─────────────────────────────────────────────────────────────
 #> Scope      root › `.task-list` (1)
-#> URL        file:///home/runner/work/_temp/Library/paparazzi/examples/tasks.html
+#> URL        http://127.0.0.1:4023/tasks.html
 #> Device     390 × 700 @2x · dark
 #> Target     `.task-done` → 8 matches
 #>   1  <button type="button" class="task-done btn btn-sm btn-outli…

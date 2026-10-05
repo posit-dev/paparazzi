@@ -66,8 +66,10 @@ rethrows that error.
 The first caption labels the form; the second replaces it after the task
 appears, fading the outgoing caption during recording. Captions use
 screen space at the top or bottom; color, font family, and size are
-configurable. They persist across navigation and recordings, appear in
-stills, and remain through the last frame.
+configurable. The default side is staged with
+`pz_stage_annotate(caption_side =)`, and the per-call `side` above
+overrides it. Captions persist across navigation and recordings, appear
+in stills, and remain through the last frame.
 `pz_annotate_clear(id = "caption")` clears one; clearing it here leaves
 later examples uncaptioned.
 

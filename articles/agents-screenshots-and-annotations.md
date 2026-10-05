@@ -157,7 +157,8 @@ sets page defaults for later annotations. Omitted arguments leave a
 setting alone; explicit `NULL` restores its default. Per-call styles
 override the staged settings. Mark badges use the mark’s `color` with
 white text; `label_fill` and `label_text_color` override those. Staged
-`fill` and `text_color` style callout bubbles and their badges.
+`fill` and `text_color` style callout bubbles and their badges. New
+captions default to the staged `caption_side` (`"bottom"` or `"top"`).
 
 ``` r
 

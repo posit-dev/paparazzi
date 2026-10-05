@@ -32,8 +32,15 @@ pz_open(
 
   - a directory of static files, served over HTTP;
 
-  - any other existing local file, including `.html` files, opened as
-    `file://` (use
+  - an `.html` file, served over HTTP when the httpuv package is
+    installed (as `file://` otherwise). The file's directory is the
+    server root, so pages that reference assets outside it, such as
+    `../deps/styles.css`, need an explicit `file://` URL or a handle
+    from
+    [`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md)
+    on the right root;
+
+  - any other existing local file, opened as `file://` (use
     [`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md)
     to serve a page over HTTP);
 
@@ -48,12 +55,12 @@ pz_open(
 
   Path detection checks Shiny first (directories containing `app.R` or
   `server.R`, or named app files), then Quarto (`.qmd`, `.Rmd`, or a
-  directory containing `_quarto.yml`), then other directories as static
-  sites. `ui.R` and `server.R` passed alone open as files. A path starts
-  a one-off server using the backend defaults; closing the page stops
-  it. Closing a page opened from a handle leaves its server running.
-  Shiny app **objects** are not supported; supply an app path or a
-  running app's URL instead.
+  directory containing `_quarto.yml`), then static sites: other
+  directories and, when httpuv is installed, `.html` files. `ui.R` and
+  `server.R` passed alone open as files. A path starts a one-off server
+  using the backend defaults; closing the page stops it. Closing a page
+  opened from a handle leaves its server running. Shiny app **objects**
+  are not supported; supply an app path or a running app's URL instead.
 
 - ...:
 
@@ -103,10 +110,11 @@ is used as-is.
 ## Examples
 
 ``` r
-# A local HTML file opens as a file:// URL
+# An HTML file is served over HTTP so the page gets bfcache and other
+# HTTP-only behavior
 page <- pz_open(pz_example("tasks"))
 pz_get_url(page)
-#> [1] "file:///home/runner/work/_temp/Library/paparazzi/examples/tasks.html"
+#> [1] "http://127.0.0.1:4831/tasks.html"
 pz_close(page)
 
 # Named arguments in `...` set up the device before the page loads

@@ -21,7 +21,8 @@ pz_stage_annotate(
   stroke_width = NULL,
   distance = NULL,
   font_family = NULL,
-  font_size = NULL
+  font_size = NULL,
+  caption_side = NULL
 )
 ```
 
@@ -80,6 +81,13 @@ pz_stage_annotate(
 - font_size:
 
   Badge font size in CSS pixels. The default is 14. Supply `NULL` to
+  restore the default.
+
+- caption_side:
+
+  Default side for new
+  [`pz_annotate_caption()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_caption.md)
+  captions: `"bottom"` (the default) or `"top"`. Supply `NULL` to
   restore the default.
 
 ## Value

@@ -16,7 +16,7 @@ pz_annotate_caption(
   ctx,
   text,
   ...,
-  side = "bottom",
+  side = NULL,
   color = "white",
   font_family = NULL,
   font_size = 20
@@ -39,7 +39,10 @@ pz_annotate_caption(
 
 - side:
 
-  `"bottom"` (the default) or `"top"`.
+  Placement: `"top"` or `"bottom"` (the default). `NULL` (the default)
+  uses the staged `caption_side` from
+  [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md)
+  (initially `"bottom"`).
 
 - color:
 

@@ -326,7 +326,9 @@ already contain the text.
 
 [`pz_annotate_caption()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_caption.md)
 adds a caption in screen space: a dark panel floating at the
-`side = "bottom"` (the default) or `"top"` edge of the capture. It’s not
+`side = "bottom"` (the default) or `"top"` edge of the capture. The
+default side comes from the page’s staged `caption_side` (see [styling
+defaults](#styling-defaults)); a per-call `side` overrides it. It’s not
 attached to an element. It persists through navigation and across
 recordings, and it’s composited onto stills. Newlines are preserved.
 
@@ -385,12 +387,13 @@ reverse; in stills, annotations disappear instantly.
 ## Styling defaults
 
 Every annotation defaults to the page’s staged color, stroke width, font
-family, and badge size, and every callout to the staged bubble colors
-and distance. Change them for all later annotations with
+family, and badge size, every callout to the staged bubble colors and
+distance, and every caption to the staged `caption_side`. Change them
+for all later annotations with
 [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md),
 and pass `NULL` to restore a default (crimson `#e11d48`, 3 pixel lines,
-sans-serif, 14 pixel text, and callouts with white text on `#171717`, 24
-pixels away or 8 without a line):
+sans-serif, 14 pixel text, captions at the bottom, and callouts with
+white text on `#171717`, 24 pixels away or 8 without a line):
 
 ``` r
 

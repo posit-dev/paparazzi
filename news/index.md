@@ -2,6 +2,32 @@
 
 ## paparazzi 0.0.0.9000
 
+- [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md)
+  gains `caption_side`, the page default for the side of new
+  [`pz_annotate_caption()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_caption.md)
+  captions. `"bottom"` remains the default and a per-call `side` still
+  overrides it;
+  [`pz_annotate_caption()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_caption.md)’s
+  `side` argument now defaults to `NULL`, meaning the staged value.
+
+- [`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md)
+  gains `root`, the directory to serve as the server root for an `.html`
+  file. Use it when the page references assets outside its own
+  directory, such as `../deps/styles.css`; the handle URL points at the
+  file relative to `root`. `root` is only supported for files, must be
+  an existing directory containing the file, and can’t be the filesystem
+  root.
+
+- [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+  serves `.html` files over HTTP with
+  [`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md)
+  when httpuv is installed, so pages get HTTP-only behavior such as the
+  browser’s back/forward cache;
+  [`pz_close()`](https://posit-dev.github.io/paparazzi/reference/pz_close.md)
+  stops the one-off server. The file’s directory is the server root, so
+  pages referencing assets outside it need an explicit `file://` URL.
+  Without httpuv, `.html` files still open as `file://`.
+
 - [`pz_act_drag()`](https://posit-dev.github.io/paparazzi/reference/pz_act_drag.md)
   gains named-only `preview = TRUE`: recorded HTML5 drags with a visible
   cursor carry a static source image and briefly settle to the same

@@ -7,7 +7,7 @@ Other files in that directory are also accessible over HTTP.
 ## Usage
 
 ``` r
-pz_serve_static(path, ...)
+pz_serve_static(path, ..., root = NULL)
 ```
 
 ## Arguments
@@ -19,6 +19,17 @@ pz_serve_static(path, ...)
 - ...:
 
   Reserved; must be empty.
+
+- root:
+
+  The directory to serve as the server root. Defaults to the file's
+  directory for an `.html` file. Only supported when `path` is a file,
+  which must live inside `root` (both are resolved with
+  [`normalizePath()`](https://rdrr.io/r/base/normalizePath.html), so
+  symlinks are resolved first, and `root` can't be the filesystem root);
+  the handle URL points at `path` relative to `root`. Use it when the
+  page references assets outside its own directory, such as
+  `../deps/styles.css`.
 
 ## Value
 
@@ -35,11 +46,12 @@ A finalizer stops the server as a last resort.
 ## Examples
 
 ``` r
-# Serve the example page over HTTP instead of opening it as file://
+# pz_open() serves HTML files over HTTP on its own; pz_serve_static()
+# creates a handle you can share across pages instead
 server <- pz_serve_static(pz_example("tasks"))
 page <- pz_open(server)
 pz_get_url(page)
-#> [1] "http://127.0.0.1:7653/tasks.html"
+#> [1] "http://127.0.0.1:5953/tasks.html"
 pz_close(page)
 server$stop()
 ```
