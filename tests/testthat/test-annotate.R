@@ -71,14 +71,39 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
   # #inner starts scrolled out of #outer's box, so its mark is hidden;
   # bring it into the container's view before measuring movement.
   pz_js(page, "document.getElementById('outer').scrollTop = 100")
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    function() isTRUE(annotation_state(page)[[2]]$visible),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the inner mark to become visible in the container"
+  )
   expect_true(annotation_state(page)[[2]]$visible)
   before <- annotation_state(page)
   pz_js(
     page,
     "window.scrollTo(0, 80); document.getElementById('outer').scrollTop = 130; document.getElementById('box').style.top = '350px'"
   )
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    function() {
+      now <- annotation_state(page)
+      # One scroll handler updates all annotations in the same tick; the box
+      # delta is exact, so anchor the poll on it and the fixed annotation.
+      length(now) == 3L &&
+        abs(
+          as.numeric(now[[1]]$rect[[2]]) -
+            (as.numeric(before[[1]]$rect[[2]]) - 40)
+        ) <
+          2 &&
+        abs(
+          as.numeric(now[[3]]$rect[[2]]) -
+            as.numeric(before[[3]]$rect[[2]])
+        ) <
+          2
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the annotations to track the scroll and layout shift"
+  )
   after <- annotation_state(page)
   expect_equal(
     as.numeric(after[[1]]$rect[[2]]),
@@ -96,16 +121,36 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
     tolerance = 2
   )
   pz_js(page, "document.getElementById('inner').style.display = 'none'")
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    function() isFALSE(annotation_state(page)[[2]]$visible),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the inner mark to hide with its target"
+  )
   expect_false(annotation_state(page)[[2]]$visible)
   pz_js(page, "document.getElementById('inner').style.display = ''")
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    function() isTRUE(annotation_state(page)[[2]]$visible),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the inner mark to reappear with its target"
+  )
   expect_true(annotation_state(page)[[2]]$visible)
   pz_js(page, "document.getElementById('outer').scrollTop = 0")
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    function() isFALSE(annotation_state(page)[[2]]$visible),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the inner mark to hide out of view"
+  )
   expect_false(annotation_state(page)[[2]]$visible)
   pz_js(page, "document.getElementById('box').remove()")
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    function() isFALSE(annotation_state(page)[[1]]$visible),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the box mark to hide with its removed target"
+  )
   expect_false(annotation_state(page)[[1]]$visible)
 })
 
@@ -370,7 +415,20 @@ test_that("redaction fills every match immediately and hides after disconnection
   }
   expect_equal(at(220, 330), rep(23 / 255, 3), tolerance = 0.03)
   pz_js(page, "document.getElementById('box').remove()")
-  pump_loop(page$child_loop, 0.05)
+  pz_poll(
+    function() {
+      identical(
+        pz_js(
+          page,
+          "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')[1].style.display"
+        ),
+        "none"
+      )
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the removed target's redaction to hide"
+  )
   after <- pz_js(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')[1].style.display"
@@ -630,11 +688,34 @@ test_that("redaction paints only inside a scrolling ancestor as its target moves
   expect_equal(pixel(380, 190), rep(23 / 255, 3), tolerance = 0.03)
   expect_equal(pixel(380, 202), rep(1, 3), tolerance = 0.03)
   pz_js(page, "document.getElementById('clip').scrollTop = 80")
-  pump_loop(page$child_loop, 0.05)
+  pz_poll(
+    function() {
+      all(
+        abs(pixel(380, 110) - 23 / 255) < 0.03,
+        abs(pixel(380, 190) - 1) < 0.03
+      )
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the redaction to follow the container scroll"
+  )
   expect_equal(pixel(380, 110), rep(23 / 255, 3), tolerance = 0.03)
   expect_equal(pixel(380, 190), rep(1, 3), tolerance = 0.03)
   pz_js(page, "document.getElementById('clip').scrollTop = 250")
-  pump_loop(page$child_loop, 0.05)
+  pz_poll(
+    function() {
+      identical(
+        pz_js(
+          page,
+          "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
+        ),
+        "none"
+      )
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the fully scrolled-out redaction to hide"
+  )
   expect_identical(
     pz_js(
       page,
@@ -644,7 +725,17 @@ test_that("redaction paints only inside a scrolling ancestor as its target moves
   )
   expect_equal(pixel(380, 110), rep(1, 3), tolerance = 0.03)
   pz_js(page, "document.getElementById('clip').scrollTop = 0")
-  pump_loop(page$child_loop, 0.05)
+  pz_poll(
+    function() {
+      all(
+        abs(pixel(380, 190) - 23 / 255) < 0.03,
+        abs(pixel(380, 175) - 23 / 255) < 0.03
+      )
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the redaction to reappear scrolled back to the top"
+  )
   expect_equal(pixel(380, 190), rep(23 / 255, 3), tolerance = 0.03)
   expect_equal(pixel(380, 175), rep(23 / 255, 3), tolerance = 0.03)
 })
@@ -1173,7 +1264,12 @@ test_that("a mark clips at the edge of a scrolling overflow ancestor", {
   expect_equal(pixel(371, 180), c(1, 0, 0), tolerance = 0.05)
   expect_equal(pixel(371, 205), c(1, 1, 1), tolerance = 0.03)
   pz_js(page, "document.getElementById('markclip').scrollTop = 250")
-  pump_loop(page$child_loop, 0.05)
+  pz_poll(
+    function() isFALSE(annotation_state(page)[[1]]$visible),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the mark to hide when scrolled out of its clip"
+  )
   expect_false(annotation_state(page)[[1]]$visible)
   expect_equal(pixel(371, 110), c(1, 1, 1), tolerance = 0.03)
 })
@@ -1237,7 +1333,23 @@ test_that("redaction follows scroll and scoped targets without restyling element
     page,
     "window.scrollTo(0, 80); document.getElementById('outer').scrollTop = 30"
   )
-  pump_loop(page$child_loop, 0.06)
+  pz_poll(
+    function() {
+      now <- rects()
+      # One scroll handler updates both redactions in the same tick; the
+      # fixed one never moves, so anchor on the inner one having moved.
+      length(now) == 2L &&
+        abs(
+          as.numeric(now[[1]][[1]]) -
+            as.numeric(before[[1]][[1]])
+        ) >
+          2 &&
+        abs(as.numeric(now[[2]][[1]]) - as.numeric(before[[2]][[1]])) < 2
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the rects to track the scroll"
+  )
   after <- rects()
   expect_equal(
     as.numeric(after[[1]][[1]]),
@@ -1342,7 +1454,16 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
   img <- png::readPNG(path)
   expect_equal(rgb(45, 35), rep(23 / 255, 3), tolerance = 0.03)
   pz_js(page, "document.getElementById('fixed').style.display = 'none'")
-  pump_loop(page$child_loop, 0.05)
+  pz_poll(
+    function() {
+      page |> pz_screenshot(path)
+      img <<- png::readPNG(path)
+      isTRUE(all.equal(rgb(45, 35), rep(1, 3), tolerance = 0.03))
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the hidden target's redaction to stop painting"
+  )
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
   expect_equal(rgb(45, 35), rep(1, 3), tolerance = 0.03)
@@ -1460,7 +1581,20 @@ test_that("blur changes text pixels and hides when target stops rendering", {
   soft <- png::readPNG(after)[rows, cols, 1]
   expect_gt(mean(abs(sharp - soft)), 0.05)
   pz_js(page, "document.getElementById('secret').style.display = 'none'")
-  pump_loop(page$child_loop, 0.05)
+  pz_poll(
+    function() {
+      identical(
+        pz_js(
+          page,
+          "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
+        ),
+        "none"
+      )
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the hidden target's redaction to hide"
+  )
   expect_identical(
     pz_js(
       page,
@@ -1472,6 +1606,9 @@ test_that("blur changes text pixels and hides when target stops rendering", {
     page,
     "document.getElementById('secret').style.display = ''; document.getElementById('secret').style.visibility = 'hidden'"
   )
+  # The display is "none" before and after: this is a negative assertion over
+  # an observation window (the recompute must not unhide), which a poll on the
+  # display value cannot express.
   pump_loop(page$child_loop, 0.05)
   expect_identical(
     pz_js(
@@ -1481,7 +1618,20 @@ test_that("blur changes text pixels and hides when target stops rendering", {
     "none"
   )
   pz_js(page, "document.getElementById('secret').style.visibility = 'visible'")
-  pump_loop(page$child_loop, 0.05)
+  pz_poll(
+    function() {
+      identical(
+        pz_js(
+          page,
+          "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
+        ),
+        ""
+      )
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the restored target's redaction to reappear"
+  )
   expect_identical(
     pz_js(
       page,
@@ -1524,9 +1674,13 @@ test_that("poll captures started after redaction returns are covered", {
     identical(page_recorder(page)$pending, pending) && !is.null(pending)
   )
   before <- length(page_recorder(page)$files)
-  pump_loop(page$child_loop, 0.3)
+  pz_poll(
+    function() length(page_recorder(page)$files) > before,
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a capture started after the redaction"
+  )
   captured <- page_recorder(page)$files
-  expect_gt(length(captured), before)
   dpr <- page_dpr(page)
   redacted <- vapply(
     captured[-seq_len(before)],

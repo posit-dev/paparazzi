@@ -255,6 +255,12 @@ test_that("spotlight follows page and inner scroll, then hides disconnected hole
   )
   expect_equal(spotlight_rgb(img, page, 50, 390), c(1, 0, 0), tolerance = 0.04)
   pz_js(page, "document.getElementById('inner').style.display = 'none'")
+  pz_poll(
+    function() isFALSE(holes()[[2]]$visible),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the hidden target's hole to close"
+  )
   img <- spotlight_image(page, path)
   expect_false(holes()[[2]]$visible)
   expect_equal(spotlight_rgb(img, page, 50, 385), rep(0.4, 3), tolerance = 0.04)
@@ -502,16 +508,24 @@ test_that("hidden and zero-size targets cannot leave spotlight holes", {
       "two.insertAdjacentHTML('beforeend', '<span style=\"visibility:visible\">shown</span>'); })()"
     )
   )
-  pump_loop(page$child_loop, 0.07)
   hole_display <- function() {
     unlist(spotlight_layer(
       page,
       "[...layer.querySelector('.pz-spotlight mask').children].slice(1).map(h => h.style.display)"
     ))
   }
+  # The display is "" before and after: a negative assertion over an
+  # observation window (hiding the target must not close the cutout while a
+  # descendant stays visible), which a poll on the display value cannot express.
+  pump_loop(page$child_loop, 0.07)
   expect_identical(hole_display(), "")
   pz_js(page, "document.querySelector('#two span').remove()")
-  pump_loop(page$child_loop, 0.07)
+  pz_poll(
+    function() identical(unname(hole_display()), "none"),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the cutout to close once no descendant stays visible"
+  )
   expect_identical(hole_display(), "none")
   pz_js(
     page,
