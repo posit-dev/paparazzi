@@ -1143,6 +1143,18 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   expect_match(rules, "pz-icon-in.*100% \\{ visibility:hidden;")
   expect_match(rules, "pz-icon-out.*100% \\{ visibility:visible;")
   expect_identical(page_cursor(page)$icon, "pointer")
+  # The cross-fade at the entry boundary can settle a frame after the
+  # glide pump's grace on a loaded runner; wait for the flip instead of
+  # sampling computed style once.
+  expect_retry(
+    function() {
+      list(
+        pass = identical(attr(cursor_overlay_state(page), "icon"), "pointer")
+      )
+    },
+    timeout = 2,
+    loop = page$child_loop
+  )
   expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
   page |> pz_record_stop()
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
