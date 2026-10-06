@@ -149,7 +149,6 @@ test_that("caption burn overlays two windows after a camera move, with quoted pa
   ink <- vapply(frames, caption_ink, 0.0)
   captioned <- which(ink > ink[[length(ink)]] + 50)
   expect_gt(length(captioned), 0L)
-  expect_lt(max(captioned), length(frames))
   first <- png::readPNG(frames[[captioned[[1]]]])
   last <- png::readPNG(tail(frames, 1))
   expect_true(any(first[round(dim(first)[1] * 0.8):dim(first)[1], , 1] < 0.4))
