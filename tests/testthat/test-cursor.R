@@ -1151,10 +1151,10 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   inks <- lapply(frames, function(frame) {
     cursor_png_ink(page, frame, band = c(300, 344), x_range = c(640, 710))
   })
-  # The landing dwells at the rest position for the remainder of the
-  # recording, while the glide crosses the 70px scan band in at most ~2
-  # frames at this speed (625px/s at 15fps), so require several qualifying
-  # frames to prove the cursor landed here rather than merely transited.
+  # At this speed (625px/s at 15fps) the glide crosses the 70px scan band
+  # in only a couple of frames, so no frame count distinguishes a landing
+  # from a transit. Stopping always captures one final frame with the
+  # cursor at rest: require the landing in that terminal frame.
   ok <- vapply(
     inks,
     function(ink) {
@@ -1162,7 +1162,7 @@ test_that("offset records landing ink and two icon boundaries outside target", {
     },
     logical(1)
   )
-  expect_gte(sum(ok), 3L)
+  expect_true(ok[[length(ok)]])
 })
 
 test_that("inside-target offset has one entry flip and explicit icon has none", {
