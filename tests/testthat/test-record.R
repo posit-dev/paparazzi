@@ -1812,8 +1812,17 @@ test_that("screencast holds the last frame on an idle page", {
     what = "the first screencast frame"
   )
   before <- length(rec$files)
+  first <- png::readPNG(tail(rec$files, 1))
   pz_wait(page, 0.4)
-  expect_length(rec$files, before)
+  # Chrome may re-send an unchanged frame (a late acknowledgement), so the
+  # idle contract is content, not cadence: frames captured while the page
+  # sits still repeat the same pixels, and only a handful arrive -- a
+  # leaked capture chain would produce a steady stream.
+  idle <- tail(rec$files, -before)
+  expect_lte(length(idle), 2L)
+  for (file in idle) {
+    expect_identical(png::readPNG(file), first, label = basename(file))
+  }
   pz_record_stop(page)
   expect_true(file.exists(out))
 })
