@@ -34,6 +34,22 @@ cursor_overlay_state <- function(page) {
   structure(unlist(v[1:3]), icon = v[[4]])
 }
 
+# Expect the overlay cursor's visible icon to settle on `icon`. During a
+# recording an automatic icon flip applies at 100% of the entrance or glide
+# animation, which can land a frame after the pump's grace on a loaded
+# runner, so poll for the settled icon and keep the sample as the final
+# assertion.
+expect_cursor_icon <- function(page, icon) {
+  expect_retry(
+    function() {
+      list(pass = identical(attr(cursor_overlay_state(page), "icon"), icon))
+    },
+    timeout = 2,
+    loop = page$child_loop
+  )
+  expect_identical(attr(cursor_overlay_state(page), "icon"), icon)
+}
+
 # Count PNG pixels where `color`'s dominant RGB channel dominates by
 # `margin`, for spotting the click ring in recorded frames. A
 # dominance test (not per-channel distance) keeps ring pixels that have

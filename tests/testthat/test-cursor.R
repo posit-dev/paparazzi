@@ -606,19 +606,7 @@ test_that("off-frame entries start with default and explicit icons can replace i
     "pz-icon-out"
   )
   expect_identical(page_cursor(page)$icon, "pointer")
-  # The entrance flip applies at 100% of the entrance animation, which
-  # can land a frame after the glide pump's grace on a loaded runner;
-  # wait for the flip instead of sampling computed style once.
-  expect_retry(
-    function() {
-      list(
-        pass = identical(attr(cursor_overlay_state(page), "icon"), "pointer")
-      )
-    },
-    timeout = 2,
-    loop = page$child_loop
-  )
-  expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
+  expect_cursor_icon(page, "pointer")
   page |> pz_cursor_move("#none", duration = 0.5)
   expect_identical(page_cursor(page)$icon, "none")
   expect_match(
@@ -633,19 +621,7 @@ test_that("off-frame entries start with default and explicit icons can replace i
   page |> pz_cursor_leave("left", icon = "grab")
   expect_identical(page_cursor(page)$icon, "grab")
   page |> pz_cursor_move("#plain", duration = 0.5)
-  # The landing icon flip applies at 100% of the glide animation, which
-  # can land a frame after the pump's grace on a loaded runner; wait
-  # for the flip instead of sampling computed style once.
-  expect_retry(
-    function() {
-      list(
-        pass = identical(attr(cursor_overlay_state(page), "icon"), "default")
-      )
-    },
-    timeout = 2,
-    loop = page$child_loop
-  )
-  expect_identical(attr(cursor_overlay_state(page), "icon"), "default")
+  expect_cursor_icon(page, "default")
   page |> pz_cursor_move("#btn", icon = "text", duration = 0.5)
   expect_identical(attr(cursor_overlay_state(page), "icon"), "text")
   page |> pz_record_stop()
@@ -1167,19 +1143,7 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   expect_match(rules, "pz-icon-in.*100% \\{ visibility:hidden;")
   expect_match(rules, "pz-icon-out.*100% \\{ visibility:visible;")
   expect_identical(page_cursor(page)$icon, "pointer")
-  # The cross-fade at the entry boundary can settle a frame after the
-  # glide pump's grace on a loaded runner; wait for the flip instead of
-  # sampling computed style once.
-  expect_retry(
-    function() {
-      list(
-        pass = identical(attr(cursor_overlay_state(page), "icon"), "pointer")
-      )
-    },
-    timeout = 2,
-    loop = page$child_loop
-  )
-  expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
+  expect_cursor_icon(page, "pointer")
   page |> pz_record_stop()
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
