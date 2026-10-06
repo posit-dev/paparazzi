@@ -1844,8 +1844,9 @@ test_that("screencast immediate stop captures the final page state", {
   pz_record_stop(page)
 
   files <- sort(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE))
-  expect_gte(length(files), 1L)
-  if (length(files)) {
+  if (!length(files)) {
+    testthat::fail("the immediate stop captured no frames")
+  } else {
     expect_equal(png_dimensions(tail(files, 1)), c(640L, 480L))
     img <- png::readPNG(tail(files, 1))
     expect_equal(
@@ -1853,8 +1854,6 @@ test_that("screencast immediate stop captures the final page state", {
       c(1, 0, 0),
       tolerance = 0.05
     )
-  } else {
-    testthat::fail("the immediate stop captured no frames")
   }
   expect_true(file.exists(out))
 })
