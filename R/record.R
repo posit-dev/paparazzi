@@ -217,6 +217,18 @@ pz_record_start <- function(
   rec$frames_dir <- record_frames_dir(path, keep_frames)
 
   page_set_recorder(page, rec)
+  # A commit can drop a capture in flight (see record_nav_rebased), so
+  # track main-frame commits for the whole recording. The listener also
+  # keeps the Page domain enabled, letting the device-zoom script
+  # re-apply on mid-recording commits; settle points re-apply it anyway.
+  rec$deregister_navigated <- page$session$Page$frameNavigated(
+    callback_ = function(params) {
+      # Subframe commits don't drop the main frame's capture.
+      if (is.null(params$frame$parentId)) {
+        record_nav_rebased(page)
+      }
+    }
+  )
   if (identical(method, "screencast")) {
     tryCatch(
       record_start_screencast(page, rec),
@@ -647,6 +659,7 @@ new_recorder <- function(
   rec$format <- format
   rec$method <- method
   rec$deregister_screencast <- NULL
+  rec$deregister_navigated <- NULL
   rec$fps <- fps
   rec$scale <- scale
   rec$hold_first <- hold[1]
@@ -818,20 +831,24 @@ record_start_screencast <- function(page, rec) {
 
 record_stop_screencast <- function(page, rec) {
   deregister <- rec$deregister_screencast
-  if (is.null(deregister)) {
-    return(invisible(NULL))
-  }
   rec$deregister_screencast <- NULL
-  session <- page$session
-  tryCatch(
-    session$Page$stopScreencast(
-      wait_ = FALSE,
-      callback_ = function(...) NULL,
-      error_ = function(e) record_error(rec, e)
-    ),
-    error = function(e) record_error(rec, e)
-  )
-  tryCatch(deregister(), error = function(e) record_error(rec, e))
+  deregister_navigated <- rec$deregister_navigated
+  rec$deregister_navigated <- NULL
+  if (!is.null(deregister)) {
+    session <- page$session
+    tryCatch(
+      session$Page$stopScreencast(
+        wait_ = FALSE,
+        callback_ = function(...) NULL,
+        error_ = function(e) record_error(rec, e)
+      ),
+      error = function(e) record_error(rec, e)
+    )
+    tryCatch(deregister(), error = function(e) record_error(rec, e))
+  }
+  if (!is.null(deregister_navigated)) {
+    tryCatch(deregister_navigated(), error = function(e) record_error(rec, e))
+  }
   invisible(NULL)
 }
 
@@ -978,9 +995,17 @@ record_error <- function(rec, e) {
   invisible(NULL)
 }
 
+# A navigation commit can drop a capture in flight: Chrome never
+# answers the command, so abandon the pending capture rather than mute
+# the recorder until chromote's response timeout fires. Any late
+# response is discarded by record_frame_done()'s identity guard.
 record_nav_rebased <- function(page) {
   rec <- page_recorder(page)
-  if (is.null(rec) || is.null(rec$frame)) {
+  if (is.null(rec)) {
+    return(invisible(FALSE))
+  }
+  rec$pending <- NULL
+  if (is.null(rec$frame)) {
     return(invisible(FALSE))
   }
   rec$frame <- NULL
