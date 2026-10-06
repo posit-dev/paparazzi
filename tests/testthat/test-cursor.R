@@ -1151,13 +1151,18 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   inks <- lapply(frames, function(frame) {
     cursor_png_ink(page, frame, band = c(300, 344), x_range = c(640, 710))
   })
-  expect_true(any(vapply(
+  # The landing dwells at the rest position for the remainder of the
+  # recording, while the glide crosses the 70px scan band in at most ~2
+  # frames at this speed (625px/s at 15fps), so require several qualifying
+  # frames to prove the cursor landed here rather than merely transited.
+  ok <- vapply(
     inks,
     function(ink) {
       ink$count > 20 && abs(ink$x - 660) < 25 && abs(ink$y - 322) < 20
     },
     logical(1)
-  )))
+  )
+  expect_gte(sum(ok), 3L)
 })
 
 test_that("inside-target offset has one entry flip and explicit icon has none", {
