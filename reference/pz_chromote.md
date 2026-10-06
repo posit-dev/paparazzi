@@ -28,7 +28,7 @@ session <- pz_chromote(page)
 
 # Make raw Chrome DevTools Protocol calls
 session$Browser$getVersion()$product
-#> [1] "Chrome/154.0.8037.57"
+#> [1] "Chrome/154.0.8037.97"
 session$Performance$enable()
 #> named list()
 metrics <- session$Performance$getMetrics()$metrics
