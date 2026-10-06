@@ -1010,6 +1010,89 @@ test_that("late capture callbacks cannot consume the final capture slot", {
   }
 })
 
+test_that("a navigation commit abandons a stranded capture", {
+  page <- page_set_recorder(
+    list(),
+    new_recorder(
+      path = tempfile(fileext = ".mp4"),
+      format = "mp4",
+      fps = 10,
+      scale = NULL,
+      hold = c(0, 0),
+      keep_frames = TRUE,
+      frame = NULL
+    )
+  )
+  rec <- page_recorder(page)
+  rec$frames_dir <- withr::local_tempdir()
+
+  # An unframed recording still has its in-flight capture abandoned.
+  stranded <- new.env(parent = emptyenv())
+  stranded$file <- file.path(rec$frames_dir, "frame-000001.png")
+  rec$pending <- stranded
+  expect_false(record_nav_rebased(page))
+  expect_null(rec$pending)
+
+  # A framed recording loses its frame context too.
+  rec$frame <- pz_frame()
+  rec$frame_ctx <- new.env(parent = emptyenv())
+  rec$pending <- new.env(parent = emptyenv())
+  expect_true(record_nav_rebased(page))
+  expect_null(rec$pending)
+  expect_null(rec$frame)
+  expect_null(rec$frame_ctx)
+
+  # Late resolutions of an abandoned capture are strict no-ops: the
+  # identity guard drops them before anything is written or counted.
+  abandoned <- new.env(parent = emptyenv())
+  abandoned$file <- file.path(rec$frames_dir, "frame-000002.png")
+  rec$pending <- abandoned
+  record_nav_rebased(page)
+  successor <- new.env(parent = emptyenv())
+  successor$file <- file.path(rec$frames_dir, "frame-000003.png")
+  rec$pending <- successor
+  record_frame_done(rec, abandoned, res = list(data = "aGk="))
+  record_frame_done(rec, abandoned, err = "boom")
+  expect_identical(rec$pending, successor)
+  expect_length(rec$files, 0)
+  expect_equal(rec$n_errors, 0L)
+  expect_null(rec$first_error)
+  expect_false(file.exists(abandoned$file))
+})
+
+test_that("a main-frame commit abandons a capture, a subframe does not", {
+  page <- local_record_page()
+  skip_if_no_av()
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  expect_type(rec$deregister_navigated, "closure")
+
+  # The child loop is not pumped below, so no tick can issue a real
+  # capture; dispatching the registered listener directly is deterministic.
+  session <- page$session
+  pending <- new.env(parent = emptyenv())
+  rec$pending <- pending
+  session$invoke_event_callbacks(
+    "Page.frameNavigated",
+    list(frame = list(id = "sub.1", parentId = "main"))
+  )
+  expect_identical(rec$pending, pending)
+  session$invoke_event_callbacks(
+    "Page.frameNavigated",
+    list(frame = list(id = "main"))
+  )
+  expect_null(rec$pending)
+
+  # Pump the loop so the stop has frames to encode, then verify the
+  # listener is torn down with the recording.
+  pz_wait(page, 0.5)
+  expect_no_error(pz_record_stop(page))
+  expect_null(rec$deregister_navigated)
+})
+
 test_that("an immediate block error is not masked by the stop", {
   page <- local_record_page()
   skip_if_no_av()
@@ -1172,15 +1255,33 @@ test_that("a framed recording survives a navigation by framing the viewport", {
     pz_record_start(out, fps = 10, hold = c(0, 0), frame = pz_frame())
   pz_wait(page, 0.2)
   root <- pz_nav_goto(page, nav_fixture_url("b"))
-  # Frames keep being captured on the new document: require frames that
-  # completed after the navigation settled, not a total count that frames
-  # captured before it can satisfy.
-  before <- length(page_recorder(root)$files)
+  # A commit that strands the in-flight capture mutes the recorder until
+  # chromote's response timeout; name that mechanism before checking
+  # that the video content moves on.
   pz_poll(
-    function() length(page_recorder(root)$files) >= before + 2L,
+    function() is.null(page_recorder(root)$pending),
+    timeout = 2,
+    loop = root$page$child_loop,
+    what = "the capture in flight at the commit to be abandoned"
+  )
+  # Frames keep being captured on the new document. A frame count cannot
+  # tell a stalled capture chain apart from a slow one, so require the
+  # capture to see the new document: paint it and poll for a frame that
+  # shows the paint.
+  pz_js(root, "document.body.style.background = 'red'")
+  post_nav_red <- function() {
+    files <- page_recorder(root)$files
+    if (!length(files)) {
+      return(FALSE)
+    }
+    pixel <- as.numeric(png::readPNG(tail(files, 1))[10, 10, 1:3])
+    all(abs(pixel - c(1, 0, 0)) < 0.05)
+  }
+  pz_poll(
+    post_nav_red,
     timeout = root$page$default_timeout,
     loop = root$page$child_loop,
-    what = "frames captured after the navigation"
+    what = "a frame capturing the navigated document"
   )
   expect_no_error(pz_record_stop(root))
 
