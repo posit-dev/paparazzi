@@ -51,7 +51,7 @@ A finalizer stops the server as a last resort.
 server <- pz_serve_static(pz_example("tasks"))
 page <- pz_open(server)
 pz_get_url(page)
-#> [1] "http://127.0.0.1:5597/tasks.html"
+#> [1] "http://127.0.0.1:5321/tasks.html"
 pz_close(page)
 server$stop()
 ```

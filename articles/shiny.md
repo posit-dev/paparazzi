@@ -137,7 +137,7 @@ For example, to compare the desktop and phone layouts side by side:
 
 app <- pz_serve_shiny(pz_example("tasks-app"))
 app
-#> <paparazzi app> http://127.0.0.1:5048/ -- running (pid 13162)
+#> <paparazzi app> http://127.0.0.1:5048/ -- running (pid 13402)
 
 desktop <- pz_open(app, width = 1024, height = 640)
 phone <- pz_open(app, width = 390, height = 640, mobile = TRUE)
