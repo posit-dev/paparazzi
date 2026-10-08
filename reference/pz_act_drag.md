@@ -138,11 +138,10 @@ or
 
 ``` r
 page <- pz_open(pz_example("tasks"))
+#> Error in startup(port = port, ...): Chrome debugging port not open after 10 seconds.
 pz_get_text(page, target = ".task-title")
-#> [1] "Renew passport"           "File tax return"         
-#> [3] "Book dentist appointment" "Return library books"    
-#> [5] "Water the plants"         "Sort out the garage"     
-#> [7] "Call the bank"           
+#> Error in pz_get_text(page, target = ".task-title"): `ctx` must be a paparazzi context (from `pz_open()` or `pz_find*()`),
+#> not a function.
 
 # The tasks are HTML5 drag sources; drop "Water the plants" on the first task
 page |>
@@ -150,10 +149,11 @@ page |>
     pz_loc(".task", has_text = "plants"),
     to = pz_loc(".task", which = "first")
   )
+#> Error in pz_act_drag(page, pz_loc(".task", has_text = "plants"), to = pz_loc(".task",     which = "first")): `ctx` must be a paparazzi context (from `pz_open()` or `pz_find*()`),
+#> not a function.
 pz_get_text(page, target = ".task-title")
-#> [1] "Water the plants"         "Renew passport"          
-#> [3] "File tax return"          "Book dentist appointment"
-#> [5] "Return library books"     "Sort out the garage"     
-#> [7] "Call the bank"           
+#> Error in pz_get_text(page, target = ".task-title"): `ctx` must be a paparazzi context (from `pz_open()` or `pz_find*()`),
+#> not a function.
 pz_close(page)
+#> Error in pz_close(page): `page` must be a page from `pz_open()`.
 ```
