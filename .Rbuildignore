@@ -2,6 +2,7 @@
 ^\.Rproj\.user$
 ^\.pi*\.lock$
 ^\.agents$
+^\.claude$
 ^LICENSE\.md$
 ^[.]?air[.]toml$
 ^jarl[.]toml$
