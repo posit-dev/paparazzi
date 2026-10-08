@@ -1,0 +1,60 @@
+color:
+  palette:
+    amber: "#BD985F"
+    cream: "#F6D490"
+    gold-brown: "#997750"
+    dark-brown: "#352A20"
+    # navbar backdrop: the logo's dark-brown deepened toward black
+    espresso: "#1E1812"
+    stone: "#949393"
+    light-stone: "#CAC9C9"
+    sage: "#AEBAAD"
+    # Bootstrap color names — velvet-noir accents for the paparazzi world
+    # black: espresso
+    # white: "#FDF9F0"     # ivory, warm like a magazine page
+    black: "#000000"
+    white: "#FFFFFF"
+    red: "#A63340"       # red carpet
+    orange: "#C77E3E"    # flashbulb glow
+    yellow: "#E8C878"    # champagne
+    green: sage
+    teal: "#3E6F6B"      # velvet teal
+    cyan: "#A9CDD1"      # diamond ice
+    blue: "#46628C"      # dusk sapphire
+    indigo: "#4A3F6B"    # midnight velvet
+    purple: "#6B4A66"    # plum velvet
+    pink: "#C9848E"      # dusty rose
+  primary: indigo
+  secondary: light-stone
+  success: teal
+
+# Navbar and other bootstrap variables come from the paparazzi logo
+# (assets/paparazzi.svg): dark-brown backdrop, amber/cream camera body.
+typography:
+  fonts:
+    - family: Oxygen Mono
+      source: google
+    - family: Montserrat
+      source: google
+    - family: Clarity City
+      source: google
+  headings:
+    family: Montserrat, Avenir, Montserrat, Corbel, 'URW Gothic', source-sans-pro, sans-serif
+  base:
+    family: Clarity City, Seravek, 'Gill Sans Nova', Ubuntu, Calibri, 'DejaVu Sans', source-sans-pro, sans-serif
+  monospace:
+    family: Oxygen Mono
+    size: 0.9em
+
+defaults:
+  bootstrap:
+    defaults:
+      headings-font-weight: 400
+      headings-color: $brand-dark-brown
+      # links stay gold-brown even though primary is dark-brown;
+      # gold-brown reads well as text but is too weak for buttons/surfaces
+      link-color: $brand-gold-brown
+      navbar-bg: $brand-espresso
+      navbar-light-contrast: $brand-cream
+      navbar-dark-contrast: $brand-cream
+

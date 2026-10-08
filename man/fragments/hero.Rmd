@@ -72,8 +72,3 @@ path <- if (identical(Sys.getenv("IN_INDEX", ""), "true")) {
 
 knitr::include_graphics(path, error = FALSE)
 ```
-
-
-That video came from the short R script shown below. paparazzi opened the page in a headless Chrome browser and did what the script said. The cursor glides to each control, text is typed one character at a time, and the camera zooms in on the form and pulls back to show the result. Captions and highlights appear on cue. There's no screen recorder involved, and no timeline to edit afterward.
-
-Because the video is a script, you never have to record a second take. When the app changes, rerun the script and you get the same demo of the new version. paparazzi works with any page Chrome can open, including Shiny apps, Quarto documents and slides, pkgdown sites, and live websites.

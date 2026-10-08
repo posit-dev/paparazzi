@@ -1,14 +1,19 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# paparazzi <a href="https://posit-dev.github.io/paparazzi/"><img src="man/figures/logo.png" align="right" height="138" alt="paparazzi website" /></a>
+# paparazzi <a href="https://posit-dev.github.io/paparazzi/" style="display: fixed"><img src="../man/figures/logo.png" align="right" height="138" alt="paparazzi website" /></a>
 
 <!-- badges: start -->
 
+[![CRAN
+status](https://www.r-pkg.org/badges/version/paparazzi)](https://CRAN.R-project.org/package=paparazzi)
+[![paparazzi status
+badge](https://posit-dev.r-universe.dev/paparazzi/badges/version)](https://posit-dev.r-universe.dev/paparazzi)
+[![R-CMD-check](https://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml/badge.svghttps://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml/badge.svghttps://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-**Polished demo videos and screenshots of anything that runs in a
-browser, written as R scripts.**
+*Polished demo videos and screenshots of anything that runs in a
+browser, from reusable R scripts.*
 
 <img src="https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-hero-1.gif" alt="A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Drag to reorder, the cursor drags the new task down the list and drops it just below the two high-priority tasks. Under the caption Check it off when you're done, the cursor clicks the task's Done button and the task is crossed out."  />
 
