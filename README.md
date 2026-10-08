@@ -17,18 +17,18 @@ browser, from reusable R scripts.*
 
 <img src="https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-hero-1.gif" alt="A demo of a task tracker. The view zooms in on the new-task form, a cursor clicks the title field and types Prepare release notes, then clicks Add. The view pulls back as the task appears at the top of the list, outlined in red, with the caption New tasks go to the top of the list. Under the caption Drag to reorder, the cursor drags the new task down the list and drops it just below the two high-priority tasks. Under the caption Check it off when you're done, the cursor clicks the task's Done button and the task is crossed out."  />
 
-That video came from the short R script shown below. paparazzi opened
-the page in a headless Chrome browser and did what the script said. The
-cursor glides to each control, text is typed one character at a time,
-and the camera zooms in on the form and pulls back to show the result.
-Captions and highlights appear on cue. There’s no screen recorder
-involved, and no timeline to edit afterward.
+paparazzi opens a page in headless Chrome and works through your R
+script one step at a time: click this button, type into that field, move
+the camera to the form, show a caption. While it records, the cursor
+moves and text appears at the pace a person would use, and the result is
+saved as an MP4, WebM, or GIF. Screenshots use the same steps, framing,
+and annotations.
 
-Because the video is a script, you never have to record a second take.
-When the app changes, rerun the script and you get the same demo of the
-new version. paparazzi works with any page Chrome can open, including
-Shiny apps, Quarto documents and slides, pkgdown sites, and live
-websites.
+The script is the source of the demo. When the page changes, run the
+script again and you get the same demo of the new version. Without a
+recording, the same script runs at full speed as a browser test.
+paparazzi works with any page Chrome can open, including Shiny apps,
+Quarto documents and slides, pkgdown sites, and live websites.
 
 ## Installation
 
