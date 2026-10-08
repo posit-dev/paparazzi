@@ -1,0 +1,85 @@
+### Additional features
+
+The demo above covers the basics: acting on the page, moving the camera, annotating, and captioning. paparazzi can also:
+
+- **Draw attention to what matters.** Callouts with arrows (`pz_annotate_callout()`) and spotlights that dim everything else (`pz_annotate_spotlight()`) lead your viewer's eye to the part of the page you're talking about. In a recording, paparazzi animates annotations in and keeps them on their elements as the page scrolls or changes.
+- **Set defaults once.** The staging functions set defaults for the whole page, so you don't repeat the same arguments in every step. `pz_stage()` sets the cursor's speed and size, the typing speed, and the pause after each step, `pz_stage_annotate()` sets how annotations look, and `pz_stage_frame()` sets the default framing.
+- **Control what's in the shot.** With `pz_frame()`, you choose exactly what a video or screenshot shows: crop to one or more elements, add padding, and set an aspect ratio, like 16:9 for slides or 9:16 for a vertical video.
+- **Show keyboard shortcuts.** When you press keys with `pz_act_press()`, paparazzi can show them in the recording as on-screen keycaps.
+- **Write subtitles.** For MP4 and WebM videos, paparazzi can write your captions to a WebVTT subtitle file, instead of or as well as burning them into the video.
+- **Use your own fonts.** `pz_stage_fonts()` loads fonts from Google Fonts, Bunny Fonts, or a file for captions, callouts, and badges.
+- **Hide private data.** Cover sensitive text with `pz_annotate_redact()` before you start recording, and it stays hidden from the very first frame.
+- **Set up the browser the way you want it.** `pz_device()` gives you one place to configure the browser: screen size, phone emulation, dark mode, zoom, reduced motion, locale, and time zone.
+
+### Screenshots
+
+You can use the same annotations, framing, and devices in screenshots. Here's the task tracker on a phone in dark mode, with a callout:
+
+```{r should-update-phone}
+#| include: false
+
+# Same staleness gate as the hero: only recapture when the image is
+# missing or the source fragment has changed since.
+should_update_phone <- identical(Sys.getenv("IN_INDEX", ""), "true") && {
+  img <- knitr::fig_chunk("phone", "png", 1)
+  !file.exists(img) || file.mtime(file.path(root(), "man/fragments/additional-features.Rmd")) > file.mtime(img)
+}
+```
+
+```{r phone, eval = should_update_phone}
+#| include: false
+#| out.width: 300px
+
+phone <- pz_open(
+  pz_example("tasks"),
+  width = 390,
+  height = 700,
+  mobile = TRUE,
+  color_scheme = "dark"
+)
+
+phone |>
+  pz_annotate_callout(
+    "Tap Done to finish a task",
+    target = pz_loc(".task-done", which = "first"),
+    side = "bottom"
+  ) |>
+  pz_screenshot()
+```
+
+```{r, eval = should_update_phone}
+#| include: false
+
+pz_close(phone)
+```
+
+<table class="table-borderless">
+<tr>
+<td valign="top" style="width: 100%; max-width: 0;">
+
+```{r}
+#| label: phone-code
+#| eval: false
+#| ref.label: phone
+```
+
+</td>
+<td valign="top" width="300" style="min-width: 260px;">
+
+```{r}
+#| echo: false
+#| out.width: 300px
+#| fig.alt: "The task tracker on a narrow phone screen in dark mode. A red-bordered callout under the first task's Done button reads Tap Done to finish a task."
+
+path <- if (identical(Sys.getenv("IN_INDEX", ""), "true")) {
+  "images/readme-phone-1.png"
+} else {
+  "https://raw.githubusercontent.com/posit-dev/paparazzi/main/pkgdown/assets/images/readme-phone-1.png"
+}
+
+knitr::include_graphics(path, error = FALSE)
+```
+
+</td>
+</tr>
+</table>

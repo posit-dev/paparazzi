@@ -6,6 +6,7 @@ output: github_document
 
 ```{r}
 #| include: false
+library(paparazzi)
 
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -34,8 +35,14 @@ knitr::opts_chunk$set(
 #| child: man/fragments/hero-about.Rmd
 ```
 
+## Features
+
 ```{r}
-#| child: man/fragments/features.Rmd
+#| child: man/fragments/additional-features.Rmd
+```
+
+```{r}
+#| child: man/fragments/knitr.Rmd
 ```
 
 ```{r}

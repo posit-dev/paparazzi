@@ -1,10 +1,8 @@
-## Shiny apps
+### Shiny apps
 
-Give `pz_open()` the path to a Shiny app, and paparazzi runs the app in a background R process, opens it, and waits until it's ready. Closing the page stops the app. `pz_set_shiny_input()` sets an input the way Shiny sees it, so even selectize inputs and sliders update on the page and the server responds:
+Give `pz_open()` the path to a Shiny app, and paparazzi runs the app in a background R process, opens it, and waits until it's ready. When you close the page, paparazzi stops the app. In between, you use the same functions you would on any other page:
 
-```{r shiny}
-#| eval: false
-
+```{r shiny, eval = FALSE}
 app <- pz_open(pz_example("tasks-app"))
 
 app |>
@@ -16,4 +14,4 @@ app |>
 pz_close(app)
 ```
 
-Recording works the same way on an app as on any other page.
+The one Shiny-specific function in that example is `pz_set_shiny_input()`. It sets an input the way Shiny sees it, so even selectize inputs and sliders update on the page and the server responds. Everything else works just as it does on any other page, so you can record a demo of your app, take screenshots, or write browser tests with what you already know.

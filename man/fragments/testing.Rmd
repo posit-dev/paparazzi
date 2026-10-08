@@ -1,8 +1,12 @@
-## Browser tests with paparazzi
+### Browser tests
 
-The cursor animation and typing only happen while recording. Take away `pz_record()` and the same steps run at full speed: the cursor stays hidden, text goes in without the typing animation, and camera moves and holds do nothing. That makes a demo script a browser test too.
+You can write browser tests with the same functions you use to record a demo. paparazzi animates the cursor and typing only while it records, so outside a recording your steps run at full speed.
 
-The steps behave well in a test. Actions like `pz_act_click()` wait for their element to be ready before acting. Expectations like `pz_expect_text()` retry until the page shows what they expect, or time out with an error that says what they last saw. Inside a testthat test, expectations count as test expectations. `pz_local_page()` closes the page, and stops its app, when the test ends:
+Browser tests are tricky because the page keeps changing as you use it. When you click a button, the page might fetch data, re-render a list, or start an animation, and you rarely know how long that will take. If your test checks too early, it fails for no reason; if it sleeps for a fixed time, it's slow and probably still flaky.
+
+paparazzi handles the waiting for you. You state what *should* happen, and paparazzi waits until it does or stops if it doesn't. Before `pz_act_click()` clicks on an element, paparazzi waits for that element to be ready. An expectation like `pz_expect_text()` retries until the page shows what you expect, or times out with an error that says what it last saw.
+
+paparazzi also works inside testthat, with the same syntax. testthat counts each paparazzi expectation as a test expectation, and `pz_local_page()` closes the page, and stops its app, when the test ends:
 
 ```r
 test_that("adding a task updates the summary", {
@@ -15,4 +19,7 @@ test_that("adding a task updates the summary", {
 })
 ```
 
-If you mainly want regression tests for a Shiny app's inputs and outputs compared against saved snapshots, [shinytest2](https://rstudio.github.io/shinytest2/) is built for that. paparazzi tests what a person does on the page, on any page, Shiny or not.
+If you're testing a Shiny app, you might also consider [shinytest2](https://rstudio.github.io/shinytest2/). Pick the tool by what you want to check:
+
+- **shinytest2** focuses on Shiny apps and snapshot testing. It reads input, output, and exported values straight from Shiny, and compares them, or screenshots of the app, against snapshots you save with the app.
+- **paparazzi** tests the front end of any page Chrome can open: Shiny apps, Quarto documents and websites, pkgdown sites, htmlwidgets, or a live website. You type and click the way a person would, then check that specific text, values, classes, or attributes show up on the page.

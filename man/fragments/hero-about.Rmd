@@ -8,15 +8,16 @@ Here's the whole script for the video at the top of this page, running on a smal
 #| ref.label: hero
 ```
 
-The first few lines set the scene. `pz_open()` opens the page at the size you want to record. `pz_stage()` sets how the recording looks: the cursor enters from the bottom, and each step pauses for a moment so viewers can follow. `pz_loc()` describes the task we're about to add, so we can point at it once it exists.
+`pz_open()` opens the page at the size you want to record. At the top of the pipeline, `pz_stage()` sets how the recording looks: the cursor enters from the bottom, and each step pauses for a moment so viewers can follow. `pz_stage_annotate()` puts captions at the top.
 
-`pz_record()` records everything in its `code` block. The `frame` is the part of the page the video shows: the task card, from its heading to the bottom of the list, padded and widened to 16:9. `format` and `scale` make the result an 800-pixel-wide GIF, small enough for a README.
+`pz_record_start()` starts the recording, and `pz_close()` stops it and writes the file. The `frame` is the part of the page the video shows: the task card, from its heading to the bottom of the list, padded and widened to 16:9. `format` and `scale` make the result an 800-pixel-wide GIF, small enough for a README.
 
-Inside the block, each line is one step, and the steps fall into two groups:
+Between those two calls, each line is one step, and the steps fall into three groups:
 
-- **Using the page.** `pz_act_type()` clicks the title field and types into it, `pz_act_click()` presses a button, and `pz_act_drag()` moves the new task to a new place in the list. `pz_find()` narrows the next steps to the new task, so `".task-done"` means that task's Done button.
-- **Directing the viewer.** `pz_camera()` zooms in and `pz_camera_reset()` pulls back out. `pz_annotate()` outlines the new task, `pz_annotate_caption()` changes the caption, and `pz_record_hold()` gives viewers a moment to read. `pz_cursor_leave()` moves the cursor out of the shot at the end.
+- **Acting on the page.** `pz_act_type()` clicks the title field and types into it, `pz_act_click()` presses a button, and `pz_act_drag()` moves the new task to a new place in the list.
 
-`pz_expect_visible()` waits for the page to finish saving the task before the script outlines it, and `pz_expect_class()` waits for it to be marked done. Waits like this keep a scripted demo in step with a real page. The video keeps rolling while the script waits, so if a step takes longer than you'd like viewers to watch, `pz_record_pause()` and `pz_record_resume()` cut it out.
+  Several steps work with the same two tasks, so before the pipeline, you describe them once with `pz_loc()`: `task_release` is the task you're about to add, and `task_dentist` is the one you'll drag it below. paparazzi doesn't look for a `pz_loc()` element until a step uses it, and it looks again each time, so you can describe the new task before it exists. Later, `pz_find()` narrows the next steps to the new task, so `".task-done"` means that task's Done button.
 
-When a recording is the last thing in a knitted R Markdown or Quarto chunk, it appears in the document, so rendering the document again records the demo again.
+- **Directing the recording.** `pz_camera()` zooms in on the form and `pz_camera_reset()` pulls back out. `pz_annotate()` outlines the new task, `pz_annotate_clear()` removes the outline, and `pz_annotate_caption()` changes the caption. `pz_record_hold()` gives viewers a moment to read, and `pz_cursor_leave()` moves the cursor out of the shot at the end.
+
+- **Waiting for the page.** `pz_expect_visible()` waits for the page to show the new task before `pz_annotate()` outlines it, and `pz_expect_class()` waits for the page to mark the task done. Waits like these keep your scripted demo in step with the real page. paparazzi keeps recording while it waits, so if a step takes longer than you'd like viewers to watch, you can cut it out with `pz_record_pause()` and `pz_record_resume()`.

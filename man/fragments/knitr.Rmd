@@ -1,0 +1,3 @@
+### R Markdown and Quarto
+
+You can also run paparazzi right inside an R Markdown or Quarto document. Put your script in a code chunk, leave out the file path, and end the chunk with `pz_screenshot()` or with the call that ends a recording, like `pz_record()` or `pz_record_stop()`. paparazzi saves the image or video with the document's other figures and shows it right where the chunk is. When your app or document changes, render again and paparazzi takes fresh screenshots and records new videos.
