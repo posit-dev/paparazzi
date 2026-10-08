@@ -7,7 +7,7 @@ should_update <- identical(Sys.getenv("IN_INDEX", ""), "true") &&
   {
     img <- knitr::fig_chunk("hero", "gif", 1)
     !file.exists(img) ||
-      any(file.mtime(c("man/fragments/hero.Rmd", "inst/examples/tasks.html")) > file.mtime(img))
+      any(file.mtime(file.path(root(), c("man/fragments/hero.Rmd", "inst/examples/tasks.html"))) > file.mtime(img))
   }
 ```
 

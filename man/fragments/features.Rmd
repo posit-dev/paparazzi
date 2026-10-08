@@ -29,7 +29,7 @@ Screenshots use the same annotations and framing. Here's the task tracker on a p
 # missing or the source fragment has changed since.
 should_update_phone <- identical(Sys.getenv("IN_INDEX", ""), "true") && {
   img <- knitr::fig_chunk("phone", "png", 1)
-  !file.exists(img) || file.mtime("man/fragments/features.Rmd") > file.mtime(img)
+  !file.exists(img) || file.mtime(file.path(root(), "man/fragments/features.Rmd")) > file.mtime(img)
 }
 ```
 
