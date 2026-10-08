@@ -81,7 +81,7 @@ task_list <- pz_find(page, ".task-list")
 task_list
 #> ── paparazzi scope ─────────────────────────────────────────────────────────────
 #> Scope      root › `.task-list` (1)
-#> URL        http://127.0.0.1:7711/tasks.html
+#> URL        http://127.0.0.1:3930/tasks.html
 #> Device     992 × 1323 @1x · light
 #> Recording  off · cursor hidden
 pz_get_count(task_list, target = ".task.done")
