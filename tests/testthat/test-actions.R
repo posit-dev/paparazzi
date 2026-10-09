@@ -1492,47 +1492,50 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
           }, true);
         });
       window.__carrySamples = [];
-      window.__carryDone = false;
-      document.addEventListener('dragend', () => { window.__carryDone = true; }, true);
       const titles = (sel) => [...document.querySelectorAll(sel)]
         .map((li) => li.querySelector('.task-title').textContent.trim());
-      const overlay = document.getElementById('paparazzi-overlay-root')?.shadowRoot;
+      const overlay = () => document.getElementById('paparazzi-overlay-root')?.shadowRoot;
       const visibleIcon = () => {
-        const icon = [...(overlay?.querySelectorAll('.pz-icon') || [])]
+        const icon = [...(overlay()?.querySelectorAll('.pz-icon') || [])]
           .find((svg) => getComputedStyle(svg).visibility === 'visible');
         return icon ? icon.classList[1].slice('pz-icon-'.length) : null;
       };
-      (function sample() {
-        const glide = document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-glide');
+      // Sample in the dragover handler: one sample per dispatched carry
+      // step, positioned by the event's own coordinates. A wall-clock
+      // sampler races the carry and can skip the early stretch entirely
+      // when timers coalesce under load.
+      document.addEventListener('dragover', (e) => {
+        const glide = overlay()?.querySelector('.pz-glide');
         let cursor = [-1, -1];
         if (glide) {
           const m = new DOMMatrixReadOnly(getComputedStyle(glide).transform);
           cursor = [m.e, m.f];
         }
         window.__carrySamples.push({
+          point: [e.clientX, e.clientY],
           cursor: cursor,
           hover: titles('.task:hover'),
           dragging: titles('.task.dragging'),
           icon: visibleIcon()
         });
-        if (!window.__carryDone) setTimeout(sample, 40);
-      })();
+      }, true);
       return true;
     })()"
   )
   pz_act_drag(page, drag_source, drop_target)
 
-  # Mid-carry samples: the overlay cursor is travelling between source
-  # and drop. The drop row never shows hover styling during the carry
-  # (the real pointer stays by the source), and the dragstart styling
-  # persists.
+  # Carry samples pin to the dispatched dragover points, so the early
+  # and mid windows below slice the carry's own schedule. The drop row
+  # never shows hover styling during the carry (the real pointer stays
+  # by the source), and the dragstart styling persists.
   samples <- jsonlite::fromJSON(
     pz_js(page, "JSON.stringify(window.__carrySamples)"),
     simplifyVector = FALSE
   )
+  pts <- t(vapply(samples, function(s) unlist(s$point), numeric(2)))
   cur <- t(vapply(samples, function(s) unlist(s$cursor), numeric(2)))
   seg <- to - from
-  along <- as.vector(sweep(cur, 2, from) %*% seg) / sum(seg^2)
+  along <- as.vector(sweep(pts, 2, from) %*% seg) / sum(seg^2)
   icons <- vapply(samples, function(s) s$icon %||% NA_character_, character(1))
   dragging_source <- vapply(
     samples,
@@ -1543,8 +1546,12 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
   expect_true(any(early_drag))
   expect_true(all(icons[early_drag] == "grabbing"))
   expect_identical(attr(cursor_overlay_state(page), "icon"), "grab")
-  mid <- along > 0.15 & along < 0.85 & cur[, 1] >= 0
+  mid <- along > 0.15 & along < 0.85
   expect_gte(sum(mid), 1)
+  # The overlay cursor itself travels the segment during the carry, on
+  # the same easing schedule as the dispatched points.
+  overlay_along <- as.vector(sweep(cur, 2, from) %*% seg) / sum(seg^2)
+  expect_true(any(cur[, 1] >= 0 & overlay_along > 0.15 & overlay_along < 0.85))
   mid_samples <- samples[mid]
   hovers <- function(s) unlist(s$hover)
   expect_false(any(vapply(
