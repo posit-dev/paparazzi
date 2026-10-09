@@ -304,26 +304,12 @@ pz_record_stop <- function(ctx) {
     }
   )
 
-  # A screencast frame may have CSS-viewport resolution even at a higher
-  # device pixel ratio. Match it for the final screenshot so encode-time
-  # framing uses the same coordinates for every frame.
-  capture_scale <- if (identical(rec$method, "screencast")) {
-    1 / pz_js(page, "window.devicePixelRatio")
-  } else {
-    1
-  }
-  record_capture(rec, page, rec$vt_end, scale = capture_scale)
-  tryCatch(
-    pz_poll(
-      function() is.null(rec$pending),
-      timeout = min(page$default_timeout, 5),
-      loop = page$child_loop,
-      what = "the final frame capture"
-    ),
-    paparazzi_error_timeout = function(e) {
-      rec$pending <- NULL
-      record_error(rec, e)
-    }
+  record_capture_settled(
+    rec,
+    page,
+    rec$vt_end,
+    "the final frame capture",
+    timeout = min(page$default_timeout, 5)
   )
 
   if (length(rec$files) == 0L) {
@@ -905,6 +891,47 @@ record_screencast_frame <- function(page, rec, frame) {
       record_frame_done(rec, pending, res = frame)
     },
     error = function(e) record_error(rec, e)
+  )
+  invisible(NULL)
+}
+
+# Captures a frame at the method's scale and waits until the capture
+# settles, whether it succeeds (the file lands) or fails (the recorder
+# clears the pending capture). A screencast frame may have CSS-viewport
+# resolution even at a higher device pixel ratio; matching it keeps
+# encode-time framing on the same coordinates for every frame. A timeout
+# is counted as a recorder error, not thrown, and never leaves a pending
+# capture blocking later frames.
+record_capture_settled <- function(
+  rec,
+  page,
+  vt,
+  what,
+  timeout = page$default_timeout
+) {
+  capture_scale <- if (identical(rec$method, "screencast")) {
+    1 / pz_js(page, "window.devicePixelRatio")
+  } else {
+    1
+  }
+  tryCatch(
+    record_capture(rec, page, vt, scale = capture_scale),
+    error = function(e) {
+      record_error(rec, e)
+      rec$pending <- NULL
+    }
+  )
+  tryCatch(
+    pz_poll(
+      function() is.null(rec$pending),
+      timeout = timeout,
+      loop = page$child_loop,
+      what = what
+    ),
+    paparazzi_error_timeout = function(e) {
+      rec$pending <- NULL
+      record_error(rec, e)
+    }
   )
   invisible(NULL)
 }

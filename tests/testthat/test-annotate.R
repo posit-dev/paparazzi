@@ -416,6 +416,57 @@ test_that("a final reveal is complete in the retained poll frame", {
   expect_lt(green_at_border(tail(rec$files, 1)), 0.1)
 })
 
+test_that("a failing settle capture is counted and the recording continues", {
+  skip_if_no_av()
+  page <- annotation_page()
+  path <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, path, hold = c(0, 0))
+  defer_record_stop(page)
+  # Only the settle-time forced captures pass scale explicitly; poll ticks
+  # call record_capture() without it and keep working.
+  original_capture <- record_capture
+  with_mocked_bindings(
+    pz_annotate(page, "#box") |> pz_annotate_clear(),
+    record_capture = function(rec, page, vt, scale) {
+      if (missing(scale)) {
+        return(original_capture(rec, page, vt))
+      }
+      stop("injected capture failure")
+    }
+  )
+  rec <- page_recorder(page)
+  expect_gt(rec$n_errors, 0L)
+  expect_null(rec$pending)
+  pz_record_hold(page, 0.2)
+  pz_record_stop(page)
+  expect_true(file.exists(path))
+})
+
+test_that("a stuck settle capture is retired instead of blocking later frames", {
+  skip_if_no_av()
+  page <- annotation_page()
+  page$default_timeout <- 1
+  path <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, path, hold = c(0, 0))
+  defer_record_stop(page)
+  original_capture <- record_capture
+  with_mocked_bindings(
+    pz_annotate(page, "#box"),
+    record_capture = function(rec, page, vt, scale) {
+      if (missing(scale)) {
+        return(original_capture(rec, page, vt))
+      }
+      rec$pending <- new.env(parent = emptyenv())
+    }
+  )
+  rec <- page_recorder(page)
+  expect_gt(rec$n_errors, 0L)
+  expect_null(rec$pending)
+  pz_record_hold(page, 0.2)
+  pz_record_stop(page)
+  expect_true(file.exists(path))
+})
+
 test_that("recorded clear removes all nodes after mixed exit animations", {
   skip_if_no_av()
   page <- annotation_page()

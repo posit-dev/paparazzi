@@ -301,19 +301,18 @@ annotate_settle <- function(ctx) {
   # Late screencast frames can still show an unfinished animation. Retain a
   # screenshot requested after the finish callbacks have applied their cleanup.
   rec <- page_recorder(page)
-  scale <- if (identical(rec$method, "screencast")) {
-    1 / pz_js(ctx, "window.devicePixelRatio")
-  } else {
-    1
-  }
-  record_wait_pending(rec, page, "the in-flight annotation frame capture")
-  record_capture(rec, page, rec_vt(rec), scale = scale)
-  pending <- rec$pending
-  pz_poll(
-    function() pending$file %in% rec$files,
-    timeout = page$default_timeout,
-    loop = page$child_loop,
-    what = "a retained frame of the completed annotations"
+  tryCatch(
+    record_wait_pending(rec, page, "the in-flight annotation frame capture"),
+    paparazzi_error_timeout = function(e) {
+      rec$pending <- NULL
+      record_error(rec, e)
+    }
+  )
+  record_capture_settled(
+    rec,
+    page,
+    rec_vt(rec),
+    "a retained frame of the completed annotations"
   )
   invisible(NULL)
 }
