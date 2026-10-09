@@ -3,7 +3,7 @@
 <!-- badges: start -->
 [![CRAN status](https://www.r-pkg.org/badges/version/paparazzi)](https://CRAN.R-project.org/package=paparazzi)
 [![paparazzi status badge](https://posit-dev.r-universe.dev/paparazzi/badges/version)](https://posit-dev.r-universe.dev/paparazzi)
-[![R-CMD-check](https://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml/badge.svghttps://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml/badge.svghttps://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/posit-dev/paparazzi/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 *Polished demo videos and screenshots of anything that runs in a browser, from reusable R scripts.*
