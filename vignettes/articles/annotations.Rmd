@@ -292,7 +292,7 @@ page |>
   )
 ```
 
-Staged styles stay on the page until you change them. Passing `NULL` restores a default: crimson (`#e11d48`) marks with 3 pixel lines, sans-serif badges with 14 pixel text, callouts with white text on `#171717`, 24 pixels from their element (8 without a line), and captions at the bottom. We'll clear the box and restore the defaults:
+Staged styles stay on the page until you change them. Passing `NULL` restores a default: crimson (`#e11d48`) marks with 3 pixel lines, sans-serif badges with 14 pixel text, callouts filled with their accent color, 24 pixels from their element (8 without a line), and captions at the bottom. We'll clear the box and restore the defaults:
 
 ```{r}
 page |> pz_annotate_clear()
@@ -305,7 +305,7 @@ page |>
   )
 ```
 
-The staged `fill` and `text_color` style callout bubbles only. Mark badges follow their mark's color unless you pass `label_fill` or `label_text_color`.
+Callout bubbles and their badges follow the callout's `color` unless you set `fill` per call or with `pz_stage_annotate()`. paparazzi chooses black or white text for the higher WCAG contrast ratio against the fill unless you set `text_color` per call or in staging. Staging `fill = NULL` and `text_color = NULL` restores these defaults. Mark badges follow their mark's color unless you pass `label_fill` or `label_text_color`.
 
 ### Web fonts
 
