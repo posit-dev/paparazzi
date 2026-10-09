@@ -90,7 +90,7 @@ To add a task, a person using the task tracker would type a title into the form 
 
 ```{r, echo = FALSE, fig.alt = "The task tracker with its selectors labeled. Red callouts point down at the new-task title field, reading #task-title, and at the Add button, reading #add-task. Every task title in the list is underlined in blue, and a blue callout reading .task-title points at the first one."}
 page |>
-  pz_stage_annotate(fill = "#e11d48", font_family = "monospace") |>
+  pz_stage_annotate(font_family = "monospace") |>
   pz_annotate("#task-title", pad = 2) |>
   pz_annotate_callout("#task-title", target = "#task-title", side = "top") |>
   pz_annotate("#add-task", pad = 2) |>
@@ -100,9 +100,7 @@ page |>
     ".task-title",
     target = pz_loc(".task-title", which = "first"),
     side = "left",
-    color = "#56B4E9",
-    fill = "#56B4E9",
-    text_color = "black"
+    color = "#56B4E9"
   ) |>
   pz_screenshot(
     frame = pz_frame(
@@ -114,7 +112,7 @@ page |>
 
 page |>
   pz_annotate_clear() |>
-  pz_stage_annotate(fill = NULL, font_family = NULL)
+  pz_stage_annotate(font_family = NULL)
 ```
 
 **Actions** like `pz_act_type()` and `pz_act_click()` use the page the way a person using it would, with real mouse and keyboard events. Each action takes the page first and returns it, so a script reads as one chain of steps joined by `|>`. Let's add a new task, **Repot the fern**, by typing it into the title field and clicking Add:
