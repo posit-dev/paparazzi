@@ -524,7 +524,9 @@ test_that("knit print gives an active recording priority over inspect images", {
   rec$active <- TRUE
   page$recorder <- rec
   ctx <- PaparazziContext$new(page, recording = rec)
-  ctx$inspect_image <- "pending.png"
+  pending <- file.path(withr::local_tempdir(), "pending.png")
+  file.create(pending)
+  ctx$inspect_image <- pending
   stopped <- FALSE
   local_mocked_bindings(
     pz_record_stop = function(ctx) {
@@ -539,6 +541,7 @@ test_that("knit print gives an active recording priority over inspect images", {
   expect_true(stopped)
   expect_identical(as.character(output), "recording media")
   expect_null(ctx$inspect_image)
+  expect_false(file.exists(pending))
 })
 
 test_that("knitted inspect images keep their CSS size on high-DPI devices", {
