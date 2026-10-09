@@ -29,12 +29,17 @@ main {
   img:not(.page-header img),
   video {
     box-shadow: var(--shadow-elevation-medium);
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     border-radius: 5px;
   }
 
   video {
     max-width: 100%;
+  }
+
+  p > img:first-child:last-child {
+    display: block;
+    margin-inline: auto;
   }
 }
 
