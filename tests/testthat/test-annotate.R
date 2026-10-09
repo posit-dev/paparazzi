@@ -444,11 +444,11 @@ test_that("a failing settle capture is counted and the recording continues", {
     loop = page$child_loop,
     what = "recording frames after the failed settle"
   )
-  # A working settle still retains a completion frame after the failure:
-  # the settle capture runs (explicit scale), succeeds, and adds a file.
-  files_before <- length(rec$files)
+  # A working settle still retains its own completion frame after the
+  # failure: the settle capture runs (explicit scale) and its file lands.
   errors_before <- rec$n_errors
   settle_captures <- 0L
+  settle_file <- NULL
   with_mocked_bindings(
     pz_annotate(page, "#box"),
     record_capture = function(rec, page, vt, scale) {
@@ -457,11 +457,12 @@ test_that("a failing settle capture is counted and the recording continues", {
       }
       settle_captures <<- settle_captures + 1L
       original_capture(rec, page, vt, scale = scale)
+      settle_file <<- rec$pending$file
     }
   )
   expect_gt(settle_captures, 0L)
   expect_equal(rec$n_errors, errors_before)
-  expect_gt(length(rec$files), files_before)
+  expect_true(settle_file %in% rec$files)
   pz_record_hold(page, 0.2)
   pz_record_stop(page)
   expect_true(file.exists(path))
