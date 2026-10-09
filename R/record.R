@@ -1200,11 +1200,7 @@ record_encode <- function(rec, page = NULL, call = caller_env()) {
   check_record_output_dir(
     rec$path,
     class = "paparazzi_error_record",
-    note = if (!rec$keep_frames) {
-      c(
-        i = "The captured frames were discarded; use {.arg keep_frames} to keep them."
-      )
-    },
+    note = c(i = "The captured frames were discarded."),
     call = call
   )
   png_size <- png_read_size(rec$files[[1]], call = call)
