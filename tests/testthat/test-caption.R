@@ -307,7 +307,16 @@ test_that("captioned GIF uses the same relative movie source after scaling", {
   pz_annotate_caption(page, "FIRST")
   pz_record_start(page, out, fps = 8, scale = 0.5, hold = c(0.2, 0.2))
   defer_record_stop(page)
+  rec <- page_recorder(page)
   pz_wait(page, 0.3)
+  # The first decoded frame must show the FIRST pill: poll that a capture
+  # landed before SECOND replaces it, instead of trusting the fixed wait.
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a capture before the caption is replaced"
+  )
   pz_annotate_caption(page, "SECOND")
   pz_wait(page, 0.3)
   pz_annotate_clear(page, "caption")
