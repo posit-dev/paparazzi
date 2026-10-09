@@ -53,31 +53,49 @@ the replayed \code{drop}, so \code{dragstart} styling stays visible through
 the carry, and the real pointer stays by the source until the
 release, so the destination shows no hover during the carry.
 
-With \code{preview = TRUE}, an active, unpaused recording with a visible cursor
-also carries a static image of the HTML5 source, captured before \code{dragstart}
-styling. A handle inside a draggable element previews that element. After
-the drop, the image briefly settles to the same source node's new bounds,
-if it survives with a supported, unchanged size. The page's source is never
-hidden or replaced. This is not the browser's native drag image and does not
-reproduce custom \code{DataTransfer.setDragImage()} feedback.
-
-Source-related or overlapping paparazzi redactions, uncertain redaction
-state, and unsupported source geometry or content references disable the
-preview with a warning. Sources containing SVG \verb{<use>} references or iframes
-are not captured. Preview capture also skips documents with imported or
-unreadable stylesheets, unsupported CSS rule groups, nonembedded font source
-URLs, or registered fonts without a readable embedded CSS representation.
-Provably separate redactions permit preview capture. If a local \verb{file://}
-page has unreadable stylesheets, serve it over HTTP with \code{\link[=pz_serve_static]{pz_serve_static()}}
-and open the server handle with \code{\link[=pz_open]{pz_open()}}; \code{pz_open()} serves \code{.html}
-files over HTTP on its own when httpuv is installed.
-Capture and other optional preview failures also warn without changing the
-drag. Use \code{preview = FALSE} to disable capture, carry imagery, and settling.
-Unrecorded, paused, hidden-cursor, and ordinary mouse drags do no preview work.
-
 \code{to} names the element to drop onto; \code{by = c(x, y)} drops at that
 offset in pixels from the source's center. Supply exactly one.
 }
+\section{Drag preview}{
+
+With \code{preview = TRUE}, paparazzi carries a static image of the HTML5 drag
+source during an active, unpaused recording with a visible cursor. Paparazzi
+captures the image before \code{dragstart} styling; a handle inside a draggable
+element previews that element. After the drop, the image briefly settles to
+the same source node's new bounds if it survives with a supported, unchanged
+size. Paparazzi never hides or replaces the page's source. The preview is not
+the browser's native drag image and does not reproduce custom
+\code{DataTransfer.setDragImage()} feedback.
+
+Paparazzi disables the optional preview with a warning in these cases. The
+drag continues without the preview.
+\itemize{
+\item \strong{Unreadable stylesheets}, often on \verb{file://} pages: open the page over
+HTTP. \code{\link[=pz_open]{pz_open()}} serves local \code{.html} paths over HTTP when httpuv is
+installed and loads. You can also serve the page with \code{\link[=pz_serve_static]{pz_serve_static()}}
+and open the server handle with \code{pz_open()}. Cross-origin stylesheets must
+also allow the browser to read their rules.
+\item \strong{Iframes or SVG \verb{<use>} references in the source}: use a source without
+these references; they can copy content outside the source subtree.
+\item \strong{Unsupported CSS rule groups, imported stylesheets, or font sources}:
+move rules out of unsupported groups or imports and embed font sources as
+data URLs in \verb{@font-face} rules. Registered fonts also need a readable embedded
+CSS representation.
+\item \strong{Source-related or overlapping paparazzi redactions, or uncertain
+redaction state}: keep redactions separate from the source or turn off the
+preview. Paparazzi permits capture only when it can verify that redactions
+are separate; do not remove redactions from sensitive content for a preview.
+\item \strong{Unsupported source geometry or content}: use a source without transforms,
+filters, clipping, overflowing content, shadow DOM, or generated content.
+Fixed or sticky descendants and out-of-box positioned content are also
+unsupported.
+}
+
+Other preview failures report the underlying error message. Use
+\code{preview = FALSE} to turn off capture, carry imagery, and settling.
+Unrecorded, paused, hidden-cursor, and ordinary mouse drags do no preview work.
+}
+
 \section{Acting on the page}{
 
 The \verb{pz_act_*()} functions use the page the way a person would. They send
