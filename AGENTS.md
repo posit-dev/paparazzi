@@ -88,7 +88,7 @@ pkgdown/index.md. Never edit the rendered files directly.
    a queue, or a second flag to manage ordering; anything that stores
    display-shaped content; anything where the fix is "add a guard for the
    guard." Stop and consult before building.
-1. **All comments are load-bearing** — only use comments to capture context that
-   will be relevant in the future. Never include local refs (like kata or
+1. **Only write load-bearing comments** — only use comments to capture context
+   that will be relevant in the future. Never include local refs (like kata or
    roborev), always inline important context from those refs. Regardless,
    comments should be minimal and included only when necessary.
