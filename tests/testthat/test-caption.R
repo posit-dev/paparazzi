@@ -125,6 +125,15 @@ test_that("caption burn overlays two windows after a camera move, with quoted pa
   out <- file.path(dir, "quoted output.mp4")
   pz_record_start(page, out, fps = 10, scale = 0.5, hold = c(0.1, 0.2))
   defer_record_stop(page)
+  rec <- page_recorder(page)
+  # The tick grid starts at the first capture; a late one can start after
+  # the caption windows, leaving no captioned frame in the decode.
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a capture before the FIRST caption"
+  )
   pz_annotate_caption(page, "FIRST")
   pz_wait(page, 0.35)
   pz_camera(page, pz_frame("#box", zoom = 1.5), duration = 0.12)
