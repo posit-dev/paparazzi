@@ -1251,6 +1251,7 @@ test_that("a targetless stop frame crops from the start-time scope", {
 test_that("a framed recording survives a navigation by framing the viewport", {
   page <- local_record_page()
   skip_if_no_av()
+  skip_if_not_installed("png")
   dpr <- page_dpr(page)
   vw <- pz_js(page, "innerWidth")
   vh <- pz_js(page, "innerHeight")
