@@ -274,8 +274,16 @@ test_that("the overlay survives navigation with its size and last position", {
   page |> pz_screenshot(before_path)
   before <- cursor_png_ink(page, before_path, band = c(280, 370))
 
-  pz_chromote(page)$Page$reload()
-  pz_wait(page, 1)
+  pz_nav_reload(page)
+  # The init script redraws the overlay with its saved state when the
+  # reloaded document boots; poll for the re-injection rather than
+  # assuming a fixed window covered it.
+  pz_poll(
+    function() !is.null(cursor_overlay_state(page)),
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "the cursor overlay to be re-injected after the reload"
+  )
 
   st <- cursor_overlay_state(page)
   expect_false(is.null(st))
@@ -689,8 +697,13 @@ test_that("navigation redraws a pressed cursor unpressed", {
   page <- local_cursor_page()
   page |> pz_cursor_move("#btn")
   cursor_press(page, TRUE)
-  pz_chromote(page)$Page$reload()
-  pz_wait(page, 1)
+  pz_nav_reload(page)
+  pz_poll(
+    function() !is.null(cursor_overlay_state(page)),
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "the cursor overlay to be re-injected after the reload"
+  )
   expect_equal(cursor_overlay_scale(page), 1.75)
 })
 
@@ -698,9 +711,9 @@ test_that("explicit icon survives navigation and recorded press", {
   skip_if_no_av()
   page <- local_cursor_page()
   page |> pz_cursor_move("#btn", icon = "crosshair")
-  pz_chromote(page)$Page$reload()
-  pz_wait(page, 1)
-  expect_identical(attr(cursor_overlay_state(page), "icon"), "crosshair")
+  pz_nav_reload(page)
+  # Polls for the re-injected overlay and the settled icon together.
+  expect_cursor_icon(page, "crosshair")
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
   page |> pz_cursor_move("#plain", icon = "not-allowed", duration = 0.5)
