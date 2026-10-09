@@ -719,6 +719,9 @@ test_that('redaction rejects unsafe capture before the library while preserving 
     expect_length(warnings, if (safe) 0 else 1)
     if (!safe) {
       expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
+      expect_match(conditionMessage(warnings[[1]]), 'redaction')
+      expect_match(conditionMessage(warnings[[1]]), 'Keep redactions separate')
+      expect_match(conditionMessage(warnings[[1]]), 'Drag preview section')
     }
     expect_equal(
       pz_js(page, 'window.__previewCaptures || 0'),
@@ -744,6 +747,56 @@ test_that('redaction rejects unsafe capture before the library while preserving 
   )) {
     check_redaction(case)
   }
+})
+
+test_that('file pages explain unreadable stylesheets and link to drag preview help', {
+  skip_if_no_av()
+  page <- local_page(
+    paste0('file://', pz_example('tasks')),
+    width = 800,
+    height = 900
+  )
+  pz_stage(page, pause = 0)
+  drag_preview_task_marker(page)
+  pz_record_start(
+    page,
+    withr::local_tempfile(fileext = '.mp4'),
+    hold = c(0, 0)
+  )
+  defer_record_stop(page)
+  warnings <- list()
+  withCallingHandlers(
+    pz_act_drag(page, '#preview-source', '#preview-target'),
+    warning = function(w) {
+      warnings <<- c(warnings, list(w))
+      invokeRestart('muffleWarning')
+    }
+  )
+  expect_length(warnings, 1)
+  expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
+  message <- conditionMessage(warnings[[1]])
+  expect_true(all(vapply(
+    c(
+      "cannot read the page's stylesheets",
+      'HTTP',
+      'httpuv',
+      'pz_open',
+      'pz_serve_static',
+      'preview = FALSE'
+    ),
+    grepl,
+    logical(1),
+    x = message,
+    fixed = TRUE
+  )))
+  expect_match(message, 'Drag preview section')
+  expect_match(message, 'pz_act_drag')
+  expect_false(grepl('<anonymous>|cssRules|SecurityError', message))
+  expect_true(drag_preview_absent(page))
+  expect_true(pz_js(
+    page,
+    'document.querySelectorAll(".task")[1] === window.__previewSource'
+  ))
 })
 
 test_that('optional capture, decode, show, move and settle failures warn once and keep the drop', {
@@ -817,6 +870,17 @@ test_that('optional capture, decode, show, move and settle failures warn once an
       conditionMessage(warnings[[1]]),
       paste('injected', method, 'failure')
     )
+    expect_match(
+      conditionMessage(warnings[[1]]),
+      'The optional drag preview was disabled; the drag will continue.',
+      fixed = TRUE
+    )
+    expect_match(conditionMessage(warnings[[1]]), 'Drag preview section')
+    expect_match(conditionMessage(warnings[[1]]), 'pz_act_drag')
+    expect_false(grepl(
+      '<anonymous>|\\n\\s+at ',
+      conditionMessage(warnings[[1]])
+    ))
     expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
     expect_true(pz_js(
       page,
@@ -1319,7 +1383,7 @@ test_that('unsafe font stylesheets skip capture without mutations or changing th
               document.head.appendChild(style);
             });
           }
-          style.textContent = css + (caseName === 'font-url' ?
+          style.textContent = css + (caseName === 'group' ? '@layer preview { ' + css + ' }' : caseName === 'font-url' ?
             '@media all { @font-face { font-family: UnusedPreviewFont; src: url(\"missing-preview-font.woff2\") format(\"woff2\"); } }' : '');
           document.head.appendChild(style);
           if (caseName === 'unreadable') {
@@ -1367,6 +1431,20 @@ test_that('unsafe font stylesheets skip capture without mutations or changing th
     )
     expect_length(warnings, 1)
     expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
+    message <- conditionMessage(warnings[[1]])
+    expect_match(
+      message,
+      if (case == 'unreadable') {
+        'cannot read the page.*stylesheets'
+      } else {
+        'unsupported CSS rule groups, imported stylesheets'
+      }
+    )
+    expect_match(
+      message,
+      if (case == 'unreadable') 'HTTP' else 'data URLs in @font-face rules'
+    )
+    expect_match(message, 'Drag preview section')
     expect_equal(pz_js(page, 'window.__previewCaptures || 0'), 0)
     expect_equal(pz_js(page, 'window.__previewInsertions'), 0)
     expect_equal(pz_js(page, 'window.__previewStyleSnapshot()'), before)
@@ -1386,7 +1464,7 @@ test_that('unsafe font stylesheets skip capture without mutations or changing th
     expect_false(page_cursor(page)$pressed)
     pz_record_stop(page)
   }
-  for (case in c('unreadable', 'import', 'font-url', 'opaque-font')) {
+  for (case in c('unreadable', 'import', 'font-url', 'opaque-font', 'group')) {
     check_sheet(case)
   }
 })
@@ -1443,8 +1521,13 @@ test_that('dragstart transforms and filters deliberately disable the captured pr
     expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
     expect_match(
       conditionMessage(warnings[[1]]),
-      'Unsupported drag preview footprint'
+      'source geometry or content cannot be captured safely'
     )
+    expect_match(
+      conditionMessage(warnings[[1]]),
+      'Use a source without transforms'
+    )
+    expect_match(conditionMessage(warnings[[1]]), 'Drag preview section')
     expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
     expect_identical(pz_js(page, 'window.__previewFontEmbedCSS'), '')
     expect_true(pz_js(
@@ -1542,7 +1625,7 @@ test_that('a real missing local image disables capture without blocking the drag
   expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
   expect_match(
     conditionMessage(warnings[[1]]),
-    'JavaScript error preparing the drag preview: Event',
+    '[object Event]',
     fixed = TRUE
   )
   expect_true(carried)
@@ -1638,8 +1721,13 @@ test_that('SVG use and iframe skip capture before copying outside the source sub
     expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
     expect_match(
       conditionMessage(warnings[[1]]),
-      'Unsupported drag preview footprint'
+      'source contains an iframe or SVG <use> reference'
     )
+    expect_match(
+      conditionMessage(warnings[[1]]),
+      'Use a source without these references'
+    )
+    expect_match(conditionMessage(warnings[[1]]), 'Drag preview section')
     expect_equal(pz_js(page, 'window.__previewCaptures || 0'), 0)
     expect_equal(
       pz_js(page, "document.querySelector('#preview-target').dataset.drops"),
@@ -1787,4 +1875,44 @@ test_that('content-box captures preserve the measured border box and far-edge pi
   )
   expect_true(drag_preview_absent(page))
   pz_record_stop(page)
+})
+
+test_that('unknown preview failures preserve literal messages and omit multiline stacks', {
+  message <- 'unfamiliar {value} at the source\n    at prepare (<anonymous>:1:2)\n    at run (<anonymous>:3:4)'
+  expect_identical(
+    drag_preview_error_message(message),
+    'unfamiliar {value} at the source'
+  )
+  state <- new.env(parent = emptyenv())
+  state$owner <- TRUE
+  state$warned <- FALSE
+  local_mocked_bindings(drag_preview_dispose = function(state) {
+    state$owner <- NULL
+  })
+  warnings <- list()
+  withCallingHandlers(
+    drag_preview_optional(state, function(ctx) {
+      drag_preview_result(list(
+        failure = list(
+          reason = 'future-reason',
+          message = 'unfamiliar {value} at the source'
+        )
+      ))
+    }),
+    warning = function(w) {
+      warnings <<- c(warnings, list(w))
+      invokeRestart('muffleWarning')
+    }
+  )
+  expect_length(warnings, 1)
+  expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
+  expect_match(
+    conditionMessage(warnings[[1]]),
+    'unfamiliar {value} at the source',
+    fixed = TRUE
+  )
+  expect_match(conditionMessage(warnings[[1]]), 'Drag preview section')
+  expect_no_warning(drag_preview_optional(state, function(ctx) {
+    stop('a disabled preview must not run again')
+  }))
 })

@@ -22,7 +22,7 @@ drag_preview_prepare <- function(state, els, from) {
         paste0(
           "function(point, annotationsAbsent) { return (",
           drag_preview_boot_js(),
-          ") (this[0], point, annotationsAbsent).prepare(); }"
+          ") (this[0], point, annotationsAbsent).run('prepare'); }"
         ),
         objectId = els$object_id,
         arguments = list(
@@ -36,7 +36,17 @@ drag_preview_prepare <- function(state, els, from) {
       timeout,
       "preparing the drag preview"
     )
-    cdp_check_exception(res, "preparing the drag preview")
+    err <- res$exceptionDetails
+    if (!is.null(err)) {
+      message <- drag_preview_error_message(
+        err$exception$description %||% err$text %||% "unknown error"
+      )
+      cli::cli_abort(
+        "JavaScript error preparing the drag preview: {message}",
+        class = "paparazzi_error_js"
+      )
+    }
+    drag_preview_result(js_value(res$result))
     invisible(NULL)
   })
 }
@@ -80,10 +90,13 @@ drag_preview_optional <- function(state, fn) {
       drag_preview_dispose(state)
       if (!state$warned) {
         state$warned <- TRUE
+        message <- drag_preview_error_message(conditionMessage(e))
         cli::cli_warn(
           c(
             "The optional drag preview was disabled; the drag will continue.",
-            i = "{conditionMessage(e)}"
+            i = drag_preview_warning_reason(e),
+            i = "Use {.code preview = FALSE} to turn off the preview.",
+            i = "See the Drag preview section in {.help paparazzi::pz_act_drag}."
           ),
           class = "paparazzi_warning_drag_preview"
         )
@@ -95,20 +108,70 @@ drag_preview_optional <- function(state, fn) {
 
 drag_preview_command <- function(state, method, arg = NULL) {
   drag_preview_optional(state, function(ctx) {
-    pz_js(
+    result <- pz_js(
       ctx,
       paste0(
         "(() => { const controller = ",
         DRAG_PREVIEW_CONTROLLER_JS,
-        "; if (!controller) throw new Error('Drag preview controller is unavailable');",
-        "return controller.",
+        "; if (!controller) return {failure:{message:'Drag preview controller is unavailable'}};",
+        "return controller.run('",
         method,
-        "(",
-        if (is.null(arg)) "" else js_literal(arg),
+        "',",
+        if (is.null(arg)) "null" else js_literal(arg),
         "); })()"
       )
     )
+    drag_preview_result(result)
   })
+}
+
+drag_preview_result <- function(result) {
+  if (!is.null(result$failure)) {
+    cli::cli_abort(
+      "{result$failure$message}",
+      class = "paparazzi_error_drag_preview",
+      reason = result$failure$reason
+    )
+  }
+  result$value
+}
+
+drag_preview_error_message <- function(message) {
+  sub("(?s)\\n[[:space:]]*at .*", "", message, perl = TRUE)
+}
+
+drag_preview_warning_reason <- function(e) {
+  switch(
+    e$reason %||% "",
+    stylesheets = paste(
+      "The browser cannot read the page's stylesheets, often on {.code file://} pages.",
+      "Open the page over HTTP: {.fn pz_open} serves local {.file .html} paths",
+      "when {.pkg httpuv} is installed and loads; or use {.fn pz_serve_static}.",
+      "Cross-origin stylesheets must also allow the browser to read their rules."
+    ),
+    references = paste(
+      "The source contains an iframe or SVG <use> reference.",
+      "Use a source without these references."
+    ),
+    fonts = paste(
+      "The page uses unsupported CSS rule groups, imported stylesheets,",
+      "or fonts without readable embedded CSS sources.",
+      "Move rules out of unsupported groups or imports and embed font sources",
+      "as data URLs in @font-face rules."
+    ),
+    redaction = paste(
+      "A paparazzi redaction overlaps or is related to the source,",
+      "or paparazzi cannot verify the redaction state.",
+      "Keep redactions separate from the source or turn off the preview;",
+      "do not remove redactions from sensitive content for a preview."
+    ),
+    geometry = paste(
+      "The source geometry or content cannot be captured safely.",
+      "Use a source without transforms, filters, clipping, overflowing content,",
+      "shadow DOM, or generated content."
+    ),
+    "{message}"
+  )
 }
 
 DRAG_PREVIEW_CONTROLLER_JS <- paste0(

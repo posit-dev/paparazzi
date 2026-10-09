@@ -5,6 +5,11 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
   layer.setAttribute('aria-hidden', 'true');
   layer.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;z-index:-2;';
   root.appendChild(layer);
+  const fail = reason => {
+    const error = new Error(reason);
+    error.pzDragPreviewReason = reason;
+    throw error;
+  };
   const own = element.getAttribute('draggable');
   let inherited = element.closest('[draggable]');
   const finiteRect = r => r && [r.left, r.top, r.width, r.height].every(Number.isFinite) &&
@@ -33,8 +38,8 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
     // SVG references and iframes can copy nodes outside this document subtree.
     for (const node of [el, ...el.querySelectorAll('*')]) {
       const css = getComputedStyle(node);
-      if (node.shadowRoot || node instanceof SVGUseElement || node instanceof HTMLIFrameElement ||
-          css.transform !== 'none' || css.translate !== 'none' ||
+      if (node instanceof SVGUseElement || node instanceof HTMLIFrameElement) fail('references');
+      if (node.shadowRoot || css.transform !== 'none' || css.translate !== 'none' ||
           css.rotate !== 'none' || css.scale !== 'none' || css.filter !== 'none') return null;
       if (node !== el && (css.position === 'fixed' || css.position === 'sticky' ||
           (css.position === 'absolute' && getComputedStyle(el).position === 'static'))) return null;
@@ -59,14 +64,19 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
     const annotations = root.querySelector('.pz-annotations');
     if (!annotations) {
       if (annotationsAbsent) return;
-      throw new Error('Annotation safety is unavailable');
+      fail('redaction');
     }
-    const verdict = annotations.pz?.dragPreviewSafety?.(controller.source, footprint);
-    if (verdict?.safe !== true) throw new Error(verdict?.reason || 'Annotation safety is unknown');
+    let verdict;
+    try {
+      verdict = annotations.pz?.dragPreviewSafety?.(controller.source, footprint);
+    } catch (_) {
+      fail('redaction');
+    }
+    if (verdict?.safe !== true) fail('redaction');
   };
   const current = () => {
     const box = bounds(controller.source);
-    if (!box) throw new Error('Unsupported drag preview footprint');
+    if (!box) fail('geometry');
     safety(box);
     return box;
   };
@@ -83,37 +93,45 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
       display:'font-display', ascentOverride:'ascent-override',
       descentOverride:'descent-override', lineGapOverride:'line-gap-override'
     };
+    const rulesOf = sheet => {
+      try {
+        return sheet.cssRules;
+      } catch (error) {
+        if (error?.name === 'SecurityError') fail('stylesheets');
+        throw error;
+      }
+    };
     const read = rules => {
       for (const rule of rules) {
-        if (rule.type === CSSRule.IMPORT_RULE) throw new Error('Imported drag preview stylesheet');
+        if (rule.type === CSSRule.IMPORT_RULE) fail('fonts');
         if (rule.type === CSSRule.FONT_FACE_RULE) {
           const src = rule.style.getPropertyValue('src');
           let urls = 0;
           const rest = src.replace(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^\s)]+))\s*\)/gi,
             (_, double, single, bare) => {
               if (!/^data:/i.test(double ?? single ?? bare)) {
-                throw new Error('Nonembedded drag preview font');
+                fail('fonts');
               }
               urls++;
               return '';
             }).replace(/(?:format|tech)\([^()]*\)/gi, '');
           if (!urls || src.includes('\\') || !/^[\s,]*$/.test(rest)) {
-            throw new Error('Unsupported drag preview font source');
+            fail('fonts');
           }
           faces.push(rule.cssText);
           represented.push(rule.style);
         } else if (rule.type === CSSRule.MEDIA_RULE) {
-          if (matchMedia(rule.conditionText).matches) read(rule.cssRules);
+          if (matchMedia(rule.conditionText).matches) read(rulesOf(rule));
         } else if (rule.type === CSSRule.SUPPORTS_RULE) {
-          if (CSS.supports(rule.conditionText)) read(rule.cssRules);
-        } else if ('cssRules' in rule && rule.cssRules.length && rule.type !== CSSRule.KEYFRAMES_RULE) {
+          if (CSS.supports(rule.conditionText)) read(rulesOf(rule));
+        } else if ('cssRules' in rule && rulesOf(rule).length && rule.type !== CSSRule.KEYFRAMES_RULE) {
           // Modern style rules expose an empty cssRules list. Other nonempty
           // groups have applicability we do not establish; never flatten them.
-          throw new Error('Unsupported drag preview font grouping');
+          fail('fonts');
         }
       }
     };
-    for (const sheet of document.styleSheets) read(sheet.cssRules);
+    for (const sheet of document.styleSheets) read(rulesOf(sheet));
     // FontFace sources are opaque. Require a readable CSS counterpart rather
     // than letting a registered programmatic face silently rasterize in fallback.
     for (const face of document.fonts) {
@@ -123,7 +141,7 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
             (key === 'unicodeRange' ? 'U+0-10FFFF' : key === 'display' ? 'auto' : 'normal');
           return face[key] === undefined || face[key] === value;
         }));
-      if (!match) throw new Error('Opaque drag preview font without embedded CSS');
+      if (!match) fail('fonts');
     }
     return faces.join('\n');
   };
@@ -137,6 +155,14 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
   const controller = {
     source:own !== null && own !== '' ? element : (inherited || element),
     image:null,
+    async run(method, arg) {
+      try {
+        return {value:await controller[method](arg)};
+      } catch (error) {
+        return {failure:{reason:error?.pzDragPreviewReason ?? null,
+          message:error?.message ?? String(error)}};
+      }
+    },
     async prepare() {
       captured = current();
       grab = {x:point.x - captured.left, y:point.y - captured.top};
