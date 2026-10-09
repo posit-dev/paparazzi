@@ -53,7 +53,7 @@ recording runs. This GIF needs the gifski package.
 ```r
 video <- tempfile(fileext = ".gif")
 pz_with_page(pz_example("tasks"), function(page) {
-  page |> pz_stage(enter = "bottom", pause = 0.2)
+  page |> pz_stage(enter = "bottom", pause = 0.5)
   page |> pz_record(video, code = {
     page |>
       pz_act_type("Repot the fern", target = "#task-title") |>
@@ -91,6 +91,9 @@ pz_with_page(pz_example("tasks"), function(page) {
   for interactive use or knitted documents.
 - **Keep expectations in demos.** A recording that runs its expectations is
   also evidence that the demo reached the state it shows.
+- **Pace videos for a first-time viewer.** High-quality videos move slowly:
+  give most pauses about 1 second, in 0.5-second steps, and never less
+  than 0.5.
 - **Know who owns each server.** A page opened from a path owns the server
   it started, and closing the page stops it. A server handle you created is
   yours to stop after its pages close.
