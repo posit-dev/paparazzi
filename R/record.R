@@ -296,19 +296,12 @@ pz_record_stop <- function(ctx) {
   rec$vt_end <- rec_vt(rec)
   record_stop_screencast(page, rec)
 
-  tryCatch(
-    record_wait_pending(rec, page, "the in-flight frame capture"),
-    paparazzi_error_timeout = function(e) {
-      rec$pending <- NULL
-      record_error(rec, e)
-    }
-  )
-
   record_capture_settled(
     rec,
     page,
     rec$vt_end,
     "the final frame capture",
+    drain_what = "the in-flight frame capture",
     timeout = min(page$default_timeout, 5)
   )
 
@@ -895,9 +888,10 @@ record_screencast_frame <- function(page, rec, frame) {
   invisible(NULL)
 }
 
-# Captures a frame at the method's scale and waits until the capture
-# settles, whether it succeeds (the file lands) or fails (the recorder
-# clears the pending capture). A screencast frame may have CSS-viewport
+# Drains any in-flight capture, then captures a frame at the method's
+# scale and waits until it settles, whether it succeeds (the file lands)
+# or fails (the recorder clears the pending capture). A screencast frame
+# may have CSS-viewport
 # resolution even at a higher device pixel ratio; matching it keeps
 # encode-time framing on the same coordinates for every frame. A timeout
 # is counted as a recorder error, not thrown, and never leaves a pending
@@ -907,8 +901,16 @@ record_capture_settled <- function(
   page,
   vt,
   what,
+  drain_what = what,
   timeout = page$default_timeout
 ) {
+  tryCatch(
+    record_wait_pending(rec, page, drain_what),
+    paparazzi_error_timeout = function(e) {
+      rec$pending <- NULL
+      record_error(rec, e)
+    }
+  )
   capture_scale <- if (identical(rec$method, "screencast")) {
     1 / pz_js(page, "window.devicePixelRatio")
   } else {

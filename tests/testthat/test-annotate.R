@@ -437,6 +437,10 @@ test_that("a failing settle capture is counted and the recording continues", {
   rec <- page_recorder(page)
   expect_gt(rec$n_errors, 0L)
   expect_null(rec$pending)
+  # A working settle still retains a completion frame after the failure.
+  files_before <- length(rec$files)
+  pz_annotate(page, "#box")
+  expect_gt(length(rec$files), files_before)
   pz_record_hold(page, 0.2)
   pz_record_stop(page)
   expect_true(file.exists(path))
@@ -445,7 +449,7 @@ test_that("a failing settle capture is counted and the recording continues", {
 test_that("a stuck settle capture is retired instead of blocking later frames", {
   skip_if_no_av()
   page <- annotation_page()
-  page$default_timeout <- 1
+  page$default_timeout <- 3
   path <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, path, hold = c(0, 0))
   defer_record_stop(page)

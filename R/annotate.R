@@ -300,19 +300,16 @@ annotate_settle <- function(ctx) {
 
   # Late screencast frames can still show an unfinished animation. Retain a
   # screenshot requested after the finish callbacks have applied their cleanup.
+  # A failed or stuck settle capture is tolerated (counted as a recorder
+  # error), so the last retained frame is not guaranteed to show the
+  # completed state when the capture itself is broken.
   rec <- page_recorder(page)
-  tryCatch(
-    record_wait_pending(rec, page, "the in-flight annotation frame capture"),
-    paparazzi_error_timeout = function(e) {
-      rec$pending <- NULL
-      record_error(rec, e)
-    }
-  )
   record_capture_settled(
     rec,
     page,
     rec_vt(rec),
-    "a retained frame of the completed annotations"
+    "a retained frame of the completed annotations",
+    drain_what = "the in-flight annotation frame capture"
   )
   invisible(NULL)
 }
