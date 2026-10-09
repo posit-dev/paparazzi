@@ -1031,6 +1031,190 @@ test_that("pz_act_select_text selects an exact substring across inline tags", {
   )
 })
 
+test_that("recorded selection visually drags across a wrapped inline range", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  pz_js(
+    page,
+    "document.getElementById('rich').style.cssText = 'width:140px;font:20px monospace'"
+  )
+  ends <- pz_js(
+    page,
+    "(() => {
+      const el = document.getElementById('rich');
+      const r = document.createRange();
+      r.setStart(el.querySelector('em').firstChild, 0);
+      r.setEnd(el.querySelector('strong').firstChild, 8);
+      const rects = [...r.getClientRects()];
+      const first = rects[0], last = rects.at(-1);
+      return [[first.left, (first.top + first.bottom) / 2],
+              [last.right, (last.top + last.bottom) / 2]];
+    })()"
+  )
+  from <- unlist(ends[[1]])
+  to <- unlist(ends[[2]])
+  expect_gt(to[[2]], from[[2]])
+  page |> pz_stage(cursor_scale = 1)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  page |> pz_cursor_move("#editor", duration = 0)
+  pz_js(
+    page,
+    "(() => {
+      window.__selectionMoves = [];
+      window.__pzAdvLog = [];
+      document.addEventListener('mousemove', e => {
+        const root = document.getElementById('paparazzi-overlay-root').shadowRoot;
+        const glide = root.querySelector('.pz-glide');
+        const inner = root.querySelector('.pz-inner');
+        const m = new DOMMatrixReadOnly(getComputedStyle(glide).transform);
+        window.__selectionMoves.push({
+          point: [e.clientX, e.clientY], cursor: [m.e, m.f],
+          pressed: inner.style.transform === 'scale(0.8)',
+          buttons: e.buttons, trusted: e.isTrusted
+        });
+      });
+      return true;
+    })()"
+  )
+
+  pz_act_select_text(page, "galapagos penguins", target = "#rich")
+
+  expect_equal(
+    pz_js(page, "window.getSelection().toString()"),
+    "galapagos penguins"
+  )
+  expect_equal(unname(cursor_overlay_state(page)[2:3]), to, tolerance = 0.01)
+  expect_equal(
+    c(page_cursor(page)$x, page_cursor(page)$y),
+    to,
+    tolerance = 0.01
+  )
+  expect_false(page_cursor(page)$pressed)
+  expect_equal(cursor_overlay_scale(page), 1)
+  expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
+  samples <- jsonlite::fromJSON(
+    pz_js(page, "JSON.stringify(window.__selectionMoves)"),
+    simplifyVector = FALSE
+  )
+  if (length(samples) < 3L) {
+    fail(
+      "Selection never produced an approach, intermediate move, and final move"
+    )
+    return(invisible(FALSE))
+  }
+  expect_equal(unlist(samples[[1]]$point), from, tolerance = 1)
+  expect_equal(unlist(samples[[length(samples)]]$point), to, tolerance = 1)
+  expect_true(all(vapply(
+    samples,
+    function(s) s$trusted && s$buttons == 0,
+    logical(1)
+  )))
+  points <- t(vapply(samples, function(s) unlist(s$point), numeric(2)))
+  cursors <- t(vapply(samples, function(s) unlist(s$cursor), numeric(2)))
+  segment <- to - from
+  along <- as.vector(sweep(points, 2, from) %*% segment) / sum(segment^2)
+  drawn <- as.vector(sweep(cursors, 2, from) %*% segment) / sum(segment^2)
+  pressed <- vapply(samples, function(s) s$pressed, logical(1))
+  expect_false(pressed[[1]])
+  expect_true(all(pressed[-1]))
+  on_path <- sweep(outer(along, segment), 2, from, "+")
+  expect_lt(max(sqrt(rowSums((points - on_path)^2))), 2)
+  expect_true(any(along > 0.15 & along < 0.85 & pressed))
+  expect_true(any(drawn > 0.15 & drawn < 0.85 & pressed))
+})
+
+test_that("selecting text leaves a nonrecorded cursor where it was", {
+  page <- local_advanced_page()
+  page |> pz_cursor_show("#editor")
+  before <- cursor_overlay_state(page)
+
+  pz_act_select_text(page, "galapagos penguins", target = "#rich")
+
+  expect_equal(cursor_overlay_state(page), before)
+  expect_equal(
+    pz_js(page, "window.getSelection().toString()"),
+    "galapagos penguins"
+  )
+  expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
+})
+
+test_that("recorded selection respects disabled and explicitly hidden cursors", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_cursor_show("#editor") |> pz_cursor_hide()
+  before <- cursor_overlay_state(page)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+
+  pz_act_select_text(page, "galapagos penguins", target = "#rich")
+
+  expect_identical(page_cursor(page)$visibility, "hidden")
+  expect_equal(cursor_overlay_state(page), before)
+  expect_equal(
+    pz_js(page, "window.getSelection().toString()"),
+    "galapagos penguins"
+  )
+  page |> pz_stage(cursor = FALSE)
+  pz_act_select_text(page, "otters", target = "#editor")
+  expect_equal(cursor_overlay_state(page), before)
+  expect_equal(pz_js(page, "window.getSelection().toString()"), "otters")
+  expect_length(adv_log(page), 0)
+})
+
+test_that("a range without client rects keeps selection instant while recording", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  page |> pz_cursor_move("#editor", duration = 0)
+  before <- cursor_overlay_state(page)
+  pz_js(
+    page,
+    "document.getElementById('rich').style.display = 'none'; window.__pzAdvLog = []"
+  )
+
+  pz_act_select_text(page, "galapagos penguins", target = "#rich")
+
+  expect_equal(cursor_overlay_state(page), before)
+  expect_false(page_cursor(page)$pressed)
+  expect_equal(
+    pz_js(page, "window.getSelection().getRangeAt(0).toString()"),
+    "galapagos penguins"
+  )
+  expect_length(adv_log(page), 0)
+})
+
+test_that("a failed selection carry releases the overlay press", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  page |> pz_cursor_move("#rich", duration = 0)
+  real_dispatch_mouse <- dispatch_mouse
+  local_mocked_bindings(
+    dispatch_mouse = function(ctx, action, target, type, ...) {
+      if (isTRUE(page_cursor(ctx$page)$pressed)) {
+        cli::cli_abort("simulated selection carry failure")
+      }
+      real_dispatch_mouse(ctx, action, target, type, ...)
+    }
+  )
+
+  expect_error(
+    pz_act_select_text(page, "galapagos penguins", target = "#rich"),
+    "simulated selection carry failure"
+  )
+
+  expect_false(page_cursor(page)$pressed)
+  expect_equal(cursor_overlay_scale(page), page_stage(page)$cursor_scale)
+  expect_equal(
+    pz_js(page, "window.getSelection().toString()"),
+    "galapagos penguins"
+  )
+  expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
+})
+
 test_that("pz_act_select_text lets typing replace the selection", {
   page <- local_advanced_page()
   pz_act_select_text(page, "otters", target = "#editor")

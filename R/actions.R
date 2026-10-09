@@ -591,13 +591,17 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 
 #' Select text inside an element
 #'
-#' Auto-waits for a match, then highlights the exact `text` inside it
-#' as if dragging across it: the substring is found among the element's
-#' text nodes (so a match spanning inline tags, e.g. across an `<em>`
-#' and a `<strong>`, is selected as one piece) and becomes the page's
-#' real window selection. Typing afterwards replaces it -- call
+#' Auto-waits for a match, then highlights the exact `text` inside it.
+#' paparazzi finds the substring among the element's text nodes and sets
+#' the page's real window selection, even when the match spans inline tags
+#' such as `<em>` and `<strong>`. Typing afterwards replaces it -- call
 #' [pz_act_type()] with `target = NULL`, which inserts into whatever has
 #' focus.
+#'
+#' While recording with a visible cursor, paparazzi animates a drag
+#' across the selected text. The browser's Range API sets the exact
+#' selection; the cursor movement doesn't select it. Outside a recording,
+#' selection is instant and leaves the cursor where it was.
 #'
 #' A contenteditable target is focused too (dragging across editable
 #' text focuses it, and that focus is where the typing lands); a static
@@ -661,7 +665,60 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
       class = "paparazzi_error_text"
     )
   }
-  stage_follow_without_glide(ctx, action_target_rect(els))
+  rect <- action_target_rect(els)
+  stage_follow_without_glide(ctx, rect)
+  if (
+    recorder_active(ctx$page) &&
+      cursor_visible(ctx$page) &&
+      !is.null(res$from) &&
+      !is.null(res$to)
+  ) {
+    from <- structure(c(x = res$from$x, y = res$from$y), rect = rect)
+    to <- c(x = res$to$x, y = res$to$y)
+    withr::defer({
+      if (isTRUE(page_cursor(ctx$page)$pressed)) {
+        try(cursor_press(ctx, FALSE), silent = TRUE)
+      }
+    })
+    stage_move_cursor(ctx, from)
+    dispatch_mouse(
+      ctx,
+      "selecting text in",
+      els$description,
+      "mouseMoved",
+      from,
+      button = "none",
+      buttons = 0,
+      clickCount = 0
+    )
+    pump_loop(ctx$page$child_loop, 0.15)
+    cursor_press(ctx, TRUE)
+    pump_loop(ctx$page$child_loop, 0.16)
+    stage_drag_carry(ctx, from, to, function(point) {
+      dispatch_mouse(
+        ctx,
+        "selecting text in",
+        els$description,
+        "mouseMoved",
+        point,
+        button = "none",
+        buttons = 0,
+        clickCount = 0
+      )
+    })
+    dispatch_mouse(
+      ctx,
+      "selecting text in",
+      els$description,
+      "mouseMoved",
+      to,
+      button = "none",
+      buttons = 0,
+      clickCount = 0
+    )
+    cursor_press(ctx, FALSE)
+    pump_loop(ctx$page$child_loop, 0.2)
+  }
   stage_action_pause(ctx)
   ctx_return(ctx)
 }
@@ -1484,7 +1541,13 @@ select_text_js <- "function(text) {
   if (el.isContentEditable) {
     el.focus();
   }
-  return { status: 'ok' };
+  const rects = range.getClientRects();
+  const first = rects[0], last = rects[rects.length - 1];
+  return {
+    status: 'ok',
+    from: first ? { x: first.left, y: (first.top + first.bottom) / 2 } : null,
+    to: last ? { x: last.right, y: (last.top + last.bottom) / 2 } : null
+  };
 }"
 
 scroll_apply_js <- "function(arg) {

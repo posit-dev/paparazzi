@@ -22,15 +22,19 @@ scope; at the root context a target is required.}
 \code{ctx}, invisibly.
 }
 \description{
-Auto-waits for a match, then highlights the exact \code{text} inside it
-as if dragging across it: the substring is found among the element's
-text nodes (so a match spanning inline tags, e.g. across an \verb{<em>}
-and a \verb{<strong>}, is selected as one piece) and becomes the page's
-real window selection. Typing afterwards replaces it -- call
+Auto-waits for a match, then highlights the exact \code{text} inside it.
+paparazzi finds the substring among the element's text nodes and sets
+the page's real window selection, even when the match spans inline tags
+such as \verb{<em>} and \verb{<strong>}. Typing afterwards replaces it -- call
 \code{\link[=pz_act_type]{pz_act_type()}} with \code{target = NULL}, which inserts into whatever has
 focus.
 }
 \details{
+While recording with a visible cursor, paparazzi animates a drag
+across the selected text. The browser's Range API sets the exact
+selection; the cursor movement doesn't select it. Outside a recording,
+selection is instant and leaves the cursor where it was.
+
 A contenteditable target is focused too (dragging across editable
 text focuses it, and that focus is where the typing lands); a static
 target is not.
