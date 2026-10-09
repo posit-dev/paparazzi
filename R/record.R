@@ -1301,8 +1301,15 @@ record_encode <- function(rec, page = NULL, call = caller_env()) {
     } else {
       resampled$files
     }
+    output_dir <- dirname(rec$path)
+    if (!dir.exists(output_dir)) {
+      cli::cli_abort(
+        "The directory {.path {output_dir}} for the recording output does not exist.",
+        call = call
+      )
+    }
     output_file <- file.path(
-      normalizePath(dirname(rec$path)),
+      normalizePath(output_dir),
       basename(rec$path)
     )
     encode <- function() {
