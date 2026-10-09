@@ -175,8 +175,8 @@ pz_act_hover <- function(ctx, target = NULL, ...) {
 #' with `typing = "natural"` (the default; see [pz_stage()]): one
 #' `insertText` per character with randomized delays around
 #' `typing_speed`, so the video shows the text appearing. While
-#' recording, the cursor that clicked the field fades out so it doesn't
-#' cover the text, and fades back in when the next action moves it. For
+#' recording, paparazzi fades the cursor out during typing so it doesn't
+#' cover the text. The next pointer action fades it back in. For
 #' a value-setting primitive that works on selects, checkboxes, and range
 #' inputs, see [pz_set_value()].
 #'
@@ -228,6 +228,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
         )
       }
     }
+    cursor_rest(ctx)
     insert_text(ctx, "the focused element", text)
     stage_action_pause(ctx)
     return(ctx_return(ctx))
@@ -238,6 +239,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
     is.null(target) && isTRUE(els_values_flat(els, focus_held_selection_js))
   ) {
     stage_follow_without_glide(ctx, action_target_rect(els))
+    cursor_rest(ctx)
     insert_text(ctx, els$description, text)
     stage_action_pause(ctx)
     return(ctx_return(ctx))

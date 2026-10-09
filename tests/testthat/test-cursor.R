@@ -1340,6 +1340,121 @@ test_that("recorded typing rests the cursor until the next move", {
   pz_record_stop(page)
 })
 
+test_that("root typing after a recording hold rests the cursor without clicking", {
+  skip_if_no_av()
+  page <- local_page(advanced_fixture_file(), scale = 2)
+  page |> pz_stage(typing = "instant")
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  pz_camera(page, pz_frame("#rich", zoom = 2), duration = 0)
+  pz_record_hold(page, 0.2)
+  pz_act_select_text(page, "otters", target = "#editor")
+  page |> pz_cursor_move("#rich", duration = 0)
+  pz_js(page, "window.__pzAdvLog = []")
+
+  pz_act_type(page, "penguins")
+
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "penguins are playful"
+  )
+  expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
+  expect_true(page_cursor(page)$resting)
+  expect_equal(cursor_overlay_state(page)[[1]], 0)
+  pz_poll(
+    function() {
+      pz_js(
+        page,
+        "getComputedStyle(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner')).opacity === '0'"
+      )
+    },
+    timeout = 2,
+    loop = page$child_loop,
+    what = "the cursor to fade out after root typing"
+  )
+  page |> pz_act_hover("#rich")
+  expect_false(page_cursor(page)$resting)
+  expect_equal(cursor_overlay_state(page)[[1]], 1)
+})
+
+test_that("typing into a scoped held selection rests the cursor without clicking", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(typing = "instant")
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  ctx <- pz_find(page, "#editor")
+  pz_act_select_text(ctx, "otters")
+  page |> pz_cursor_move("#rich", duration = 0)
+  pz_js(page, "window.__pzAdvLog = []")
+
+  pz_act_type(ctx, "penguins")
+
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "penguins are playful"
+  )
+  expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
+  expect_true(page_cursor(page)$resting)
+  expect_equal(cursor_overlay_state(page)[[1]], 0)
+  pz_poll(
+    function() {
+      pz_js(
+        page,
+        "getComputedStyle(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner')).opacity === '0'"
+      )
+    },
+    timeout = 2,
+    loop = page$child_loop,
+    what = "the cursor to fade out after held-selection typing"
+  )
+  page |> pz_act_hover("#rich")
+  expect_false(page_cursor(page)$resting)
+  expect_equal(cursor_overlay_state(page)[[1]], 1)
+})
+
+test_that("no-click typing leaves a nonrecorded shown cursor alone", {
+  page <- local_advanced_page()
+  ctx <- pz_find(page, "#editor")
+  pz_act_select_text(ctx, "otters")
+  page |> pz_cursor_show("#rich")
+  before <- cursor_overlay_state(page)
+
+  pz_act_type(ctx, "penguins")
+  pz_act_type(page, "!")
+
+  expect_false(page_cursor(page)$resting)
+  expect_equal(cursor_overlay_state(page), before)
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "penguins! are playful"
+  )
+  expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
+})
+
+test_that("no-click recorded typing never revives an explicitly hidden cursor", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(typing = "instant")
+  page |> pz_cursor_show("#rich") |> pz_cursor_hide()
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  ctx <- pz_find(page, "#editor")
+  pz_act_select_text(ctx, "otters")
+
+  pz_act_type(ctx, "penguins")
+  pz_act_type(page, "!")
+
+  expect_identical(page_cursor(page)$visibility, "hidden")
+  expect_false(page_cursor(page)$resting)
+  expect_equal(cursor_overlay_state(page)[[1]], 0)
+  expect_equal(
+    pz_js(page, "document.getElementById('editor').textContent"),
+    "penguins! are playful"
+  )
+  expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
+})
+
 test_that("cursor move offset defaults to zero and rejects NULL", {
   page <- local_cursor_page()
   expect_error(pz_cursor_move(page, "#btn", offset = NULL), "offset.*NULL")
