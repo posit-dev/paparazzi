@@ -151,6 +151,7 @@ pz_record_start <- function(
     )
   }
   check_string(path)
+  check_record_output_dir(path, class = "paparazzi_error_input")
   method <- arg_match(method)
   check_number_decimal(fps, min = 1, max = 120)
   check_number_decimal(scale, min = 0, allow_null = TRUE)
@@ -1175,7 +1176,23 @@ record_resample <- function(rec) {
   )
 }
 
+check_record_output_dir <- function(path, class, call = caller_env()) {
+  dir <- dirname(path)
+  if (!dir.exists(dir)) {
+    cli::cli_abort(
+      "The directory {.path {dir}} for the recording output does not exist.",
+      class = class,
+      call = call
+    )
+  }
+}
+
 record_encode <- function(rec, page = NULL, call = caller_env()) {
+  check_record_output_dir(
+    rec$path,
+    class = "paparazzi_error_record",
+    call = call
+  )
   png_size <- png_read_size(rec$files[[1]], call = call)
   if (!is.null(rec$crop) || length(rec$camera)) {
     for (path in rec$files[-1L]) {
@@ -1301,15 +1318,8 @@ record_encode <- function(rec, page = NULL, call = caller_env()) {
     } else {
       resampled$files
     }
-    output_dir <- dirname(rec$path)
-    if (!dir.exists(output_dir)) {
-      cli::cli_abort(
-        "The directory {.path {output_dir}} for the recording output does not exist.",
-        call = call
-      )
-    }
     output_file <- file.path(
-      normalizePath(output_dir),
+      normalizePath(dirname(rec$path)),
       basename(rec$path)
     )
     encode <- function() {

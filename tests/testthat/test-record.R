@@ -147,15 +147,36 @@ test_that("plain videos encode to new relative paths", {
   }
 })
 
-test_that("encoding to a missing directory fails clearly", {
+test_that("recording to a missing directory fails clearly", {
   skip_if_no_av()
   page <- local_record_page()
   dir <- withr::local_tempdir()
   withr::local_dir(dir)
 
-  pz_record_start(page, file.path("missing", "out.mp4"), fps = 5)
+  for (ext in c("mp4", "webm", "gif")) {
+    expect_error(
+      pz_record_start(page, file.path("missing", paste0("out.", ext))),
+      "does not exist",
+      class = "paparazzi_error_input"
+    )
+  }
+})
+
+test_that("deleting the output directory mid-recording fails at encode", {
+  skip_if_no_av()
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  dir.create("sub")
+
+  pz_record_start(page, file.path("sub", "out.mp4"), fps = 5)
   pz_record_hold(page, 0.2)
-  expect_error(pz_record_stop(page), "does not exist")
+  unlink("sub", recursive = TRUE)
+  expect_error(
+    pz_record_stop(page),
+    "does not exist",
+    class = "paparazzi_error_record"
+  )
 })
 
 test_that("pause/resume cuts the paused stretch out of the video", {
