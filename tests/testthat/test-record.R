@@ -1253,7 +1253,16 @@ test_that("a framed recording survives a navigation by framing the viewport", {
   page |>
     pz_find("#box") |>
     pz_record_start(out, fps = 10, hold = c(0, 0), frame = pz_frame())
-  pz_wait(page, 0.2)
+  # The video must open on the pre-navigation document, so a frame of it
+  # has to land before the commit; the commit discards any capture still
+  # in flight (the pending-abandonment poll below), and without a
+  # pre-navigation frame the video clock starts at the red paint.
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 1L,
+    timeout = page$page$default_timeout,
+    loop = page$page$child_loop,
+    what = "a frame of the pre-navigation document"
+  )
   root <- pz_nav_goto(page, nav_fixture_url("b"))
   # A commit that strands the in-flight capture mutes the recorder until
   # chromote's response timeout; name that mechanism before checking
@@ -1283,10 +1292,24 @@ test_that("a framed recording survives a navigation by framing the viewport", {
     loop = root$page$child_loop,
     what = "a frame capturing the navigated document"
   )
+  # Arrival of the red frame is proven; idle so the recording spans more
+  # than one resample tick and the stop-time frame lands in the video.
+  pz_wait(root, 0.2)
   expect_no_error(pz_record_stop(root))
 
   info <- recorded_video_info(out)
-  expect_gte(info$frames, 3)
+  expect_gte(info$frames, 2L)
+  # The video spans the navigation: it opens on the pre-navigation
+  # document and ends on the red paint.
+  decoded <- tempfile("record-decoded-")
+  withr::defer(unlink(decoded, recursive = TRUE))
+  frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
+  is_red <- function(path) {
+    pixel <- as.numeric(png::readPNG(path)[10, 10, 1:3])
+    all(abs(pixel - c(1, 0, 0)) < 0.1)
+  }
+  expect_false(is_red(frames[[1]]))
+  expect_true(is_red(tail(frames, 1)[[1]]))
   # The navigation released the scope the recording started in, so the
   # not-yet-measured when = "stop" crop resolved as the full viewport
   # instead of raising the detach error.
