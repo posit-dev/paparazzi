@@ -689,13 +689,27 @@ test_that("frames are resampled to the requested constant fps", {
   page <- local_record_page()
   skip_if_no_av()
 
+  # The video clock starts at the first completed frame, so poll for it
+  # before the timed window; a fixed window alone lets a slow first
+  # capture shrink the resampled frame count.
+  record_timed <- function(out, fps) {
+    page |> pz_record_start(out, fps = fps, hold = c(0, 0))
+    pz_poll(
+      function() length(page_recorder(page)$files) >= 1L,
+      timeout = page$page$default_timeout,
+      loop = page$page$child_loop,
+      what = "the first captured frame"
+    )
+    pz_wait(page, 0.6)
+    pz_record_stop(page)
+    recorded_video_info(out)
+  }
+
   out5 <- withr::local_tempfile(fileext = ".mp4")
-  page |> pz_record(out5, pz_wait(page, 0.6), fps = 5, hold = c(0, 0))
-  info5 <- recorded_video_info(out5)
+  info5 <- record_timed(out5, fps = 5)
 
   out20 <- withr::local_tempfile(fileext = ".mp4")
-  page |> pz_record(out20, pz_wait(page, 0.6), fps = 20, hold = c(0, 0))
-  info20 <- recorded_video_info(out20)
+  info20 <- record_timed(out20, fps = 20)
 
   # same real time, different output rates: durations agree, frame
   # counts track fps
