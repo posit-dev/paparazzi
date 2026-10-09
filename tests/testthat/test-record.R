@@ -122,7 +122,7 @@ test_that("captioned videos encode to new relative paths", {
 
     expect_true(file.exists(out))
     expect_gt(recorded_video_info(out)$duration, 0)
-    expect_identical(getwd(), normalizePath(dir))
+    expect_identical(getwd(), normalizePath(dir, winslash = "/"))
   }
 })
 
@@ -143,8 +143,19 @@ test_that("plain videos encode to new relative paths", {
 
     expect_true(file.exists(out))
     expect_gt(recorded_video_info(out)$duration, 0)
-    expect_identical(getwd(), normalizePath(dir))
+    expect_identical(getwd(), normalizePath(dir, winslash = "/"))
   }
+})
+
+test_that("encoding to a missing directory fails clearly", {
+  skip_if_no_av()
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+
+  pz_record_start(page, file.path("missing", "out.mp4"), fps = 5)
+  pz_record_hold(page, 0.2)
+  expect_error(pz_record_stop(page), "does not exist")
 })
 
 test_that("pause/resume cuts the paused stretch out of the video", {
