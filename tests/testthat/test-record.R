@@ -172,11 +172,10 @@ test_that("deleting the output directory mid-recording fails at encode", {
   pz_record_start(page, file.path("sub", "out.mp4"), fps = 5)
   pz_record_hold(page, 0.2)
   unlink("sub", recursive = TRUE)
-  expect_error(
-    pz_record_stop(page),
-    "does not exist",
-    class = "paparazzi_error_record"
-  )
+  err <- tryCatch(pz_record_stop(page), error = function(e) e)
+  expect_s3_class(err, "paparazzi_error_record")
+  expect_match(conditionMessage(err), "does not exist")
+  expect_match(conditionMessage(err), "discarded")
 })
 
 test_that("pause/resume cuts the paused stretch out of the video", {

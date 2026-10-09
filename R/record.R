@@ -58,7 +58,8 @@
 #'
 #' @inheritParams pz_act_click
 #' @param path Output file path; the extension (`.mp4`, `.webm`, or
-#'   `.gif`) selects the format. An existing file is overwritten. With
+#'   `.gif`) selects the format. An existing file is overwritten. The
+#'   directory must already exist. With
 #'   `NULL` (the default) while knitting, a numbered file in the chunk's
 #'   figure directory is used and the recording appears in the document;
 #'   in an interactive session, a temporary file is used and shown in the
@@ -1176,11 +1177,19 @@ record_resample <- function(rec) {
   )
 }
 
-check_record_output_dir <- function(path, class, call = caller_env()) {
+check_record_output_dir <- function(
+  path,
+  class,
+  note = NULL,
+  call = caller_env()
+) {
   dir <- dirname(path)
   if (!dir.exists(dir)) {
     cli::cli_abort(
-      "The directory {.path {dir}} for the recording output does not exist.",
+      c(
+        "The directory {.path {dir}} for the recording output does not exist.",
+        note
+      ),
       class = class,
       call = call
     )
@@ -1191,6 +1200,11 @@ record_encode <- function(rec, page = NULL, call = caller_env()) {
   check_record_output_dir(
     rec$path,
     class = "paparazzi_error_record",
+    note = if (!rec$keep_frames) {
+      c(
+        i = "The captured frames were discarded; use {.arg keep_frames} to keep them."
+      )
+    },
     call = call
   )
   png_size <- png_read_size(rec$files[[1]], call = call)

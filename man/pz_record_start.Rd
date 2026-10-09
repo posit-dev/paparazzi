@@ -22,7 +22,8 @@ pz_record_start(
 \item{ctx}{A paparazzi context.}
 
 \item{path}{Output file path; the extension (\code{.mp4}, \code{.webm}, or
-\code{.gif}) selects the format. An existing file is overwritten. With
+\code{.gif}) selects the format. An existing file is overwritten. The
+directory must already exist. With
 \code{NULL} (the default) while knitting, a numbered file in the chunk's
 figure directory is used and the recording appears in the document;
 in an interactive session, a temporary file is used and shown in the
