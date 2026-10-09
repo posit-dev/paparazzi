@@ -683,18 +683,19 @@ test_that("clearing all logs the caption clear before the clear settles", {
   rec <- page_recorder(page)
   before <- length(rec$captions)
   captions_at_settle <- NULL
-  settled <- FALSE
+  recording_at_settle <- NULL
   real_settle <- annotate_settle
   local_mocked_bindings(
     annotate_settle = function(ctx) {
       captions_at_settle <<- page_recorder(ctx$page)$captions
-      settled <<- TRUE
+      recording_at_settle <<- annotate_recording(ctx$page)
       real_settle(ctx)
     }
   )
 
   pz_annotate_clear(page)
-  expect_true(settled)
+  # The settle ran on the live recording path, not the early return.
+  expect_true(recording_at_settle)
   expect_length(captions_at_settle, before + 1L)
   expect_null(captions_at_settle[[length(captions_at_settle)]]$caption)
   expect_identical(rec$captions, captions_at_settle)
