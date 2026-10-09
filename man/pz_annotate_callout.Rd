@@ -64,7 +64,9 @@ decorations; \code{NULL} uses the staged annotation color.}
 
 \item{fill, text_color}{CSS colors for the bubble background and text
 (and the callout's badge); \code{NULL} uses the staged \code{fill}/\code{text_color}
-from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}, falling back to \code{"#171717"} on \code{"white"}.
+from \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}. Without a staged value, the fill follows
+the resolved \code{color}, and paparazzi chooses black or white text for
+the higher WCAG contrast ratio against the fill.
 \code{\link[=pz_annotate]{pz_annotate()}} mark badges do not use these; they follow their mark's
 \code{color} unless overridden per call with \code{label_fill}/\code{label_text_color}.}
 

@@ -997,6 +997,8 @@ test_that("show_keys defaults to none and restores its staged default", {
 
 test_that("pz_stage_annotate stages fill, text color, stroke width and distance", {
   page <- local_cursor_page()
+  expect_null(page_stage(page)$annotate_fill)
+  expect_null(page_stage(page)$annotate_text_color)
   expect_error(pz_stage_annotate(page, fill = ""), "fill.*empty string")
   expect_error(
     pz_stage_annotate(page, text_color = ""),

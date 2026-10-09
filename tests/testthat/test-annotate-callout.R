@@ -272,7 +272,7 @@ test_that("callout bubble paints in still and leaves after clearing", {
   sample <- function() {
     as.numeric(png::readPNG(path)[y * dpr + 1, x * dpr + 1, 1:3])
   }
-  expect_lt(max(sample()), 0.5)
+  expect_equal(sample(), c(225, 29, 72) / 255, tolerance = 0.05)
   page |> pz_annotate_clear("tip") |> pz_screenshot(path)
   expect_equal(sample(), c(1, 1, 1), tolerance = 0.05)
 })
@@ -903,9 +903,9 @@ test_that("fill and text_color style the bubble and badge, staged or per-call", 
   page |>
     pz_annotate_callout("Plain", target = "#target", label = 1, id = "tip")
   node <- callout_details(page)$nodes[[1]]
-  expect_identical(node$fill, "rgb(23, 23, 23)")
+  expect_identical(node$fill, node$color)
   expect_identical(node$textColor, "rgb(255, 255, 255)")
-  expect_identical(node$badgeFill, "rgb(23, 23, 23)")
+  expect_identical(node$badgeFill, node$color)
   expect_identical(node$badgeColor, "rgb(255, 255, 255)")
 
   page |>
@@ -1058,8 +1058,8 @@ test_that("callout style options resolve per-call, staged, then built-in", {
   })
   pz_annotate_callout(page, "x", target = "#target")
   defaults <- captured
-  expect_identical(defaults$fill, "#171717")
-  expect_identical(defaults$textColor, "white")
+  expect_identical(defaults$fill, "#e11d48")
+  expect_null(defaults$textColor)
   expect_identical(defaults$leader, list(start = "none", end = "arrow"))
   expect_true(is.numeric(defaults$strokeWidth) && defaults$strokeWidth > 0)
   expect_true(is.numeric(defaults$distance) && defaults$distance > 0)
@@ -1100,4 +1100,65 @@ test_that("callout style options resolve per-call, staged, then built-in", {
     leader = c(start = "bar")
   )
   expect_identical(captured$leader, list(start = "bar", end = "none"))
+})
+
+test_that("callout fill follows the resolved accent unless overridden", {
+  page <- callout_page()
+  draw <- function(...) {
+    pz_annotate_callout(page, "Tip", target = "#target", id = "tip", ...)
+    callout_details(page)$nodes[[1]]
+  }
+  node <- draw()
+  expect_identical(node$fill, "rgb(225, 29, 72)")
+  pz_stage_annotate(page, color = "#2563eb")
+  node <- draw()
+  expect_identical(node$fill, "rgb(37, 99, 235)")
+  node <- draw(color = "#56B4E9")
+  expect_identical(node$fill, "rgb(86, 180, 233)")
+
+  pz_stage_annotate(page, fill = "yellow")
+  expect_identical(draw(color = "blue")$fill, "rgb(255, 255, 0)")
+  expect_identical(draw(fill = "lime")$fill, "rgb(0, 255, 0)")
+  pz_stage_annotate(page, fill = NULL)
+  expect_identical(draw()$fill, "rgb(37, 99, 235)")
+  expect_identical(draw(color = "purple")$fill, "rgb(128, 0, 128)")
+})
+
+test_that("callout text chooses the higher WCAG contrast against its fill", {
+  page <- callout_page()
+  draw <- function(...) {
+    pz_annotate_callout(
+      page,
+      "Tip",
+      target = "#target",
+      label = 1,
+      id = "tip",
+      ...
+    )
+    callout_details(page)$nodes[[1]]
+  }
+  for (color in c("#e11d48", "#2563eb", "navy", "hsl(240, 100%, 25%)")) {
+    node <- draw(color = color)
+    expect_identical(node$textColor, "rgb(255, 255, 255)")
+    expect_identical(node$badgeColor, node$textColor)
+    expect_identical(node$badgeFill, node$fill)
+  }
+  for (color in c("#56B4E9", "yellow", "rgb(240, 240, 240)", "#777777")) {
+    node <- draw(color = color)
+    expect_identical(node$textColor, "rgb(0, 0, 0)")
+    expect_identical(node$badgeColor, node$textColor)
+    expect_identical(node$badgeFill, node$fill)
+  }
+  # An explicit fill, rather than the accent, determines contrast.
+  expect_identical(
+    draw(color = "navy", fill = "white")$textColor,
+    "rgb(0, 0, 0)"
+  )
+  pz_stage_annotate(page, fill = "white")
+  expect_identical(draw(color = "navy")$textColor, "rgb(0, 0, 0)")
+  pz_stage_annotate(page, text_color = "red")
+  expect_identical(draw()$textColor, "rgb(255, 0, 0)")
+  expect_identical(draw(text_color = "blue")$textColor, "rgb(0, 0, 255)")
+  pz_stage_annotate(page, text_color = NULL)
+  expect_identical(draw()$textColor, "rgb(0, 0, 0)")
 })

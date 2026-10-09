@@ -27,13 +27,15 @@ bubble borders, leader lines and decorations. The default is \code{"#e11d48"}.
 Supply \code{NULL} to restore the default.}
 
 \item{fill}{CSS background color for new callout bubbles and their
-badges. The default is \code{"#171717"}. Supply \code{NULL} to restore the
-default. Callout chrome only: \code{\link[=pz_annotate]{pz_annotate()}} mark badges follow their
-mark's \code{color} unless overridden per call with \code{label_fill}.}
+badges. By default, the fill follows each callout's resolved \code{color}.
+Supply \code{NULL} to restore this default. Callout chrome only:
+\code{\link[=pz_annotate]{pz_annotate()}} mark badges follow their mark's \code{color} unless
+overridden per call with \code{label_fill}.}
 
 \item{text_color}{CSS text color for new callout bubbles and their
-badges. The default is \code{"white"}. Supply \code{NULL} to restore the
-default. Callout chrome only, like \code{fill}.}
+badges. By default, paparazzi chooses black or white for the higher
+WCAG contrast ratio against the resolved fill. Supply \code{NULL} to
+restore this default. Callout chrome only, like \code{fill}.}
 
 \item{stroke_width}{Stroke width in CSS pixels for new annotation marks
 and callout leader lines; decoration sizes scale with it. The default

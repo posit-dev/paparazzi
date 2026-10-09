@@ -256,12 +256,14 @@ pz_stage <- function(
 #'   bubble borders, leader lines and decorations. The default is `"#e11d48"`.
 #'   Supply `NULL` to restore the default.
 #' @param fill CSS background color for new callout bubbles and their
-#'   badges. The default is `"#171717"`. Supply `NULL` to restore the
-#'   default. Callout chrome only: [pz_annotate()] mark badges follow their
-#'   mark's `color` unless overridden per call with `label_fill`.
+#'   badges. By default, the fill follows each callout's resolved `color`.
+#'   Supply `NULL` to restore this default. Callout chrome only:
+#'   [pz_annotate()] mark badges follow their mark's `color` unless
+#'   overridden per call with `label_fill`.
 #' @param text_color CSS text color for new callout bubbles and their
-#'   badges. The default is `"white"`. Supply `NULL` to restore the
-#'   default. Callout chrome only, like `fill`.
+#'   badges. By default, paparazzi chooses black or white for the higher
+#'   WCAG contrast ratio against the resolved fill. Supply `NULL` to
+#'   restore this default. Callout chrome only, like `fill`.
 #' @param stroke_width Stroke width in CSS pixels for new annotation marks
 #'   and callout leader lines; decoration sizes scale with it. The default
 #'   is 3. Supply `NULL` to restore the default.
@@ -391,8 +393,8 @@ STAGE_DEFAULTS <- list(
   click_effect = "press",
   click_effect_color = "#e11d48",
   annotate_color = "#e11d48",
-  annotate_fill = "#171717",
-  annotate_text_color = "white",
+  annotate_fill = NULL,
+  annotate_text_color = NULL,
   annotate_stroke_width = 3,
   annotate_distance = NULL,
   annotate_font_family = "sans-serif",

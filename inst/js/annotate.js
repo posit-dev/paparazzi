@@ -11,6 +11,25 @@ function(root) {
   let next = 0;
   const durations = {none:0, fade:250, draw:350, pop:250, slide:300, wipe:400};
   const svgNS = 'http://www.w3.org/2000/svg';
+  const contrastText = fill => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = fill;
+    layer.appendChild(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 1, 1);
+    const rgb = [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    const linear = rgb.map(v => {
+      v /= 255;
+      return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    const luminance = linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+    return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? 'black' : 'white';
+  };
   const keys = (reveal, path) => {
     switch (reveal) {
       case 'fade': return [{opacity:0},{opacity:1}];
@@ -627,6 +646,7 @@ function(root) {
         nodes, opts).duration;
     },
     callout: (elements, opts) => {
+      const textColor = opts.textColor ?? contrastText(opts.fill);
       const nodes = elements.map((el, i) => {
         const box = document.createElement('div');
         box.className = 'pz-callout';
@@ -639,7 +659,7 @@ function(root) {
         bubble.textContent = opts.text;
         bubble.style.cssText = 'box-sizing:border-box;width:max-content;white-space:normal;overflow-wrap:anywhere;overflow:hidden;border:2px solid;border-radius:8px;line-height:1.35;padding:8px 12px;';
         bubble.style.backgroundColor = opts.fill;
-        bubble.style.color = opts.textColor;
+        bubble.style.color = textColor;
         bubble.style.borderColor = opts.color;
         bubble.style.fontFamily = opts.fontFamily;
         bubble.style.fontSize = opts.fontSize + 'px';
@@ -675,7 +695,7 @@ function(root) {
           badge.textContent = opts.label === true ? String(i + 1) : String(opts.label);
           badge.style.cssText = 'position:absolute;top:5px;left:6px;box-sizing:border-box;max-width:calc(100% - 8px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 5px;border:1px solid;border-radius:4px;line-height:1.2;';
           badge.style.backgroundColor = opts.fill;
-          badge.style.color = opts.textColor;
+          badge.style.color = textColor;
           badge.style.borderColor = opts.color;
           badge.style.fontFamily = opts.fontFamily;
           badge.style.fontSize = opts.fontSize + 'px';
