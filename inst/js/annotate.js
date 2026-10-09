@@ -360,9 +360,14 @@ function(root) {
           box.style.display = 'none';
           return;
         }
-        // Negative insets let badges overhang the mark within the clip region.
         const inset = v => Math.max(v, -1e5) + 'px';
-        box.style.clipPath = `inset(${inset(clip.top - top)} ${inset(left + w - clip.right)} ${inset(top + h - clip.bottom)} ${inset(clip.left - left)})`;
+        const clipped = entry.kind === 'redact' ? box : box.querySelector('.pz-mark-clip');
+        clipped.style.clipPath = `inset(${inset(clip.top - top)} ${inset(left + w - clip.right)} ${inset(top + h - clip.bottom)} ${inset(clip.left - left)})`;
+        const badge = box.querySelector('span');
+        if (badge) {
+          badge.style.left = Math.max(0, clip.left - left) + 'px';
+          badge.style.top = Math.max(0, clip.top - top) + 'px';
+        }
         if (entry.kind === 'circle' || (entry.kind === 'box' && entry.reveal === 'draw')) {
           const svg = box.querySelector('svg');
           const path = svg.firstChild;
@@ -602,26 +607,26 @@ function(root) {
       const nodes = elements.map((el, i) => {
         const box = document.createElement('div');
         box.className = 'pz-annotation';
-        box.style.cssText = 'position:fixed;box-sizing:border-box;pointer-events:none;';
+        box.style.cssText = 'position:fixed;box-sizing:border-box;pointer-events:none;z-index:0;';
         box.style.color = opts.color;
         box.style.borderColor = opts.color;
-        let shape = box;
+        const clip = document.createElement('div');
+        clip.className = 'pz-mark-clip';
+        clip.style.cssText = 'position:absolute;inset:0;';
+        let shape;
         if (opts.type === 'box') {
           if (opts.reveal === 'draw') {
             shape = stroke('rect', opts.strokeWidth);
             shape.classList.add('pz-shape');
-            box.appendChild(shape);
           } else {
             shape = document.createElement('div');
             shape.className = 'pz-shape';
             shape.style.cssText = `position:absolute;inset:0;box-sizing:border-box;border:${opts.strokeWidth}px solid;border-radius:5px;`;
             shape.style.borderColor = opts.color;
-            box.appendChild(shape);
           }
         } else if (opts.type === 'circle') {
           shape = stroke('ellipse', opts.strokeWidth);
           shape.classList.add('pz-shape');
-          box.appendChild(shape);
         } else {
           shape = document.createElement('div');
           shape.className = 'pz-shape';
@@ -631,8 +636,9 @@ function(root) {
           } else {
             shape.style.cssText += 'top:0;height:100%;background:currentColor;opacity:.35;mix-blend-mode:multiply;';
           }
-          box.appendChild(shape);
         }
+        clip.appendChild(shape);
+        box.appendChild(clip);
         if (opts.label !== null) {
           const badge = document.createElement('span');
           badge.textContent = opts.label === true ? String(i + 1) : String(opts.label);

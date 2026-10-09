@@ -74,13 +74,15 @@ Draws an annotation for each element matched by \code{target}. Annotations
 follow their elements as the page scrolls or changes layout, and appear
 in screenshots and recordings until cleared with \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}.
 Annotations belong to the current document; navigating away removes them.
-Marks and their badges are clipped by the target's overflow containers
-(axis-aligned clipping only, not a custom \code{overflow-clip-margin}). On sides
+Marks respect the target's overflow containers (axis-aligned clipping only,
+not a custom \code{overflow-clip-margin}). Their badges sit above the visible
+mark's top-left corner, outside those clips. Badges size to their labels,
+wrapping long labels at 20em rather than at the target's width. On sides
 where the target is not cut off, the clip leaves room for the mark's \code{pad}
-so its outline stays intact. A mark hides while its target is disconnected,
-not rendered, \code{visibility: hidden} with no visible descendants, or entirely
-clipped, even if its padding would reach into view. Zero-size targets on
-a clipping edge also stay hidden.
+so its outline stays intact. A mark and its badge hide while the target is
+disconnected, not rendered, \code{visibility: hidden} with no visible descendants,
+or entirely clipped, even if its padding would reach into view. Zero-size
+targets on a clipping edge also stay hidden.
 }
 \seealso{
 \code{\link[=pz_annotate_clear]{pz_annotate_clear()}}, \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}

@@ -2713,3 +2713,69 @@ test_that("a clipped recorded badge paints in retained frames and clears", {
   expect_length(annotation_state(page), 0)
   page |> pz_record_stop()
 })
+
+test_that("clipped badges retain reveal, reverse exit, and replacement semantics", {
+  page <- local_clipped_badge_page()
+  page |>
+    pz_annotate("#marked", reveal = "none", id = "boot") |>
+    pz_annotate_clear()
+  path <- withr::local_tempfile(fileext = ".png")
+  for (reveal in c("fade", "draw", "pop", "slide", "wipe")) {
+    pz_js(
+      page,
+      paste0(
+        "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+        "l.pz.draw([document.querySelector('#marked')], {id:'mark',type:'box',pad:[4,4,4,4],",
+        "label:'A',color:'red',strokeWidth:3,labelFill:'#ff00ff',labelTextColor:'white',fontFamily:'sans-serif',fontSize:14,",
+        "reveal:'",
+        reveal,
+        "',animate:true}); const a=l.querySelector('.pz-annotation').getAnimations({subtree:true})[0];",
+        "a.pause(); a.currentTime=",
+        if (reveal %in% c("draw", "wipe")) "0.5" else "1",
+        "*a.effect.getTiming().duration; })()"
+      )
+    )
+    page |> pz_screenshot(path)
+    expect_png_pixel(page, path, 102, 110, c(255, 0, 255))
+    pz_js(
+      page,
+      paste0(
+        "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+        "window.__exitNode=l.querySelector('.pz-annotation'); l.pz.clear({id:'mark',animate:true});",
+        "const a=window.__exitNode.getAnimations({subtree:true})[0]; a.pause(); a.currentTime=0; })()"
+      )
+    )
+    has_badge <- pz_js(page, "window.__exitNode.querySelector('span') !== null")
+    expect_identical(has_badge, !reveal %in% c("draw", "wipe"))
+    page |> pz_screenshot(path)
+    expect_png_pixel(
+      page,
+      path,
+      102,
+      110,
+      if (has_badge) c(255, 0, 255) else rep(255, 3)
+    )
+    pz_js(
+      page,
+      "window.__exitNode.getAnimations({subtree:true})[0].finish()"
+    )
+    pz_poll(
+      function() {
+        pz_js(
+          page,
+          "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
+        ) ==
+          0
+      },
+      timeout = 5,
+      loop = page$child_loop,
+      what = "the completed reverse animation to remove its mark and badge"
+    )
+  }
+  page |> pz_annotate("#marked", label = "Old", id = "mark")
+  page |> pz_annotate("#marked", label = "New", id = "mark")
+  expect_length(annotation_badge_rects(page), 1)
+  expect_identical(annotation_state(page)[[1]]$label, "New")
+  page |> pz_annotate_clear()
+  expect_length(annotation_state(page), 0)
+})
