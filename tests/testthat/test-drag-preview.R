@@ -1670,6 +1670,19 @@ test_that('a source that gains an iframe after the drop loses its preview silent
       "})"
     )
   )
+  original_settle <- drag_preview_settle
+  settled <- FALSE
+  local_mocked_bindings(drag_preview_settle = function(state) {
+    duration <- original_settle(state)
+    settled <<- TRUE
+    expect_equal(duration, 0)
+    expect_true(drag_preview_absent(page))
+    expect_true(pz_js(
+      page,
+      "document.querySelector('#preview-source iframe') instanceof HTMLIFrameElement"
+    ))
+    duration
+  })
   warnings <- list()
   withCallingHandlers(
     pz_act_drag(
@@ -1682,8 +1695,8 @@ test_that('a source that gains an iframe after the drop loses its preview silent
       invokeRestart('muffleWarning')
     }
   )
+  expect_true(settled)
   expect_length(warnings, 0)
-  expect_true(drag_preview_absent(page))
 })
 
 test_that('SVG use and iframe skip capture before copying outside the source subtree', {
