@@ -1444,8 +1444,12 @@ test_that("a recorded mouse drag streams held moves that follow the cursor", {
   between <- if (up - down > 1) types[(down + 1):(up - 1)] else character(0)
   expect_gt(sum(between == "mousemove"), 1)
 
-  # The box tracks the cursor through the carry, not just at arrival:
-  # mid-carry samples have the box near the overlay cursor.
+  # The box tracks the pointer through the carry, not just at arrival:
+  # mid-carry samples have the box at the dispatched point. The box
+  # follows the event coordinates exactly (grab at the box center), so
+  # the drift is sub-pixel; comparing against the overlay cursor instead
+  # would couple the assertion to the overlay's own glide schedule,
+  # which lags the dispatched stream under load.
   samples <- jsonlite::fromJSON(
     pz_js(page, "JSON.stringify(window.__carryLog)"),
     simplifyVector = FALSE
@@ -1455,10 +1459,19 @@ test_that("a recorded mouse drag streams held moves that follow the cursor", {
   box <- t(vapply(samples, function(s) unlist(s$box), numeric(2)))
   seg <- to - from
   along <- as.vector(sweep(pts, 2, from) %*% seg) / sum(seg^2)
-  mid <- along > 0.15 & along < 0.85 & cur[, 1] >= 0
+  mid <- along > 0.15 & along < 0.85
   expect_gte(sum(mid), 1)
-  drift <- sqrt((box[mid, 1] - cur[mid, 1])^2 + (box[mid, 2] - cur[mid, 2])^2)
-  expect_lt(median(drift), 80)
+  drift <- sqrt((box[mid, 1] - pts[mid, 1])^2 + (box[mid, 2] - pts[mid, 2])^2)
+  expect_lt(max(drift), 2)
+  # The overlay cursor itself travels the segment during the carry, on
+  # its own easing schedule. It shares the carry's total duration with
+  # the dispatched stream, so scheduling jitter can only trail it by so
+  # much: beyond half the segment the video would show the box detached
+  # from the cursor.
+  overlay_along <- as.vector(sweep(cur, 2, from) %*% seg) / sum(seg^2)
+  expect_true(any(cur[, 1] >= 0 & overlay_along > 0.15 & overlay_along < 0.85))
+  valid <- mid & cur[, 1] >= 0
+  expect_true(all(abs(overlay_along[valid] - along[valid]) < 0.5))
   pz_record_stop(page)
 })
 
