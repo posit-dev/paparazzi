@@ -94,7 +94,7 @@ drag_preview_optional <- function(state, fn) {
         cli::cli_warn(
           c(
             "The optional drag preview was disabled; the drag will continue.",
-            i = drag_preview_warning_reason(e),
+            i = drag_preview_warning_reason(e$reason, message),
             i = "Use {.code preview = FALSE} to turn off the preview.",
             i = "See the Drag preview section in {.help paparazzi::pz_act_drag}."
           ),
@@ -140,9 +140,9 @@ drag_preview_error_message <- function(message) {
   sub("(?s)\\n[[:space:]]*at .*", "", message, perl = TRUE)
 }
 
-drag_preview_warning_reason <- function(e) {
+drag_preview_warning_reason <- function(reason, message) {
   switch(
-    e$reason %||% "",
+    reason %||% "",
     stylesheets = paste(
       "The browser cannot read the page's stylesheets, often on {.code file://} pages.",
       "Open the page over HTTP: {.fn pz_open} serves local {.file .html} paths",
@@ -170,7 +170,9 @@ drag_preview_warning_reason <- function(e) {
       "Use a source without transforms, filters, clipping, overflowing content,",
       "shadow DOM, or generated content."
     ),
-    "{message}"
+    # The raw JS message is interpolated by cli_warn() in the caller, so
+    # literal braces must be doubled to survive interpolation.
+    gsub("([{}])", "\\1\\1", message)
   )
 }
 

@@ -1625,7 +1625,7 @@ test_that('a real missing local image disables capture without blocking the drag
   expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
   expect_match(
     conditionMessage(warnings[[1]]),
-    '[object Event]',
+    'Failed to load the img needed for the preview (error)',
     fixed = TRUE
   )
   expect_true(carried)
@@ -1644,6 +1644,46 @@ test_that('a real missing local image disables capture without blocking the drag
   )
   expect_false(page_cursor(page)$pressed)
   pz_record_stop(page)
+})
+
+test_that('a source that gains an iframe after the drop loses its preview silently', {
+  skip_if_no_av()
+  page <- local_task_page(width = 800, height = 900)
+  pz_stage(page, pause = 0)
+  drag_preview_task_marker(page)
+  pz_record_start(
+    page,
+    withr::local_tempfile(fileext = '.mp4'),
+    fps = 15,
+    hold = c(0, 0)
+  )
+  defer_record_stop(page)
+  # The iframe arrives in the drop handler, after the preview is prepared
+  # and before the post-drop settle re-checks the source.
+  pz_js(
+    page,
+    paste0(
+      "document.addEventListener('drop', () => {",
+      "document.querySelector('#preview-source')",
+      ".insertAdjacentHTML('beforeend',",
+      "'<iframe srcdoc=\"<body></body>\" style=\"width:10px;height:10px;border:0\"></iframe>');",
+      "})"
+    )
+  )
+  warnings <- list()
+  withCallingHandlers(
+    pz_act_drag(
+      page,
+      '#preview-source .task-drag-handle',
+      '#preview-target .task-drag-handle'
+    ),
+    warning = function(w) {
+      warnings <<- c(warnings, list(w))
+      invokeRestart('muffleWarning')
+    }
+  )
+  expect_length(warnings, 0)
+  expect_true(drag_preview_absent(page))
 })
 
 test_that('SVG use and iframe skip capture before copying outside the source subtree', {

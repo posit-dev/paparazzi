@@ -10,6 +10,15 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
     error.pzDragPreviewReason = reason;
     throw error;
   };
+  // Resource load failures reject with a DOM Event, not an Error; String()
+  // would render as '[object Event]'.
+  const describeError = error => {
+    if (error instanceof Event) {
+      const tag = error.target?.tagName?.toLowerCase() ?? 'resource';
+      return `Failed to load the ${tag} needed for the preview (${error.type})`;
+    }
+    return error?.message ?? String(error);
+  };
   const own = element.getAttribute('draggable');
   let inherited = element.closest('[draggable]');
   const finiteRect = r => r && [r.left, r.top, r.width, r.height].every(Number.isFinite) &&
@@ -160,7 +169,7 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
         return {value:await controller[method](arg)};
       } catch (error) {
         return {failure:{reason:error?.pzDragPreviewReason ?? null,
-          message:error?.message ?? String(error)}};
+          message:describeError(error)}};
       }
     },
     async prepare() {
@@ -200,7 +209,17 @@ function(root, htmlToImage, element, point, annotationsAbsent) {
     },
     settle() {
       if (!live() || !controller.image?.isConnected) return 0;
-      const box = bounds(controller.source);
+      let box;
+      try {
+        box = bounds(controller.source);
+      } catch (error) {
+        // A source that gains an iframe or SVG <use> between the drop and
+        // the settle loses its preview silently, like other unsupported
+        // post-drop geometry.
+        if (error?.pzDragPreviewReason !== 'references') throw error;
+        controller.dispose();
+        return 0;
+      }
       if (!box) { controller.dispose(); return 0; }
       safety(box);
       if (Math.abs(box.width - captured.width) > 0.5 || Math.abs(box.height - captured.height) > 0.5) {
