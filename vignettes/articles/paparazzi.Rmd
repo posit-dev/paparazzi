@@ -376,7 +376,7 @@ test_that("a new task goes to the top of the list", {
 
 We've now built a demo video from a script: we drove a page with actions, kept the script in step with expectations, and framed, staged, and annotated the recording. From here:
 
-- The [three-part app walkthrough](walkthrough.html) records a series of short MP4 videos with camera moves, a callout, captions, and redacted task titles.
+- The [in-depth app walkthrough](demo-video.html) puts the recording features together into a longer demo video, with camera moves, captions, callouts, and redactions working together across several steps.
 - The [annotations article](annotations.html) shows every kind of annotation, including marks, callouts, spotlights, redactions, and captions, and how to style, frame, and clear them.
 - The [Shiny apps article](shiny.html) shows how paparazzi starts Shiny apps, waits for them, and sets their inputs, and how to test them.
 - The [function reference](../reference/index.html) lists every function by task, with an example for each.

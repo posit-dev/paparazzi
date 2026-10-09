@@ -13,7 +13,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 Annotations draw attention to parts of a page: an outline around a field, a callout explaining a button, a cover over something private. They sit on an overlay above the page and follow their elements as the page scrolls or changes layout, and they show up in screenshots and recordings until you clear them. They belong to the current document, so navigating away removes them.
 
-This article tours every kind of annotation on the task tracker bundled with paparazzi. The [Get started article](paparazzi.html) covers selectors and scopes; the [walkthrough](walkthrough.html) uses annotations in longer recordings. You'll need a Chromium-based browser. The GIF recordings at the end need gifski, and the keystroke callouts in a GIF also need av.
+This article tours every kind of annotation on the task tracker bundled with paparazzi. The [Get started article](paparazzi.html) covers selectors and scopes; the [in-depth app walkthrough](demo-video.html) uses annotations in a longer recording. You'll need a Chromium-based browser. The GIF recordings at the end need gifski, and the keystroke callouts in a GIF also need av.
 
 ```{r setup}
 library(paparazzi)
@@ -365,4 +365,4 @@ Finally, close the page to shut down the browser:
 pz_close(page)
 ```
 
-For annotations in a longer narrative recording, see the [three-part app walkthrough](walkthrough.html); the [function reference](../reference/index.html#annotations) lists every annotation function with its arguments.
+For annotations in a longer narrative recording, see the [in-depth app walkthrough](demo-video.html); the [function reference](../reference/index.html#annotations) lists every annotation function with its arguments.

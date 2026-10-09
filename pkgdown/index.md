@@ -351,9 +351,10 @@ what you want to check:
 
 - [Get started](articles/paparazzi.html) builds a demo video one step at
   a time, from opening a page to framing the finished recording.
-- [Make a three-part app walkthrough](articles/walkthrough.html) records
-  a series of short videos with camera moves, callouts, captions, and
-  redactions.
+- [Record an in-depth app walkthrough](articles/demo-video.html) puts
+  the recording features together into a longer demo video, with camera
+  moves, captions, callouts, and redactions working together across
+  several steps.
 - [Annotate pages](articles/annotations.html) tours every kind of mark,
   callout, spotlight, redaction, and caption.
 - [Shiny apps](articles/shiny.html) covers starting apps, waiting for
