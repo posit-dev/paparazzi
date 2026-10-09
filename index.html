@@ -101,12 +101,26 @@
 <p>paparazzi controls Chrome (or another Chromium-based browser) through <a href="https://rstudio.github.io/chromote/" class="external-link">chromote</a>, so you’ll need one installed. If chromote can’t find it, see <code><a href="https://rstudio.github.io/chromote/reference/find_chrome.html" class="external-link">?chromote::find_chrome</a></code>.</p>
 <p>paparazzi routes each recording to the encoder that suits it best: MP4 and WebM videos go to the <a href="https://docs.ropensci.org/av/" class="external-link">av</a> package, GIFs to <a href="https://r-rust.github.io/gifski/" class="external-link">gifski</a>. Both are suggested dependencies, and paparazzi checks for them only when a recording needs them. Simple GIFs need only gifski, but two features call in extra packages: cropping a GIF to a framed region of the page needs <a href="https://cran.r-project.org/package=png" class="external-link">png</a>, and camera movement or burned-in captions need av to composite the frames.</p>
 </div>
+<div class="section level3">
+<h3 id="agent-quickstart">Agent quickstart<a class="anchor" aria-label="anchor" href="#agent-quickstart"></a>
+</h3>
+<p>paparazzi includes an agent skill that teaches coding agents how to write paparazzi scripts. You can give your agent that skill in one of three ways:</p>
+<ul>
+<li>
+<p><strong>Install the skill</strong> into your project with <a href="https://skills.sh" class="external-link">skills</a> or the <a href="https://posit-dev.github.io/btw/reference/install_btw_cli.html" class="external-link">btw CLI</a>:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">npx</span> skills add posit-dev/paparazzi</span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ex">btw</span> skills install posit-dev/paparazzi</span></code></pre></div>
+</li>
+<li><p><strong>Ask your agent to read <code><a href="articles/agents.html">vignette("agents", package = "paparazzi")</a></code>.</strong> <a href="https://posit-dev.github.io/btw/" class="external-link">btw</a> is the easy way to give your agent R documentation, through an <a href="https://posit-dev.github.io/btw/reference/mcp.html" class="external-link">MCP server</a> or the <a href="https://posit-dev.github.io/btw/reference/install_btw_cli.html" class="external-link">btw CLI</a> (<code>btw docs vignette paparazzi -n agents</code>).</p></li>
+<li><p><strong>Ask your agent to read <a href="https://posit-dev.github.io/paparazzi/articles/agents.md" class="uri">https://posit-dev.github.io/paparazzi/articles/agents.md</a>.</strong> This is the same skill, published as a Markdown page on the paparazzi website.</p></li>
+</ul>
+</div>
 </div>
 <div class="section level2">
 <h2 id="the-code-that-made-the-video">The code that made the video<a class="anchor" aria-label="anchor" href="#the-code-that-made-the-video"></a>
 </h2>
-<p>Here’s the whole script for the video at the top of this page, running on a small task-tracker page that ships with paparazzi:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<p>Here’s the whole script for the video at the top of this page. It records a small task-tracker page that ships with paparazzi:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/paparazzi/">paparazzi</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pz_open.html">pz_open</a></span><span class="op">(</span></span>
@@ -151,16 +165,16 @@
 <span>  <span class="fu"><a href="reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="reference/pz_open.html">pz_open()</a></code> opens the page at the size you want to record. At the top of the pipeline, <code><a href="reference/pz_stage.html">pz_stage()</a></code> sets how the recording looks: the cursor enters from the bottom, and each step pauses for a moment so viewers can follow. <code><a href="reference/pz_stage_annotate.html">pz_stage_annotate()</a></code> puts captions at the top.</p>
-<p><code><a href="reference/pz_record_start.html">pz_record_start()</a></code> starts the recording, and <code><a href="reference/pz_close.html">pz_close()</a></code> stops it and writes the file. The <code>frame</code> is the part of the page the video shows: the task card, from its heading to the bottom of the list, padded and widened to 16:9. <code>format</code> and <code>scale</code> make the result an 800-pixel-wide GIF, small enough for a README.</p>
+<p><code><a href="reference/pz_open.html">pz_open()</a></code> opens the page at the size you want to record. At the top of the pipeline, <code><a href="reference/pz_stage.html">pz_stage()</a></code> sets defaults for the recording: the cursor enters from the bottom, and paparazzi pauses for a moment after each action so viewers can follow. <code><a href="reference/pz_stage_annotate.html">pz_stage_annotate()</a></code> tells paparazzi to place captions at the top.</p>
+<p><code><a href="reference/pz_record_start.html">pz_record_start()</a></code> starts the recording, and <code><a href="reference/pz_close.html">pz_close()</a></code> stops it and writes the file. The <code>frame</code> is the part of the page the video shows: the task card, from its heading to the bottom of the list, padded and widened to 16:9. With <code>format</code> and <code>scale</code>, you ask for an 800-pixel-wide GIF, small enough for a README.</p>
 <p>Between those two calls, each line is one step, and the steps fall into three groups:</p>
 <ul>
 <li>
 <p><strong>Acting on the page.</strong> <code><a href="reference/pz_act_type.html">pz_act_type()</a></code> clicks the title field and types into it, <code><a href="reference/pz_act_click.html">pz_act_click()</a></code> presses a button, and <code><a href="reference/pz_act_drag.html">pz_act_drag()</a></code> moves the new task to a new place in the list.</p>
-<p>Several steps work with the same two tasks, so before the pipeline, you describe them once with <code><a href="reference/pz_loc.html">pz_loc()</a></code>: <code>task_release</code> is the task you’re about to add, and <code>task_dentist</code> is the one you’ll drag it below. paparazzi doesn’t look for a <code><a href="reference/pz_loc.html">pz_loc()</a></code> element until a step uses it, and it looks again each time, so you can describe the new task before it exists. Later, <code><a href="reference/pz_find.html">pz_find()</a></code> narrows the next steps to the new task, so <code>".task-done"</code> means that task’s Done button.</p>
+<p>Several steps use the same two tasks, so before the pipeline, we describe them once with <code><a href="reference/pz_loc.html">pz_loc()</a></code>: <code>task_release</code> is the task we’re about to add, and <code>task_dentist</code> is the one we’ll drag it onto. paparazzi doesn’t look for a <code><a href="reference/pz_loc.html">pz_loc()</a></code> element until a step uses it, and it looks again each time, so you can describe an element before it exists, like the new task here. Later, <code><a href="reference/pz_find.html">pz_find()</a></code> scopes the next steps to the new task, so paparazzi looks for <code>".task-done"</code> only inside it and clicks that task’s Done button.</p>
 </li>
-<li><p><strong>Directing the recording.</strong> <code><a href="reference/pz_camera.html">pz_camera()</a></code> zooms in on the form and <code><a href="reference/pz_camera_reset.html">pz_camera_reset()</a></code> pulls back out. <code><a href="reference/pz_annotate.html">pz_annotate()</a></code> outlines the new task, <code><a href="reference/pz_annotate_clear.html">pz_annotate_clear()</a></code> removes the outline, and <code><a href="reference/pz_annotate_caption.html">pz_annotate_caption()</a></code> changes the caption. <code><a href="reference/pz_record_hold.html">pz_record_hold()</a></code> gives viewers a moment to read, and <code><a href="reference/pz_cursor_leave.html">pz_cursor_leave()</a></code> moves the cursor out of the shot at the end.</p></li>
-<li><p><strong>Waiting for the page.</strong> <code><a href="reference/pz_expect_visible.html">pz_expect_visible()</a></code> waits for the page to show the new task before <code><a href="reference/pz_annotate.html">pz_annotate()</a></code> outlines it, and <code><a href="reference/pz_expect_class.html">pz_expect_class()</a></code> waits for the page to mark the task done. Waits like these keep your scripted demo in step with the real page. paparazzi keeps recording while it waits, so if a step takes longer than you’d like viewers to watch, you can cut it out with <code><a href="reference/pz_record_pause.html">pz_record_pause()</a></code> and <code><a href="reference/pz_record_pause.html">pz_record_resume()</a></code>.</p></li>
+<li><p><strong>Directing the recording.</strong> <code><a href="reference/pz_camera.html">pz_camera()</a></code> zooms in on the form and <code><a href="reference/pz_camera_reset.html">pz_camera_reset()</a></code> pulls back out. <code><a href="reference/pz_annotate.html">pz_annotate()</a></code> outlines the new task, <code><a href="reference/pz_annotate_clear.html">pz_annotate_clear()</a></code> removes the outline, and <code><a href="reference/pz_annotate_caption.html">pz_annotate_caption()</a></code> changes the caption. <code><a href="reference/pz_record_hold.html">pz_record_hold()</a></code> holds the frame so viewers have a moment to read, and <code><a href="reference/pz_cursor_leave.html">pz_cursor_leave()</a></code> moves the cursor out of the shot at the end.</p></li>
+<li><p><strong>Waiting for the page.</strong> <code><a href="reference/pz_expect_visible.html">pz_expect_visible()</a></code> waits for the page to show the new task before <code><a href="reference/pz_annotate.html">pz_annotate()</a></code> outlines it, and <code><a href="reference/pz_expect_class.html">pz_expect_class()</a></code> waits for the page to mark the task done. Because paparazzi waits for the page instead of guessing at timing, your scripted demo stays in step with the real page. paparazzi keeps recording while it waits, so if a step takes longer than you’d like viewers to watch, you can cut it out with <code><a href="reference/pz_record_pause.html">pz_record_pause()</a></code> and <code><a href="reference/pz_record_pause.html">pz_record_resume()</a></code>.</p></li>
 </ul>
 </div>
 <div class="section level2">
@@ -195,7 +209,7 @@
 <p>You can use the same annotations, framing, and devices in screenshots. Here’s the task tracker on a phone in dark mode, with a callout:</p>
 <table class="table table-borderless"><tr>
 <td valign="top" style="width: 100%; max-width: 0;">
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">phone</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pz_open.html">pz_open</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span>,</span>
 <span>  width <span class="op">=</span> <span class="fl">390</span>,</span>
@@ -226,7 +240,7 @@
 <h3 id="shiny-apps">Shiny apps<a class="anchor" aria-label="anchor" href="#shiny-apps"></a>
 </h3>
 <p>Give <code><a href="reference/pz_open.html">pz_open()</a></code> the path to a Shiny app, and paparazzi runs the app in a background R process, opens it, and waits until it’s ready. When you close the page, paparazzi stops the app. In between, you use the same functions you would on any other page:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">app</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pz_open.html">pz_open</a></span><span class="op">(</span><span class="fu"><a href="reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks-app"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">app</span> <span class="op">|&gt;</span></span>
@@ -245,7 +259,7 @@
 <p>Browser tests are tricky because the page keeps changing as you use it. When you click a button, the page might fetch data, re-render a list, or start an animation, and you rarely know how long that will take. If your test checks too early, it fails for no reason; if it sleeps for a fixed time, it’s slow and probably still flaky.</p>
 <p>paparazzi handles the waiting for you. You state what <em>should</em> happen, and paparazzi waits until it does or stops if it doesn’t. Before <code><a href="reference/pz_act_click.html">pz_act_click()</a></code> clicks on an element, paparazzi waits for that element to be ready. An expectation like <code><a href="reference/pz_expect_text.html">pz_expect_text()</a></code> retries until the page shows what you expect, or times out with an error that says what it last saw.</p>
 <p>paparazzi also works inside testthat, with the same syntax. testthat counts each paparazzi expectation as a test expectation, and <code><a href="reference/pz_with_page.html">pz_local_page()</a></code> closes the page, and stops its app, when the test ends:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">test_that</span><span class="op">(</span><span class="st">"adding a task updates the summary"</span>, <span class="op">{</span></span>
 <span>  <span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pz_with_page.html">pz_local_page</a></span><span class="op">(</span><span class="fu"><a href="reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks-app"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>

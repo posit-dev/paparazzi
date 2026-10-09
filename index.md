@@ -54,10 +54,41 @@ packages: cropping a GIF to a framed region of the page needs
 [png](https://cran.r-project.org/package=png), and camera movement or
 burned-in captions need av to composite the frames.
 
+### Agent quickstart
+
+paparazzi includes an agent skill that teaches coding agents how to
+write paparazzi scripts. You can give your agent that skill in one of
+three ways:
+
+- **Install the skill** into your project with
+  [skills](https://skills.sh) or the [btw
+  CLI](https://posit-dev.github.io/btw/reference/install_btw_cli.html):
+
+  ``` bash
+  npx skills add posit-dev/paparazzi
+  ```
+
+  ``` bash
+  btw skills install posit-dev/paparazzi
+  ```
+
+- **Ask your agent to read
+  [`vignette("agents", package = "paparazzi")`](https://posit-dev.github.io/paparazzi/articles/agents.md).**
+  [btw](https://posit-dev.github.io/btw/) is the easy way to give your
+  agent R documentation, through an [MCP
+  server](https://posit-dev.github.io/btw/reference/mcp.html) or the
+  [btw
+  CLI](https://posit-dev.github.io/btw/reference/install_btw_cli.html)
+  (`btw docs vignette paparazzi -n agents`).
+
+- **Ask your agent to read
+  <https://posit-dev.github.io/paparazzi/articles/agents.md>.** This is
+  the same skill, published as a Markdown page on the paparazzi website.
+
 ## The code that made the video
 
-Here’s the whole script for the video at the top of this page, running
-on a small task-tracker page that ships with paparazzi:
+Here’s the whole script for the video at the top of this page. It
+records a small task-tracker page that ships with paparazzi:
 
 ``` r
 
@@ -111,17 +142,17 @@ pz_close(page)
 opens the page at the size you want to record. At the top of the
 pipeline,
 [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
-sets how the recording looks: the cursor enters from the bottom, and
-each step pauses for a moment so viewers can follow.
+sets defaults for the recording: the cursor enters from the bottom, and
+paparazzi pauses for a moment after each action so viewers can follow.
 [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md)
-puts captions at the top.
+tells paparazzi to place captions at the top.
 
 [`pz_record_start()`](https://posit-dev.github.io/paparazzi/reference/pz_record_start.md)
 starts the recording, and
 [`pz_close()`](https://posit-dev.github.io/paparazzi/reference/pz_close.md)
 stops it and writes the file. The `frame` is the part of the page the
 video shows: the task card, from its heading to the bottom of the list,
-padded and widened to 16:9. `format` and `scale` make the result an
+padded and widened to 16:9. With `format` and `scale`, you ask for an
 800-pixel-wide GIF, small enough for a README.
 
 Between those two calls, each line is one step, and the steps fall into
@@ -135,17 +166,17 @@ three groups:
   [`pz_act_drag()`](https://posit-dev.github.io/paparazzi/reference/pz_act_drag.md)
   moves the new task to a new place in the list.
 
-  Several steps work with the same two tasks, so before the pipeline,
-  you describe them once with
+  Several steps use the same two tasks, so before the pipeline, we
+  describe them once with
   [`pz_loc()`](https://posit-dev.github.io/paparazzi/reference/pz_loc.md):
-  `task_release` is the task you’re about to add, and `task_dentist` is
-  the one you’ll drag it below. paparazzi doesn’t look for a
+  `task_release` is the task we’re about to add, and `task_dentist` is
+  the one we’ll drag it onto. paparazzi doesn’t look for a
   [`pz_loc()`](https://posit-dev.github.io/paparazzi/reference/pz_loc.md)
   element until a step uses it, and it looks again each time, so you can
-  describe the new task before it exists. Later,
+  describe an element before it exists, like the new task here. Later,
   [`pz_find()`](https://posit-dev.github.io/paparazzi/reference/pz_find.md)
-  narrows the next steps to the new task, so `".task-done"` means that
-  task’s Done button.
+  scopes the next steps to the new task, so paparazzi looks for
+  `".task-done"` only inside it and clicks that task’s Done button.
 
 - **Directing the recording.**
   [`pz_camera()`](https://posit-dev.github.io/paparazzi/reference/pz_camera.md)
@@ -159,7 +190,7 @@ three groups:
   [`pz_annotate_caption()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_caption.md)
   changes the caption.
   [`pz_record_hold()`](https://posit-dev.github.io/paparazzi/reference/pz_record_hold.md)
-  gives viewers a moment to read, and
+  holds the frame so viewers have a moment to read, and
   [`pz_cursor_leave()`](https://posit-dev.github.io/paparazzi/reference/pz_cursor_leave.md)
   moves the cursor out of the shot at the end.
 
@@ -169,10 +200,11 @@ three groups:
   [`pz_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate.md)
   outlines it, and
   [`pz_expect_class()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_class.md)
-  waits for the page to mark the task done. Waits like these keep your
-  scripted demo in step with the real page. paparazzi keeps recording
-  while it waits, so if a step takes longer than you’d like viewers to
-  watch, you can cut it out with
+  waits for the page to mark the task done. Because paparazzi waits for
+  the page instead of guessing at timing, your scripted demo stays in
+  step with the real page. paparazzi keeps recording while it waits, so
+  if a step takes longer than you’d like viewers to watch, you can cut
+  it out with
   [`pz_record_pause()`](https://posit-dev.github.io/paparazzi/reference/pz_record_pause.md)
   and
   [`pz_record_resume()`](https://posit-dev.github.io/paparazzi/reference/pz_record_pause.md).
