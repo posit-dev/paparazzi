@@ -105,7 +105,11 @@ page |>
     text_color = "black"
   ) |>
   pz_screenshot(
-    frame = pz_frame(list("h1", ".task-list"), pad = 24, target_box = "annotated")
+    frame = pz_frame(
+      list("h1", "#add-task", ".task-list"),
+      pad = 24,
+      target_box = "annotated"
+    )
   )
 
 page |>
@@ -123,21 +127,20 @@ page |>
 
 Before an action clicks or types, paparazzi waits for its element to be ready: on the page, not hidden, and not covered by anything else. The element doesn't need to be on screen yet: if it's scrolled out of view, paparazzi scrolls to it, then clicks or types.
 
-Let's check that the new task arrived. Some elements are easy to target: the page has only one `#task-title` input and one `#add-task` button. But it has a `.task-title` for every task, so we need a more expressive way to say which one we want. `pz_loc()` describes an element more precisely than a selector alone, and it lets us define how to find an element once and reuse it in several calls. New tasks go to the top of the list, so we want the first `.task-title`:
+Let's check that the new task arrived. Some elements are easy to target: the page has only one `#task-title` input and one `#add-task` button. But it has a `.task-title` for every task, so we need a more expressive way to say which one we want.
+
+`pz_loc()` describes an element more precisely than a selector alone, and it lets us define how to find an element once and reuse it in several calls. New tasks go to the top of the list, so we'll get the first `.task-title` with `which = "first"` and then use `pz_get_text()` to read that element's text.
 
 ```{r}
 first_task_title <- pz_loc(".task-title", which = "first")
-```
-
-`pz_get_text()` reads that element's text:
-
-```{r}
 pz_get_text(page, target = first_task_title)
 ```
 
-That's not what we added. We added a task to repot the fern, but `pz_get_text()` found the _old_ first task, "Renew passport". That's because our code runs quickly, but it takes a little bit of time for the app to actually save our new task: the page shows "Saving…" for a moment before the new task appears.
+That's not what we added! We added a task to repot the fern, but `pz_get_text()` found the _old_ first task, "Renew passport". That's because it takes a little bit of time for the app to actually save our new task (if you're using the app you'd see the page show "Saving..." for a moment before the new task appears), but our `pz_get_text()` runs immediately after the last action. When it does, a `.task-title` element exists on the page -- just not the one we want.
 
-To wait for the new task, we need an **expectation**. Actions wait for the element they act on, but here we need to wait for the app to add a new element to the page before we move on. Expectation functions start with `pz_expect_`. Each one checks the page and, if the check fails, tries again until it passes or times out. This time, the expectation waits for the page to finish saving before we read the first task again:
+To wait for the new task, we need an **expectation**. Actions wait for the element they act on, but here we need to wait for the app to add a new element to the page before we move on. Expectation functions start with `pz_expect_`. Each one checks the page and, if the check fails, tries again until it passes or times out.
+
+Let's try again, using `pz_expect_text()` to wait for the repotting task to show up in the app as the first task before we read it.
 
 ```{r}
 page |>
@@ -157,7 +160,7 @@ page |>
   pz_expect_text("Walk the dog", target = first_task_title, timeout = 1)
 ```
 
-paparazzi calls a `pz_loc()` description a **spec**. A spec doesn't find anything when you create it: paparazzi looks up the elements each time you use it, so one spec keeps working as the page changes. That's how `first_task_title` found "Renew passport" the first time and "Repot the fern" once the new task arrived. We'll describe the new task with a spec, too, and use it in the video:
+paparazzi calls a `pz_loc()` description a **location spec**. A spec doesn't find anything when you create it: paparazzi looks up the elements each time you use it, so one spec keeps working as the page changes. That's how `first_task_title` found "Renew passport" the first time and "Repot the fern" once the new task arrived. We'll describe the new task with a spec, too, and use it in the video:
 
 ```{r}
 fern <- pz_loc(".task", has_text = "Repot the fern")
@@ -324,10 +327,19 @@ page |>
 
 When an action in your script can't find its element, or finds the wrong one, you can use `pz_inspect()` to see what paparazzi sees. It prints the page summary and the matches for a target, which paparazzi looks up from the current scope. Because it returns the context it was given, you can drop it into the middle of a chain:
 
-```{r}
+```{r, eval = FALSE}
 page |>
   pz_find(".task-list") |>
-  pz_inspect(".task-done", show = "none")
+  pz_inspect(".task-done", show = "screenshot")
+```
+
+```{r, echo = FALSE, message = FALSE, fig.alt = "The task list with a dashed outline around the list and numbered solid outlines around the visible Done buttons."}
+inspect_path <- knitr::fig_path("png")
+dir.create(dirname(inspect_path), recursive = TRUE, showWarnings = FALSE)
+page |>
+  pz_find(".task-list") |>
+  pz_inspect(".task-done", show = "screenshot", path = inspect_path)
+knitr::include_graphics(inspect_path)
 ```
 
 `.task-done` matches one button for each task. The page hides the Done buttons of finished tasks, so `pz_inspect()` lists them as `hidden`. An action targeting one of them would wait for it to become visible, then time out. With `show = "screenshot"`, `pz_inspect()` also saves a screenshot with the matches outlined and numbered.
