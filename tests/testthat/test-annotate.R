@@ -321,6 +321,101 @@ test_that("a recorded fade settles into captured frames and clears in reverse", 
   expect_true(file.exists(path))
 })
 
+test_that("a final clear retains the unannotated frame before the end hold", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  pz_js(page, "document.getElementById('box').style.background = '#0000ff'")
+  path <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(
+    page,
+    path,
+    method = "screencast",
+    fps = 20,
+    hold = c(0, 0.5),
+    keep_frames = TRUE
+  )
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  defer_record_stop(page)
+  pz_poll(
+    function() {
+      if (!length(rec$files)) {
+        return(FALSE)
+      }
+      marker <- png::readPNG(tail(rec$files, 1))[331, 251, 1:3]
+      all(marker == c(0, 0, 1))
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the unannotated reference frame with the blue box"
+  )
+  reference <- png::readPNG(tail(rec$files, 1))
+  pz_annotate(page, "#box", type = "box", reveal = "fade")
+  pz_annotate(page, "#fixed", type = "circle", reveal = "wipe")
+  pz_annotate_callout(page, "Then press Add", target = "#box", reveal = "draw")
+  pz_record_hold(page, 1)
+  pz_poll(
+    function() max(abs(png::readPNG(tail(rec$files, 1)) - reference)) > 0.5,
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a retained frame containing the annotations"
+  )
+  expect_gt(max(abs(png::readPNG(tail(rec$files, 1)) - reference)), 0.5)
+
+  # Extend the browser's actual exits without changing the reported durations.
+  # Completion must not depend on the nominal animation budget.
+  pz_js(
+    page,
+    paste0(
+      "const originalAnimate = Element.prototype.animate;",
+      "Element.prototype.animate = function(frames, options) {",
+      "return originalAnimate.call(this, frames, {...options, duration:options.duration * 4}); };"
+    )
+  )
+  pz_annotate_clear(page)
+  # Polling after clear would mask its obligation to retain the completed state.
+  cleared <- tail(rec$files, 1)
+  pz_record_stop(page)
+  expect_equal(max(abs(png::readPNG(cleared) - reference)), 0)
+  expect_equal(max(abs(png::readPNG(tail(rec$files, 1)) - reference)), 0)
+})
+
+test_that("a final reveal is complete in the retained poll frame", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- annotation_page()
+  path <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(
+    page,
+    path,
+    method = "poll",
+    fps = 20,
+    hold = c(0, 0.5),
+    keep_frames = TRUE
+  )
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  defer_record_stop(page)
+  pz_js(
+    page,
+    paste0(
+      "const originalAnimate = Element.prototype.animate;",
+      "Element.prototype.animate = function(frames, options) {",
+      "return originalAnimate.call(this, frames, {...options, duration:options.duration * 4}); };"
+    )
+  )
+  pz_annotate(page, "#box", reveal = "fade", color = "#ff0000")
+  dpr <- page_dpr(page)
+  green_at_border <- function(file) {
+    png::readPNG(file)[round(311 * dpr) + 1, round(225 * dpr) + 1, 2]
+  }
+  revealed <- tail(rec$files, 1)
+  pz_record_stop(page)
+  expect_lt(green_at_border(revealed), 0.1)
+  expect_lt(green_at_border(tail(rec$files, 1)), 0.1)
+})
+
 test_that("recorded clear removes all nodes after mixed exit animations", {
   skip_if_no_av()
   page <- annotation_page()

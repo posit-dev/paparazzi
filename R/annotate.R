@@ -181,7 +181,7 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
     auto_unbox = TRUE,
     null = "null"
   )
-  duration <- pz_js(
+  pz_js(
     ctx,
     paste0(
       "(() => { return ",
@@ -194,7 +194,7 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
   if (is.null(id) || identical(id, "caption")) {
     caption_clear(ctx$page)
   }
-  annotate_pump(ctx, duration)
+  annotate_settle(ctx)
   ctx_return(ctx)
 }
 
@@ -272,14 +272,50 @@ annotate_call <- function(ctx, els, fn, options, what) {
     what
   )
   cdp_check_exception(res, what)
-  annotate_pump(ctx, res$result$value)
+  annotate_settle(ctx)
 }
 
-annotate_pump <- function(ctx, duration) {
-  if (annotate_recording(ctx$page) && is.numeric(duration) && duration > 0) {
-    pump_loop(ctx$page$child_loop, duration / 1000 + 0.05)
+annotate_settle <- function(ctx) {
+  page <- ctx$page
+  if (!annotate_recording(page)) {
+    return(invisible(NULL))
   }
-  invisible(duration)
+  pz_poll(
+    function() {
+      pz_js(
+        ctx,
+        paste0(
+          "document.getElementById('",
+          OVERLAY_HOST_ID,
+          "')?.shadowRoot?.querySelector('.pz-annotations')",
+          "?.getAnimations({subtree:true}).length ?? 0"
+        )
+      ) ==
+        0
+    },
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "the annotation animations to finish"
+  )
+
+  # Late screencast frames can still show an unfinished animation. Retain a
+  # screenshot requested after the finish callbacks have applied their cleanup.
+  rec <- page_recorder(page)
+  scale <- if (identical(rec$method, "screencast")) {
+    1 / pz_js(ctx, "window.devicePixelRatio")
+  } else {
+    1
+  }
+  record_wait_pending(rec, page, "the in-flight annotation frame capture")
+  record_capture(rec, page, rec_vt(rec), scale = scale)
+  pending <- rec$pending
+  pz_poll(
+    function() pending$file %in% rec$files,
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "a retained frame of the completed annotations"
+  )
+  invisible(NULL)
 }
 
 annotate_recording <- function(page) {
