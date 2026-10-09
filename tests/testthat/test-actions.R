@@ -1408,15 +1408,17 @@ test_that("a recorded mouse drag streams held moves that follow the cursor", {
   page |> pz_cursor_move("#dragbox", duration = 0)
   from <- element_center(page, "#dragbox")
   to <- element_center(page, "#dropzone")
-  # Page-side rAF log of the box and the overlay cursor's rendered
-  # position, read after the drag so sampling can't disturb the carry.
+  # Page-side log of each held move: the dispatched point, the box the
+  # page just moved (this listener is registered after the fixture's),
+  # and the overlay cursor's rendered position, read after the drag.
+  # Sampling per dispatched move pins samples to the carry steps; a
+  # frame-driven sampler can skip the mid-carry window under load.
   pz_js(
     page,
     "(() => {
       window.__carryLog = [];
-      window.__carryDone = false;
-      document.addEventListener('mouseup', () => { window.__carryDone = true; }, true);
-      (function sample() {
+      document.addEventListener('mousemove', (e) => {
+        if (e.buttons !== 1) return;
         const glide = document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-glide');
         let cursor = [-1, -1];
         if (glide) {
@@ -1424,9 +1426,12 @@ test_that("a recorded mouse drag streams held moves that follow the cursor", {
           cursor = [m.e, m.f];
         }
         const r = document.getElementById('dragbox').getBoundingClientRect();
-        window.__carryLog.push({ cursor: cursor, box: [r.x + r.width / 2, r.y + r.height / 2] });
-        if (!window.__carryDone) requestAnimationFrame(sample);
-      })();
+        window.__carryLog.push({
+          point: [e.clientX, e.clientY],
+          cursor: cursor,
+          box: [r.x + r.width / 2, r.y + r.height / 2]
+        });
+      });
       return true;
     })()"
   )
@@ -1440,15 +1445,16 @@ test_that("a recorded mouse drag streams held moves that follow the cursor", {
   expect_gt(sum(between == "mousemove"), 1)
 
   # The box tracks the cursor through the carry, not just at arrival:
-  # samples taken while the cursor is mid-path have the box near it.
+  # mid-carry samples have the box near the overlay cursor.
   samples <- jsonlite::fromJSON(
     pz_js(page, "JSON.stringify(window.__carryLog)"),
     simplifyVector = FALSE
   )
+  pts <- t(vapply(samples, function(s) unlist(s$point), numeric(2)))
   cur <- t(vapply(samples, function(s) unlist(s$cursor), numeric(2)))
   box <- t(vapply(samples, function(s) unlist(s$box), numeric(2)))
   seg <- to - from
-  along <- as.vector(sweep(cur, 2, from) %*% seg) / sum(seg^2)
+  along <- as.vector(sweep(pts, 2, from) %*% seg) / sum(seg^2)
   mid <- along > 0.15 & along < 0.85 & cur[, 1] >= 0
   expect_gte(sum(mid), 1)
   drift <- sqrt((box[mid, 1] - cur[mid, 1])^2 + (box[mid, 2] - cur[mid, 2])^2)
