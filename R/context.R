@@ -229,14 +229,24 @@ knit_print.PaparazziContext <- function(x, ...) {
   if (ctx_recording(x)) {
     return(knitr::knit_print(pz_record_stop(x), ...))
   }
-  knitr::normal_print(x)
-  if (!is.null(image)) {
-    return(knitr::include_graphics(
-      image,
-      dpi = attr(image, "dpi")
-    ))
+  # A pending image belongs to the chunk that captured it. Anywhere else it
+  # is stale (the inspect result was assigned, or a getter kept it), so drop
+  # it and its unreferenced figure file.
+  if (
+    !is.null(image) &&
+      !identical(attr(image, "chunk"), knitr::opts_current$get("label"))
+  ) {
+    unlink(image)
+    image <- NULL
   }
-  invisible(x)
+  # pz_inspect() already printed the summary with its match details; only
+  # print when there is no pending image to show.
+  if (is.null(image)) {
+    knitr::normal_print(x)
+    invisible(x)
+  } else {
+    knitr::include_graphics(image, dpi = attr(image, "dpi"))
+  }
 }
 
 ctx_derive <- function(ctx, scope) {

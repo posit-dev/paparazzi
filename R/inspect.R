@@ -99,7 +99,8 @@ pz_inspect <- function(
       if (knit_image) {
         ctx$inspect_image <- structure(
           path,
-          dpi = 96 * pz_js(ctx, "window.devicePixelRatio")
+          dpi = 96 * pz_js(ctx, "window.devicePixelRatio"),
+          chunk = knitr::opts_current$get("label")
         )
         return(ctx)
       }

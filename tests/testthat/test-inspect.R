@@ -450,6 +450,50 @@ test_that("terminal getters retain pending inspect images until knit print", {
   expect_null(page$inspect_image)
 })
 
+test_that("a knitted inspect prints its summary once, with the image", {
+  skip_if_not_installed("knitr")
+  page <- local_inspect_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r inspect-once, echo=FALSE, fig.path="figures/"}',
+    'page |> pz_inspect("#insp-btn", show = "screenshot")',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_identical(
+    lengths(regmatches(
+      markdown,
+      gregexpr("paparazzi page", markdown, fixed = TRUE)
+    )),
+    1L
+  )
+  expect_match(markdown, "figures/inspect-once-1.png", fixed = TRUE)
+})
+
+test_that("a pending inspect image is dropped outside its own chunk", {
+  skip_if_not_installed("knitr")
+  page <- local_inspect_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r inspect-assign, echo=FALSE, fig.path="figures/"}',
+    'x <- page |> pz_inspect("#insp-btn", show = "screenshot")',
+    '```',
+    '',
+    '```{r inspect-later, echo=FALSE, fig.path="figures/"}',
+    'x',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_false(grepl("inspect-assign-1.png", markdown, fixed = TRUE))
+  expect_false(file.exists("figures/inspect-assign-1.png"))
+})
+
 test_that("knitting keeps auto nonvisual and explicit paths unchanged", {
   skip_if_not_installed("knitr")
   page <- local_inspect_page()
