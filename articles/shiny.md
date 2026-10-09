@@ -1,15 +1,25 @@
 # Shiny apps
 
-paparazzi works with any web page, and a Shiny app is a web page. But
-Shiny apps need a few extra things. The app has to be running before a
-browser can open it. The page keeps changing after it loads, as the
-server sends outputs. And some inputs, like selectize dropdowns and
-sliders, are awkward to set by clicking. This article covers the tools
-paparazzi has for each of these, and how to use them in tests.
+In this article, we’ll open, test, and record a Shiny version of the
+task tracker that comes with paparazzi. A Shiny app is still a web page.
+Actions, expectations, screenshots, and recordings work on it exactly as
+they do on any other page. Shiny only adds a few things for you to
+learn.
+
+Those few things come from how Shiny apps work. We first have to start
+up a Shiny server to run the app before a browser can open it. And the
+app isn’t ready when the browser finishes loading the page: you have to
+wait for the outputs from the server to settle. The same wait comes up
+each time an input changes an output. Also some inputs, like selectize
+dropdowns and sliders, are awkward to set by clicking. We’ll see how
+paparazzi handles each of these, then use the same code to both test the
+app *and* grab a screen recording.
 
 If you haven’t used paparazzi before, start with the [Get started
 article](https://posit-dev.github.io/paparazzi/articles/paparazzi.md),
 which introduces actions, expectations, and scopes on a static page.
+You’ll need Chrome or another Chromium-based browser, the shiny package,
+and, for the recording at the end, the gifski and png packages.
 
 ``` r
 
@@ -18,45 +28,54 @@ library(paparazzi)
 
 ## Open an app
 
-Give
 [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
-a Shiny app, as a directory or an `app.R` file, and paparazzi does three
-things: it starts the app in a background R process, opens it in the
-browser, and waits until Shiny is ready. paparazzi’s example app is a
-Shiny version of the task tracker from the Get started article:
+opens a Shiny app when you give it the app’s directory or `app.R` file.
+paparazzi starts the app in a background R process, opens it in the
+browser, and waits until Shiny is ready. `pz_example("tasks-app")`
+returns the path to the example app, a simple Shiny version of the task
+tracker from the Get started article:
 
 ``` r
 
-page <- pz_open(pz_example("tasks-app"), width = 720, height = 640)
+page <- pz_open(
+  pz_example("tasks-app"),
+  width = 720,
+  height = 640
+)
+
 page |> pz_screenshot()
 ```
 
 ![The Shiny task app: a title input, a priority dropdown, an Add button,
 and a list of two tasks.](shiny_files/figure-html/unnamed-chunk-2-1.png)
 
-“Ready” means Shiny is **idle**: the browser has connected to the app,
-and no outputs are being recalculated, for at least 200 milliseconds in
-a row. The task list in this app takes half a second to render, and
+paparazzi considers Shiny ready when it’s **idle**: the browser has
+connected to the app, and Shiny hasn’t been busy or recalculating any
+outputs for at least 200 milliseconds. The list is already in the
+screenshot because
 [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
-waited for it, so the list is already in the screenshot.
+waited the half second the app takes to render it.
 
-This page owns its app, so `pz_close(page)` will stop the app too. The
-app runs in a separate R process, so it can’t see objects in your
-session. If it needs settings, pass them as environment variables with
-`envvars`, or as
+Because paparazzi started a Shiny server for this page, `pz_close(page)`
+both closes the page in the browser *and* stops the app. The app runs in
+a separate R process and can’t see objects in your R session. If the app
+needs settings, pass them to
+[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+as environment variables with `envvars`, or as
 [`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html) options
 with `shiny_options`.
 
 ## Wait for the server
 
-Shiny apps do their work on the server, so the page changes a little
-after each input. Clicking Add sends a message to the server, which
-updates the list and re-renders it. Waits and expectations cover this in
-two ways.
+Because Shiny app typically does its work on the server, the page
+changes a moment after each input. When a person using the app clicks
+Add, the browser sends a message to the server, which adds the task,
+recalculates the summary, and re-renders the list. Until the server
+finishes, the page still shows the old list.
 
 [`pz_wait_for_shiny_idle()`](https://posit-dev.github.io/paparazzi/reference/pz_wait_for_shiny_idle.md)
-waits until Shiny is idle again. It’s the right tool when you don’t care
-about a specific value, only that the app has caught up:
+waits until Shiny is idle again. Use it when you need the app to catch
+up but don’t need to check a specific value:
 
 ``` r
 
@@ -70,14 +89,13 @@ pz_get_text(page, target = "#summary")
 ```
 
 [`pz_set_value()`](https://posit-dev.github.io/paparazzi/reference/pz_set_value.md)
-sets the text input the same way for any page: it sets the value and
-fires the input’s `input` and `change` events, which is how Shiny learns
-about the change.
+works the same on any page by setting the input’s value and firing the
+`input` and `change` events that Shiny listens for.
 
-When you know what the page should show, an expectation is usually
-better. It retries until the page shows that value, so it waits for
-exactly what you care about, and it says what went wrong if the value
-never appears:
+When you know what the page should show, use an expectation instead. An
+expectation waits for exactly what you care about. It retries until the
+page shows the value you expect. If the value never appears, its error
+says what it was looking for and what it last saw:
 
 ``` r
 
@@ -90,12 +108,15 @@ page |>
 ## Set inputs through Shiny
 
 Some Shiny inputs are hard to set by clicking. The priority input in
-this app is a selectize input: the `<select>` element is hidden, and the
-dropdown you see is built from other elements.
+this app is a selectize input: Shiny hides the `<select>` element and
+builds the dropdown that a person using the app sees from other
+elements. Shiny reads and updates each input through its **input
+binding**, a JavaScript object that knows how that kind of input works.
+
 [`pz_set_shiny_input()`](https://posit-dev.github.io/paparazzi/reference/pz_set_shiny_input.md)
-sets an input through its Shiny **input binding**, the JavaScript object
-Shiny uses to read and update that input. The widget on the page
-updates, and the server sees the new value:
+sets an input through its binding. It takes the input’s ID and a value,
+then waits for Shiny to go idle before the next step runs. The dropdown
+on the page shows the new value, and the server sees it:
 
 ``` r
 
@@ -108,44 +129,66 @@ page |>
 high.](shiny_files/figure-html/unnamed-chunk-5-1.png)
 
 [`pz_set_shiny_input()`](https://posit-dev.github.io/paparazzi/reference/pz_set_shiny_input.md)
-takes the input’s ID and waits for Shiny to go idle afterward, so the
-app has reacted by the time the next step runs. It works with inputs
-whose binding can set a value, including sliders and date ranges; file
-inputs and action buttons aren’t supported, so use
+works with inputs whose binding can set a value, including sliders and
+date ranges. For file inputs and action buttons, which it can’t set, use
 [`pz_set_files()`](https://posit-dev.github.io/paparazzi/reference/pz_set_files.md)
 and
-[`pz_act_click()`](https://posit-dev.github.io/paparazzi/reference/pz_act_click.md)
-for those. For inputs that are easy to reach, like text boxes and
-buttons,
+[`pz_act_click()`](https://posit-dev.github.io/paparazzi/reference/pz_act_click.md).
+
+For inputs that are easy to reach, like text boxes and buttons,
 [`pz_act_type()`](https://posit-dev.github.io/paparazzi/reference/pz_act_type.md),
 [`pz_set_value()`](https://posit-dev.github.io/paparazzi/reference/pz_set_value.md),
 and
 [`pz_act_click()`](https://posit-dev.github.io/paparazzi/reference/pz_act_click.md)
-are closer to what a person does, and those are what you want in a
-recording.
+are closer to what a person using the app does. In a recording,
+[`pz_act_type()`](https://posit-dev.github.io/paparazzi/reference/pz_act_type.md)
+types one character at a time, while
+[`pz_set_shiny_input()`](https://posit-dev.github.io/paparazzi/reference/pz_set_shiny_input.md)
+and
+[`pz_set_value()`](https://posit-dev.github.io/paparazzi/reference/pz_set_value.md)
+change the value at once. Prefer actions in anything you record.
 
 ## Share one app across pages
 
-Starting an app takes time. To open several pages on the same app, start
-it once with
+Each time you give
+[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+an app path, paparazzi starts another copy of the app in its own R
+process, and starting an app takes time.
+
+When you want the same app in several browser windows at once, like a
+desktop window and a phone-sized one, start the app once with
 [`pz_serve_shiny()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_shiny.md)
-and pass the handle to
-[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md).
-For example, to compare the desktop and phone layouts side by side:
+and pass the handle it returns to each
+[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+call. Printing the handle shows the app’s URL and whether it’s running:
 
 ``` r
 
 app <- pz_serve_shiny(pz_example("tasks-app"))
 app
-#> <paparazzi app> http://127.0.0.1:5048/ -- running (pid 13302)
+#> <paparazzi app> http://127.0.0.1:5048/ -- running (pid 13953)
 
 desktop <- pz_open(app, width = 1024, height = 640)
 phone <- pz_open(app, width = 390, height = 640, mobile = TRUE)
 ```
 
-Each page gets its own Shiny session, so the two pages have separate
-task lists. Pages opened from a handle don’t own the app, so closing
-them leaves it running. Stop it yourself when you’re done. `app$logs()`
+Each page gets its own Shiny session and its own task list. When we add
+a task on the desktop page, the phone page still shows the two tasks the
+app starts with:
+
+``` r
+
+desktop |>
+  pz_set_value("Buy milk", target = "#title") |>
+  pz_act_click("#add") |>
+  pz_expect_text("3 tasks", target = "#summary")
+
+pz_get_text(phone, target = "#summary")
+#> [1] "2 tasks"
+```
+
+Closing a page opened from a handle leaves the app running, and you stop
+the app yourself when you’re done. Before stopping it, `app$logs()`
 returns what the app printed, which helps when an app fails to start or
 errors partway through:
 
@@ -160,18 +203,19 @@ head(app$logs())
 app$stop()
 ```
 
-In a script, `withr::defer(app$stop())` makes sure the app stops even if
-a later step fails.
+In a script, `withr::defer(app$stop())` stops the app even if a later
+step fails.
 
 ## Test an app
 
-When paparazzi’s expectations run inside a testthat test, each one
-counts as a testthat expectation, and a failure is reported as a test
-failure.
+You can write tests for a Shiny app with the same functions we’ve used
+so far. When paparazzi’s expectations run inside a
+[testthat](https://testthat.r-lib.org/) test, each one counts as a
+testthat expectation, and a failed one fails the test.
 [`pz_local_page()`](https://posit-dev.github.io/paparazzi/reference/pz_with_page.md)
-opens a page and closes it when the test ends. Given an app path, the
-page starts the app and stops it at the end too. Together, a test for
-the task app looks like this:
+opens a page and closes it when the test ends. Given an app path, it
+also starts the app and stops it when the test ends. Here’s the “Buy
+milk” step from earlier as a test:
 
 ``` r
 
@@ -185,29 +229,31 @@ test_that("adding a task updates the summary", {
 })
 ```
 
-For your own app, point
+For your own app, give
 [`pz_local_page()`](https://posit-dev.github.io/paparazzi/reference/pz_with_page.md)
-at the app’s directory. To share one running app between tests, start it
-with
+the path to the app’s directory. To share one running app across tests,
+start it with
 [`pz_serve_shiny()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_shiny.md)
-and pass the handle instead; you then stop the app yourself, for example
-with `withr::defer(app$stop(), testthat::teardown_env())` in a setup
+in a setup file and pass the handle to
+[`pz_local_page()`](https://posit-dev.github.io/paparazzi/reference/pz_with_page.md)
+instead. Then you stop the app yourself, for example with
+`withr::defer(app$stop(), testthat::teardown_env())` in the same setup
 file.
 
 [shinytest2](https://rstudio.github.io/shinytest2/) is also built for
-testing Shiny apps, and it works differently. shinytest2 records an
-app’s input and output values and compares them against saved snapshots,
-which suits regression tests of an app’s reactive logic. paparazzi finds
-elements with CSS selectors and interacts with the page as a person
-would, which suits testing what a user sees and does. The two can live
-in the same test suite.
+testing Shiny apps, and it works differently. shinytest2 tests check the
+app’s reactive logic by recording the app’s input and output values and
+comparing them against saved snapshots. paparazzi tests check what a
+person using the app sees and does by finding elements with CSS
+selectors and using the page with the same mouse and keyboard events as
+that person. Both can live in the same test suite.
 
 ## Record a demo
 
-Recording works the same way for apps as for any other page. Stage the
-page, wrap the steps in
-[`pz_record()`](https://posit-dev.github.io/paparazzi/reference/pz_record.md),
-and paparazzi animates the cursor and typing while it records:
+You record a Shiny app the same way as any other page. Here, we’ll stage
+the page so the cursor glides in from the left and each step pauses for
+0.4 seconds, then wrap the steps in
+[`pz_record()`](https://posit-dev.github.io/paparazzi/reference/pz_record.md):
 
 ``` r
 
@@ -228,4 +274,8 @@ page |>
 
 ![A cursor glides to the title input, types Water the plants, and clicks
 Add. The task count changes from 4 to 5 and the new task appears at the
-end of the list.](shiny_files/figure-html/unnamed-chunk-8-1.gif)
+end of the list.](shiny_files/figure-html/unnamed-chunk-9-1.gif)
+
+The video shows the new task at the end of the list because
+[`pz_expect_text()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_text.md)
+waits for the server to add it before the recording ends.

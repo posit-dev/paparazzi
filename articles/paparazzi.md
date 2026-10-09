@@ -129,38 +129,42 @@ Let’s check that the new task arrived. Some elements are easy to target:
 the page has only one `#task-title` input and one `#add-task` button.
 But it has a `.task-title` for every task, so we need a more expressive
 way to say which one we want.
+
 [`pz_loc()`](https://posit-dev.github.io/paparazzi/reference/pz_loc.md)
 describes an element more precisely than a selector alone, and it lets
 us define how to find an element once and reuse it in several calls. New
-tasks go to the top of the list, so we want the first `.task-title`:
+tasks go to the top of the list, so we’ll get the first `.task-title`
+with `which = "first"` and then use
+[`pz_get_text()`](https://posit-dev.github.io/paparazzi/reference/pz_get_text.md)
+to read that element’s text.
 
 ``` r
 
 first_task_title <- pz_loc(".task-title", which = "first")
-```
-
-[`pz_get_text()`](https://posit-dev.github.io/paparazzi/reference/pz_get_text.md)
-reads that element’s text:
-
-``` r
-
 pz_get_text(page, target = first_task_title)
 #> [1] "Renew passport"
 ```
 
-That’s not what we added. We added a task to repot the fern, but
+That’s not what we added! We added a task to repot the fern, but
 [`pz_get_text()`](https://posit-dev.github.io/paparazzi/reference/pz_get_text.md)
-found the *old* first task, “Renew passport”. That’s because our code
-runs quickly, but it takes a little bit of time for the app to actually
-save our new task: the page shows “Saving…” for a moment before the new
-task appears.
+found the *old* first task, “Renew passport”. That’s because it takes a
+little bit of time for the app to actually save our new task (if you’re
+using the app you’d see the page show “Saving…” for a moment before the
+new task appears), but our
+[`pz_get_text()`](https://posit-dev.github.io/paparazzi/reference/pz_get_text.md)
+runs immediately after the last action. When it does, a `.task-title`
+element exists on the page – just not the one we want.
 
 To wait for the new task, we need an **expectation**. Actions wait for
 the element they act on, but here we need to wait for the app to add a
 new element to the page before we move on. Expectation functions start
 with `pz_expect_`. Each one checks the page and, if the check fails,
-tries again until it passes or times out. This time, the expectation
-waits for the page to finish saving before we read the first task again:
+tries again until it passes or times out.
+
+Let’s try again, using
+[`pz_expect_text()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_text.md)
+to wait for the repotting task to show up in the app as the first task
+before we read it.
 
 ``` r
 
@@ -193,11 +197,12 @@ page |>
 
 paparazzi calls a
 [`pz_loc()`](https://posit-dev.github.io/paparazzi/reference/pz_loc.md)
-description a **spec**. A spec doesn’t find anything when you create it:
-paparazzi looks up the elements each time you use it, so one spec keeps
-working as the page changes. That’s how `first_task_title` found “Renew
-passport” the first time and “Repot the fern” once the new task arrived.
-We’ll describe the new task with a spec, too, and use it in the video:
+description a **location spec**. A spec doesn’t find anything when you
+create it: paparazzi looks up the elements each time you use it, so one
+spec keeps working as the page changes. That’s how `first_task_title`
+found “Renew passport” the first time and “Repot the fern” once the new
+task arrived. We’ll describe the new task with a spec, too, and use it
+in the video:
 
 ``` r
 
@@ -255,7 +260,7 @@ page |>
 
 ![A cursor fades in on the task form, types Repot the fern, and clicks
 Add. The new task appears at the top of the
-list.](paparazzi_files/figure-html/unnamed-chunk-11-1.gif)
+list.](paparazzi_files/figure-html/unnamed-chunk-10-1.gif)
 
 The steps are the ones we ran before, but in the recording it looks as
 though a real person is using the task tracker. The cursor fades in over
@@ -320,7 +325,7 @@ page |> pz_screenshot(frame = shot)
 
 ![The task tracker cropped to a 16 by 9 view of the card, from its
 heading down to the task
-list.](paparazzi_files/figure-html/unnamed-chunk-14-1.png)
+list.](paparazzi_files/figure-html/unnamed-chunk-13-1.png)
 
 A frame can also leave out padding or set it separately for each side.
 See
@@ -376,7 +381,7 @@ page |>
 ![The view zooms in on the new-task form while a cursor types Repot the
 fern and clicks Add. The view pulls back as the new task appears at the
 top of the list, outlined in red, under the caption New tasks go to the
-top of the list.](paparazzi_files/figure-html/unnamed-chunk-15-1.gif)
+top of the list.](paparazzi_files/figure-html/unnamed-chunk-14-1.gif)
 
 The new lines fall into three groups:
 
@@ -447,7 +452,7 @@ page |>
 ![The cursor glides to the Urgent checkbox and checks it with a brief
 press, then clicks it again, and a crimson ring spreads out from the
 click as the box
-unchecks.](paparazzi_files/figure-html/unnamed-chunk-17-1.gif)
+unchecks.](paparazzi_files/figure-html/unnamed-chunk-16-1.gif)
 
 The ring is crimson unless you pass a CSS color as `effect_color`, and
 `effect = "none"` turns click feedback off. To change every click on the
@@ -526,7 +531,7 @@ page |>
 ```
 
 ![The task tracker on a narrow phone screen, in dark
-mode.](paparazzi_files/figure-html/unnamed-chunk-21-1.png)
+mode.](paparazzi_files/figure-html/unnamed-chunk-20-1.png)
 
 [`pz_device()`](https://posit-dev.github.io/paparazzi/reference/pz_device.md)
 can also zoom the page, turn on reduced motion, or set the locale and
@@ -547,30 +552,35 @@ a chain:
 
 page |>
   pz_find(".task-list") |>
-  pz_inspect(".task-done", show = "none")
-#> ── paparazzi scope ─────────────────────────────────────────────────────────────
-#> Scope      root › `.task-list` (1)
-#> URL        http://127.0.0.1:4023/tasks.html
-#> Device     390 × 700 @2x · dark
-#> Target     `.task-done` → 8 matches
-#>   1  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      hidden · enabled · at 306,324 · 55 × 31
-#>   2  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      visible · enabled · at 306,372 · 55 × 31
-#>   3  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      visible · enabled · at 306,420 · 55 × 31
-#>   4  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      visible · enabled · at 306,476 · 55 × 31
-#>   5  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      hidden · enabled · at 306,541 · 55 × 31
-#>   6  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      visible · enabled · at 306,606 · 55 × 31
-#>   7  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      visible · enabled · at 306,671 · 55 × 31
-#>   8  <button type="button" class="task-done btn btn-sm btn-outli…
-#>      visible · enabled · at 306,728 · 55 × 31
-#> Recording  off · cursor hidden
+  pz_inspect(".task-done", show = "screenshot")
 ```
+
+    #> ── paparazzi scope ─────────────────────────────────────────────────────────────
+    #> Scope      root › `.task-list` (1)
+    #> URL        http://127.0.0.1:4023/tasks.html
+    #> Device     390 × 700 @2x · dark
+    #> Target     `.task-done` → 8 matches
+    #>   1  <button type="button" class="task-done btn btn-sm btn-outli…
+    #>      hidden · enabled · at 306,324 · 55 × 31
+    #>   2  <button type="button" class="task-done btn btn-sm btn-outli…
+    #>      visible · enabled · at 306,372 · 55 × 31
+    #>   3  <button type="button" class="task-done btn btn-sm btn-outli…
+    #>      visible · enabled · at 306,420 · 55 × 31
+    #>   4  <button type="button" class="task-done btn btn-sm btn-outli…
+    #>      visible · enabled · at 306,476 · 55 × 31
+    #>   5  <button type="button" class="task-done btn btn-sm btn-outli…
+    #>      hidden · enabled · at 306,541 · 55 × 31
+    #>   6  <button type="button" class="task-done btn btn-sm btn-outli…
+    #>      visible · enabled · at 306,606 · 55 × 31
+    #>   7  <button type="button" class="task-done btn btn-sm btn-outli…
+    #>      visible · enabled · at 306,671 · 55 × 31
+    #>   8  <button type="button" class="task-done btn btn-sm btn-outli…
+    #>      visible · enabled · at 306,728 · 55 × 31
+    #> Recording  off · cursor hidden
+
+![The task list with a dashed outline around the list and numbered solid
+outlines around the visible Done
+buttons.](paparazzi_files/figure-html/unnamed-chunk-22-1.png)
 
 `.task-done` matches one button for each task. The page hides the Done
 buttons of finished tasks, so
@@ -630,10 +640,11 @@ We’ve now built a demo video from a script: we drove a page with
 actions, kept the script in step with expectations, and framed, staged,
 and annotated the recording. From here:
 
-- The [three-part app
-  walkthrough](https://posit-dev.github.io/paparazzi/articles/walkthrough.md)
-  records a series of short MP4 videos with camera moves, a callout,
-  captions, and redacted task titles.
+- The [in-depth app
+  walkthrough](https://posit-dev.github.io/paparazzi/articles/demo-video.md)
+  puts the recording features together into a longer demo video, with
+  camera moves, captions, callouts, and redactions working together
+  across several steps.
 - The [annotations
   article](https://posit-dev.github.io/paparazzi/articles/annotations.md)
   shows every kind of annotation, including marks, callouts, spotlights,

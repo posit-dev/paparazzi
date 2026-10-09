@@ -39,17 +39,17 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="active nav-item"><a class="nav-link" href="../articles/paparazzi.html">Get started</a></li>
-<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/walkthrough.html">Make a three-part app walkthrough</a></li>
+<li><a class="dropdown-item" href="../articles/demo-video.html">Record an in-depth app walkthrough</a></li>
     <li><a class="dropdown-item" href="../articles/annotations.html">Annotate pages</a></li>
     <li><a class="dropdown-item" href="../articles/shiny.html">Shiny apps</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><a class="nav-link" href="../news/index.html">News</a></li>
@@ -154,7 +154,7 @@ tell paparazzi which elements to use. paparazzi finds elements with CSS
 selectors: the title field is <code>#task-title</code>, the Add button
 is <code>#add-task</code>, and each task in the list shows its title in
 a <code>.task-title</code> element.</p>
-<p><img src="paparazzi_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="The task tracker with its selectors labeled. Red callouts point down at the new-task title field, reading #task-title, and at the Add button, reading #add-task. Every task title in the list is underlined in blue, and a blue callout reading .task-title points at the first one." width="855"></p>
+<p><img src="paparazzi_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="The task tracker with its selectors labeled. Red callouts point down at the new-task title field, reading #task-title, and at the Add button, reading #add-task. Every task title in the list is underlined in blue, and a blue callout reading .task-title points at the first one." width="878"></p>
 <p><strong>Actions</strong> like <code><a href="../reference/pz_act_type.html">pz_act_type()</a></code> and
 <code><a href="../reference/pz_act_click.html">pz_act_click()</a></code> use the page the way a person using it
 would, with real mouse and keyboard events. Each action takes the page
@@ -172,30 +172,34 @@ paparazzi scrolls to it, then clicks or types.</p>
 <p>Let’s check that the new task arrived. Some elements are easy to
 target: the page has only one <code>#task-title</code> input and one
 <code>#add-task</code> button. But it has a <code>.task-title</code> for
-every task, so we need a more expressive way to say which one we want.
-<code><a href="../reference/pz_loc.html">pz_loc()</a></code> describes an element more precisely than a
+every task, so we need a more expressive way to say which one we
+want.</p>
+<p><code><a href="../reference/pz_loc.html">pz_loc()</a></code> describes an element more precisely than a
 selector alone, and it lets us define how to find an element once and
-reuse it in several calls. New tasks go to the top of the list, so we
-want the first <code>.task-title</code>:</p>
+reuse it in several calls. New tasks go to the top of the list, so we’ll
+get the first <code>.task-title</code> with <code>which = "first"</code>
+and then use <code><a href="../reference/pz_get_text.html">pz_get_text()</a></code> to read that element’s text.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">first_task_title</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task-title"</span>, which <span class="op">=</span> <span class="st">"first"</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/pz_get_text.html">pz_get_text()</a></code> reads that element’s text:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/pz_get_text.html">pz_get_text</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="va">first_task_title</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">first_task_title</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task-title"</span>, which <span class="op">=</span> <span class="st">"first"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pz_get_text.html">pz_get_text</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="va">first_task_title</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "Renew passport"</span></span></code></pre></div>
-<p>That’s not what we added. We added a task to repot the fern, but
+<p>That’s not what we added! We added a task to repot the fern, but
 <code><a href="../reference/pz_get_text.html">pz_get_text()</a></code> found the <em>old</em> first task, “Renew
-passport”. That’s because our code runs quickly, but it takes a little
-bit of time for the app to actually save our new task: the page shows
-“Saving…” for a moment before the new task appears.</p>
+passport”. That’s because it takes a little bit of time for the app to
+actually save our new task (if you’re using the app you’d see the page
+show “Saving…” for a moment before the new task appears), but our
+<code><a href="../reference/pz_get_text.html">pz_get_text()</a></code> runs immediately after the last action. When
+it does, a <code>.task-title</code> element exists on the page – just
+not the one we want.</p>
 <p>To wait for the new task, we need an <strong>expectation</strong>.
 Actions wait for the element they act on, but here we need to wait for
 the app to add a new element to the page before we move on. Expectation
 functions start with <code>pz_expect_</code>. Each one checks the page
-and, if the check fails, tries again until it passes or times out. This
-time, the expectation waits for the page to finish saving before we read
-the first task again:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+and, if the check fails, tries again until it passes or times out.</p>
+<p>Let’s try again, using <code><a href="../reference/pz_expect_text.html">pz_expect_text()</a></code> to wait for the
+repotting task to show up in the app as the first task before we read
+it.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="va">first_task_title</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_get_text.html">pz_get_text</a></span><span class="op">(</span>target <span class="op">=</span> <span class="va">first_task_title</span><span class="op">)</span></span>
@@ -209,7 +213,7 @@ so you never publish a video of the wrong thing.</li>
 </ol>
 <p>When an expectation times out, its error says what it was looking for
 and what it last saw:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span><span class="st">"Walk the dog"</span>, target <span class="op">=</span> <span class="va">first_task_title</span>, timeout <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #BBBB00; font-weight: bold;">Error</span><span style="font-weight: bold;"> in `pz_expect_text()`:</span></span></span>
@@ -218,13 +222,13 @@ and what it last saw:</p>
 <span><span class="co">#&gt; Last seen: "Repot the fern"</span></span>
 <span><span class="co">#&gt; Waited 1s.</span></span></code></pre></div>
 <p>paparazzi calls a <code><a href="../reference/pz_loc.html">pz_loc()</a></code> description a
-<strong>spec</strong>. A spec doesn’t find anything when you create it:
-paparazzi looks up the elements each time you use it, so one spec keeps
-working as the page changes. That’s how <code>first_task_title</code>
-found “Renew passport” the first time and “Repot the fern” once the new
-task arrived. We’ll describe the new task with a spec, too, and use it
-in the video:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<strong>location spec</strong>. A spec doesn’t find anything when you
+create it: paparazzi looks up the elements each time you use it, so one
+spec keeps working as the page changes. That’s how
+<code>first_task_title</code> found “Renew passport” the first time and
+“Repot the fern” once the new task arrived. We’ll describe the new task
+with a spec, too, and use it in the video:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fern</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, has_text <span class="op">=</span> <span class="st">"Repot the fern"</span><span class="op">)</span></span></code></pre></div>
 <p><code>has_text</code> picks <code>.task</code> elements whose text
 includes “Repot the fern”. <code><a href="../reference/pz_loc.html">pz_loc()</a></code> can also pick a match
@@ -259,7 +263,7 @@ in the viewer instead.</p>
 <p>We’ll reload the page to start fresh, and ask for a GIF, which plays
 by itself on a web page. <code>scale = 800</code> makes it 800 pixels
 wide:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_nav_goto.html">pz_nav_reload</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
@@ -267,7 +271,7 @@ wide:</p>
 <span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add-task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span><span class="va">fern</span><span class="op">)</span></span></code></pre></div>
-<p><img src="paparazzi_files/figure-html/unnamed-chunk-11-1.gif" class="r-plt" alt="A cursor fades in on the task form, types Repot the fern, and clicks Add. The new task appears at the top of the list."></p>
+<p><img src="paparazzi_files/figure-html/unnamed-chunk-10-1.gif" class="r-plt" alt="A cursor fades in on the task form, types Repot the fern, and clicks Add. The new task appears at the top of the list."></p>
 <p>The steps are the ones we ran before, but in the recording it looks
 as though a real person is using the task tracker. The cursor fades in
 over the title field and fades out while it types, so it doesn’t cover
@@ -288,7 +292,7 @@ and the settings last until you change them.</p>
 <p>For the final video, the cursor will glide in from the bottom of the
 frame, and each step will pause for 0.3 seconds so we don’t lose our
 viewers between steps:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_stage.html">pz_stage</a></span><span class="op">(</span>enter <span class="op">=</span> <span class="st">"bottom"</span>, pause <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -301,14 +305,14 @@ fit, the padding around them, and optionally an aspect ratio.</p>
 <p>We’ll use <code><a href="../reference/pz_frame.html">pz_frame()</a></code> fit the card’s heading and task
 list, pad them by 24 pixels, and widen the result to 16:9, the shape of
 most video players and slides:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">shot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"h1"</span>, <span class="st">".task-list"</span><span class="op">)</span>, pad <span class="op">=</span> <span class="fl">24</span>, ratio <span class="op">=</span> <span class="fl">16</span> <span class="op">/</span> <span class="fl">9</span><span class="op">)</span></span></code></pre></div>
 <p>Like a spec, a frame is only a description. paparazzi measures the
 page when it uses the frame. A screenshot is a quick way to check one
 before recording:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="va">shot</span><span class="op">)</span></span></code></pre></div>
-<p><img src="paparazzi_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" alt="The task tracker cropped to a 16 by 9 view of the card, from its heading down to the task list." width="1000"></p>
+<p><img src="paparazzi_files/figure-html/unnamed-chunk-13-1.png" class="r-plt" alt="The task tracker cropped to a 16 by 9 view of the card, from its heading down to the task list." width="1000"></p>
 <p>A frame can also leave out padding or set it separately for each
 side. See <code><a href="../reference/pz_frame.html">pz_frame()</a></code> for how to anchor the content while
 it’s widened, or keep the frame within another element.</p>
@@ -331,7 +335,7 @@ happening at each step.</p>
 <code><a href="../reference/pz_camera.html">pz_camera()</a></code> doesn’t scroll or zoom the browser, so the
 steps act on the page exactly as they did before. Outside a recording,
 it does nothing. Here’s the whole script:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_nav_goto.html">pz_nav_reload</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
@@ -353,7 +357,7 @@ it does nothing. Here’s the whole script:</p>
 <span>        <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">1.5</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="paparazzi_files/figure-html/unnamed-chunk-15-1.gif" class="r-plt" alt="The view zooms in on the new-task form while a cursor types Repot the fern and clicks Add. The view pulls back as the new task appears at the top of the list, outlined in red, under the caption New tasks go to the top of the list."></p>
+<p><img src="paparazzi_files/figure-html/unnamed-chunk-14-1.gif" class="r-plt" alt="The view zooms in on the new-task form while a cursor types Repot the fern and clicks Add. The view pulls back as the new task appears at the top of the list, outlined in red, under the caption New tasks go to the top of the list."></p>
 <p>The new lines fall into three groups:</p>
 <ul>
 <li>
@@ -380,7 +384,7 @@ anything down.</li>
 </ul>
 <p>Annotations stay on the page until you clear them, and they appear in
 screenshots too. Clear them before moving on:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/pz_annotate.html">pz_annotate()</a></code> can also draw circles, underlines, and
 highlights, with numbered badges. <code><a href="../reference/pz_annotate_callout.html">pz_annotate_callout()</a></code>
@@ -393,7 +397,7 @@ briefly as it presses, which is hard to see in a small video, so
 <code><a href="../reference/pz_act_click.html">pz_act_click()</a></code> can draw a ring instead, one that grows out
 from the click point and fades. Here the cursor checks Urgent with the
 default press, then unchecks it with <code>effect = "ring"</code>:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record.html">pz_record</a></span><span class="op">(</span></span>
 <span>    format <span class="op">=</span> <span class="st">"gif"</span>,</span>
@@ -405,7 +409,7 @@ default press, then unchecks it with <code>effect = "ring"</code>:</p>
 <span>        <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#task-urgent"</span>, effect <span class="op">=</span> <span class="st">"ring"</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="paparazzi_files/figure-html/unnamed-chunk-17-1.gif" class="r-plt" alt="The cursor glides to the Urgent checkbox and checks it with a brief press, then clicks it again, and a crimson ring spreads out from the click as the box unchecks."></p>
+<p><img src="paparazzi_files/figure-html/unnamed-chunk-16-1.gif" class="r-plt" alt="The cursor glides to the Urgent checkbox and checks it with a brief press, then clicks it again, and a crimson ring spreads out from the click as the box unchecks."></p>
 <p>The ring is crimson unless you pass a CSS color as
 <code>effect_color</code>, and <code>effect = "none"</code> turns click
 feedback off. To change every click on the page, set
@@ -421,7 +425,7 @@ repotting done, the script needs to find <em>its</em> Done button.
 calls the <strong>scope</strong>. After that, paparazzi looks up targets
 inside the scope, so <code>".task-done"</code> means this task’s Done
 button:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_find.html">pz_find</a></span><span class="op">(</span><span class="va">fern</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">".task-done"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -436,7 +440,7 @@ returns a new, scoped context, which goes down the chain, while
 <code>page</code> still refers to the whole page. The next chain that
 starts from <code>page</code> starts at the whole page again. To keep
 working in a scope, assign it to a variable:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">task_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_find.html">pz_find</a></span><span class="op">(</span><span class="va">page</span>, <span class="st">".task-list"</span><span class="op">)</span></span>
 <span><span class="va">task_list</span></span>
 <span><span class="co">#&gt; ── paparazzi scope ─────────────────────────────────────────────────────────────</span></span>
@@ -449,7 +453,7 @@ working in a scope, assign it to a variable:</p>
 page (<code>root</code>) down to the task list, and <code>(1)</code>
 says the scope holds one element. New chains from <code>task_list</code>
 start inside it:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pz_get_count.html">pz_get_count</a></span><span class="op">(</span><span class="va">task_list</span>, target <span class="op">=</span> <span class="st">".task.done"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 2</span></span></code></pre></div>
 <p>Two tasks are done: the fern repotting, and “Return library books”,
@@ -462,11 +466,11 @@ which started out done.</p>
 so you can set up the browser exactly the way you want before you take a
 screenshot or record. The task tracker follows the browser’s color
 scheme, so here it is on a phone in dark mode:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_device.html">pz_device</a></span><span class="op">(</span>width <span class="op">=</span> <span class="fl">390</span>, height <span class="op">=</span> <span class="fl">700</span>, mobile <span class="op">=</span> <span class="cn">TRUE</span>, color_scheme <span class="op">=</span> <span class="st">"dark"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="paparazzi_files/figure-html/unnamed-chunk-21-1.png" class="r-plt" alt="The task tracker on a narrow phone screen, in dark mode." width="300px"></p>
+<p><img src="paparazzi_files/figure-html/unnamed-chunk-20-1.png" class="r-plt" alt="The task tracker on a narrow phone screen, in dark mode." width="300px"></p>
 <p><code><a href="../reference/pz_device.html">pz_device()</a></code> can also zoom the page, turn on reduced
 motion, or set the locale and time zone. Device settings stay in place
 until you change them, so a recording made now would also be a phone
@@ -480,11 +484,11 @@ wrong one, you can use <code><a href="../reference/pz_inspect.html">pz_inspect()
 sees. It prints the page summary and the matches for a target, which
 paparazzi looks up from the current scope. Because it returns the
 context it was given, you can drop it into the middle of a chain:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_find.html">pz_find</a></span><span class="op">(</span><span class="st">".task-list"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_inspect.html">pz_inspect</a></span><span class="op">(</span><span class="st">".task-done"</span>, show <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── paparazzi scope ─────────────────────────────────────────────────────────────</span></span>
+<span>  <span class="fu"><a href="../reference/pz_inspect.html">pz_inspect</a></span><span class="op">(</span><span class="st">".task-done"</span>, show <span class="op">=</span> <span class="st">"screenshot"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">#&gt; ── paparazzi scope ─────────────────────────────────────────────────────────────</span></span>
 <span><span class="co">#&gt; Scope      root › `.task-list` (1)</span></span>
 <span><span class="co">#&gt; URL        http://127.0.0.1:4023/tasks.html</span></span>
 <span><span class="co">#&gt; Device     390 × 700 @2x · dark</span></span>
@@ -505,7 +509,8 @@ context it was given, you can drop it into the middle of a chain:</p>
 <span><span class="co">#&gt;      visible · enabled · at 306,671 · 55 × 31</span></span>
 <span><span class="co">#&gt;   8  &lt;button type="button" class="task-done btn btn-sm btn-outli…</span></span>
 <span><span class="co">#&gt;      visible · enabled · at 306,728 · 55 × 31</span></span>
-<span><span class="co">#&gt; Recording  off · cursor hidden</span></span></code></pre></div>
+<span><span class="co">#&gt; Recording  off · cursor hidden</span></span></code></pre>
+<p><img src="paparazzi_files/figure-html/unnamed-chunk-22-1.png" class="r-plt" alt="The task list with a dashed outline around the list and numbered solid outlines around the visible Done buttons." width="396"></p>
 <p><code>.task-done</code> matches one button for each task. The page
 hides the Done buttons of finished tasks, so <code><a href="../reference/pz_inspect.html">pz_inspect()</a></code>
 lists them as <code>hidden</code>. An action targeting one of them would
@@ -554,9 +559,10 @@ test:</p>
 actions, kept the script in step with expectations, and framed, staged,
 and annotated the recording. From here:</p>
 <ul>
-<li>The <a href="walkthrough.html">three-part app walkthrough</a>
-records a series of short MP4 videos with camera moves, a callout,
-captions, and redacted task titles.</li>
+<li>The <a href="demo-video.html">in-depth app walkthrough</a> puts the
+recording features together into a longer demo video, with camera moves,
+captions, callouts, and redactions working together across several
+steps.</li>
 <li>The <a href="annotations.html">annotations article</a> shows every
 kind of annotation, including marks, callouts, spotlights, redactions,
 and captions, and how to style, frame, and clear them.</li>

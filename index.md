@@ -366,10 +366,11 @@ what you want to check:
   started](https://posit-dev.github.io/paparazzi/articles/paparazzi.md)
   builds a demo video one step at a time, from opening a page to framing
   the finished recording.
-- [Make a three-part app
-  walkthrough](https://posit-dev.github.io/paparazzi/articles/walkthrough.md)
-  records a series of short videos with camera moves, callouts,
-  captions, and redactions.
+- [Record an in-depth app
+  walkthrough](https://posit-dev.github.io/paparazzi/articles/demo-video.md)
+  puts the recording features together into a longer demo video, with
+  camera moves, captions, callouts, and redactions working together
+  across several steps.
 - [Annotate
   pages](https://posit-dev.github.io/paparazzi/articles/annotations.md)
   tours every kind of mark, callout, spotlight, redaction, and caption.

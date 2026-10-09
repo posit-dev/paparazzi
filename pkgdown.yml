@@ -10,10 +10,10 @@ articles:
   agents-testing: agents-testing.html
   agents: agents.html
   articles/annotations: annotations.html
+  articles/demo-video: demo-video.html
   articles/paparazzi: paparazzi.html
   articles/shiny: shiny.html
-  articles/walkthrough: walkthrough.html
-last_built: 2026-10-09T13:44Z
+last_built: 2026-10-09T17:19Z
 urls:
   reference: https://posit-dev.github.io/paparazzi/reference
   article: https://posit-dev.github.io/paparazzi/articles

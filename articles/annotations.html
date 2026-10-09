@@ -39,17 +39,17 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/paparazzi.html">Get started</a></li>
-<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/walkthrough.html">Make a three-part app walkthrough</a></li>
+<li><a class="dropdown-item" href="../articles/demo-video.html">Record an in-depth app walkthrough</a></li>
     <li><a class="dropdown-item" href="../articles/annotations.html">Annotate pages</a></li>
     <li><a class="dropdown-item" href="../articles/shiny.html">Shiny apps</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><a class="nav-link" href="../news/index.html">News</a></li>
@@ -86,20 +86,34 @@
 
     
     
+<p>In this article, we’ll draw every kind of annotation paparazzi offers
+on <a href="../reference/pz_example.html">the task tracker bundled with
+paparazzi</a>: marks, callouts, spotlights, redactions, and captions.
+Along the way, we’ll style them, fit them into framed stills, and
+animate them in a recording, so you can choose the right annotation for
+each screenshot or video.</p>
 <p>Annotations draw attention to parts of a page: an outline around a
 field, a callout explaining a button, a cover over something private.
-They sit on an overlay above the page and follow their elements as the
-page scrolls or changes layout, and they show up in screenshots and
-recordings until you clear them. They belong to the current document, so
-navigating away removes them.</p>
-<p>This article tours every kind of annotation on the task tracker
-bundled with paparazzi. The <a href="paparazzi.html">Get started
-article</a> covers selectors and scopes; the <a href="walkthrough.html">walkthrough</a> uses annotations in longer
-recordings. You’ll need a Chromium-based browser. The GIF recordings at
-the end need gifski, and the keystroke callouts in a GIF also need
-av.</p>
+paparazzi draws most annotations into the page itself, attached to an
+element. That’s how they follow their elements as the page scrolls or
+changes layout, and why they show up in screenshots as well as
+recordings.</p>
+<p>Annotations stay on the page until you clear them, and they belong to
+the current document, so paparazzi removes them when the page navigates
+away. Captions are the exception: paparazzi adds them to each screenshot
+and recording instead of drawing them into the page, so they stay
+through navigation, as <a href="#captions">Captions</a> explains.</p>
+<p>If you’re new to paparazzi, read the <a href="paparazzi.html">Get
+started article</a> first: it introduces selectors, location specs, and
+scopes, which annotations use to pick their elements. Afterward, the <a href="demo-video.html">in-depth app walkthrough</a> combines annotations
+in a longer recording. You’ll need a Chromium-based browser, and the
+recordings at the end need the av package to encode MP4 files.</p>
+<p><code><a href="../reference/pz_open.html">pz_open()</a></code> starts a headless browser and opens the page,
+and <code><a href="../reference/pz_example.html">pz_example()</a></code> returns the path to the task tracker that
+comes with paparazzi:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/paparazzi/">paparazzi</a></span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_open.html">pz_open</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span>,</span>
 <span>  width <span class="op">=</span> <span class="fl">720</span>,</span>
@@ -109,17 +123,17 @@ av.</p>
 <div class="section level2">
 <h2 id="marks">Marks<a class="anchor" aria-label="anchor" href="#marks"></a>
 </h2>
-<p><a href="../reference/pz_annotate.html"><code>pz_annotate()</code></a>
-draws a mark on every element matching <code>target</code>, which is a
-selector, a <a href="../reference/pz_loc.html"><code>pz_loc()</code></a>
-spec, or a list of targets. With no target, it marks the current scope.
-There are four mark types:</p>
+<p><code><a href="../reference/pz_annotate.html">pz_annotate()</a></code> takes a <code>target</code> selector, <a href="../reference/pz_loc.html">location spec</a>, or list of targets
+and draws an annotation mark on every matching element. With no target,
+it marks the current scope – the element that <code><a href="../reference/pz_find.html">pz_find()</a></code>
+narrowed the chain to – or the page body.</p>
+<p>You choose one of four marks with the <code>type</code> argument:</p>
 <ul>
 <li>
 <code>"box"</code> (the default) outlines the element.</li>
 <li>
 <code>"circle"</code> draws an ellipse around it, with room for
-things that aren’t rectangular.</li>
+elements that aren’t rectangular.</li>
 <li>
 <code>"underline"</code> strokes along the element’s bottom
 edge.</li>
@@ -127,40 +141,43 @@ edge.</li>
 <code>"highlight"</code> lays a translucent fill over the element,
 blended with the page.</li>
 </ul>
+<p>Let’s draw one of each, with a <code>label</code> naming its
+type:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-title"</span>, type <span class="op">=</span> <span class="st">"box"</span>, label <span class="op">=</span> <span class="st">"box"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, type <span class="op">=</span> <span class="st">"circle"</span>, label <span class="op">=</span> <span class="st">"circle"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task-title"</span>, which <span class="op">=</span> <span class="st">"first"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, has_text <span class="op">=</span> <span class="st">"File tax return"</span><span class="op">)</span>,</span>
 <span>    type <span class="op">=</span> <span class="st">"underline"</span>,</span>
 <span>    label <span class="op">=</span> <span class="st">"underline"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, which <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, has_text <span class="op">=</span> <span class="st">"Water the plants"</span><span class="op">)</span>,</span>
 <span>    type <span class="op">=</span> <span class="st">"highlight"</span>,</span>
 <span>    label <span class="op">=</span> <span class="st">"highlight"</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"main"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="annotations_files/figure-html/mark-types-1.png" class="r-plt" alt="The task tracker with four labeled marks: a box around the title field, a circle around the Add button, an underline under the first task, and a highlight over the second task." width="572"></p>
-<p>Here and below, each screenshot passes a <a href="../reference/pz_frame.html"><code>pz_frame()</code></a> so the
-still is cropped to what it discusses. Marks stay on the page after
-they’re drawn, so clear them between examples:</p>
+<p><img src="annotations_files/figure-html/mark-types-1.png" class="r-plt" alt="The task tracker with four labeled marks: a box around the title field, a circle around the Add button, an underline under the File tax return task, and a highlight over the Water the plants task." width="572"></p>
+<p>Each screenshot in this article passes a <code><a href="../reference/pz_frame.html">pz_frame()</a></code>, so
+paparazzi crops the still to the part of the page we’re discussing.
+Marks stay on the page after paparazzi draws them, so we’ll clear them
+before each new example:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>A mark is clipped wherever its target is. If a task row has scrolled
-out of the scrolling task list, its mark is cut off at the list’s edge
-instead of being drawn over whatever sits below the list. On sides where
-the target is not cut off, the outline keeps its padding, even if that
-takes it past the container’s edge. A fully clipped target shows no mark
-or badge, even if the padding would reach into view. A mark also hides
-while its target is hidden or removed from the page.</p>
+<p>paparazzi only draws a mark where its target can be seen. When a task
+row scrolls out of view inside the scrolling task list, paparazzi cuts
+its mark off at the list’s edge instead of drawing it over whatever sits
+below the list. On the sides where the target isn’t cut off, the outline
+keeps its padding, even past the list’s edge. paparazzi hides the mark,
+and its badge, when the target is scrolled entirely out of the list,
+hidden, or removed from the page.</p>
 <div class="section level3">
-<h3 id="badges">Badges<a class="anchor" aria-label="anchor" href="#badges"></a>
+<h3 id="label-badges">Label badges<a class="anchor" aria-label="anchor" href="#label-badges"></a>
 </h3>
 <p><code>label</code> adds a small badge to each mark.
 <code>label = TRUE</code> numbers the matches in document order, which
-is handy when a screenshot refers to “item 3”:</p>
+helps when your text refers to “item 3”:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">".filters a"</span>, label <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
@@ -168,61 +185,65 @@ is handy when a screenshot refers to “item 3”:</p>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">".filters"</span>, pad <span class="op">=</span> <span class="fl">16</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/labels-1.png" class="r-plt" alt="The three filter links, All, Open, and Done, boxed and numbered 1, 2, and 3." width="548"></p>
+<p>The badges sit outside the filter links, so this frame uses
+<code>target_box = "annotated"</code> to fit the links together with
+their marks and badges. <a href="#framing-stills">Framing stills</a>
+shows the difference.</p>
 <p>A single string or number repeats on every match instead, so
 <code>label = "A"</code> or <code>label = 1</code> puts the same badge
-everywhere the target matches.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+on each element the target matches.</p>
 </div>
 <div class="section level3">
 <h3 id="padding-color-and-fonts">Padding, color, and fonts<a class="anchor" aria-label="anchor" href="#padding-color-and-fonts"></a>
 </h3>
-<p><code>pad</code> grows the mark beyond the element’s box: one number
-for all sides, or <code>c(top, right, bottom, left)</code>.
-<code>color</code> accepts any CSS color for the outline and badge,
-<code>stroke_width</code> sets the outline’s thickness in CSS pixels,
-and <code>font_family</code> and <code>font_size</code> style the badge
-text. The badge is filled with the mark’s color and has white text;
-<code>label_fill</code> and <code>label_text_color</code> change that
-for one call. Color, stroke width, and fonts default to the page’s
-staged settings, which <a href="#styling-defaults">Styling defaults</a>
-covers below.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<p><code>pad</code> grows the mark beyond the element’s box, with one
+number for all sides or <code>c(top, right, bottom, left)</code>.
+<code>color</code> sets the outline and badge to any CSS color, and
+<code>stroke_width</code> sets the outline’s thickness in CSS pixels.
+<code>font_family</code> and <code>font_size</code> style the badge
+text.</p>
+<p>paparazzi fills each badge with the mark’s color and writes its text
+in white; <code>label_fill</code> and <code>label_text_color</code>
+change that for one call. When you leave out the color, stroke width, or
+fonts, paparazzi uses the page’s defaults, which you can change with
+<code><a href="../reference/pz_stage_annotate.html">pz_stage_annotate()</a></code>, as <a href="#styling-defaults">Styling
+defaults</a> explains.</p>
+<p>Here, an amber highlight covers the title field, and a blue box with
+a monospace badge fits snugly around the Add button:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-title"</span>, type <span class="op">=</span> <span class="st">"highlight"</span>, pad <span class="op">=</span> <span class="fl">6</span>, color <span class="op">=</span> <span class="st">"#f59e0b"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span></span>
-<span>    <span class="st">"#task-priority"</span>,</span>
-<span>    label <span class="op">=</span> <span class="st">"A"</span>,</span>
+<span>    <span class="st">"#add-task"</span>,</span>
+<span>    label <span class="op">=</span> <span class="st">"#add-task"</span>,</span>
 <span>    pad <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">6</span>, <span class="fl">2</span>, <span class="fl">6</span><span class="op">)</span>,</span>
 <span>    color <span class="op">=</span> <span class="st">"#2563eb"</span>,</span>
 <span>    font_family <span class="op">=</span> <span class="st">"monospace"</span>,</span>
 <span>    font_size <span class="op">=</span> <span class="fl">16</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="annotations_files/figure-html/pad-color-1.png" class="r-plt" alt="The new-task form with a loose amber highlight around the title field and a blue box with a monospace A badge around the priority dropdown." width="564"></p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">24</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p><img src="annotations_files/figure-html/pad-color-1.png" class="r-plt" alt="The new-task form with a loose amber highlight around the title field and a blue box around the Add button, with a monospace badge reading #add-task." width="604"></p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="callouts">Callouts<a class="anchor" aria-label="anchor" href="#callouts"></a>
 </h2>
-<p><a href="../reference/pz_annotate_callout.html"><code>pz_annotate_callout()</code></a>
-draws a bubble next to each matching element, repeating the same
-<code>text</code> for every match. <code>side</code> picks where the
-bubble goes: a cardinal side (<code>"top"</code>, <code>"right"</code>,
-<code>"bottom"</code>, <code>"left"</code>) or a diagonal like
-<code>"top right"</code>. The default, <code>NULL</code>, chooses the
-cardinal side with the most room. A bubble is kept inside the viewport
-even if that moves it off the requested side. A callout hides while its
-target is hidden or scrolled out of view inside a scrolling container.
-If only part of the target is visible, the leader points at that part.
-The bubble itself is never cut off.</p>
-<p>A leader line runs from the bubble to the element, with an arrow at
-the element’s end. <code>leader = FALSE</code> drops the line for a
-tooltip-style bubble, and <code>label</code> adds a badge just like on
+<p><code><a href="../reference/pz_annotate_callout.html">pz_annotate_callout()</a></code> draws a bubble of text next to
+each matching element, repeating the same <code>text</code> for every
+match. <code>side</code> picks where the bubble goes: a side
+(<code>"top"</code>, <code>"right"</code>, <code>"bottom"</code>,
+<code>"left"</code>) or a corner like <code>"top right"</code>. When you
+leave <code>side</code> out, paparazzi picks the side with the most
+room.</p>
+<p>paparazzi keeps every bubble inside the viewport, even if that moves
+it off the side you asked for, and it never cuts a bubble off. A leader
+line runs from the bubble to the element, with an arrow at the element’s
+end. <code>leader = FALSE</code> drops the line for a tooltip-style
+bubble, and <code>label</code> adds a badge, just as it does for
 marks.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Name the task"</span>,</span>
@@ -235,33 +256,31 @@ marks.</p>
 <span>    target <span class="op">=</span> <span class="st">"#task-priority"</span>,</span>
 <span>    side <span class="op">=</span> <span class="st">"bottom"</span>,</span>
 <span>    leader <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">12</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/callouts-1.png" class="r-plt" alt="The new-task form with a numbered callout above the title field pointing down at it, and a tooltip-style callout without an arrow below the priority dropdown." width="561"></p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>The frame’s <code>target_box = "annotated"</code> keeps the crop wide
-enough to include the bubbles; <a href="#framing-stills">Framing
-stills</a> explains what that does.</p>
+<p>Like a mark, a callout hides while its target is hidden or scrolled
+out of view inside a scrolling container. When only part of the target
+is in view, the leader points at that part.</p>
 <div class="section level3">
 <h3 id="leaders-and-bubble-colors">Leaders and bubble colors<a class="anchor" aria-label="anchor" href="#leaders-and-bubble-colors"></a>
 </h3>
-<p><code>leader</code> also takes a decoration for each end of the line:
+<p><code>leader</code> also takes a decoration for each end of the line.
 <code>start</code> is the bubble’s end and <code>end</code> is the
-element’s. Each can be <code>"none"</code>, <code>"arrow"</code>,
-<code>"dot"</code>, or <code>"bar"</code>, and an end you leave out gets
-<code>"none"</code>. <code>distance</code> sets the gap between the
-bubble and the element in CSS pixels (24 by default, or 8 for a bubble
-without a line), and <code>stroke_width</code> sets the line’s
-thickness, which also sizes the decorations.</p>
-<p>The bubble is dark with white text unless you say otherwise.
-<code>fill</code> and <code>text_color</code> change the bubble’s
-background and text, while <code>color</code> still sets its border and
-the line:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+element’s end, and each can be <code>"none"</code>,
+<code>"arrow"</code>, <code>"dot"</code>, or <code>"bar"</code>. An end
+you leave out gets <code>"none"</code>. <code>distance</code> sets the
+gap between the bubble and the element in CSS pixels: 24 by default, or
+8 for a bubble without a line. <code>stroke_width</code> sets the line’s
+thickness, and paparazzi sizes the decorations to match.</p>
+<p>paparazzi draws dark bubbles with white text unless you choose other
+colors. <code>fill</code> and <code>text_color</code> change the
+bubble’s background and text, while <code>color</code> still sets its
+border and the line. Here, a long line with a dot at the bubble leads
+from a pale yellow bubble to the Add button:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Add it to the list"</span>,</span>
@@ -271,177 +290,179 @@ the line:</p>
 <span>    distance <span class="op">=</span> <span class="fl">40</span>,</span>
 <span>    fill <span class="op">=</span> <span class="st">"#fef3c7"</span>,</span>
 <span>    text_color <span class="op">=</span> <span class="st">"#171717"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">12</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/callout-styles-1.png" class="r-plt" alt="The new-task form with a pale yellow callout below the Add button, joined to it by a long line with a dot at the bubble and an arrow at the button." width="573"></p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
 <h2 id="spotlight">Spotlight<a class="anchor" aria-label="anchor" href="#spotlight"></a>
 </h2>
-<p><a href="../reference/pz_annotate_spotlight.html"><code>pz_annotate_spotlight()</code></a>
-dims the whole page except for a rounded cutout around each target, so
-the reader’s eye goes straight to what matters. <code>dim</code> sets
-the opacity of the black scrim from 0 (transparent) to 1 (black),
-defaulting to 0.6, and <code>pad</code> grows the cutouts. A list of
-targets gets one cutout each. A cutout only opens over the visible part
-of its target, so a target scrolled out of a scrolling container gets no
-cutout.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<p><code><a href="../reference/pz_annotate_spotlight.html">pz_annotate_spotlight()</a></code> dims the whole page except for a
+rounded cutout around each target, so the viewer’s eye goes straight to
+what matters. <code>dim</code> sets how dark the page gets, from 0 (no
+dimming) to 1 (black), and defaults to 0.6. <code>pad</code> grows the
+cutouts, and a list of targets gets one cutout each:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_spotlight.html">pz_annotate_spotlight</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"#task-title"</span>, <span class="st">"#add-task"</span><span class="op">)</span>,</span>
 <span>    pad <span class="op">=</span> <span class="fl">8</span>,</span>
 <span>    dim <span class="op">=</span> <span class="fl">0.75</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"main"</span>, pad <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"main"</span>, pad <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/spotlight-1.png" class="r-plt" alt="The task tracker dimmed to near-black, with bright cutouts around the title field and the Add button." width="588"></p>
-<p>There is only one spotlight per page: drawing a new one replaces the
-old. Clear it by its reserved id or by clearing everything:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<p>paparazzi only opens a cutout over the part of a target that’s in
+view, so a target scrolled out of a scrolling container gets no
+cutout.</p>
+<p>A page has one spotlight at a time: drawing a new spotlight replaces
+the old one. paparazzi gives the spotlight the reserved id
+<code>"spotlight"</code>, so you can clear it alone without clearing
+other annotations:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span>id <span class="op">=</span> <span class="st">"spotlight"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="redaction">Redaction<a class="anchor" aria-label="anchor" href="#redaction"></a>
 </h2>
-<p><a href="../reference/pz_annotate_redact.html"><code>pz_annotate_redact()</code></a>
-covers elements so their contents don’t reach the screenshot or
-recording. <code>method = "fill"</code> (the default) paints an opaque
-cover, near-black unless you pass a <code>color</code>:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_redact.html">pz_annotate_redact</a></span><span class="op">(</span><span class="st">'[data-priority="high"] .task-title'</span>, method <span class="op">=</span> <span class="st">"fill"</span><span class="op">)</span></span>
+<p><code><a href="../reference/pz_annotate_redact.html">pz_annotate_redact()</a></code> covers elements so their contents
+stay out of the screenshot or recording. We’ll treat the titles of the
+high-priority tasks as private. With <code>method = "fill"</code>, the
+default, paparazzi paints an opaque cover, near-black unless you pass a
+<code>color</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">private</span> <span class="op">&lt;-</span> <span class="st">'[data-priority="high"] .task-title'</span></span>
+<span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate_redact.html">pz_annotate_redact</a></span><span class="op">(</span><span class="va">private</span>, method <span class="op">=</span> <span class="st">"fill"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">'[data-priority="high"] .task-title'</span>, pad <span class="op">=</span> <span class="fl">24</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="va">private</span>, pad <span class="op">=</span> <span class="fl">24</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/redact-fill-1.png" class="r-plt" alt="The high-priority task titles covered by solid near-black bars." width="338"></p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><code>method = "blur"</code> blurs what’s underneath instead:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_redact.html">pz_annotate_redact</a></span><span class="op">(</span><span class="st">'[data-priority="high"] .task-title'</span>, method <span class="op">=</span> <span class="st">"blur"</span><span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<p>With <code>method = "blur"</code>, paparazzi blurs what’s underneath
+instead:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate_redact.html">pz_annotate_redact</a></span><span class="op">(</span><span class="va">private</span>, method <span class="op">=</span> <span class="st">"blur"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">'[data-priority="high"] .task-title'</span>, pad <span class="op">=</span> <span class="fl">24</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="va">private</span>, pad <span class="op">=</span> <span class="fl">24</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/redact-blur-1.png" class="r-plt" alt="The high-priority task titles blurred so the text is unreadable but its shape is visible." width="338"></p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>Use fill for real secrets: blur can leave short text partly legible,
-and a fill stays opaque even if you give it a translucent color. A
-redaction covers each element’s border box plus <code>pad</code>, but
-not content overflowing the element, so redact the element that actually
-overflows or add padding. Like marks, redactions are clipped by
-scrolling containers and hide if their target is hidden or removed.
-Clipping follows <code>overflow</code> but not a custom
-<code>overflow-clip-margin</code>. Redactions draw instantly, so add
-them <em>before</em> starting a recording: frames captured earlier can
-already contain the text.</p>
+<p>Use fill for real secrets. Blur can leave short text partly legible,
+while a fill stays opaque even if you give it a translucent color.</p>
+<p>A redaction covers each element’s border box plus <code>pad</code>,
+but not content that overflows the element, so redact the element that
+actually overflows or add padding. Like marks, redactions stop at the
+edges of scrolling containers and hide while their target is hidden or
+removed.</p>
+<p>paparazzi draws redactions instantly, even during a recording, but a
+frame captured before the redaction can already show the text. Add
+redactions <em>before</em> you start a recording, or while it’s paused,
+as the <a href="demo-video.html#hide-private-details">in-depth app
+walkthrough</a> does.</p>
 </div>
 <div class="section level2">
 <h2 id="captions">Captions<a class="anchor" aria-label="anchor" href="#captions"></a>
 </h2>
-<p><a href="../reference/pz_annotate_caption.html"><code>pz_annotate_caption()</code></a>
-adds a caption in screen space: a dark panel floating at the
-<code>side = "bottom"</code> (the default) or <code>"top"</code> edge of
-the capture. The default side comes from the page’s staged
-<code>caption_side</code> (see <a href="#styling-defaults">styling
-defaults</a>); a per-call <code>side</code> overrides it. It’s not
-attached to an element. It persists through navigation and across
-recordings, and it’s composited onto stills. Newlines are preserved.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<p><code><a href="../reference/pz_annotate_caption.html">pz_annotate_caption()</a></code> adds a caption to the screen
+instead of to an element: a dark panel along the bottom edge of the
+capture, or the top edge with <code>side = "top"</code>. paparazzi adds
+the caption to each still and recording itself instead of drawing it
+into the page, so the caption stays through navigation and across
+recordings. It keeps any newlines in its text.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_caption.html">pz_annotate_caption</a></span><span class="op">(</span><span class="st">"Seven tasks, two clicks from done"</span><span class="op">)</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="annotations_files/figure-html/caption-1.png" class="r-plt" alt="The task tracker with a dark caption panel centered along the bottom edge, reading: Seven tasks, two clicks from done." width="720"></p>
-<p>The caption sits at the edge of the <em>viewport</em>, so a full-page
-still shows it as above. In a still cropped to a frame, the caption
-appears wherever it happened to be on screen, which is rarely what you
-want; captions belong to full-page stills and recordings.</p>
-<p>Calling <code><a href="../reference/pz_annotate_caption.html">pz_annotate_caption()</a></code> again replaces the
-caption. Remove it by its reserved id:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<p><img src="annotations_files/figure-html/caption-1.png" class="r-plt" alt="The task tracker with a dark caption panel centered along the bottom edge, reading: Seven tasks, two clicks from done." width="400px"></p>
+<p>paparazzi adds the caption after it crops a still to its frame, so
+the caption runs along the edge of a framed still, too:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">".task-list"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="annotations_files/figure-html/caption-framed-1.png" class="r-plt" alt="The task list cropped to its first few tasks, with the dark caption panel along the bottom edge of the crop." width="546"></p>
+<p>paparazzi shows one caption at a time. Each call to
+<code><a href="../reference/pz_annotate_caption.html">pz_annotate_caption()</a></code> replaces the caption on screen, which
+makes it easy to give each step of a recording its own caption. The
+caption’s reserved id is <code>"caption"</code>:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span>id <span class="op">=</span> <span class="st">"caption"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="clearing-and-replacing">Clearing and replacing<a class="anchor" aria-label="anchor" href="#clearing-and-replacing"></a>
 </h2>
-<p><a href="../reference/pz_annotate_clear.html"><code>pz_annotate_clear()</code></a>
-removes one annotation by <code>id</code>, or every annotation when
-<code>id</code> is <code>NULL</code>. The reserved ids
-<code>"spotlight"</code> and <code>"caption"</code> clear those types;
-your own marks, callouts, and redactions take any nonempty id. Reusing
-an id replaces that annotation instead of stacking a second one:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-title"</span>, id <span class="op">=</span> <span class="st">"mark"</span><span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, type <span class="op">=</span> <span class="st">"circle"</span>, id <span class="op">=</span> <span class="st">"mark"</span><span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/pz_annotate_clear.html">pz_annotate_clear()</a></code> removes one annotation by
+<code>id</code>, or every annotation when you leave <code>id</code> out.
+Besides the reserved <code>"spotlight"</code> and
+<code>"caption"</code>, you can give your own marks, callouts, and
+redactions any nonempty id. Each call to an annotation function with an
+id you’ve used before replaces that annotation instead of adding a
+second one:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-title"</span>, id <span class="op">=</span> <span class="st">"mark"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, type <span class="op">=</span> <span class="st">"circle"</span>, id <span class="op">=</span> <span class="st">"mark"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/replace-1.png" class="r-plt" alt="The new-task form with only a circle around the Add button; the box that was around the title field is gone." width="548"></p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>Only the circle remains: the second <code>id = "mark"</code> call
-replaced the box. During an active recording, clearing plays the
-annotation’s reveal in reverse; in stills, annotations disappear
-instantly.</p>
+<p>The second <code>id = "mark"</code> call replaced the box around the
+title field, so only the circle remains.</p>
 </div>
 <div class="section level2">
 <h2 id="styling-defaults">Styling defaults<a class="anchor" aria-label="anchor" href="#styling-defaults"></a>
 </h2>
-<p>Every annotation defaults to the page’s staged color, stroke width,
-font family, and badge size, every callout to the staged bubble colors
-and distance, and every caption to the staged <code>caption_side</code>.
-Change them for all later annotations with <a href="../reference/pz_stage_annotate.html"><code>pz_stage_annotate()</code></a>,
-and pass <code>NULL</code> to restore a default (crimson
-<code>#e11d48</code>, 3 pixel lines, sans-serif, 14 pixel text, captions
-at the bottom, and callouts with white text on <code>#171717</code>, 24
-pixels away or 8 without a line):</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<p><code><a href="../reference/pz_stage_annotate.html">pz_stage_annotate()</a></code> sets your annotation styles once for
+every later annotation on the page. It sets the color, stroke width,
+font family, and badge size for every annotation, the bubble colors and
+distance for callouts, and the side for captions. Arguments to
+individual annotation functions override these defaults for that
+call.</p>
+<p>Let’s make later annotations blue, with large monospace badges:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_stage_annotate.html">pz_stage_annotate</a></span><span class="op">(</span></span>
 <span>    color <span class="op">=</span> <span class="st">"#2563eb"</span>,</span>
 <span>    font_family <span class="op">=</span> <span class="st">"monospace"</span>,</span>
-<span>    font_size <span class="op">=</span> <span class="fl">18</span></span>
+<span>    font_size <span class="op">=</span> <span class="fl">24</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, label <span class="op">=</span> <span class="st">"A"</span><span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, label <span class="op">=</span> <span class="st">"A"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">8</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/stage-style-1.png" class="r-plt" alt="The Add button boxed in blue with a large monospace A badge." width="532"></p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<p>Staged styles stay on the page until you change them. Passing
+<code>NULL</code> restores a default: crimson (<code>#e11d48</code>)
+marks with 3 pixel lines, sans-serif badges with 14 pixel text, callouts
+with white text on <code>#171717</code>, 24 pixels from their element (8
+without a line), and captions at the bottom. We’ll clear the box and
+restore the defaults:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_stage_annotate.html">pz_stage_annotate</a></span><span class="op">(</span></span>
 <span>    color <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>    font_family <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>    font_size <span class="op">=</span> <span class="cn">NULL</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p>Per-call arguments with the same names override the staged values for
-that call. Mark badges are the exception: they ignore the staged
-<code>fill</code> and <code>text_color</code> and follow the mark’s
-color unless you pass <code>label_fill</code> or
-<code>label_text_color</code>.</p>
+<p>The staged <code>fill</code> and <code>text_color</code> style
+callout bubbles only. Mark badges follow their mark’s color unless you
+pass <code>label_fill</code> or <code>label_text_color</code>.</p>
 <div class="section level3">
 <h3 id="web-fonts">Web fonts<a class="anchor" aria-label="anchor" href="#web-fonts"></a>
 </h3>
-<p>A <code>font_family</code> string names a font Chrome can already
-find, such as a generic family like <code>"monospace"</code> or a font
-installed on the machine running Chrome. To use a web font, load it into
-the page first with <a href="../reference/pz_stage_fonts.html"><code>pz_stage_fonts()</code></a>.
-Declare the font with <a href="../reference/pz_font_google.html"><code>pz_font_google()</code></a>,
-<a href="../reference/pz_font_bunny.html"><code>pz_font_bunny()</code></a>,
-or <a href="../reference/pz_font_file.html"><code>pz_font_file()</code></a>
-for a font file on disk. <code><a href="../reference/pz_stage_fonts.html">pz_stage_fonts()</a></code> waits until the
-font has loaded, so no annotation is ever drawn in a fallback font while
-it downloads.</p>
+<p>A <code>font_family</code> string names a font that Chrome can
+already find, like a generic family such as <code>"monospace"</code> or
+a font installed on the machine running Chrome. To use a web font, you
+first load it into the page with <code><a href="../reference/pz_stage_fonts.html">pz_stage_fonts()</a></code>. You
+describe the font with <code><a href="../reference/pz_font_google.html">pz_font_google()</a></code>,
+<code><a href="../reference/pz_font_bunny.html">pz_font_bunny()</a></code>, or, for a font file on disk,
+<code><a href="../reference/pz_font_file.html">pz_font_file()</a></code>. <code><a href="../reference/pz_stage_fonts.html">pz_stage_fonts()</a></code> waits until
+the font has loaded, so paparazzi never draws an annotation in a
+fallback font while the font downloads.</p>
 <p>A handwritten font makes a callout look like a note written over the
 screenshot. We’ll stage Patrick Hand from Google Fonts and make it the
 default for later annotations:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hand</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_font_google.html">pz_font_google</a></span><span class="op">(</span><span class="st">"Patrick Hand"</span><span class="op">)</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_stage_fonts.html">pz_stage_fonts</a></span><span class="op">(</span><span class="va">hand</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -450,67 +471,68 @@ default for later annotations:</p>
 <span>    <span class="st">"Optional: attach a file"</span>,</span>
 <span>    target <span class="op">=</span> <span class="st">"#attachment"</span>,</span>
 <span>    side <span class="op">=</span> <span class="st">"bottom"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">8</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/web-font-1.png" class="r-plt" alt="The new-task form with a dark callout below the attachment field, pointing up at it and reading Optional: attach a file in a handwritten font." width="532"></p>
-<p>The font object works anywhere <code>font_family</code> does. It
-stands for the CSS string <code>'"Patrick Hand", sans-serif'</code>, so
-text falls back to sans-serif for characters the font lacks. A font
-object that isn’t staged on the page is an error. Captions and keystroke
-callouts follow the staged <code>font_family</code> too, and staged
-fonts stay with the page when it navigates to a new document.</p>
-<p>Google and Bunny fonts are downloaded by Chrome, so staging them
-needs a network connection. <code><a href="../reference/pz_font_file.html">pz_font_file()</a></code> reads the file
-in R and works offline.</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_stage_annotate.html">pz_stage_annotate</a></span><span class="op">(</span>font_family <span class="op">=</span> <span class="cn">NULL</span>, font_size <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+<p>You can pass the font object anywhere <code>font_family</code> takes
+a string, as long as you’ve staged it on the page. It stands for the CSS
+font family <code>'"Patrick Hand", sans-serif'</code>, so the browser
+falls back to sans-serif for characters the font lacks. Captions and
+keystroke callouts use the staged <code>font_family</code> too, and
+staged fonts stay with the page when it navigates to a new document.</p>
+<p>Chrome downloads Google and Bunny fonts, so staging them needs a
+network connection. <code><a href="../reference/pz_font_file.html">pz_font_file()</a></code> reads the font file in
+R, so it works offline.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_stage_annotate.html">pz_stage_annotate</a></span><span class="op">(</span>font_family <span class="op">=</span> <span class="cn">NULL</span>, font_size <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
 <h2 id="framing-stills">Framing stills<a class="anchor" aria-label="anchor" href="#framing-stills"></a>
 </h2>
-<p>A screenshot’s frame is measured from the target’s elements. Badges
-and callouts paint <em>outside</em> those elements, so the default
-<code>target_box = "element"</code> can crop them off.
-<code>target_box = "annotated"</code> measures the elements plus their
-attached marks, callouts, and spotlight cutouts. Here’s the difference
-on the same callout:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<p>paparazzi measures a still’s frame from the elements its target
+matches. Badges and callouts sit <em>outside</em> those elements, so
+with the default <code>target_box = "element"</code>, the frame can crop
+them off. With <code>target_box = "annotated"</code>, paparazzi measures
+the elements together with their marks, callouts, and spotlight cutouts.
+Here’s the difference on a callout beside the Done filter:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">done</span> <span class="op">&lt;-</span> <span class="st">".filters a[href='#done']"</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span><span class="st">"Finished tasks"</span>, target <span class="op">=</span> <span class="va">done</span>, side <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="va">done</span>, pad <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/frame-element-1.png" class="r-plt" alt="A tight crop of the Done filter link; the callout arrow beside it is visible but the bubble is cut off." width="122"></p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="va">done</span>, pad <span class="op">=</span> <span class="fl">24</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/frame-annotated-1.png" class="r-plt" alt="A crop of the Done filter link that includes the full callout bubble to its right." width="263"></p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>Redactions and annotations on unrelated elements are never included.
-<code>target_box = "annotated"</code> applies to stills; a recording’s
-home frame always uses the element box.</p>
+<p><code>target_box = "annotated"</code> never includes redactions or
+annotations on other elements. It only applies to stills: paparazzi
+always measures a recording’s frame from the element box.</p>
 </div>
 <div class="section level2">
 <h2 id="reveals">Reveals<a class="anchor" aria-label="anchor" href="#reveals"></a>
 </h2>
-<p>So far every mark has appeared fully drawn, because reveal animations
-only play during an active, unpaused recording. <code>reveal</code>
-chooses the animation: <code>"fade"</code>, <code>"draw"</code> (the
-stroke draws itself), <code>"pop"</code>, <code>"slide"</code>,
-<code>"wipe"</code> (sweeps clockwise from 12 o’clock), or
-<code>"none"</code>. The defaults are fade for boxes, draw for the other
-mark types, pop for callouts, and fade for spotlights. Clearing an
-annotation plays its reveal in reverse. This recording shows a box
-fading in, a circle drawing itself, and a callout popping in, then all
-three reversing out:</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<p>So far, every annotation has appeared fully drawn. During a
+recording, paparazzi animates each annotation as it appears, and calls
+this animation a <strong>reveal</strong>. When you clear an annotation
+during a recording, paparazzi plays its reveal in reverse. Outside a
+recording, or while it’s paused, paparazzi draws and clears annotations
+instantly.</p>
+<p><code>reveal</code> chooses the animation: <code>"fade"</code>,
+<code>"draw"</code> (the outline draws itself), <code>"pop"</code>,
+<code>"slide"</code>, <code>"wipe"</code> (sweeps clockwise from 12
+o’clock), or <code>"none"</code>. Boxes fade in by default, the other
+marks draw themselves, callouts pop in, and spotlights fade in. This
+recording shows a box fading in, a circle drawing itself, and a callout
+popping in, then all three reversing out:</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_start.html">pz_record_start</a></span><span class="op">(</span></span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">40</span>, when <span class="op">=</span> <span class="st">"start"</span><span class="op">)</span>,</span>
@@ -530,26 +552,28 @@ three reversing out:</p>
 <span>  <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <video controls preload="metadata" src="annotations_files/figure-html/reveals-1.mp4"><a href="annotations_files/figure-html/reveals-1.mp4">Download
 recording</a>
-</video><p>The recording stops when the chain ends, and with no path it’s
-written into the article as an MP4. Pass a path to choose the file, or
-<code>format = "gif"</code> for a GIF.</p>
+</video><p>The recording chain ends the chunk, so paparazzi stops the recording
+and adds it to the article as an MP4. In a script, give
+<code><a href="../reference/pz_record_start.html">pz_record_start()</a></code> a path to choose the file.</p>
 </div>
 <div class="section level2">
 <h2 id="keystroke-callouts">Keystroke callouts<a class="anchor" aria-label="anchor" href="#keystroke-callouts"></a>
 </h2>
-<p>One more callout exists only in recordings: <a href="../reference/pz_act_press.html"><code>pz_act_press(show_keys = ...)</code></a>
-shows the keys being pressed as keycaps. <code>"words"</code> spells out
-modifier names, <code>"mac"</code> uses Mac symbols, and
-<code>"both"</code> shows <code>Mod</code> as <code>Ctrl / ⌘</code>. The
-default is <code>"none"</code>; set <a href="../reference/pz_stage.html"><code>pz_stage(show_keys = ...)</code></a>
-to change it for a whole page.</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<p><code><a href="../reference/pz_act_press.html">pz_act_press()</a></code> can show the keys it presses as keycaps,
+a callout that paparazzi draws only in recordings. Set <a href="../reference/pz_act_press.html"><code>show_keys</code></a> to
+choose how the keycaps look: <code>"words"</code> spells out modifier
+names, <code>"mac"</code> uses Mac symbols, and <code>"both"</code>
+shows <code>Mod</code> as <code>Ctrl / ⌘</code>. The default is
+<code>"none"</code>, and <a href="../reference/pz_stage.html"><code>pz_stage(show_keys = ...)</code></a>
+changes it for every later key press on the page.</p>
+<p>The task tracker adds a task when you press Enter in the title field,
+so we’ll show Enter with Mac symbols:</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_start.html">pz_record_start</a></span><span class="op">(</span></span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">24</span>, when <span class="op">=</span> <span class="st">"start"</span><span class="op">)</span>,</span>
 <span>    scale <span class="op">=</span> <span class="fl">0.6</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Water the dog"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_press.html">pz_act_press</a></span><span class="op">(</span><span class="st">"Enter"</span>, show_keys <span class="op">=</span> <span class="st">"mac"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span></span>
@@ -558,13 +582,15 @@ to change it for a whole page.</p>
 <span>  <span class="op">)</span></span></code></pre></div>
 <video controls preload="metadata" src="annotations_files/figure-html/show-keys-1.mp4"><a href="annotations_files/figure-html/show-keys-1.mp4">Download
 recording</a>
-</video><p>Keystroke callouts appear only in recordings, never in stills, and
-each <code><a href="../reference/pz_act_press.html">pz_act_press()</a></code> call replaces the previous callout.</p>
-<p>Finally, close the page to shut down the browser:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+</video><p>paparazzi shows one keystroke callout at a time, so each
+<code><a href="../reference/pz_act_press.html">pz_act_press()</a></code> call replaces the previous one. Keystroke
+callouts never appear in stills.</p>
+<p>We’re done with the browser, so let’s close it:</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span></code></pre></div>
-<p>For annotations in a longer narrative recording, see the <a href="walkthrough.html">three-part app walkthrough</a>; the <a href="../reference/index.html#annotations">function reference</a> lists
-every annotation function with its arguments.</p>
+<p>The <a href="../reference/index.html#annotations">function
+reference</a> lists every annotation function with all of its
+arguments.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

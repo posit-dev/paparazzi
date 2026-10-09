@@ -2,8 +2,8 @@
 
 ### Guides
 
-- [Make a three-part app
-  walkthrough](https://posit-dev.github.io/paparazzi/articles/walkthrough.md):
+- [Record an in-depth app
+  walkthrough](https://posit-dev.github.io/paparazzi/articles/demo-video.md):
 - [Annotate
   pages](https://posit-dev.github.io/paparazzi/articles/annotations.md):
 - [Shiny apps](https://posit-dev.github.io/paparazzi/articles/shiny.md):
