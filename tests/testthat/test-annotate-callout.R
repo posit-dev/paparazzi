@@ -1161,4 +1161,10 @@ test_that("callout text chooses the higher WCAG contrast against its fill", {
   expect_identical(draw(text_color = "blue")$textColor, "rgb(0, 0, 255)")
   pz_stage_annotate(page, text_color = NULL)
   expect_identical(draw()$textColor, "rgb(0, 0, 0)")
+  # Translucent fills are blended over white before measuring contrast.
+  expect_identical(draw(fill = "transparent")$textColor, "rgb(0, 0, 0)")
+  expect_identical(
+    draw(fill = "rgba(0, 0, 0, 0.9)")$textColor,
+    "rgb(255, 255, 255)"
+  )
 })

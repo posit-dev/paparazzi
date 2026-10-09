@@ -22,7 +22,11 @@ function(root) {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, 1, 1);
-    const rgb = [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    const pixel = ctx.getImageData(0, 0, 1, 1).data;
+    // Measure against an opaque white backdrop so translucent fills
+    // (e.g. 'transparent') don't read as opaque black.
+    const alpha = pixel[3] / 255;
+    const rgb = [0, 1, 2].map(i => pixel[i] * alpha + 255 * (1 - alpha));
     const linear = rgb.map(v => {
       v /= 255;
       return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;

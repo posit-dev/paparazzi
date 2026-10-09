@@ -86,12 +86,9 @@ pz_annotate_callout <- function(
   stage <- page_stage(ctx$page)
   fill <- fill %||% stage$annotate_fill %||% style$color
   text_color <- text_color %||% stage$annotate_text_color
-  if (is.null(text_color)) {
-    check_string(fill, allow_empty = FALSE)
-    surface <- list(fill = fill, text_color = NULL)
-  } else {
-    surface <- annotate_fill_style(ctx, fill, text_color)
-  }
+  check_string(fill, allow_empty = FALSE)
+  check_string(text_color, allow_empty = FALSE, allow_null = TRUE)
+  surface <- list(fill = fill, text_color = text_color)
   stroke_width <- annotate_stroke_width(ctx, stroke_width)
   distance <- annotate_distance(ctx, distance, leader)
   els <- annotate_elements(ctx, target)

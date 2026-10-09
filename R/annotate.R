@@ -225,27 +225,6 @@ annotate_style <- function(
   list(color = color, font_family = font_family, font_size = font_size)
 }
 
-annotate_fill_style <- function(
-  ctx,
-  fill,
-  text_color,
-  fill_arg = "fill",
-  text_color_arg = "text_color",
-  call = caller_env()
-) {
-  stage <- page_stage(ctx$page)
-  fill <- fill %||% stage$annotate_fill
-  text_color <- text_color %||% stage$annotate_text_color
-  check_string(fill, allow_empty = FALSE, arg = fill_arg, call = call)
-  check_string(
-    text_color,
-    allow_empty = FALSE,
-    arg = text_color_arg,
-    call = call
-  )
-  list(fill = fill, text_color = text_color)
-}
-
 annotate_stroke_width <- function(ctx, stroke_width, call = caller_env()) {
   stroke_width <- stroke_width %||% page_stage(ctx$page)$annotate_stroke_width
   check_positive_css_px(stroke_width, arg = "stroke_width", call = call)
