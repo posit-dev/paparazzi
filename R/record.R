@@ -389,8 +389,9 @@ pz_record_pause <- function(ctx) {
   # but completed during it would leak paused-stretch content into the
   # video. If the drain times out, the pause fails and the recording
   # continues unpaused.
+  held <- rec$held
   rec$held <- TRUE
-  on.exit(rec$held <- FALSE, add = TRUE)
+  on.exit(rec$held <- held, add = TRUE)
   record_wait_pending(
     rec,
     ctx$page,
