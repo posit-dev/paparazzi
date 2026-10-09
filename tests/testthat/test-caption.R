@@ -671,7 +671,7 @@ test_that("still blend works for single-pixel dimensions", {
   }
 })
 
-test_that("clearing all logs the caption clear before mark fades pump", {
+test_that("clearing all logs the caption clear before the clear settles", {
   skip_if_no_av()
   page <- local_record_page()
   out <- withr::local_tempfile(fileext = ".mp4")
@@ -682,22 +682,22 @@ test_that("clearing all logs the caption clear before mark fades pump", {
     pz_annotate_caption("Hello")
   rec <- page_recorder(page)
   before <- length(rec$captions)
-  captions_at_pump <- NULL
-  clear_duration <- NULL
-  real_pump <- annotate_pump
+  captions_at_settle <- NULL
+  settled <- FALSE
+  real_settle <- annotate_settle
   local_mocked_bindings(
-    annotate_pump = function(ctx, duration) {
-      captions_at_pump <<- page_recorder(ctx$page)$captions
-      clear_duration <<- duration
-      real_pump(ctx, duration)
+    annotate_settle = function(ctx) {
+      captions_at_settle <<- page_recorder(ctx$page)$captions
+      settled <<- TRUE
+      real_settle(ctx)
     }
   )
 
   pz_annotate_clear(page)
-  expect_gt(clear_duration, 0)
-  expect_length(captions_at_pump, before + 1L)
-  expect_null(captions_at_pump[[length(captions_at_pump)]]$caption)
-  expect_identical(rec$captions, captions_at_pump)
+  expect_true(settled)
+  expect_length(captions_at_settle, before + 1L)
+  expect_null(captions_at_settle[[length(captions_at_settle)]]$caption)
+  expect_identical(rec$captions, captions_at_settle)
   pz_record_stop(page)
 })
 
