@@ -891,11 +891,10 @@ record_screencast_frame <- function(page, rec, frame) {
 # Drains any in-flight capture, then captures a frame at the method's
 # scale and waits until it settles, whether it succeeds (the file lands)
 # or fails (the recorder clears the pending capture). A screencast frame
-# may have CSS-viewport
-# resolution even at a higher device pixel ratio; matching it keeps
-# encode-time framing on the same coordinates for every frame. A timeout
-# is counted as a recorder error, not thrown, and never leaves a pending
-# capture blocking later frames.
+# may have CSS-viewport resolution even at a higher device pixel ratio;
+# matching it keeps encode-time framing on the same coordinates for every
+# frame. A timeout is counted as a recorder error, not thrown, and never
+# leaves a pending capture blocking later frames.
 record_capture_settled <- function(
   rec,
   page,

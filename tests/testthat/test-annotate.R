@@ -436,10 +436,31 @@ test_that("a failing settle capture is counted and the recording continues", {
   )
   rec <- page_recorder(page)
   expect_gt(rec$n_errors, 0L)
-  expect_null(rec$pending)
-  # A working settle still retains a completion frame after the failure.
+  # Later frames are not blocked by the failed settle capture.
+  files_after <- length(rec$files)
+  pz_poll(
+    function() length(rec$files) > files_after,
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "recording frames after the failed settle"
+  )
+  # A working settle still retains a completion frame after the failure:
+  # the settle capture runs (explicit scale), succeeds, and adds a file.
   files_before <- length(rec$files)
-  pz_annotate(page, "#box")
+  errors_before <- rec$n_errors
+  settle_captures <- 0L
+  with_mocked_bindings(
+    pz_annotate(page, "#box"),
+    record_capture = function(rec, page, vt, scale) {
+      if (missing(scale)) {
+        return(original_capture(rec, page, vt))
+      }
+      settle_captures <<- settle_captures + 1L
+      original_capture(rec, page, vt, scale = scale)
+    }
+  )
+  expect_gt(settle_captures, 0L)
+  expect_equal(rec$n_errors, errors_before)
   expect_gt(length(rec$files), files_before)
   pz_record_hold(page, 0.2)
   pz_record_stop(page)
@@ -465,7 +486,14 @@ test_that("a stuck settle capture is retired instead of blocking later frames", 
   )
   rec <- page_recorder(page)
   expect_gt(rec$n_errors, 0L)
-  expect_null(rec$pending)
+  # Later frames are not blocked by the retired settle capture.
+  files_after <- length(rec$files)
+  pz_poll(
+    function() length(rec$files) > files_after,
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "recording frames after the retired settle"
+  )
   pz_record_hold(page, 0.2)
   pz_record_stop(page)
   expect_true(file.exists(path))
