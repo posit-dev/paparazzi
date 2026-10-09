@@ -618,7 +618,6 @@ test_that("first appearance follows during fade; home and reads do not", {
   pz_camera(page, pz_frame("#a", zoom = 2), duration = 0)
   pz_get_text(page, "#b")
   pz_expect_text(page, "B", target = "#b")
-  pz_wait(page, 0.01)
   expect_length(rec$camera, 1)
   pz_act_hover(page, "#b")
   expect_length(rec$camera, 2)
