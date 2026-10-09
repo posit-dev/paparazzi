@@ -906,7 +906,15 @@ test_that("stop captures a final frame after a late page change", {
   withr::defer(unlink(frames_dir, recursive = TRUE))
   page |> pz_record_start(out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
-  pz_wait(page, 0.4)
+  rec <- page_recorder(page)
+  # The first kept frame must predate the color change, so wait for an
+  # actual capture instead of assuming one landed in a fixed window.
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = page$page$default_timeout,
+    loop = page$page$child_loop,
+    what = "a frame of the page before the color change"
+  )
   # A change right before stop must appear in the final frame; without
   # the stop-time capture the video would end on an older one.
   pz_js(
