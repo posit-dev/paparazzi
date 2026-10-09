@@ -1,4 +1,13 @@
-# paparazzi <a href="https://posit-dev.github.io/paparazzi/" style="display: fixed"><img src="../man/figures/logo.png" align="right" height="138" alt="paparazzi website" /></a>
+```{r}
+#| include: false
+logo_src <- if (identical(Sys.getenv("IN_INDEX", ""), "true")) {
+  "../man/figures/logo.png"
+} else {
+  "man/figures/logo.png"
+}
+```
+
+# paparazzi <a href="https://posit-dev.github.io/paparazzi/" style="display: fixed"><img src="`r logo_src`" align="right" height="138" alt="paparazzi website" /></a>
 
 <!-- badges: start -->
 [![CRAN status](https://www.r-pkg.org/badges/version/paparazzi)](https://CRAN.R-project.org/package=paparazzi)
