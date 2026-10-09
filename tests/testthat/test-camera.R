@@ -141,8 +141,27 @@ test_that("camera zoom and reset change MP4 and GIF content, not dimensions", {
     out <- withr::local_tempfile(fileext = paste0(".", ext))
     pz_record_start(page, out, fps = 10, hold = c(0.2, 0.2))
     defer_record_stop(page)
+    rec <- page_recorder(page)
+    # The first encoded frame must predate the camera move: wait for an
+    # actual baseline capture instead of assuming one already landed.
+    pz_poll(
+      function() length(rec$files) >= 1L,
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a baseline frame before the camera move"
+    )
     pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.2)
+    zoom_end <- rec$camera[[length(rec$camera)]]$end
     pz_wait(page, 0.25)
+    # Retained frames are raw captures; the zoom applies at encode. Poll
+    # that a capture landed at full zoom so the zoomed window is on the
+    # record before the reset starts shrinking it.
+    pz_poll(
+      function() any(rec$times >= zoom_end),
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a frame captured at full zoom"
+    )
     pz_camera_reset(page)
     pz_wait(page, 0.2)
     suppressWarnings(pz_record_stop(page))
@@ -216,8 +235,18 @@ test_that("framed camera uses final home, scale and each method's capture densit
       what = "a baseline frame before the camera move"
     )
     pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.15)
+    zoom_end <- rec$camera[[length(rec$camera)]]$end
     pz_wait(page, 0.25)
     pz_js(page, "document.getElementById('home').style.width = '480px'")
+    # Retained frames are raw captures; the zoom applies at encode. Poll
+    # that a capture landed at full zoom before the reset starts shrinking
+    # it. The width change above gives screencast a repaint to capture.
+    pz_poll(
+      function() any(rec$times >= zoom_end),
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a frame captured at full zoom"
+    )
     pz_camera_reset(page)
     pz_wait(page, 0.15)
     suppressWarnings(pz_record_stop(page))
