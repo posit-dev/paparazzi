@@ -227,6 +227,10 @@ knit_print.PaparazziContext <- function(x, ...) {
   image <- x$inspect_image
   x$inspect_image <- NULL
   if (ctx_recording(x)) {
+    # The recording media wins; the pending image would never be shown.
+    if (!is.null(image)) {
+      unlink(image)
+    }
     return(knitr::knit_print(pz_record_stop(x), ...))
   }
   # A pending image belongs to the chunk that captured it. Anywhere else it
