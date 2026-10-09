@@ -1673,6 +1673,8 @@ test_that('a source that gains an iframe after the drop loses its preview silent
   original_settle <- drag_preview_settle
   settled <- FALSE
   local_mocked_bindings(drag_preview_settle = function(state) {
+    expect_false(is.null(state))
+    expect_false(drag_preview_absent(page))
     duration <- original_settle(state)
     settled <<- TRUE
     expect_equal(duration, 0)
