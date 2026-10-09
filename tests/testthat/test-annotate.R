@@ -2461,3 +2461,255 @@ test_that("stroke_width reaches mark shapes and is stageable", {
   )
   page |> pz_annotate_clear() |> pz_stage_annotate(stroke_width = NULL)
 })
+
+annotation_badge_rects <- function(page) {
+  pz_js(
+    page,
+    paste0(
+      "(() => { const nodes = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-annotation');",
+      "return [...nodes].map(n => { const badge = n.querySelector('span');",
+      "const r = badge.getBoundingClientRect();",
+      "const range = document.createRange(); range.selectNodeContents(badge);",
+      "return {visible:n.style.display !== 'none',",
+      "left:r.left,top:r.top,width:r.width,height:r.height,bottom:r.bottom,",
+      "lines:range.getClientRects().length}; }); })()"
+    )
+  )
+}
+
+local_clipped_badge_page <- function(.env = parent.frame()) {
+  page <- local_page(.env = .env)
+  pz_js(
+    page,
+    paste0(
+      "document.body.style.background = 'white';",
+      "document.body.innerHTML = '<div id=horizontal style=\"position:absolute;left:100px;top:100px;width:100px;height:140px;overflow-x:hidden\">' +",
+      "'<div id=vertical style=\"position:relative;left:-20px;top:20px;width:160px;height:70px;overflow-y:hidden\">' +",
+      "'<div id=marked style=\"position:relative;top:-20px;width:110px;height:80px\"></div>' +",
+      "'<div style=\"height:200px\"></div></div></div>';"
+    )
+  )
+  page
+}
+
+test_that("the tasks Add badge stays on one line beyond its narrow button", {
+  page <- local_page(
+    pz_example("tasks"),
+    color_scheme = "light",
+    width = 1000,
+    height = 720
+  )
+  page |>
+    pz_annotate(
+      "#add-task",
+      label = "A",
+      pad = 2,
+      font_family = "monospace",
+      id = "add"
+    )
+  one_line <- annotation_badge_rects(page)[[1]]$height
+  page |>
+    pz_annotate(
+      "#add-task",
+      label = "#add-task",
+      pad = 2,
+      font_family = "monospace",
+      label_fill = "#ff00ff",
+      id = "add"
+    )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  badge <- annotation_badge_rects(page)[[1]]
+  target <- pz_get_rect(page, "#add-task")
+  expect_equal(badge$height, one_line)
+  expect_equal(badge$lines, 1)
+  expect_gt(badge$width, target$width)
+  expect_gt(badge$left + badge$width - 2, target$x + target$width)
+  expect_png_pixel(
+    page,
+    path,
+    badge$left + badge$width - 2,
+    badge$top + badge$height / 2,
+    c(255, 0, 255)
+  )
+})
+
+test_that("task title badges paint outside overflow wrappers in annotated crops", {
+  page <- local_page(
+    pz_example("tasks"),
+    color_scheme = "light",
+    width = 1000,
+    height = 720
+  )
+  page |>
+    pz_annotate(
+      ".task-title",
+      label = ".task-title",
+      font_family = "monospace",
+      label_fill = "#ff00ff"
+    )
+  spec <- pz_frame(list("h1", ".task-list"), pad = 24, target_box = "annotated")
+  clip <- frame_clip(page, frame_effective(page, spec))
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path, frame = spec)
+  badges <- annotation_badge_rects(page)
+  titles <- pz_get_rect(page, ".task-title")
+  visible <- vapply(badges, `[[`, TRUE, "visible")
+  expect_gt(sum(visible), 0)
+  expect_gt(sum(!visible), 0)
+  expect_length(badges, nrow(titles))
+  size <- png_dimensions(path) / page_dpr(page)
+  for (i in which(visible)) {
+    badge <- badges[[i]]
+    expect_equal(badge$bottom, titles$y[i], tolerance = 0.1)
+    point <- c(badge$left + 2 - clip$x, badge$top + badge$height / 2 - clip$y)
+    expect_true(all(point >= 0 & point < size))
+    expect_png_pixel(page, path, point[1], point[2], c(255, 0, 255))
+  }
+  # Hidden owners must not leak their badges back into the document.
+  expect_true(all(vapply(badges[!visible], function(b) b$width == 0, TRUE)))
+})
+
+test_that("nested overflow clips shapes but anchors badges to the visible mark", {
+  page <- local_clipped_badge_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  for (type in c("box", "circle", "underline", "highlight")) {
+    page |>
+      pz_annotate(
+        "#marked",
+        type = type,
+        label = "A",
+        pad = 4,
+        color = "red",
+        label_fill = "#ff00ff",
+        reveal = "none",
+        id = "mark"
+      ) |>
+      pz_screenshot(path)
+    badge <- annotation_badge_rects(page)[[1]]
+    expect_equal(c(badge$left, badge$bottom), c(100, 120), tolerance = 0.1)
+    expect_png_pixel(page, path, 102, 110, c(255, 0, 255))
+    expect_png_pixel(page, path, 96, 150, rep(255, 3))
+    expect_png_pixel(page, path, 150, 110, rep(255, 3))
+    point <- switch(
+      type,
+      box = c(192, 150),
+      circle = c(192, 140),
+      underline = c(150, 180),
+      highlight = c(150, 150)
+    )
+    expect_png_pixel(
+      page,
+      path,
+      point[1],
+      point[2],
+      if (type == "highlight") c(255, 166, 166) else c(255, 0, 0)
+    )
+    pz_js(page, "document.getElementById('vertical').scrollTop = 30")
+    pz_poll(
+      function() abs(annotation_state(page)[[1]]$rect[[2]] - 66) < 0.1,
+      timeout = 5,
+      loop = page$child_loop,
+      what = "the mark to follow the nested container scroll"
+    )
+    badge <- annotation_badge_rects(page)[[1]]
+    expect_equal(c(badge$left, badge$bottom), c(100, 120), tolerance = 0.1)
+    page |> pz_screenshot(path)
+    expect_png_pixel(page, path, 102, 110, c(255, 0, 255))
+    pz_js(page, "document.getElementById('vertical').scrollTop = 150")
+    pz_poll(
+      function() !annotation_badge_rects(page)[[1]]$visible,
+      timeout = 5,
+      loop = page$child_loop,
+      what = "the fully clipped mark and badge to hide"
+    )
+    page |> pz_screenshot(path)
+    expect_png_pixel(page, path, 102, 110, rep(255, 3))
+    pz_js(page, "document.getElementById('vertical').scrollTop = 0")
+    pz_poll(
+      function() {
+        state <- annotation_state(page)[[1]]
+        state$visible && abs(state$rect[[2]] - 96) < 0.1
+      },
+      timeout = 5,
+      loop = page$child_loop,
+      what = "the mark to return to its unscrolled position"
+    )
+    pz_js(page, "document.getElementById('marked').style.display = 'none'")
+    pz_poll(
+      function() !annotation_badge_rects(page)[[1]]$visible,
+      timeout = 5,
+      loop = page$child_loop,
+      what = "the non-rendered mark and badge to hide"
+    )
+    pz_js(page, "document.getElementById('marked').style.display = ''")
+    pz_poll(
+      function() annotation_badge_rects(page)[[1]]$visible,
+      timeout = 5,
+      loop = page$child_loop,
+      what = "the restored mark and badge to reappear"
+    )
+    page |> pz_annotate_clear("mark")
+    expect_length(annotation_state(page), 0)
+    expect_equal(
+      pz_js(
+        page,
+        "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
+      ),
+      0
+    )
+  }
+})
+
+test_that("a clipped recorded badge paints in retained frames and clears", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- local_clipped_badge_page()
+  path <- withr::local_tempfile(fileext = ".mp4")
+  page |>
+    pz_record_start(
+      path,
+      method = "poll",
+      fps = 12,
+      hold = c(0, 0),
+      keep_frames = TRUE
+    )
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  defer_record_stop(page)
+  dpr <- page_dpr(page)
+  last_badge <- function() {
+    if (!length(rec$files)) {
+      return(rep(NA_real_, 3))
+    }
+    png::readPNG(tail(rec$files, 1))[
+      round(110 * dpr) + 1,
+      round(102 * dpr) + 1,
+      1:3
+    ]
+  }
+  page |>
+    pz_annotate(
+      "#marked",
+      label = "A",
+      pad = 4,
+      label_fill = "#ff00ff",
+      reveal = "fade",
+      id = "mark"
+    )
+  pz_poll(
+    function() isTRUE(all(abs(last_badge() - c(1, 0, 1)) < 0.03)),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a retained frame containing the clipped target's badge"
+  )
+  page |> pz_annotate_clear("mark")
+  pz_poll(
+    function() isTRUE(all(abs(last_badge() - 1) < 0.03)),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a retained frame without the cleared badge"
+  )
+  expect_length(annotation_state(page), 0)
+  page |> pz_record_stop()
+})
