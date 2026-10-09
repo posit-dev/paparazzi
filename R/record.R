@@ -1301,11 +1301,10 @@ record_encode <- function(rec, page = NULL, call = caller_env()) {
     } else {
       resampled$files
     }
-    output_file <- if (burning) {
-      normalizePath(rec$path, mustWork = FALSE)
-    } else {
-      rec$path
-    }
+    output_file <- file.path(
+      normalizePath(dirname(rec$path)),
+      basename(rec$path)
+    )
     encode <- function() {
       av::av_encode_video(
         input_files,

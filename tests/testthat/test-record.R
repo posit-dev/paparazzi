@@ -104,6 +104,49 @@ test_that("webm encodes", {
   expect_lte(info$duration, 1.0)
 })
 
+test_that("captioned videos encode to new relative paths", {
+  skip_if_no_av()
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  dir.create("sub")
+
+  for (format in c("mp4", "webm")) {
+    out <- file.path("sub", paste0("captioned.", format))
+    expect_false(file.exists(out))
+    pz_record_start(page, out, fps = 5, hold = c(0, 0))
+    defer_record_stop(page)
+    pz_annotate_caption(page, "hi")
+    pz_record_hold(page, 0.5)
+    pz_record_stop(page)
+
+    expect_true(file.exists(out))
+    expect_gt(recorded_video_info(out)$duration, 0)
+    expect_identical(getwd(), normalizePath(dir))
+  }
+})
+
+test_that("plain videos encode to new relative paths", {
+  skip_if_no_av()
+  page <- local_record_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  dir.create("sub")
+
+  for (format in c("mp4", "webm")) {
+    out <- file.path("sub", paste0("plain.", format))
+    expect_false(file.exists(out))
+    pz_record_start(page, out, fps = 5, hold = c(0, 0))
+    defer_record_stop(page)
+    pz_record_hold(page, 0.5)
+    pz_record_stop(page)
+
+    expect_true(file.exists(out))
+    expect_gt(recorded_video_info(out)$duration, 0)
+    expect_identical(getwd(), normalizePath(dir))
+  }
+})
+
 test_that("pause/resume cuts the paused stretch out of the video", {
   page <- local_record_page()
   skip_if_no_av()
