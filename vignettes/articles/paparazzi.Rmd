@@ -327,19 +327,10 @@ page |>
 
 When an action in your script can't find its element, or finds the wrong one, you can use `pz_inspect()` to see what paparazzi sees. It prints the page summary and the matches for a target, which paparazzi looks up from the current scope. Because it returns the context it was given, you can drop it into the middle of a chain:
 
-```{r, eval = FALSE}
+```{r, fig.alt = "The task list with a dashed outline around the list and numbered solid outlines around the visible Done buttons."}
 page |>
   pz_find(".task-list") |>
   pz_inspect(".task-done", show = "screenshot")
-```
-
-```{r, echo = FALSE, message = FALSE, fig.alt = "The task list with a dashed outline around the list and numbered solid outlines around the visible Done buttons."}
-inspect_path <- knitr::fig_path("png")
-dir.create(dirname(inspect_path), recursive = TRUE, showWarnings = FALSE)
-page |>
-  pz_find(".task-list") |>
-  pz_inspect(".task-done", show = "screenshot", path = inspect_path)
-knitr::include_graphics(inspect_path)
 ```
 
 `.task-done` matches one button for each task. The page hides the Done buttons of finished tasks, so `pz_inspect()` lists them as `hidden`. An action targeting one of them would wait for it to become visible, then time out. With `show = "screenshot"`, `pz_inspect()` also saves a screenshot with the matches outlined and numbered.
