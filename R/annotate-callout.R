@@ -38,7 +38,9 @@
 #'   (and the callout's badge); `NULL` uses the staged `fill`/`text_color`
 #'   from [pz_stage_annotate()]. Without a staged value, the fill follows
 #'   the resolved `color`, and paparazzi chooses black or white text for
-#'   the higher WCAG contrast ratio against the fill.
+#'   the higher WCAG contrast ratio against the fill. Automatic contrast
+#'   blends translucent fills over white, so set `text_color` explicitly
+#'   with a translucent fill on a dark page.
 #'   [pz_annotate()] mark badges do not use these; they follow their mark's
 #'   `color` unless overridden per call with `label_fill`/`label_text_color`.
 #' @param stroke_width Leader line width in CSS pixels, or `NULL` for the
@@ -88,7 +90,6 @@ pz_annotate_callout <- function(
   text_color <- text_color %||% stage$annotate_text_color
   check_string(fill, allow_empty = FALSE)
   check_string(text_color, allow_empty = FALSE, allow_null = TRUE)
-  surface <- list(fill = fill, text_color = text_color)
   stroke_width <- annotate_stroke_width(ctx, stroke_width)
   distance <- annotate_distance(ctx, distance, leader)
   els <- annotate_elements(ctx, target)
@@ -102,8 +103,8 @@ pz_annotate_callout <- function(
     label = label,
     reveal = reveal,
     color = style$color,
-    fill = surface$fill,
-    textColor = surface$text_color,
+    fill = fill,
+    textColor = text_color,
     strokeWidth = stroke_width,
     distance = distance,
     fontFamily = style$font_family,
