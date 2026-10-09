@@ -383,6 +383,19 @@ pz_record_pause <- function(ctx) {
     return(ctx_return(ctx))
   }
   camera_settle(ctx$page, rec)
+  # Pause is a hard boundary: no frame may land after it returns. Hold
+  # new captures while draining the one in flight (resume and device
+  # changes drain it the same way); a capture issued before the pause
+  # but completed during it would leak paused-stretch content into the
+  # video. If the drain times out, the pause fails and the recording
+  # continues unpaused.
+  rec$held <- TRUE
+  on.exit(rec$held <- FALSE, add = TRUE)
+  record_wait_pending(
+    rec,
+    ctx$page,
+    "the in-flight frame capture before pausing"
+  )
   rec$vt_base <- rec_vt(rec)
   rec$paused <- TRUE
   ctx_return(ctx)
