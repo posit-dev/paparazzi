@@ -68,9 +68,10 @@ later examples uncaptioned.
 The start frame is the **home frame**. `pz_camera()` moves to a shot within
 it, applied when the video is encoded: here `zoom = 2` frames the form at
 twice the home zoom, and `pz_camera_reset()` goes back to the home frame. The
-camera changes the video, not the browser viewport. With `wait = TRUE` the
-next action starts after the move finishes; the default, `FALSE`, overlaps
-them.
+camera changes the video, not the browser viewport. `pz_camera()` picks a
+good move duration from the pan and zoom distance; pass `duration` only in
+extreme cases, with a good reason. With `wait = TRUE` the next action starts
+after the move finishes; the default, `FALSE`, overlaps them.
 
 Frames accept a `pz_frame()` spec or locator. `when = "start"` measures the
 recording crop at capture start; the default uses the final layout. Numeric
