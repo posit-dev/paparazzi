@@ -42,6 +42,10 @@ PaparazziContext <- R6::R6Class(
     #'   `NULL` (internal).
     recording = NULL,
 
+    #' @field inspect_image Pending annotated screenshot path for knitr, or
+    #'   `NULL` (internal).
+    inspect_image = NULL,
+
     #' @description Create a context attached to a page.
     #' @param page A `PaparazziPage`.
     #' @param scope Stack of pinned element sets; defaults to empty (the
@@ -220,17 +224,28 @@ PaparazziPage <- R6::R6Class(
 
 #' @exportS3Method knitr::knit_print
 knit_print.PaparazziContext <- function(x, ...) {
+  image <- x$inspect_image
+  x$inspect_image <- NULL
   if (ctx_recording(x)) {
     return(knitr::knit_print(pz_record_stop(x), ...))
   }
   knitr::normal_print(x)
+  if (!is.null(image)) {
+    return(knitr::include_graphics(
+      image,
+      dpi = attr(image, "dpi")
+    ))
+  }
+  invisible(x)
 }
 
 ctx_derive <- function(ctx, scope) {
+  ctx$inspect_image <- NULL
   PaparazziContext$new(ctx$page, scope = scope, recording = ctx$recording)
 }
 
 ctx_return <- function(ctx) {
+  ctx$inspect_image <- NULL
   if (ctx_recording(ctx)) ctx else invisible(ctx)
 }
 

@@ -21,14 +21,21 @@ omits the target section.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{path}{Where to write the annotated screenshot; \code{NULL} writes a
-temporary file. Only used with \code{show = "screenshot"}.}
+\item{path}{Where to write the annotated screenshot; with \code{NULL},
+paparazzi writes a numbered chunk figure while knitting and a temporary
+file otherwise. Only used with \code{show = "screenshot"}.}
 
 \item{show}{How to visualize: \code{"auto"}, \code{"screenshot"} (annotated
 capture), \code{"browser"} (outlines left in the live page), or \code{"none"}.}
 }
 \value{
-\code{ctx}, invisibly, so it can be dropped anywhere in a chain.
+\code{ctx}, invisibly (visibly in an active recording chain). With
+\code{show = "screenshot"} and \code{path = NULL} while knitting, returns \code{ctx}
+visibly so knitr prints the summary and includes the annotated screenshot
+once. A subsequent action or scope change discards the pending image;
+a terminal getter leaves it for the next knitr print. If the context
+belongs to an active recording chain, knitr stops and includes the
+recording instead of the inspect image.
 }
 \description{
 Prints a console summary of the page: URL, device, recording and cursor

@@ -368,3 +368,169 @@ test_that("target outline numbering keeps hidden matches in the count", {
   overlay_clear(page)
   expect_identical(texts, "2")
 })
+
+test_that("implicit inspect screenshots are one-shot numbered knit figures", {
+  skip_if_not_installed("knitr")
+  page <- local_inspect_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r fig-inspect, echo=FALSE, fig.path="figures/", fig.alt="Outlined matches", out.width="50%"}',
+    'got <- inspect_capture(function() pz_inspect(page, "#insp-btn", show = "screenshot"))',
+    'got$value',
+    'page',
+    'page |> pz_inspect(".insp-item", show = "screenshot")',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_true(got$visible)
+  expect_identical(got$value, page)
+  expect_length(got$msgs, 0L)
+  expect_false(grepl("Annotated screenshot:", markdown, fixed = TRUE))
+  expect_identical(
+    lengths(regmatches(
+      markdown,
+      gregexpr("figures/fig-inspect-1.png", markdown, fixed = TRUE)
+    )),
+    1L
+  )
+  expect_match(markdown, "figures/fig-inspect-2.png", fixed = TRUE)
+  expect_match(markdown, 'alt="Outlined matches"', fixed = TRUE)
+  expect_match(markdown, 'width="50%"', fixed = TRUE)
+  expect_true(file.exists("figures/fig-inspect-1.png"))
+  expect_true(file.exists("figures/fig-inspect-2.png"))
+  expect_null(page$inspect_image)
+})
+
+test_that("context-returning steps discard pending inspect images", {
+  skip_if_not_installed("knitr")
+  page <- local_inspect_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r inspect-chain, echo=FALSE}',
+    'ctx <- page |> pz_inspect(show = "screenshot") |> pz_act_click("#insp-btn")',
+    'after_action <- ctx$inspect_image',
+    'ctx',
+    'found <- withVisible(page |> pz_inspect(show = "screenshot") |> pz_find("#insp-list"))',
+    'after_find <- page$inspect_image',
+    'found$value',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_null(after_action)
+  expect_null(after_find)
+  expect_null(found$value$inspect_image)
+  expect_true(found$visible)
+  expect_false(grepl("inspect-chain-", markdown, fixed = TRUE))
+})
+
+test_that("terminal getters retain pending inspect images until knit print", {
+  skip_if_not_installed("knitr")
+  page <- local_inspect_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r inspect-get, echo=FALSE}',
+    'count <- page |> pz_inspect(show = "screenshot") |> pz_get_count(".insp-item")',
+    'pending <- page$inspect_image',
+    'page',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_identical(count, 12L)
+  expect_match(pending, "inspect-get-1.png", fixed = TRUE)
+  expect_match(markdown, "inspect-get-1.png", fixed = TRUE)
+  expect_null(page$inspect_image)
+})
+
+test_that("knitting keeps auto nonvisual and explicit paths unchanged", {
+  skip_if_not_installed("knitr")
+  page <- local_inspect_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r inspect-explicit, echo=FALSE}',
+    'auto <- inspect_capture(function() pz_inspect(page))',
+    'explicit <- inspect_capture(function() pz_inspect(page, path = "manual.png", show = "screenshot"))',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_false(auto$visible)
+  expect_length(auto$msgs, 0L)
+  expect_false(explicit$visible)
+  expect_match(explicit$msgs, "Annotated screenshot:", fixed = TRUE)
+  expect_true(file.exists("manual.png"))
+  expect_false(grepl("manual.png", markdown, fixed = TRUE))
+  expect_null(page$inspect_image)
+})
+
+test_that("knit print gives an active recording priority over inspect images", {
+  skip_if_not_installed("knitr")
+  page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
+  rec <- new.env(parent = emptyenv())
+  rec$active <- TRUE
+  page$recorder <- rec
+  ctx <- PaparazziContext$new(page, recording = rec)
+  ctx$inspect_image <- "pending.png"
+  stopped <- FALSE
+  local_mocked_bindings(
+    pz_record_stop = function(ctx) {
+      stopped <<- TRUE
+      ctx$recording$active <- FALSE
+      knitr::asis_output("recording media")
+    },
+    inspect_summary_print = function(...) stop("unexpected summary")
+  )
+
+  output <- knit_print.PaparazziContext(ctx)
+  expect_true(stopped)
+  expect_identical(as.character(output), "recording media")
+  expect_null(ctx$inspect_image)
+})
+
+test_that("knitted inspect images keep their CSS size on high-DPI devices", {
+  skip_if_not_installed("knitr")
+  page <- local_inspect_page()
+  pz_device(page, width = 400, height = 300, scale = 2)
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r inspect-dpi, echo=FALSE, fig.retina=2}',
+    'page |> pz_inspect(show = "screenshot")',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_identical(png_dimensions("figure/inspect-dpi-1.png"), c(800L, 600L))
+  expect_match(markdown, 'width="400"', fixed = TRUE)
+})
+
+test_that("a pending inspect image can print after the browser closes", {
+  skip_if_not_installed("knitr")
+  page <- local_inspect_page()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  text <- paste(
+    '```{r inspect-closed, echo=FALSE}',
+    'ctx <- page |> pz_inspect(show = "screenshot")',
+    'pz_close(page)',
+    'ctx',
+    '```',
+    sep = "\n"
+  )
+
+  markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
+  expect_false(grepl("Error", markdown, fixed = TRUE))
+  expect_match(markdown, "figure/inspect-closed-1.png", fixed = TRUE)
+  expect_null(page$inspect_image)
+})

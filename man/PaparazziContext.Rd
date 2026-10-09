@@ -28,6 +28,9 @@ timeout, staging settings, recorder state -- lives on the page.
 
     \item{\code{recording}}{The recorder a recording chain belongs to, or
 \code{NULL} (internal).}
+
+    \item{\code{inspect_image}}{Pending annotated screenshot path for knitr, or
+\code{NULL} (internal).}
   }
   \if{html}{\out{</div>}}
 }

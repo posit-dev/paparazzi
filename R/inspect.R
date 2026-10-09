@@ -27,12 +27,19 @@ NULL
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` (default)
 #'   omits the target section.
-#' @param path Where to write the annotated screenshot; `NULL` writes a
-#'   temporary file. Only used with `show = "screenshot"`.
+#' @param path Where to write the annotated screenshot; with `NULL`,
+#'   paparazzi writes a numbered chunk figure while knitting and a temporary
+#'   file otherwise. Only used with `show = "screenshot"`.
 #' @param show How to visualize: `"auto"`, `"screenshot"` (annotated
 #'   capture), `"browser"` (outlines left in the live page), or `"none"`.
 #'
-#' @return `ctx`, invisibly, so it can be dropped anywhere in a chain.
+#' @return `ctx`, invisibly (visibly in an active recording chain). With
+#'   `show = "screenshot"` and `path = NULL` while knitting, returns `ctx`
+#'   visibly so knitr prints the summary and includes the annotated screenshot
+#'   once. A subsequent action or scope change discards the pending image;
+#'   a terminal getter leaves it for the next knitr print. If the context
+#'   belongs to an active recording chain, knitr stops and includes the
+#'   recording instead of the inspect image.
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_inspect()
@@ -81,8 +88,21 @@ pz_inspect <- function(
       ctx$page$view()
     } else {
       withr::defer(try(overlay_clear(ctx), silent = TRUE))
-      path <- path %||% tempfile(fileext = ".png")
+      knit_image <- is.null(path) && isTRUE(getOption("knitr.in.progress"))
+      path <- path %||%
+        if (knit_image) {
+          knit_capture_path("png")
+        } else {
+          tempfile(fileext = ".png")
+        }
       inspect_annotated_capture(ctx, scope_rects, target_rects, path)
+      if (knit_image) {
+        ctx$inspect_image <- structure(
+          path,
+          dpi = 96 * pz_js(ctx, "window.devicePixelRatio")
+        )
+        return(ctx)
+      }
       inspect_show(path)
     }
   }
