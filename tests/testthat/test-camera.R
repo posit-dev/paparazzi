@@ -312,7 +312,7 @@ test_that("50 camera moves fit the available perspective expression parser", {
   )
 })
 
-test_that("resampled camera ticks keep source video times and frame scroll indices", {
+test_that("resampled camera ticks keep logical video times and frame scroll indices", {
   rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0.2, 0.2), FALSE, NULL)
   rec$times <- c(2, 2.3, 2.8)
   rec$vt_end <- 2.8
@@ -325,12 +325,16 @@ test_that("resampled camera ticks keep source video times and frame scroll indic
   expect_equal(rec$scroll[[sampled$index[[6]]]], c(0, 150))
   expect_equal(tail(sampled$index, 1), 3L)
   rec$holds <- list(list(vt = 2.3, seconds = 0.3))
+  rec$times <- c(2, 2.3, 3.1)
+  rec$vt_end <- 3.1
   held <- record_resample(rec)
-  held_ticks <- which(abs(held$vts - 2.3) < 1e-8)
-  expect_gte(length(held_ticks), 3)
+  held_ticks <- which(held$vts >= 2.3 - 1e-8 & held$vts < 2.6 - 1e-8)
+  expect_length(held_ticks, 3)
+  expect_equal(held$index[held_ticks], rep(2L, 3))
+  expect_equal(held$vts[held_ticks], c(2.3, 2.4, 2.5))
   move <- list(
     start = 2,
-    end = 2.8,
+    end = 2.3,
     box = c(100, 50, 300, 200),
     zoom = 2,
     reset = FALSE,

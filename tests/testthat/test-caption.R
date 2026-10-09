@@ -241,8 +241,8 @@ test_that("a persistent GIF caption survives repeated source frames", {
   out <- file.path(dir, "persist.gif")
   rec <- new_recorder(out, "gif", 10, NULL, c(0, 0.2), FALSE, NULL)
   rec$files <- c(first, last)
-  rec$times <- c(0, 0.063)
-  rec$vt_end <- 0.063
+  rec$times <- c(0, 0.563)
+  rec$vt_end <- 0.563
   rec$holds <- list(list(vt = 0.05, seconds = 0.5))
   rec$camera_viewport_width <- 320
   rec$captions <- list(list(
@@ -338,6 +338,254 @@ test_that("captioned GIF uses the same relative movie source after scaling", {
   expect_gt(length(pill_rows), 5)
   expect_lt(length(pill_rows), 45)
   expect_true(all(last[round(dim(last)[1] * 0.8):dim(last)[1], , 1] > 0.8))
+})
+
+test_that("explicit holds separate caption windows without a real-time wait", {
+  local_mocked_bindings(rec_now = function() 100)
+  page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
+  rec <- new_recorder(
+    withr::local_tempfile(fileext = ".mp4"),
+    "mp4",
+    10,
+    NULL,
+    c(0.2, 0.3),
+    FALSE,
+    NULL
+  )
+  page_set_recorder(page, rec)
+  withr::defer(unlink(sub("\\.mp4$", ".vtt", rec$path)))
+
+  page_set_caption(page, list(text = "A"))
+  pz_record_hold(page, 1.5)
+  page_set_caption(page, list(text = "B"))
+  between <- rec_vt(rec)
+  pz_record_hold(page, 1.5)
+  rec$times <- c(0, between, rec_vt(rec))
+  rec$files <- c("before.png", "between.png", "final.png")
+  rec$vt_end <- rec_vt(rec)
+
+  sampled <- record_resample(rec)
+  windows <- caption_windows(rec, sampled)
+  expect_equal(sampled$total, 3.5)
+  expect_equal(sampled$n_ticks, 35L)
+  expect_equal(sampled$index, rep(1:3, c(17, 15, 3)))
+  expect_equal(
+    vapply(windows, function(w) w$caption$text, character(1)),
+    c("A", "B")
+  )
+  starts <- vapply(windows, `[[`, numeric(1), "start")
+  ends <- vapply(windows, `[[`, numeric(1), "end")
+  expect_equal(starts, c(0, 1.7))
+  expect_equal(ends, c(1.7, 3.5))
+  expect_true(all(ends > starts))
+  expect_lte(ends[1], starts[2])
+  expect_equal(
+    readLines(caption_vtt(rec, windows)),
+    c(
+      "WEBVTT",
+      "",
+      "00:00:00.000 --> 00:00:01.700",
+      "A",
+      "",
+      "00:00:01.700 --> 00:00:03.500",
+      "B",
+      ""
+    )
+  )
+})
+
+test_that("explicit holds before the first frame keep both caption intervals", {
+  now <- 100
+  local_mocked_bindings(rec_now = function() now)
+  page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
+  rec <- new_recorder(
+    withr::local_tempfile(fileext = ".mp4"),
+    "mp4",
+    10,
+    NULL,
+    c(0.2, 0.3),
+    FALSE,
+    NULL
+  )
+  page_set_recorder(page, rec)
+  withr::defer(unlink(sub("\\.mp4$", ".vtt", rec$path)))
+
+  page_set_caption(page, list(text = "A"))
+  pz_record_hold(page, 1.5)
+  page_set_caption(page, list(text = "B"))
+  pz_record_hold(page, 1.5)
+  now <- 100.1
+  first <- rec_vt(rec)
+  now <- 100.2
+  rec$times <- c(first, rec_vt(rec))
+  rec$files <- c("first.png", "final.png")
+  rec$vt_end <- rec_vt(rec)
+
+  sampled <- record_resample(rec)
+  windows <- caption_windows(rec, sampled)
+  expect_equal(sampled$vts[[1]], 0)
+  expect_equal(sampled$total, 3.7)
+  expect_equal(sampled$n_ticks, 37L)
+  expect_equal(
+    vapply(windows, function(w) w$caption$text, character(1)),
+    c("A", "B")
+  )
+  starts <- vapply(windows, `[[`, numeric(1), "start")
+  ends <- vapply(windows, `[[`, numeric(1), "end")
+  expect_equal(starts, c(0, 1.7))
+  expect_equal(ends, c(1.7, 3.7))
+  expect_true(all(ends > starts))
+  expect_lte(ends[1], starts[2])
+  expect_equal(
+    grep(
+      " --> ",
+      readLines(caption_vtt(rec, windows)),
+      value = TRUE,
+      fixed = TRUE
+    ),
+    c("00:00:00.000 --> 00:00:01.700", "00:00:01.700 --> 00:00:03.700")
+  )
+})
+
+test_that("explicit holds delay later key callouts without extending expiry", {
+  local_mocked_bindings(rec_now = function() 100)
+  page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
+  rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+  page_set_recorder(page, rec)
+  first <- list(vt = rec_vt(rec), last = rec_vt(rec), keys = list("A"))
+  pz_record_hold(page, 1.5)
+  second <- list(vt = rec_vt(rec), last = rec_vt(rec), keys = list("B"))
+  pz_record_hold(page, 1.5)
+  rec$keypresses <- list(first, second)
+  rec$times <- c(0, second$vt, rec_vt(rec))
+  rec$files <- c("first.png", "second.png", "final.png")
+  rec$vt_end <- rec_vt(rec)
+
+  windows <- key_callout_windows(rec, record_resample(rec))
+  expect_equal(vapply(windows, `[[`, numeric(1), "start"), c(0, 1.5))
+  expect_equal(vapply(windows, `[[`, numeric(1), "end"), c(1.3, 2.8))
+  expect_equal(vapply(windows, `[[`, numeric(1), "fade_start"), c(1, 2.5))
+  expect_equal(lapply(windows, `[[`, "keys"), list(list("A"), list("B")))
+})
+
+test_that("explicit holds encode both sequential captions with poll and screencast", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  seconds <- function(time) {
+    parts <- as.numeric(strsplit(time, ":", fixed = TRUE)[[1]])
+    sum(parts * c(3600, 60, 1))
+  }
+  for (method in c("poll", "screencast")) {
+    page <- local_page(
+      record_fixture_file(),
+      width = 320,
+      height = 240,
+      scale = 1
+    )
+    pz_js(page, "document.querySelector('#box').style.backgroundColor = 'red'")
+    dir <- withr::local_tempdir()
+    out <- file.path(dir, paste0(method, ".mp4"))
+    pz_record_start(
+      page,
+      out,
+      method = method,
+      captions = "both",
+      fps = 10,
+      hold = c(0.2, 0.3)
+    )
+    defer_record_stop(page)
+    rec <- page_recorder(page)
+    has_marker <- function(path) {
+      image <- png::readPNG(path)
+      pixel <- image[round(dim(image)[1] / 4), round(dim(image)[2] / 4), 1:3]
+      pixel[1] > 0.8 && pixel[2] < 0.2 && pixel[3] < 0.2
+    }
+    pz_poll(
+      function() any(vapply(rec$files, has_marker, logical(1))),
+      timeout = page$default_timeout,
+      loop = page$child_loop,
+      what = "a retained frame containing the red box before the captions"
+    )
+
+    pz_annotate_caption(page, "Caption A", color = "red")
+    pz_record_hold(page, 1.5)
+    pz_annotate_caption(page, "Caption B", color = "blue")
+    pz_record_hold(page, 1.5)
+    pz_annotate(
+      page,
+      "#box",
+      reveal = "none",
+      pad = 4,
+      color = "lime",
+      stroke_width = 6
+    )
+    after_hold <- rec$holds[[2]]$vt + 1.5
+    has_mark <- function(path) {
+      image <- png::readPNG(path)
+      mark <- image[20:100, 30:150, 1:3]
+      sum(mark[,, 2] > 0.8 & mark[,, 1] < 0.2 & mark[,, 3] < 0.2) > 30
+    }
+    pz_poll(
+      function() {
+        any(vapply(rec$files[rec$times >= after_hold], has_mark, logical(1)))
+      },
+      timeout = page$default_timeout,
+      loop = page$child_loop,
+      what = "a retained post-hold frame containing the lime annotation"
+    )
+    marked <- which(vapply(rec$files, has_mark, logical(1)))
+    expect_gt(length(marked), 0)
+    expect_gte(rec$times[[tail(marked, 1)]], after_hold)
+    pz_record_pause(page)
+    pz_record_stop(page)
+    expect_equal(rec$vt_end, rec$vt_base, tolerance = 0)
+
+    cues <- readLines(sub("\\.mp4$", ".vtt", out))
+    expect_equal(
+      cues[cues %in% c("Caption A", "Caption B")],
+      c("Caption A", "Caption B")
+    )
+    timings <- strsplit(
+      grep(" --> ", cues, value = TRUE, fixed = TRUE),
+      " --> ",
+      fixed = TRUE
+    )
+    expect_length(timings, 2)
+    starts <- vapply(timings, function(t) seconds(t[[1]]), numeric(1))
+    ends <- vapply(timings, function(t) seconds(t[[2]]), numeric(1))
+    expect_true(all(ends > starts))
+    expect_lte(ends[1], starts[2])
+    expect_true(all(ends - starts >= 1.4))
+
+    frames <- av_video_images_quiet(
+      out,
+      destdir = file.path(dir, "decoded"),
+      format = "png"
+    )
+    middle <- floor((starts + ends) / 2 * rec$fps) + 1L
+    expect_lte(max(middle), length(frames))
+    first <- png::readPNG(frames[[middle[[1]]]])
+    second <- png::readPNG(frames[[middle[[2]]]])
+    rows <- round(dim(first)[1] * 0.7):round(dim(first)[1] * 0.95)
+    red <- first[rows, , 1:3]
+    blue <- second[rows, , 1:3]
+    expect_gt(
+      sum(
+        red[,, 1] > 0.45 &
+          red[,, 1] - red[,, 2] > 0.18 &
+          red[,, 1] - red[,, 3] > 0.18
+      ),
+      10
+    )
+    expect_gt(
+      sum(
+        blue[,, 3] > 0.45 &
+          blue[,, 3] - blue[,, 1] > 0.18 &
+          blue[,, 3] - blue[,, 2] > 0.18
+      ),
+      10
+    )
+  }
 })
 
 test_that("caption windows use output ticks through holds and same-time replacements", {

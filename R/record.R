@@ -405,11 +405,12 @@ pz_record_resume <- function(ctx) {
 #' Hold the current frame while recording
 #'
 #' Lingers on the current frame for `seconds` in the output video.
-#' Unlike [pz_wait()], no real time passes: the hold is inserted into
-#' the video timeline at encode time. When the page is not recording
-#' this is a no-op, so debugging a chain with the recording commented
-#' out doesn't pay for video-only pauses. A camera move still in
-#' progress (see [pz_camera()]) finishes before the hold begins.
+#' Unlike [pz_wait()], the hold advances only the video clock. Captions,
+#' annotations, and keystroke callouts added afterward appear after the
+#' held segment. When the page is not recording this is a no-op, so
+#' debugging a chain with the recording commented out doesn't pay for
+#' video-only pauses. A camera move still in progress (see [pz_camera()])
+#' finishes before the hold begins.
 #'
 #' @inheritParams pz_act_click
 #' @param seconds Seconds to hold the frame in the output.
@@ -441,6 +442,7 @@ pz_record_hold <- function(ctx, seconds) {
   }
   camera_settle(ctx$page, rec)
   rec$holds <- c(rec$holds, list(list(vt = rec_vt(rec), seconds = seconds)))
+  rec$vt_base <- rec$vt_base + seconds
   ctx_return(ctx)
 }
 
@@ -1181,13 +1183,16 @@ ticks_to_vt <- function(ticks, holds) {
 
 record_resample <- function(rec) {
   t0 <- rec$times[[1]]
+  # Keep positive holds requested before the first capture in the output.
+  for (h in rec$holds) {
+    if (h$seconds > 0) {
+      t0 <- min(t0, h$vt)
+    }
+  }
   times <- rec$times - t0
   vt_end <- max(rec$vt_end - t0, 0)
   holds <- c(
     list(list(vt = 0, seconds = rec$hold_first)),
-    lapply(rec$holds, function(h) {
-      list(vt = max(h$vt - t0, 0), seconds = h$seconds)
-    }),
     list(list(vt = vt_end, seconds = rec$hold_last))
   )
   holds <- holds[order(map_dbl(holds, `[[`, "vt"))]

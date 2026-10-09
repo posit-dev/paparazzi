@@ -735,6 +735,40 @@ test_that("block error wins over stop failure and the page can record again", {
   expect_true(file.exists(next_path))
 })
 
+test_that("explicit holds advance the clock without advancing real time", {
+  now <- 100
+  local_mocked_bindings(rec_now = function() now)
+  page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
+  rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+  page_set_recorder(page, rec)
+
+  pz_record_hold(page, 1.5)
+  expect_equal(rec$holds[[1]], list(vt = 0, seconds = 1.5))
+  expect_equal(rec_vt(rec), 1.5, tolerance = 0)
+  pz_record_hold(page, 0.5)
+  pz_record_hold(page, 0)
+  expect_equal(vapply(rec$holds, `[[`, numeric(1), "vt"), c(0, 1.5, 2))
+  expect_equal(rec_vt(rec), 2, tolerance = 0)
+  expect_equal(now, 100)
+
+  now <- 102
+  pz_record_pause(page)
+  expect_equal(rec_vt(rec), 4, tolerance = 0)
+  now <- 112
+  expect_equal(rec_vt(rec), 4, tolerance = 0)
+  pz_record_hold(page, 0.25)
+  expect_equal(rec_vt(rec), 4.25, tolerance = 0)
+  pz_record_resume(page)
+  now <- 113
+  expect_equal(rec_vt(rec), 5.25, tolerance = 0)
+  pz_record_hold(page, 0.75)
+  expect_equal(rec_vt(rec), 6, tolerance = 0)
+
+  pz_record_pause(page)
+  now <- 999
+  expect_equal(rec_vt(rec), 6, tolerance = 0)
+})
+
 test_that("pz_record_hold extends the video and is a no-op otherwise", {
   page <- local_record_page()
   skip_if_no_av()
@@ -757,6 +791,19 @@ test_that("pz_record_hold extends the video and is a no-op otherwise", {
   expect_lt(elapsed, 0.5)
   expect_false(res$visible)
   expect_identical(res$value, page)
+})
+
+test_that("zero holds do not move the first-frame trim origin", {
+  rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+  rec$times <- c(2, 3)
+  rec$files <- c("first.png", "final.png")
+  rec$vt_end <- 3
+  rec$holds <- list(list(vt = 0, seconds = 0))
+
+  sampled <- record_resample(rec)
+  expect_equal(sampled$vts[[1]], 2)
+  expect_equal(sampled$total, 1)
+  expect_equal(sampled$n_ticks, 10L)
 })
 
 test_that("frames are resampled to the requested constant fps", {

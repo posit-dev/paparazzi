@@ -16,11 +16,12 @@ pz_record_hold(ctx, seconds)
 }
 \description{
 Lingers on the current frame for \code{seconds} in the output video.
-Unlike \code{\link[=pz_wait]{pz_wait()}}, no real time passes: the hold is inserted into
-the video timeline at encode time. When the page is not recording
-this is a no-op, so debugging a chain with the recording commented
-out doesn't pay for video-only pauses. A camera move still in
-progress (see \code{\link[=pz_camera]{pz_camera()}}) finishes before the hold begins.
+Unlike \code{\link[=pz_wait]{pz_wait()}}, the hold advances only the video clock. Captions,
+annotations, and keystroke callouts added afterward appear after the
+held segment. When the page is not recording this is a no-op, so
+debugging a chain with the recording commented out doesn't pay for
+video-only pauses. A camera move still in progress (see \code{\link[=pz_camera]{pz_camera()}})
+finishes before the hold begins.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run("av")) withAutoprint(\{ # examplesIf}
