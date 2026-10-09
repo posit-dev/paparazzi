@@ -13,7 +13,7 @@ template:
 
 navbar:
   structure:
-    left:  [intro, reference, articles]
+    left:  [intro, articles, reference]
     right: [news, github, lightswitch, search]
   components:
     # Override the default "Changelog" link; delete this once `news.releases`
