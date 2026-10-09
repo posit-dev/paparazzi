@@ -153,7 +153,7 @@ Like a mark, a callout hides while its target is hidden or scrolled out of view 
 
 `leader` also takes a decoration for each end of the line. `start` is the bubble's end and `end` is the element's end, and each can be `"none"`, `"arrow"`, `"dot"`, or `"bar"`. An end you leave out gets `"none"`. `distance` sets the gap between the bubble and the element in CSS pixels: 24 by default, or 8 for a bubble without a line. `stroke_width` sets the line's thickness, and paparazzi sizes the decorations to match.
 
-paparazzi draws dark bubbles with white text unless you choose other colors. `fill` and `text_color` change the bubble's background and text, while `color` still sets its border and the line. Here, a long line with a dot at the bubble leads from a pale yellow bubble to the Add button:
+By default, a bubble takes the callout's accent color for its fill, and paparazzi picks black or white text for contrast against it. `fill` and `text_color` choose other colors, while `color` still sets the border and the line. Here, a long line with a dot at the bubble leads from a pale yellow bubble to the Add button:
 
 ```{r callout-styles, fig.alt = "The new-task form with a pale yellow callout below the Add button, joined to it by a long line with a dot at the bubble and an arrow at the button."}
 page |>
@@ -313,7 +313,7 @@ A `font_family` string names a font that Chrome can already find, like a generic
 
 A handwritten font makes a callout look like a note written over the screenshot. We'll stage Patrick Hand from Google Fonts and make it the default for later annotations:
 
-```{r web-font, fig.alt = "The new-task form with a dark callout below the attachment field, pointing up at it and reading Optional: attach a file in a handwritten font."}
+```{r web-font, fig.alt = "The new-task form with a crimson callout below the attachment field, pointing up at it and reading Optional: attach a file in a handwritten font."}
 hand <- pz_font_google("Patrick Hand")
 page |>
   pz_stage_fonts(hand) |>
