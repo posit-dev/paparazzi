@@ -1890,9 +1890,13 @@ test_that("screencast records real Chrome PNG events and acknowledges later fram
   ))
   defer_record_stop(page)
   rec <- page_recorder(page)
-  pz_wait(page, 0.3)
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = page$page$default_timeout,
+    loop = page$page$child_loop,
+    what = "the first screencast frame"
+  )
   before <- length(rec$files)
-  expect_gte(before, 1L)
   # A fresh paint must arrive even after the initial event has been acked.
   pz_js(page, "document.getElementById('box').style.background = 'red'")
   pz_poll(
