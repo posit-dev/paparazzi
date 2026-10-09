@@ -12,3 +12,21 @@ pak::pak("posit-dev/paparazzi")
 paparazzi controls Chrome (or another Chromium-based browser) through [chromote](https://rstudio.github.io/chromote/), so you'll need one installed. If chromote can't find it, see `?chromote::find_chrome`.
 
 paparazzi routes each recording to the encoder that suits it best: MP4 and WebM videos go to the [av](https://docs.ropensci.org/av/) package, GIFs to [gifski](https://r-rust.github.io/gifski/). Both are suggested dependencies, and paparazzi checks for them only when a recording needs them. Simple GIFs need only gifski, but two features call in extra packages: cropping a GIF to a framed region of the page needs [png](https://cran.r-project.org/package=png), and camera movement or burned-in captions need av to composite the frames.
+
+### Agent quickstart
+
+paparazzi includes an agent skill that teaches coding agents how to write paparazzi scripts. You can give your agent that skill in one of three ways:
+
+- **Install the skill** into your project with [skills](https://skills.sh) or the [btw CLI](https://posit-dev.github.io/btw/reference/install_btw_cli.html):
+
+  ```bash
+  npx skills add posit-dev/paparazzi
+  ```
+
+  ```bash
+  btw skills install posit-dev/paparazzi
+  ```
+
+- **Ask your agent to read `vignette("agents", package = "paparazzi")`.** [btw](https://posit-dev.github.io/btw/) is the easy way to give your agent R documentation, through an [MCP server](https://posit-dev.github.io/btw/reference/mcp.html) or the [btw CLI](https://posit-dev.github.io/btw/reference/install_btw_cli.html) (`btw docs vignette paparazzi -n agents`).
+
+- **Ask your agent to read <https://posit-dev.github.io/paparazzi/articles/agents.md>.** This is the same skill, published as a Markdown page on the paparazzi website.
