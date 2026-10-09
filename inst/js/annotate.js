@@ -613,7 +613,7 @@ function(root) {
         if (opts.label !== null) {
           const badge = document.createElement('span');
           badge.textContent = opts.label === true ? String(i + 1) : String(opts.label);
-          badge.style.cssText = 'position:absolute;left:0;top:0;transform:translateY(-100%);padding:2px 5px;border-radius:3px;line-height:1.2;';
+          badge.style.cssText = 'position:absolute;left:0;top:0;transform:translateY(-100%);width:max-content;max-width:20em;padding:2px 5px;border-radius:3px;line-height:1.2;';
           badge.style.backgroundColor = opts.labelFill;
           badge.style.color = opts.labelTextColor;
           badge.style.fontFamily = opts.fontFamily;

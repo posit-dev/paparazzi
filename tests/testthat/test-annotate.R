@@ -2167,6 +2167,36 @@ test_that("mark badges follow their mark unless overridden per call", {
     pz_stage_annotate(color = NULL, fill = NULL, text_color = NULL)
 })
 
+test_that("mark badges size to their label, not their mark", {
+  page <- annotation_page()
+  badge_box <- function() {
+    pz_js(
+      page,
+      "(() => { const r = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').getBoundingClientRect(); return [r.width, r.height]; })()"
+    )
+  }
+  page |> pz_annotate("#fixed", label = "A", reveal = "none", id = "mark")
+  one_line <- badge_box()[[2]]
+
+  page |>
+    pz_annotate(
+      "#fixed",
+      label = "#add-task-button",
+      reveal = "none",
+      id = "mark"
+    )
+  box <- badge_box()
+  expect_gt(box[[1]], 90)
+  expect_equal(box[[2]], one_line)
+
+  long <- paste(rep("word", 30), collapse = " ")
+  page |> pz_annotate("#fixed", label = long, reveal = "none", id = "mark")
+  box <- badge_box()
+  expect_lte(box[[1]], 20 * 14 + 10)
+  expect_gt(box[[2]], one_line)
+  page |> pz_annotate_clear()
+})
+
 test_that("marks validate label_fill, label_text_color and stroke_width", {
   page <- annotation_page()
   expect_error(
