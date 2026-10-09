@@ -3,12 +3,17 @@ test_that("Shiny idle waits for a slow reactive output and holds for 200ms", {
   skip_if_no_shiny()
   page <- pz_open(shiny_idle_fixture(), wait = "none")
   withr::defer(pz_close(page))
-  start <- Sys.time()
   result <- withVisible(pz_wait_for_shiny_idle(page, timeout = 5))
   expect_false(result$visible)
   expect_identical(result$value, page)
   expect_equal(shiny_idle_state(page)$text, "reactive ready")
-  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.9)
+  # The hold measured against the render itself: __slowReadyAt stamps
+  # the moment #slow rendered (page clock), and the wait resolved only
+  # after its 200ms stability hold. Reading the stamp after the wait
+  # returns only inflates the measured hold, so the bound is safe; the
+  # 10ms margin covers timer granularity.
+  held_ms <- pz_js(page, "performance.now() - window.__slowReadyAt")
+  expect_gte(held_ms / 1000, 0.19)
 })
 
 test_that("Shiny idle restarts its stability window when busy returns", {
@@ -16,20 +21,24 @@ test_that("Shiny idle restarts its stability window when busy returns", {
   skip_if_no_shiny()
   page <- pz_open(shiny_idle_fixture(), wait = "shiny")
   withr::defer(pz_close(page))
+  # start precedes each pz_js so the 600ms pulse provably starts after
+  # the reference, and the pulse must outlive the wait's observer
+  # attach: a pulse that ends before the attach is never observed, and
+  # the wait would resolve after just the 200ms hold.
+  start <- Sys.time()
   pz_js(
     page,
-    "document.documentElement.classList.add('shiny-busy'); setTimeout(() => document.documentElement.classList.remove('shiny-busy'), 250)"
+    "document.documentElement.classList.add('shiny-busy'); setTimeout(() => document.documentElement.classList.remove('shiny-busy'), 600)"
   )
-  start <- Sys.time()
   pz_wait_for_shiny_idle(page, timeout = 3)
-  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.4)
+  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.78)
+  start <- Sys.time()
   pz_js(
     page,
-    "document.querySelector('#slow').classList.add('recalculating'); setTimeout(() => document.querySelector('#slow').classList.remove('recalculating'), 250)"
+    "document.querySelector('#slow').classList.add('recalculating'); setTimeout(() => document.querySelector('#slow').classList.remove('recalculating'), 600)"
   )
-  start <- Sys.time()
   pz_wait_for_shiny_idle(page, timeout = 3)
-  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.4)
+  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.78)
 })
 
 test_that("Shiny idle restarts the hold when busy returns mid-window", {
