@@ -2972,22 +2972,38 @@ test_that("viewport translation composes with the visible overflow anchor", {
 test_that("badge placement follows movement, scroll, and viewport resize", {
   page <- local_viewport_badge_page()
   reference <- viewport_badge_reference(page, "#add-task")
+  # Badge placement rides animation frames, which headless CI does not
+  # reliably produce on device-emulated pages. Screenshots force a sync
+  # before capturing, so drive the same sync here instead of waiting on
+  # the requestAnimationFrame loop.
+  sync_badges <- function() {
+    pz_js(page, paste0(ANNOTATION_LAYER_JS, "?.sync()"))
+  }
+  # Badges clamp to the client area, which is narrower than the emulated
+  # viewport whenever classic scrollbars show, so measure the expected
+  # edge from the page instead of hard-coding the requested width.
+  at_right_edge <- function(inner_width) {
+    function() {
+      sync_badges()
+      dims <- unlist(pz_js(
+        page,
+        "[window.innerWidth,document.documentElement.clientWidth]"
+      ))
+      badge <- annotation_badge_rects(page)[[1]]
+      isTRUE(dims[1] == inner_width) &&
+        abs(badge$left + badge$width - (dims[2] - 1 / 64)) < 0.001
+    }
+  }
   pz_js(page, "document.getElementById('edge').style.left='calc(100vw - 30px)'")
   pz_poll(
-    function() {
-      badge <- annotation_badge_rects(page)[[1]]
-      abs(badge$left + badge$width - (1000 - 1 / 64)) < 0.001
-    },
+    at_right_edge(1000),
     timeout = 5,
     loop = page$child_loop,
     what = "the badge to reach its right-edge viewport placement"
   )
   page |> pz_device(width = 600, height = 400)
   pz_poll(
-    function() {
-      badge <- annotation_badge_rects(page)[[1]]
-      abs(badge$left + badge$width - (600 - 1 / 64)) < 0.001
-    },
+    at_right_edge(600),
     timeout = 5,
     loop = page$child_loop,
     what = "the badge to follow the resized viewport edge"
@@ -2997,7 +3013,10 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
     "document.getElementById('edge').style.left='300px'; document.body.style.height='1200px'; window.scrollTo(0,250)"
   )
   pz_poll(
-    function() abs(annotation_badge_rects(page)[[1]]$top) < 0.001,
+    function() {
+      sync_badges()
+      abs(annotation_badge_rects(page)[[1]]$top) < 0.001
+    },
     timeout = 5,
     loop = page$child_loop,
     what = "the scrolled target's badge to stay at the viewport top"
@@ -3008,6 +3027,7 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
   pz_js(page, "window.scrollTo(0,0)")
   pz_poll(
     function() {
+      sync_badges()
       abs(annotation_badge_rects(page)[[1]]$top - (250 - reference$height)) <
         0.001
     },
