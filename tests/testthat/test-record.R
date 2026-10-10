@@ -2330,6 +2330,59 @@ test_that("screencast cuts paused paints and resumes event delivery", {
   expect_lte(recorded_video_info(out)$duration, expected + 1 / rec$fps + 0.002)
 })
 
+test_that("resumed screencast snapshots keep frame sizes on guttered pages", {
+  skip_if_no_av()
+  page <- local_record_page()
+  pz_js(
+    page,
+    "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>')"
+  )
+  pz_js(
+    page,
+    "document.body.insertAdjacentHTML('beforeend', '<div style=\"position:absolute;top:0;left:0;width:2px;height:3000px\"></div>')"
+  )
+  # The fixture must overflow: classic gutters shrink the client viewport.
+  expect_lt(
+    pz_js(page, "window.visualViewport.width"),
+    pz_js(page, "window.innerWidth")
+  )
+
+  out <- withr::local_tempfile(fileext = ".mp4")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
+  pz_record_start(
+    page,
+    out,
+    method = "screencast",
+    fps = 10,
+    hold = c(0, 0),
+    keep_frames = TRUE
+  )
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "the first screencast frame"
+  )
+  pz_record_pause(page)
+  before <- length(rec$files)
+  pz_record_resume(page)
+  pz_poll(
+    function() length(rec$files) > before,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "the resumed capture"
+  )
+  pz_record_stop(page)
+  # Screencast frames, the resume snapshot, and the settled stop capture
+  # must all match the recording surface; a client-area snapshot clip would
+  # mix frame sizes on a guttered page.
+  expect_frame_files_size(rec$files, png_dimensions(rec$files[[1]]))
+  expect_equal(rec$n_errors, 0L)
+})
+
 test_that("resume captures a paused change on an idle page", {
   skip_if_no_av()
   testthat::skip_if_not_installed("png")
