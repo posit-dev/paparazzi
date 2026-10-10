@@ -2,10 +2,11 @@
 
 Lingers on the current frame for `seconds` in the output video. Unlike
 [`pz_wait()`](https://posit-dev.github.io/paparazzi/reference/pz_wait.md),
-no real time passes: the hold is inserted into the video timeline at
-encode time. When the page is not recording this is a no-op, so
-debugging a chain with the recording commented out doesn't pay for
-video-only pauses. A camera move still in progress (see
+the hold advances only the video clock. Captions, annotations, and
+keystroke callouts added afterward appear after the held segment. When
+the page is not recording this is a no-op, so debugging a chain with the
+recording commented out doesn't pay for video-only pauses. A camera move
+still in progress (see
 [`pz_camera()`](https://posit-dev.github.io/paparazzi/reference/pz_camera.md))
 finishes before the hold begins.
 

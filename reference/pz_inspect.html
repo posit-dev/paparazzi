@@ -126,8 +126,9 @@ omits the target section.</p></dd>
 
 
 <dt id="arg-path">path<a class="anchor" aria-label="anchor" href="#arg-path"></a></dt>
-<dd><p>Where to write the annotated screenshot; <code>NULL</code> writes a
-temporary file. Only used with <code>show = "screenshot"</code>.</p></dd>
+<dd><p>Where to write the annotated screenshot; with <code>NULL</code>,
+paparazzi writes a numbered chunk figure while knitting and a temporary
+file otherwise. Only used with <code>show = "screenshot"</code>.</p></dd>
 
 
 <dt id="arg-show">show<a class="anchor" aria-label="anchor" href="#arg-show"></a></dt>
@@ -137,7 +138,13 @@ capture), <code>"browser"</code> (outlines left in the live page), or <code>"non
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p><code>ctx</code>, invisibly, so it can be dropped anywhere in a chain.</p>
+    <p><code>ctx</code>, invisibly (visibly in an active recording chain). With
+<code>show = "screenshot"</code> and <code>path = NULL</code> while knitting, returns <code>ctx</code>
+visibly so knitr prints the summary and includes the annotated screenshot
+once. A subsequent action or scope change discards the pending image;
+a terminal getter leaves it for the next knitr print. If the context
+belongs to an active recording chain, knitr stops and includes the
+recording instead of the inspect image.</p>
     </div>
 
     <div class="section level2">
@@ -186,7 +193,7 @@ capture), <code>"browser"</code> (outlines left in the live page), or <code>"non
 <span class="r-out co"><span class="r-pr">#&gt;</span>   7  &lt;button type="button" class="task-done btn btn-sm btn-outli…</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      visible · enabled · at 760,552 · 55 × 31</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Recording  off · cursor hidden</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Annotated screenshot: <span style="color: #0000BB;">/tmp/Rtmpj67Q5R/inspect.png</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Annotated screenshot: <span style="color: #0000BB;">/tmp/Rtmp9Q5gop/inspect.png</span></span>
 <span class="r-in"><span><span class="fu"><a href="pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>

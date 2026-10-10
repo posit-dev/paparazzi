@@ -275,11 +275,12 @@ you leave out gets <code>"none"</code>. <code>distance</code> sets the
 gap between the bubble and the element in CSS pixels: 24 by default, or
 8 for a bubble without a line. <code>stroke_width</code> sets the line’s
 thickness, and paparazzi sizes the decorations to match.</p>
-<p>paparazzi draws dark bubbles with white text unless you choose other
-colors. <code>fill</code> and <code>text_color</code> change the
-bubble’s background and text, while <code>color</code> still sets its
-border and the line. Here, a long line with a dot at the bubble leads
-from a pale yellow bubble to the Add button:</p>
+<p>By default, a bubble takes the callout’s accent color for its fill,
+and paparazzi picks black or white text for contrast against it.
+<code>fill</code> and <code>text_color</code> choose other colors, while
+<code>color</code> still sets the border and the line. Here, a long line
+with a dot at the bubble leads from a pale yellow bubble to the Add
+button:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span></span>
@@ -432,9 +433,9 @@ call.</p>
 <p>Staged styles stay on the page until you change them. Passing
 <code>NULL</code> restores a default: crimson (<code>#e11d48</code>)
 marks with 3 pixel lines, sans-serif badges with 14 pixel text, callouts
-with white text on <code>#171717</code>, 24 pixels from their element (8
-without a line), and captions at the bottom. We’ll clear the box and
-restore the defaults:</p>
+filled with their accent color, 24 pixels from their element (8 without
+a line), and captions at the bottom. We’ll clear the box and restore the
+defaults:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -444,9 +445,14 @@ restore the defaults:</p>
 <span>    font_family <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>    font_size <span class="op">=</span> <span class="cn">NULL</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p>The staged <code>fill</code> and <code>text_color</code> style
-callout bubbles only. Mark badges follow their mark’s color unless you
-pass <code>label_fill</code> or <code>label_text_color</code>.</p>
+<p>Callout bubbles and their badges follow the callout’s
+<code>color</code> unless you set <code>fill</code> per call or with
+<code><a href="../reference/pz_stage_annotate.html">pz_stage_annotate()</a></code>. paparazzi chooses black or white text
+for the higher WCAG contrast ratio against the fill unless you set
+<code>text_color</code> per call or in staging. Staging
+<code>fill = NULL</code> and <code>text_color = NULL</code> restores
+these defaults. Mark badges follow their mark’s color unless you pass
+<code>label_fill</code> or <code>label_text_color</code>.</p>
 <div class="section level3">
 <h3 id="web-fonts">Web fonts<a class="anchor" aria-label="anchor" href="#web-fonts"></a>
 </h3>
@@ -475,7 +481,7 @@ default for later annotations:</p>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">8</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="annotations_files/figure-html/web-font-1.png" class="r-plt" alt="The new-task form with a dark callout below the attachment field, pointing up at it and reading Optional: attach a file in a handwritten font." width="532"></p>
+<p><img src="annotations_files/figure-html/web-font-1.png" class="r-plt" alt="The new-task form with a crimson callout below the attachment field, pointing up at it and reading Optional: attach a file in a handwritten font." width="532"></p>
 <p>You can pass the font object anywhere <code>font_family</code> takes
 a string, as long as you’ve staged it on the page. It stands for the CSS
 font family <code>'"Patrick Hand", sans-serif'</code>, so the browser

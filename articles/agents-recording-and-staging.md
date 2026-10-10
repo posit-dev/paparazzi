@@ -21,7 +21,7 @@ page <- pz_open(
   height = 720,
   color_scheme = "light"
 )
-pz_stage(page, enter = "bottom", pause = 0.25, cursor_speed = 480)
+pz_stage(page, enter = "bottom", pause = 0.5, cursor_speed = 480)
 video <- tempfile(fileext = ".mp4")
 basil <- pz_loc(".task", has_text = "Water the basil")
 
@@ -36,7 +36,7 @@ page |>
     ),
     fps = 12,
     scale = 0.75,
-    hold = c(0.3, 0.8)
+    hold = c(0.5, 1.5)
   ) |>
   pz_annotate_caption("Add a task") |>
   pz_camera(pz_frame("#new-task", zoom = 2), wait = TRUE) |>
@@ -79,8 +79,12 @@ moves to a shot within it, applied when the video is encoded: here
 `zoom = 2` frames the form at twice the home zoom, and
 [`pz_camera_reset()`](https://posit-dev.github.io/paparazzi/reference/pz_camera_reset.md)
 goes back to the home frame. The camera changes the video, not the
-browser viewport. With `wait = TRUE` the next action starts after the
-move finishes; the default, `FALSE`, overlaps them.
+browser viewport.
+[`pz_camera()`](https://posit-dev.github.io/paparazzi/reference/pz_camera.md)
+picks a good move duration from the pan and zoom distance; pass
+`duration` only in extreme cases, with a good reason. With `wait = TRUE`
+the next action starts after the move finishes; the default, `FALSE`,
+overlaps them.
 
 Frames accept a
 [`pz_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_frame.md)
@@ -134,6 +138,13 @@ adds seconds to the first and last frames; its default is `c(0.5, 1)`.
 `pz_record_hold(seconds)` adds a hold at a chosen point in the script.
 It changes the video timeline, not how long the R script waits.
 
+Pace the video for a first-time viewer: high-quality videos move slowly
+so viewers can follow along. Give most pauses about 1 second, step them
+in 0.5-second increments, and never go below 0.5 seconds. The rule
+covers
+[`pz_record_hold()`](https://posit-dev.github.io/paparazzi/reference/pz_record_hold.md),
+the `hold` argument, and the staged `pause`.
+
 ## Pause and resume a recording
 
 Use
@@ -153,14 +164,14 @@ recording <- pz_record_start(page, paused_video, fps = 10, scale = 0.5)
 recording |>
   pz_act_click("#toggle-help") |>
   pz_expect_visible(target = "#help") |>
-  pz_record_hold(0.4) |>
+  pz_record_hold(0.5) |>
   pz_record_pause()
 
 page |> pz_act_click("#toggle-help")
 recording |>
   pz_record_resume() |>
   pz_expect_hidden(target = "#help") |>
-  pz_record_hold(0.4) |>
+  pz_record_hold(0.5) |>
   pz_record_stop()
 ```
 
@@ -214,7 +225,7 @@ page |>
     enter = "bottom",
     typing = "natural",
     typing_speed = 18,
-    pause = 0.2,
+    pause = 0.5,
     camera_follow = TRUE,
     show_keys = "mac",
     click_effect = "ring",
@@ -307,7 +318,7 @@ add_task <- function(ctx, title) {
 add_task(app, "Check the seedlings")
 app |> pz_expect_count(3, target = ".task")
 
-pz_stage(app, typing = "natural", typing_speed = 20, pause = 0.25)
+pz_stage(app, typing = "natural", typing_speed = 20, pause = 0.5)
 shiny_demo <- tempfile(fileext = ".mp4")
 pz_record(
   app,

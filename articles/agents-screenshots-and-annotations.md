@@ -157,7 +157,11 @@ sets page defaults for later annotations. Omitted arguments leave a
 setting alone; explicit `NULL` restores its default. Per-call styles
 override the staged settings. Mark badges use the mark’s `color` with
 white text; `label_fill` and `label_text_color` override those. Staged
-`fill` and `text_color` style callout bubbles and their badges. New
+`fill` and `text_color` style callout bubbles and their badges. Without
+a per-call or staged fill, each callout follows its resolved `color`.
+Without a per-call or staged text color, paparazzi chooses black or
+white for the higher WCAG contrast ratio against the fill. Staging
+`fill = NULL` or `text_color = NULL` restores these defaults. New
 captions default to the staged `caption_side` (`"bottom"` or `"top"`).
 
 ``` r

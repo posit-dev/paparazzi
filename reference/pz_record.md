@@ -26,11 +26,12 @@ pz_record(ctx, path = NULL, code, ...)
 - path:
 
   Output file path; the extension (`.mp4`, `.webm`, or `.gif`) selects
-  the format. An existing file is overwritten. With `NULL` (the default)
-  while knitting, a numbered file in the chunk's figure directory is
-  used and the recording appears in the document; in an interactive
-  session, a temporary file is used and shown in the viewer when
-  recording stops. A path is required otherwise.
+  the format. An existing file is overwritten. The directory must
+  already exist. With `NULL` (the default) while knitting, a numbered
+  file in the chunk's figure directory is used and the recording appears
+  in the document; in an interactive session, a temporary file is used
+  and shown in the viewer when recording stops. A path is required
+  otherwise.
 
 - code:
 

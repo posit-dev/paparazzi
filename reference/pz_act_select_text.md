@@ -1,10 +1,9 @@
 # Select text inside an element
 
-Auto-waits for a match, then highlights the exact `text` inside it as if
-dragging across it: the substring is found among the element's text
-nodes (so a match spanning inline tags, e.g. across an `<em>` and a
-`<strong>`, is selected as one piece) and becomes the page's real window
-selection. Typing afterwards replaces it – call
+Auto-waits for a match, then highlights the exact `text` inside it.
+paparazzi finds the substring among the element's text nodes and sets
+the page's real window selection, even when the match spans inline tags
+such as `<em>` and `<strong>`. Typing afterwards replaces it – call
 [`pz_act_type()`](https://posit-dev.github.io/paparazzi/reference/pz_act_type.md)
 with `target = NULL`, which inserts into whatever has focus.
 
@@ -41,6 +40,13 @@ pz_act_select_text(ctx, text, ..., target = NULL)
 `ctx`, invisibly.
 
 ## Details
+
+While recording with a visible cursor, paparazzi animates a drag across
+the text, then sets the exact selection with the browser's Range API.
+The drag sends real mouse-move events, which can trigger page hover
+effects such as tooltips or hover menus. Outside a recording, selection
+is instant and leaves the cursor where it was, without sending
+mouse-move events.
 
 A contenteditable target is focused too (dragging across editable text
 focuses it, and that focus is where the typing lands); a static target

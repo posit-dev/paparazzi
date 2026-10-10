@@ -168,7 +168,11 @@ decorations; <code>NULL</code> uses the staged annotation color.</p></dd>
 <dt id="arg-fill-text-color">fill, text_color<a class="anchor" aria-label="anchor" href="#arg-fill-text-color"></a></dt>
 <dd><p>CSS colors for the bubble background and text
 (and the callout's badge); <code>NULL</code> uses the staged <code>fill</code>/<code>text_color</code>
-from <code><a href="pz_stage_annotate.html">pz_stage_annotate()</a></code>, falling back to <code>"#171717"</code> on <code>"white"</code>.
+from <code><a href="pz_stage_annotate.html">pz_stage_annotate()</a></code>. Without a staged value, the fill follows
+the resolved <code>color</code>, and paparazzi chooses black or white text for
+the higher WCAG contrast ratio against the fill. Automatic contrast
+blends translucent fills over white, so set <code>text_color</code> explicitly
+with a translucent fill on a dark page.
 <code><a href="pz_annotate.html">pz_annotate()</a></code> mark badges do not use these; they follow their mark's
 <code>color</code> unless overridden per call with <code>label_fill</code>/<code>label_text_color</code>.</p></dd>
 

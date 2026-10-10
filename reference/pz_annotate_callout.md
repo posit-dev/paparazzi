@@ -102,8 +102,12 @@ pz_annotate_callout(
 
   CSS colors for the bubble background and text (and the callout's
   badge); `NULL` uses the staged `fill`/`text_color` from
-  [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md),
-  falling back to `"#171717"` on `"white"`.
+  [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md).
+  Without a staged value, the fill follows the resolved `color`, and
+  paparazzi chooses black or white text for the higher WCAG contrast
+  ratio against the fill. Automatic contrast blends translucent fills
+  over white, so set `text_color` explicitly with a translucent fill on
+  a dark page.
   [`pz_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate.md)
   mark badges do not use these; they follow their mark's `color` unless
   overridden per call with `label_fill`/`label_text_color`.

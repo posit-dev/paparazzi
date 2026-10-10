@@ -227,10 +227,11 @@ CSS pixels: 24 by default, or 8 for a bubble without a line.
 `stroke_width` sets the line’s thickness, and paparazzi sizes the
 decorations to match.
 
-paparazzi draws dark bubbles with white text unless you choose other
-colors. `fill` and `text_color` change the bubble’s background and text,
-while `color` still sets its border and the line. Here, a long line with
-a dot at the bubble leads from a pale yellow bubble to the Add button:
+By default, a bubble takes the callout’s accent color for its fill, and
+paparazzi picks black or white text for contrast against it. `fill` and
+`text_color` choose other colors, while `color` still sets the border
+and the line. Here, a long line with a dot at the bubble leads from a
+pale yellow bubble to the Add button:
 
 ``` r
 
@@ -434,9 +435,9 @@ badge.](annotations_files/figure-html/stage-style-1.png)
 
 Staged styles stay on the page until you change them. Passing `NULL`
 restores a default: crimson (`#e11d48`) marks with 3 pixel lines,
-sans-serif badges with 14 pixel text, callouts with white text on
-`#171717`, 24 pixels from their element (8 without a line), and captions
-at the bottom. We’ll clear the box and restore the defaults:
+sans-serif badges with 14 pixel text, callouts filled with their accent
+color, 24 pixels from their element (8 without a line), and captions at
+the bottom. We’ll clear the box and restore the defaults:
 
 ``` r
 
@@ -450,8 +451,13 @@ page |>
   )
 ```
 
-The staged `fill` and `text_color` style callout bubbles only. Mark
-badges follow their mark’s color unless you pass `label_fill` or
+Callout bubbles and their badges follow the callout’s `color` unless you
+set `fill` per call or with
+[`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md).
+paparazzi chooses black or white text for the higher WCAG contrast ratio
+against the fill unless you set `text_color` per call or in staging.
+Staging `fill = NULL` and `text_color = NULL` restores these defaults.
+Mark badges follow their mark’s color unless you pass `label_fill` or
 `label_text_color`.
 
 ### Web fonts
@@ -489,7 +495,7 @@ page |>
   )
 ```
 
-![The new-task form with a dark callout below the attachment field,
+![The new-task form with a crimson callout below the attachment field,
 pointing up at it and reading Optional: attach a file in a handwritten
 font.](annotations_files/figure-html/web-font-1.png)
 

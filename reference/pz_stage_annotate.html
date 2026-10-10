@@ -105,15 +105,17 @@ Supply <code>NULL</code> to restore the default.</p></dd>
 
 <dt id="arg-fill">fill<a class="anchor" aria-label="anchor" href="#arg-fill"></a></dt>
 <dd><p>CSS background color for new callout bubbles and their
-badges. The default is <code>"#171717"</code>. Supply <code>NULL</code> to restore the
-default. Callout chrome only: <code><a href="pz_annotate.html">pz_annotate()</a></code> mark badges follow their
-mark's <code>color</code> unless overridden per call with <code>label_fill</code>.</p></dd>
+badges. By default, the fill follows each callout's resolved <code>color</code>.
+Supply <code>NULL</code> to restore this default. Callout chrome only:
+<code><a href="pz_annotate.html">pz_annotate()</a></code> mark badges follow their mark's <code>color</code> unless
+overridden per call with <code>label_fill</code>.</p></dd>
 
 
 <dt id="arg-text-color">text_color<a class="anchor" aria-label="anchor" href="#arg-text-color"></a></dt>
 <dd><p>CSS text color for new callout bubbles and their
-badges. The default is <code>"white"</code>. Supply <code>NULL</code> to restore the
-default. Callout chrome only, like <code>fill</code>.</p></dd>
+badges. By default, paparazzi chooses black or white for the higher
+WCAG contrast ratio against the resolved fill. Supply <code>NULL</code> to
+restore this default. Callout chrome only, like <code>fill</code>.</p></dd>
 
 
 <dt id="arg-stroke-width">stroke_width<a class="anchor" aria-label="anchor" href="#arg-stroke-width"></a></dt>

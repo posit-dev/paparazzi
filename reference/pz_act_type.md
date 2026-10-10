@@ -15,10 +15,9 @@ Insertion is instant (one `insertText`), except while recording with
 [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)):
 one `insertText` per character with randomized delays around
 `typing_speed`, so the video shows the text appearing. While recording,
-the cursor that clicked the field fades out so it doesn't cover the
-text, and fades back in when the next action moves it. For a
-value-setting primitive that works on selects, checkboxes, and range
-inputs, see
+paparazzi fades the cursor out during typing so it doesn't cover the
+text. The next pointer action fades it back in. For a value-setting
+primitive that works on selects, checkboxes, and range inputs, see
 [`pz_set_value()`](https://posit-dev.github.io/paparazzi/reference/pz_set_value.md).
 
 ## Usage

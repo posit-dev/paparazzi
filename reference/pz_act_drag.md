@@ -25,34 +25,6 @@ replayed `drop`, so `dragstart` styling stays visible through the carry,
 and the real pointer stays by the source until the release, so the
 destination shows no hover during the carry.
 
-With `preview = TRUE`, an active, unpaused recording with a visible
-cursor also carries a static image of the HTML5 source, captured before
-`dragstart` styling. A handle inside a draggable element previews that
-element. After the drop, the image briefly settles to the same source
-node's new bounds, if it survives with a supported, unchanged size. The
-page's source is never hidden or replaced. This is not the browser's
-native drag image and does not reproduce custom
-`DataTransfer.setDragImage()` feedback.
-
-Source-related or overlapping paparazzi redactions, uncertain redaction
-state, and unsupported source geometry or content references disable the
-preview with a warning. Sources containing SVG `<use>` references or
-iframes are not captured. Preview capture also skips documents with
-imported or unreadable stylesheets, unsupported CSS rule groups,
-nonembedded font source URLs, or registered fonts without a readable
-embedded CSS representation. Provably separate redactions permit preview
-capture. If a local `file://` page has unreadable stylesheets, serve it
-over HTTP with
-[`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md)
-and open the server handle with
-[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md);
-[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
-serves `.html` files over HTTP on its own when httpuv is installed.
-Capture and other optional preview failures also warn without changing
-the drag. Use `preview = FALSE` to disable capture, carry imagery, and
-settling. Unrecorded, paused, hidden-cursor, and ordinary mouse drags do
-no preview work.
-
 `to` names the element to drop onto; `by = c(x, y)` drops at that offset
 in pixels from the source's center. Supply exactly one.
 
@@ -100,6 +72,56 @@ pz_act_drag(ctx, target, to = NULL, ..., by = NULL, preview = TRUE)
 ## Value
 
 `ctx`, invisibly.
+
+## Drag preview
+
+With `preview = TRUE`, paparazzi carries a static image of the HTML5
+drag source during an active, unpaused recording with a visible cursor.
+Paparazzi captures the image before `dragstart` styling; a handle inside
+a draggable element previews that element. After the drop, the image
+briefly settles to the same source node's new bounds if it survives with
+a supported, unchanged size. Paparazzi never hides or replaces the
+page's source. The preview is not the browser's native drag image and
+does not reproduce custom `DataTransfer.setDragImage()` feedback.
+
+Paparazzi disables the optional preview with a warning in these cases.
+The drag continues without the preview.
+
+- **Unreadable stylesheets**, often on `file://` pages: open the page
+  over HTTP.
+  [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+  serves local `.html` paths over HTTP when httpuv is installed and
+  loads. You can also serve the page with
+  [`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md)
+  and open the server handle with
+  [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md).
+  Cross-origin stylesheets must also allow the browser to read their
+  rules.
+
+- **Iframes or SVG `<use>` references in the source**: use a source
+  without these references; they can copy content outside the source
+  subtree.
+
+- **Unsupported CSS rule groups, imported stylesheets, or font
+  sources**: move rules out of unsupported groups or imports and embed
+  font sources as data URLs in `@font-face` rules. Registered fonts also
+  need a readable embedded CSS representation.
+
+- **Source-related or overlapping paparazzi redactions, or uncertain
+  redaction state**: keep redactions separate from the source or turn
+  off the preview. Paparazzi permits capture only when it can verify
+  that redactions are separate; do not remove redactions from sensitive
+  content for a preview.
+
+- **Unsupported source geometry or content**: use a source without
+  transforms, filters, clipping, overflowing content, shadow DOM, or
+  generated content. Fixed or sticky descendants and out-of-box
+  positioned content are also unsupported.
+
+Other preview failures report the underlying error message. Use
+`preview = FALSE` to turn off capture, carry imagery, and settling.
+Unrecorded, paused, hidden-cursor, and ordinary mouse drags do no
+preview work.
 
 ## Acting on the page
 

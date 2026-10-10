@@ -28,6 +28,10 @@ default timeout, staging settings, recorder state – lives on the page.
 
   The recorder a recording chain belongs to, or `NULL` (internal).
 
+- `inspect_image`:
+
+  Pending annotated screenshot path for knitr, or `NULL` (internal).
+
 ## Methods
 
 ### Public methods

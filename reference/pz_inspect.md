@@ -54,8 +54,9 @@ pz_inspect(
 
 - path:
 
-  Where to write the annotated screenshot; `NULL` writes a temporary
-  file. Only used with `show = "screenshot"`.
+  Where to write the annotated screenshot; with `NULL`, paparazzi writes
+  a numbered chunk figure while knitting and a temporary file otherwise.
+  Only used with `show = "screenshot"`.
 
 - show:
 
@@ -64,7 +65,13 @@ pz_inspect(
 
 ## Value
 
-`ctx`, invisibly, so it can be dropped anywhere in a chain.
+`ctx`, invisibly (visibly in an active recording chain). With
+`show = "screenshot"` and `path = NULL` while knitting, returns `ctx`
+visibly so knitr prints the summary and includes the annotated
+screenshot once. A subsequent action or scope change discards the
+pending image; a terminal getter leaves it for the next knitr print. If
+the context belongs to an active recording chain, knitr stops and
+includes the recording instead of the inspect image.
 
 ## Examples
 
@@ -113,6 +120,6 @@ page |>
 #>   7  <button type="button" class="task-done btn btn-sm btn-outli…
 #>      visible · enabled · at 760,552 · 55 × 31
 #> Recording  off · cursor hidden
-#> Annotated screenshot: /tmp/Rtmpj67Q5R/inspect.png
+#> Annotated screenshot: /tmp/Rtmp9Q5gop/inspect.png
 pz_close(page)
 ```

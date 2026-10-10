@@ -553,34 +553,33 @@ a chain:
 page |>
   pz_find(".task-list") |>
   pz_inspect(".task-done", show = "screenshot")
+#> ── paparazzi scope ─────────────────────────────────────────────────────────────
+#> Scope      root › `.task-list` (1)
+#> URL        http://127.0.0.1:4023/tasks.html
+#> Device     390 × 700 @2x · dark
+#> Target     `.task-done` → 8 matches
+#>   1  <button type="button" class="task-done btn btn-sm btn-outli…
+#>      hidden · enabled · at 306,324 · 55 × 31
+#>   2  <button type="button" class="task-done btn btn-sm btn-outli…
+#>      visible · enabled · at 306,372 · 55 × 31
+#>   3  <button type="button" class="task-done btn btn-sm btn-outli…
+#>      visible · enabled · at 306,420 · 55 × 31
+#>   4  <button type="button" class="task-done btn btn-sm btn-outli…
+#>      visible · enabled · at 306,476 · 55 × 31
+#>   5  <button type="button" class="task-done btn btn-sm btn-outli…
+#>      hidden · enabled · at 306,541 · 55 × 31
+#>   6  <button type="button" class="task-done btn btn-sm btn-outli…
+#>      visible · enabled · at 306,606 · 55 × 31
+#>   7  <button type="button" class="task-done btn btn-sm btn-outli…
+#>      visible · enabled · at 306,671 · 55 × 31
+#>   8  <button type="button" class="task-done btn btn-sm btn-outli…
+#>      visible · enabled · at 306,728 · 55 × 31
+#> Recording  off · cursor hidden
 ```
-
-    #> ── paparazzi scope ─────────────────────────────────────────────────────────────
-    #> Scope      root › `.task-list` (1)
-    #> URL        http://127.0.0.1:4023/tasks.html
-    #> Device     390 × 700 @2x · dark
-    #> Target     `.task-done` → 8 matches
-    #>   1  <button type="button" class="task-done btn btn-sm btn-outli…
-    #>      hidden · enabled · at 306,324 · 55 × 31
-    #>   2  <button type="button" class="task-done btn btn-sm btn-outli…
-    #>      visible · enabled · at 306,372 · 55 × 31
-    #>   3  <button type="button" class="task-done btn btn-sm btn-outli…
-    #>      visible · enabled · at 306,420 · 55 × 31
-    #>   4  <button type="button" class="task-done btn btn-sm btn-outli…
-    #>      visible · enabled · at 306,476 · 55 × 31
-    #>   5  <button type="button" class="task-done btn btn-sm btn-outli…
-    #>      hidden · enabled · at 306,541 · 55 × 31
-    #>   6  <button type="button" class="task-done btn btn-sm btn-outli…
-    #>      visible · enabled · at 306,606 · 55 × 31
-    #>   7  <button type="button" class="task-done btn btn-sm btn-outli…
-    #>      visible · enabled · at 306,671 · 55 × 31
-    #>   8  <button type="button" class="task-done btn btn-sm btn-outli…
-    #>      visible · enabled · at 306,728 · 55 × 31
-    #> Recording  off · cursor hidden
 
 ![The task list with a dashed outline around the list and numbered solid
 outlines around the visible Done
-buttons.](paparazzi_files/figure-html/unnamed-chunk-22-1.png)
+buttons.](paparazzi_files/figure-html/unnamed-chunk-21-1.png)
 
 `.task-done` matches one button for each task. The page hides the Done
 buttons of finished tasks, so

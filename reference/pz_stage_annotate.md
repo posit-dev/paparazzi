@@ -44,18 +44,19 @@ pz_stage_annotate(
 
 - fill:
 
-  CSS background color for new callout bubbles and their badges. The
-  default is `"#171717"`. Supply `NULL` to restore the default. Callout
-  chrome only:
+  CSS background color for new callout bubbles and their badges. By
+  default, the fill follows each callout's resolved `color`. Supply
+  `NULL` to restore this default. Callout chrome only:
   [`pz_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate.md)
   mark badges follow their mark's `color` unless overridden per call
   with `label_fill`.
 
 - text_color:
 
-  CSS text color for new callout bubbles and their badges. The default
-  is `"white"`. Supply `NULL` to restore the default. Callout chrome
-  only, like `fill`.
+  CSS text color for new callout bubbles and their badges. By default,
+  paparazzi chooses black or white for the higher WCAG contrast ratio
+  against the resolved fill. Supply `NULL` to restore this default.
+  Callout chrome only, like `fill`.
 
 - stroke_width:
 
