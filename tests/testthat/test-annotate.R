@@ -2990,8 +2990,10 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
         "[window.innerWidth,document.documentElement.clientWidth]"
       ))
       badge <- annotation_badge_rects(page)[[1]]
-      isTRUE(dims[1] == inner_width) &&
-        abs(badge$left + badge$width - (dims[2] - 1 / 64)) < 0.001
+      isTRUE(
+        dims[1] == inner_width &&
+          abs(badge$left + badge$width - (dims[2] - 1 / 64)) < 0.001
+      )
     }
   }
   pz_js(page, "document.getElementById('edge').style.left='calc(100vw - 30px)'")
@@ -3035,6 +3037,65 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
     loop = page$child_loop,
     what = "the badge to return to its preferred above-mark anchor"
   )
+})
+
+test_that("badges reposition themselves when targets move and scroll", {
+  # Unlike the device-emulated pages above, a plain page receives
+  # animation frames on every platform, so these polls exercise the
+  # requestAnimationFrame path without forcing the layer's sync.
+  page <- local_page()
+  pz_js(
+    page,
+    paste0(
+      "document.body.style.cssText='margin:0;background:white';",
+      "document.body.innerHTML='<div id=edge style=\"position:absolute;left:400px;top:250px;width:30px;height:30px\"></div>';"
+    )
+  )
+  viewport_badge_reference(page, "#add-task")
+  client_width <- unlist(pz_js(page, "document.documentElement.clientWidth"))
+  pz_js(
+    page,
+    paste0(
+      "document.getElementById('edge').style.left='",
+      client_width - 30,
+      "px'"
+    )
+  )
+  pz_poll(
+    function() {
+      badge <- annotation_badge_rects(page)[[1]]
+      isTRUE(abs(badge$left + badge$width - (client_width - 1 / 64)) < 0.001)
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the badge to follow its moved target to the viewport edge"
+  )
+  badge <- annotation_badge_rects(page)[[1]]
+  expect_equal(
+    badge$left + badge$width,
+    client_width - 1 / 64,
+    tolerance = 0.001
+  )
+  pz_js(
+    page,
+    paste0(
+      "document.getElementById('edge').style.left='300px'; ",
+      # The default window is taller than the emulated pages, so grow
+      # the body past the measured viewport or the scroll has nowhere to go.
+      "document.body.style.height=(innerHeight+400)+'px'; ",
+      "window.scrollTo(0,250)"
+    )
+  )
+  pz_poll(
+    function() {
+      isTRUE(abs(annotation_badge_rects(page)[[1]]$top) < 0.001)
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the scrolled target's badge to stay at the viewport top"
+  )
+  badge <- annotation_badge_rects(page)[[1]]
+  expect_equal(c(badge$left, badge$top), c(300, 0), tolerance = 0.001)
 })
 
 test_that("off-viewport badges stay with their targets in framed captures", {
