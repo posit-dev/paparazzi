@@ -2779,3 +2779,429 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
   page |> pz_annotate_clear()
   expect_length(annotation_state(page), 0)
 })
+
+local_viewport_badge_page <- function(
+  width = 1000,
+  height = 720,
+  .env = parent.frame()
+) {
+  page <- local_page(width = width, height = height, .env = .env)
+  pz_js(
+    page,
+    paste0(
+      "document.body.style.cssText='margin:0;background:white';",
+      "document.body.innerHTML='<div id=edge style=\"position:absolute;left:400px;top:250px;width:30px;height:30px\"></div>';"
+    )
+  )
+  page
+}
+
+viewport_badge_reference <- function(page, label, pad = 0) {
+  page |>
+    pz_annotate(
+      "#edge",
+      label = label,
+      pad = pad,
+      label_fill = "#ff00ff",
+      color = "red",
+      font_family = "monospace",
+      reveal = "none",
+      id = "edge"
+    )
+  annotation_badge_rects(page)[[1]]
+}
+
+expect_viewport_badge <- function(page, path, x, y, reference) {
+  badge <- annotation_badge_rects(page)[[1]]
+  expect_equal(c(badge$left, badge$top), c(x, y), tolerance = 0.001)
+  expect_equal(
+    c(badge$width, badge$height),
+    c(reference$width, reference$height)
+  )
+  viewport <- unlist(pz_js(page, "[innerWidth,innerHeight]"))
+  expect_gte(badge$left, -0.001)
+  expect_gte(badge$top, -0.001)
+  expect_lte(badge$left + badge$width, viewport[1] + 0.001)
+  expect_lte(badge$bottom, viewport[2] + 0.001)
+  size <- png_dimensions(path) / page_dpr(page)
+  # These points use the expected placement, not the potentially offscreen DOM.
+  points <- rbind(
+    c(x + 2, y + reference$height / 2),
+    c(x + reference$width - 2, y + reference$height / 2)
+  )
+  expect_true(all(points >= 0 & sweep(points, 2, size, `<`)))
+  for (i in seq_len(nrow(points))) {
+    expect_png_pixel(page, path, points[i, 1], points[i, 2], c(255, 0, 255))
+  }
+  ink <- png_canvas_eval(
+    page,
+    path,
+    paste0(
+      "const p=c.getImageData(",
+      round((x + 5) * page_dpr(page)),
+      ",",
+      round((y + 2) * page_dpr(page)),
+      ",",
+      max(1, floor((reference$width - 10) * page_dpr(page))),
+      ",",
+      max(1, floor((reference$height - 4) * page_dpr(page))),
+      ").data; let ink=0,fill=0; for(let i=0;i<p.length;i+=4) {",
+      "if(p[i]>240 && p[i+1]>240 && p[i+2]>240) ink++;",
+      "if(p[i]>240 && p[i+1]<10 && p[i+2]>240) fill++; } return {ink,fill};"
+    )
+  )
+  expect_gt(ink$ink, 0)
+  expect_gt(ink$fill, 0)
+}
+
+test_that("right-edge badges translate without squeezing medium or 20em labels", {
+  page <- local_viewport_badge_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  for (label in c("#add-task", paste(rep("word", 15), collapse = " "))) {
+    pz_js(page, "document.getElementById('edge').style.left='400px'")
+    reference <- viewport_badge_reference(page, label)
+    expect_gt(reference$width, 30)
+    pz_js(page, "document.getElementById('edge').style.left='970px'")
+    page |> pz_screenshot(path)
+    expect_viewport_badge(
+      page,
+      path,
+      1000 - reference$width,
+      250 - reference$height,
+      reference
+    )
+    expect_png_pixel(page, path, 985, 251, c(255, 0, 0))
+  }
+})
+
+test_that("top and top-right badges move down while retaining their label size", {
+  page <- local_viewport_badge_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  for (label in c("#add-task", paste(rep("word", 15), collapse = " "))) {
+    for (pad in c(0, 4)) {
+      pz_js(
+        page,
+        "document.getElementById('edge').style.left='400px'; document.getElementById('edge').style.top='250px'"
+      )
+      reference <- viewport_badge_reference(page, label, pad)
+      pz_js(page, "document.getElementById('edge').style.top='0px'")
+      page |> pz_screenshot(path)
+      expect_viewport_badge(page, path, 400 - pad, 0, reference)
+      pz_js(page, "document.getElementById('edge').style.left='970px'")
+      page |> pz_screenshot(path)
+      expect_viewport_badge(page, path, 1000 - reference$width, 0, reference)
+    }
+  }
+})
+
+test_that("left and bottom viewport edges use the same minimum translation", {
+  page <- local_viewport_badge_page()
+  path <- withr::local_tempfile(fileext = ".png")
+  reference <- viewport_badge_reference(page, "#add-task", pad = 4)
+  pz_js(page, "document.getElementById('edge').style.left='-6px'")
+  page |> pz_screenshot(path)
+  expect_viewport_badge(page, path, 0, 246 - reference$height, reference)
+
+  pz_js(
+    page,
+    "document.getElementById('edge').style.left='400px'; document.getElementById('edge').style.top='250px'"
+  )
+  reference <- viewport_badge_reference(page, "A", pad = c(-40, 0, 50, 0))
+  pz_js(page, "document.getElementById('edge').style.top='690px'")
+  page |> pz_screenshot(path)
+  expect_viewport_badge(page, path, 400, 720 - reference$height, reference)
+})
+
+test_that("viewport translation composes with the visible overflow anchor", {
+  page <- local_viewport_badge_page()
+  reference <- viewport_badge_reference(page, "#add-task", pad = 4)
+  pz_js(
+    page,
+    paste0(
+      "const edge=document.getElementById('edge'); edge.style.cssText='position:relative;left:-20px;top:-20px;width:80px;height:80px';",
+      "const outer=document.createElement('div'); outer.style.cssText='position:absolute;left:970px;top:100px;width:30px;height:100px;overflow-x:hidden';",
+      "const inner=document.createElement('div'); inner.style.cssText='width:100px;height:50px;overflow-y:hidden';",
+      "edge.replaceWith(outer); outer.appendChild(inner); inner.appendChild(edge);"
+    )
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  expect_viewport_badge(
+    page,
+    path,
+    1000 - reference$width,
+    100 - reference$height,
+    reference
+  )
+  expect_equal(
+    as.numeric(unlist(annotation_state(page)[[1]]$rect)),
+    c(946, 76, 88, 88)
+  )
+  expect_png_pixel(page, path, 952, 120, rep(255, 3))
+  expect_png_pixel(page, path, 990, 77, rep(255, 3))
+  expect_png_pixel(page, path, 990, 162, rep(255, 3))
+})
+
+test_that("badge placement follows movement, scroll, and viewport resize", {
+  page <- local_viewport_badge_page()
+  reference <- viewport_badge_reference(page, "#add-task")
+  pz_js(page, "document.getElementById('edge').style.left='calc(100vw - 30px)'")
+  pz_poll(
+    function() {
+      badge <- annotation_badge_rects(page)[[1]]
+      abs(badge$left + badge$width - 1000) < 0.001
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the badge to reach its right-edge viewport placement"
+  )
+  page |> pz_device(width = 600, height = 400)
+  pz_poll(
+    function() {
+      badge <- annotation_badge_rects(page)[[1]]
+      abs(badge$left + badge$width - 600) < 0.001
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the badge to follow the resized viewport edge"
+  )
+  pz_js(
+    page,
+    "document.getElementById('edge').style.left='300px'; document.body.style.height='1200px'; window.scrollTo(0,250)"
+  )
+  pz_poll(
+    function() abs(annotation_badge_rects(page)[[1]]$top) < 0.001,
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the scrolled target's badge to stay at the viewport top"
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  expect_viewport_badge(page, path, 300, 0, reference)
+  pz_js(page, "window.scrollTo(0,0)")
+  pz_poll(
+    function() {
+      abs(annotation_badge_rects(page)[[1]]$top - (250 - reference$height)) <
+        0.001
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the badge to return to its preferred above-mark anchor"
+  )
+})
+
+test_that("off-viewport badges stay with their targets in framed captures", {
+  page <- local_viewport_badge_page()
+  reference <- viewport_badge_reference(page, "#add-task", pad = 4)
+  pz_js(page, "document.getElementById('edge').style.top='730px'")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  badge <- annotation_badge_rects(page)[[1]]
+  expect_equal(c(badge$left, badge$bottom), c(396, 726), tolerance = 0.001)
+  pz_js(page, "document.getElementById('edge').style.top='1500px'")
+  spec <- pz_frame("#edge", target_box = "annotated", pad = 8)
+  clip <- frame_clip(page, frame_effective(page, spec))
+  page |> pz_screenshot(path, frame = spec)
+  badge <- annotation_badge_rects(page)[[1]]
+  expect_equal(badge$bottom, 1496, tolerance = 0.001)
+  expect_equal(pz_js(page, "window.scrollY"), 0)
+  expect_png_pixel(
+    page,
+    path,
+    398 - clip$x,
+    1496 - reference$height / 2 - clip$y,
+    c(255, 0, 255)
+  )
+})
+
+test_that("oversized badges pin to zero without viewport-dependent rewrapping", {
+  page <- local_viewport_badge_page()
+  reference <- viewport_badge_reference(
+    page,
+    paste(rep("word", 15), collapse = " ")
+  )
+  page |> pz_device(width = 200, height = 720)
+  pz_js(page, "document.getElementById('edge').style.left='170px'")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  badge <- annotation_badge_rects(page)[[1]]
+  expect_equal(badge$left, 0)
+  expect_equal(
+    c(badge$width, badge$height),
+    c(reference$width, reference$height)
+  )
+  expect_gt(badge$width, 200)
+  expect_png_pixel(page, path, 2, badge$top + badge$height / 2, c(255, 0, 255))
+  page |> pz_device(width = 1000, height = 40)
+  pz_js(
+    page,
+    "document.getElementById('edge').style.left='400px'; document.getElementById('edge').style.top='10px'"
+  )
+  page |> pz_screenshot(path)
+  badge <- annotation_badge_rects(page)[[1]]
+  expect_equal(badge$top, 0)
+  expect_equal(
+    c(badge$width, badge$height),
+    c(reference$width, reference$height)
+  )
+  expect_gt(badge$height, 40)
+  expect_png_pixel(page, path, 402, 20, c(255, 0, 255))
+})
+
+test_that("fractional zoomed badge sizes do not leak past the viewport edge", {
+  page <- local_viewport_badge_page()
+  pz_js(page, "document.documentElement.style.zoom='1.25'")
+  reference <- viewport_badge_reference(page, "#add-task")
+  pz_js(page, "document.getElementById('edge').style.left='776px'")
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  expect_viewport_badge(
+    page,
+    path,
+    1000 - reference$width,
+    312.5 - reference$height,
+    reference
+  )
+})
+
+test_that("pop and slide do not feed animated sizes back into badge placement", {
+  page <- local_viewport_badge_page()
+  reference <- viewport_badge_reference(page, "#add-task")
+  pz_js(
+    page,
+    "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='0px'"
+  )
+  for (reveal in c("pop", "slide")) {
+    pz_js(
+      page,
+      paste0(
+        "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+        "l.pz.draw([document.getElementById('edge')],{id:'edge',type:'box',pad:[0,0,0,0],label:'#add-task',",
+        "color:'red',strokeWidth:3,labelFill:'#ff00ff',labelTextColor:'white',fontFamily:'monospace',fontSize:14,",
+        "reveal:'",
+        reveal,
+        "',animate:true}); l.querySelector('.pz-annotation').getAnimations({subtree:true})[0].pause(); })()"
+      )
+    )
+    for (fraction in c(0, 0.5, 1)) {
+      placement <- pz_js(
+        page,
+        paste0(
+          "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
+          "const a=l.querySelector('.pz-annotation').getAnimations({subtree:true})[0]; a.currentTime=",
+          fraction,
+          "*a.effect.getTiming().duration; l.pz.sync();",
+          "const b=l.querySelector('span'); return [parseFloat(b.style.left),parseFloat(b.style.top)]; })()"
+        )
+      )
+      expect_equal(
+        as.numeric(unlist(placement)),
+        c(30 - reference$width, reference$height),
+        tolerance = 0.001
+      )
+    }
+    page |> pz_annotate_clear("edge")
+  }
+  page |> pz_annotate("#edge", label = "Old", id = "edge")
+  page |> pz_annotate("#edge", label = "New", id = "edge")
+  expect_length(annotation_badge_rects(page), 1)
+  expect_identical(annotation_state(page)[[1]]$label, "New")
+  page |> pz_annotate_clear()
+  expect_length(annotation_state(page), 0)
+})
+
+test_that("a recorded top-right badge appears in retained frames and clears", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- local_viewport_badge_page()
+  reference <- viewport_badge_reference(page, "#add-task")
+  page |> pz_annotate_clear()
+  pz_js(
+    page,
+    "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='0px'"
+  )
+  path <- withr::local_tempfile(fileext = ".mp4")
+  page |>
+    pz_record_start(
+      path,
+      method = "poll",
+      fps = 12,
+      hold = c(0, 0),
+      keep_frames = TRUE
+    )
+  rec <- page_recorder(page)
+  withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+  defer_record_stop(page)
+  dpr <- page_dpr(page)
+  last_badge <- function() {
+    if (!length(rec$files)) {
+      return(rep(NA_real_, 3))
+    }
+    png::readPNG(tail(rec$files, 1))[
+      round(reference$height / 2 * dpr) + 1,
+      round((1000 - reference$width + 2) * dpr) + 1,
+      1:3
+    ]
+  }
+  page |>
+    pz_annotate(
+      "#edge",
+      label = "#add-task",
+      font_family = "monospace",
+      label_fill = "#ff00ff",
+      reveal = "fade",
+      id = "edge"
+    )
+  pz_poll(
+    function() isTRUE(all(abs(last_badge() - c(1, 0, 1)) < 0.03)),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a retained frame showing the viewport-contained top-right badge"
+  )
+  page |> pz_annotate_clear("edge")
+  pz_poll(
+    function() isTRUE(all(abs(last_badge() - 1) < 0.03)),
+    timeout = 5,
+    loop = page$child_loop,
+    what = "a retained frame without the cleared viewport badge"
+  )
+  expect_length(annotation_state(page), 0)
+  page |> pz_record_stop()
+})
+
+test_that("interior zero-size marks clamp badges but viewport-edge points do not", {
+  page <- local_viewport_badge_page()
+  reference <- viewport_badge_reference(page, "#add-task", pad = 10)
+  pz_js(
+    page,
+    "document.getElementById('edge').style.cssText='position:absolute;left:990px;top:5px;width:0;height:0'"
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  expect_true(annotation_state(page)[[1]]$visible)
+  expect_viewport_badge(page, path, 1000 - reference$width, 0, reference)
+  pz_js(page, "document.getElementById('edge').style.left='1000px'")
+  page |> pz_screenshot(path)
+  badge <- annotation_badge_rects(page)[[1]]
+  expect_equal(c(badge$left, badge$bottom), c(990, -5), tolerance = 0.001)
+})
+
+test_that("padding alone cannot pull an off-viewport target's badge inward", {
+  page <- local_viewport_badge_page()
+  reference <- viewport_badge_reference(page, "#add-task", pad = 20)
+  pz_js(
+    page,
+    "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='730px'"
+  )
+  path <- withr::local_tempfile(fileext = ".png")
+  page |> pz_screenshot(path)
+  badge <- annotation_badge_rects(page)[[1]]
+  expect_equal(c(badge$left, badge$bottom), c(950, 710), tolerance = 0.001)
+  expect_png_pixel(
+    page,
+    path,
+    1000 - reference$width + 2,
+    710 - reference$height / 2,
+    rep(255, 3)
+  )
+})
