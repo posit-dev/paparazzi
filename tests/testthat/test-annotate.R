@@ -427,7 +427,7 @@ test_that("a failing settle capture is counted and the recording continues", {
   original_capture <- record_capture
   with_mocked_bindings(
     pz_annotate(page, "#box") |> pz_annotate_clear(),
-    record_capture = function(rec, page, vt, scale) {
+    record_capture = function(rec, page, vt, scale, extent) {
       if (missing(scale)) {
         return(original_capture(rec, page, vt))
       }
@@ -451,12 +451,12 @@ test_that("a failing settle capture is counted and the recording continues", {
   settle_file <- NULL
   with_mocked_bindings(
     pz_annotate(page, "#box"),
-    record_capture = function(rec, page, vt, scale) {
+    record_capture = function(rec, page, vt, scale, extent) {
       if (missing(scale)) {
         return(original_capture(rec, page, vt))
       }
       settle_captures <<- settle_captures + 1L
-      original_capture(rec, page, vt, scale = scale)
+      original_capture(rec, page, vt, scale = scale, extent = extent)
       settle_file <<- rec$pending$file
     }
   )
@@ -478,7 +478,7 @@ test_that("a stuck settle capture is retired instead of blocking later frames", 
   original_capture <- record_capture
   with_mocked_bindings(
     pz_annotate(page, "#box"),
-    record_capture = function(rec, page, vt, scale) {
+    record_capture = function(rec, page, vt, scale, extent) {
       if (missing(scale)) {
         return(original_capture(rec, page, vt))
       }

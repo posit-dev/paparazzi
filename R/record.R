@@ -900,12 +900,14 @@ record_screencast_frame <- function(page, rec, frame) {
 }
 
 # Drains any in-flight capture, then captures a frame at the method's
-# scale and waits until it settles, whether it succeeds (the file lands)
-# or fails (the recorder clears the pending capture). A screencast frame
-# may have CSS-viewport resolution even at a higher device pixel ratio;
-# matching it keeps encode-time framing on the same coordinates for every
-# frame. A timeout is counted as a recorder error, not thrown, and never
-# leaves a pending capture blocking later frames.
+# scale and extent and waits until it settles, whether it succeeds (the
+# file lands) or fails (the recorder clears the pending capture). A
+# screencast frame may have CSS-viewport resolution even at a higher
+# device pixel ratio and always covers the whole compositor surface;
+# matching both keeps every frame in a recording the same size and
+# encode-time framing on the same coordinates. A timeout is counted as
+# a recorder error, not thrown, and never leaves a pending capture
+# blocking later frames.
 record_capture_settled <- function(
   rec,
   page,
@@ -921,13 +923,20 @@ record_capture_settled <- function(
       record_error(rec, e)
     }
   )
-  capture_scale <- if (identical(rec$method, "screencast")) {
-    1 / pz_js(page, "window.devicePixelRatio")
-  } else {
-    1
+  capture_scale <- 1
+  capture_extent <- "viewport"
+  if (identical(rec$method, "screencast")) {
+    capture_scale <- 1 / pz_js(page, "window.devicePixelRatio")
+    capture_extent <- "surface"
   }
   tryCatch(
-    record_capture(rec, page, vt, scale = capture_scale),
+    record_capture(
+      rec,
+      page,
+      vt,
+      scale = capture_scale,
+      extent = capture_extent
+    ),
     error = function(e) {
       record_error(rec, e)
       rec$pending <- NULL
@@ -957,7 +966,8 @@ record_screencast_snapshot <- function(page, rec) {
       rec,
       page,
       rec_vt(rec),
-      scale = 1 / pz_js(page, "window.devicePixelRatio")
+      scale = 1 / pz_js(page, "window.devicePixelRatio"),
+      extent = "surface"
     ),
     error = function(e) record_error(rec, e)
   )
@@ -965,8 +975,18 @@ record_screencast_snapshot <- function(page, rec) {
 }
 
 # Unclipped surface captures at DPR 2 can remap concurrent mouse input
-# to half its coordinates; a viewport clip avoids that Chrome path.
-record_capture <- function(rec, page, vt, scale = 1) {
+# to half its coordinates; a viewport clip avoids that Chrome path. The
+# clip's extent decides which rectangle is captured: "viewport" is the
+# client area (classic scrollbars excluded), "surface" the whole window,
+# matching screencast frames so one recording never mixes frame sizes.
+record_capture <- function(
+  rec,
+  page,
+  vt,
+  scale = 1,
+  extent = c("viewport", "surface")
+) {
+  extent <- rlang::arg_match(extent)
   index <- length(rec$files) + 1L
   pending <- new.env(parent = emptyenv())
   pending$vt <- vt
@@ -976,40 +996,55 @@ record_capture <- function(rec, page, vt, scale = 1) {
   remaining <- function() {
     max(0.1, as.numeric(difftime(deadline, Sys.time(), units = "secs")))
   }
+  # The layout metrics give the clip's scroll origin but only the client
+  # size; the window extent needs the full window dimensions.
   tryCatch(
-    page$session$Page$getLayoutMetrics(
-      wait_ = FALSE,
-      timeout_ = remaining(),
-      callback_ = function(metrics) {
-        tryCatch(
-          {
-            v <- metrics$cssVisualViewport
-            pending$scroll <- c(max(v$pageX, 0), max(v$pageY, 0))
-            pending$viewport_width <- v$clientWidth
-            clip <- list(
-              x = max(v$pageX, 0),
-              y = max(v$pageY, 0),
-              width = v$clientWidth,
-              height = v$clientHeight,
-              scale = scale
-            )
-            page$session$Page$captureScreenshot(
-              format = "png",
-              clip = clip,
-              fromSurface = TRUE,
-              wait_ = FALSE,
-              timeout_ = remaining(),
-              callback_ = function(res) {
-                record_frame_done(rec, pending, res = res)
-              },
-              error_ = function(err) record_frame_done(rec, pending, err = err)
-            )
-          },
-          error = function(e) record_frame_done(rec, pending, err = e)
-        )
-      },
-      error_ = function(err) record_frame_done(rec, pending, err = err)
-    ),
+    {
+      size <- if (identical(extent, "surface")) {
+        unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+      }
+      page$session$Page$getLayoutMetrics(
+        wait_ = FALSE,
+        timeout_ = remaining(),
+        callback_ = function(metrics) {
+          tryCatch(
+            {
+              v <- metrics$cssVisualViewport
+              pending$scroll <- c(max(v$pageX, 0), max(v$pageY, 0))
+              width <- v$clientWidth
+              height <- v$clientHeight
+              if (identical(extent, "surface")) {
+                width <- size[[1]]
+                height <- size[[2]]
+              }
+              pending$viewport_width <- width
+              clip <- list(
+                x = max(v$pageX, 0),
+                y = max(v$pageY, 0),
+                width = width,
+                height = height,
+                scale = scale
+              )
+              page$session$Page$captureScreenshot(
+                format = "png",
+                clip = clip,
+                fromSurface = TRUE,
+                wait_ = FALSE,
+                timeout_ = remaining(),
+                callback_ = function(res) {
+                  record_frame_done(rec, pending, res = res)
+                },
+                error_ = function(err) {
+                  record_frame_done(rec, pending, err = err)
+                }
+              )
+            },
+            error = function(e) record_frame_done(rec, pending, err = e)
+          )
+        },
+        error_ = function(err) record_frame_done(rec, pending, err = err)
+      )
+    },
     error = function(e) record_frame_done(rec, pending, err = e)
   )
   invisible(rec)
