@@ -256,6 +256,9 @@ function(root) {
     const layoutQuantum = 1 / 64;
     const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
     layer.style.zoom = String(1 / zoom);
+    // Root client bounds exclude the classic scrollbars omitted from recorded frames.
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
     for (const entry of entries.values()) {
       if (entry.kind === 'spotlight') {
         const svg = entry.nodes[0];
@@ -369,10 +372,10 @@ function(root) {
         if (badge) {
           let x = Math.max(left, clip.left), y = Math.max(top, clip.top);
           badge.style.transform = 'translateY(-100%)';
-          const inX = r.width === 0 ? r.left >= 0 && r.left < innerWidth :
-            Math.max(r.left, clip.left, 0) < Math.min(r.right, clip.right, innerWidth);
-          const inY = r.height === 0 ? r.top >= 0 && r.top < innerHeight :
-            Math.max(r.top, clip.top, 0) < Math.min(r.bottom, clip.bottom, innerHeight);
+          const inX = r.width === 0 ? r.left >= 0 && r.left < viewportWidth :
+            Math.max(r.left, clip.left, 0) < Math.min(r.right, clip.right, viewportWidth);
+          const inY = r.height === 0 ? r.top >= 0 && r.top < viewportHeight :
+            Math.max(r.top, clip.top, 0) < Math.min(r.bottom, clip.bottom, viewportHeight);
           // Off-viewport badges stay attached for target-framed captures.
           if (inX && inY) {
             // Layout lengths exclude reveal transforms and retain subpixel precision.
@@ -381,8 +384,8 @@ function(root) {
               parseFloat(style.paddingRight);
             const height = parseFloat(style.height) + parseFloat(style.paddingTop) +
               parseFloat(style.paddingBottom);
-            const maxX = Math.max(0, innerWidth - width);
-            const maxY = Math.max(0, innerHeight - height);
+            const maxX = Math.max(0, viewportWidth - width);
+            const maxY = Math.max(0, viewportHeight - height);
             x = x < 0 ? 0 : x > maxX ? Math.max(0, maxX - layoutQuantum) : x;
             const preferredY = y - height;
             const placedY = preferredY < 0 ? 0 : preferredY > maxY ?

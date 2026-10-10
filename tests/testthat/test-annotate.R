@@ -2812,7 +2812,10 @@ viewport_badge_reference <- function(page, label, pad = 0) {
 }
 
 expect_viewport_badge <- function(page, path, x, y, reference) {
-  viewport <- unlist(pz_js(page, "[innerWidth,innerHeight]"))
+  viewport <- unlist(pz_js(
+    page,
+    "[document.documentElement.clientWidth,document.documentElement.clientHeight]"
+  ))
   # Far-edge clamps move one Chromium layout unit inward; near edges pin to zero.
   if (x > 0 && x == viewport[1] - reference$width) {
     x <- max(0, x - 1 / 64)
@@ -3210,5 +3213,127 @@ test_that("padding alone cannot pull an off-viewport target's badge inward", {
     1000 - reference$width + 2,
     710 - reference$height / 2,
     rep(255, 3)
+  )
+})
+
+test_that("badge bounds exclude forced classic scrollbars like recorder crops", {
+  page <- local_viewport_badge_page()
+  pz_js(
+    page,
+    paste0(
+      "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar{width:24px;height:18px;background:white}</style>');",
+      "document.documentElement.style.overflow='scroll';",
+      "document.body.style.width='2000px'; document.body.style.height='2000px';"
+    )
+  )
+  pz_poll(
+    function() {
+      gap <- unlist(pz_js(
+        page,
+        "[innerWidth-document.documentElement.clientWidth,innerHeight-document.documentElement.clientHeight]"
+      ))
+      all(gap == c(24, 18))
+    },
+    timeout = 5,
+    loop = page$child_loop,
+    what = "the forced classic scrollbars to reserve 24px by 18px"
+  )
+  viewport <- unlist(pz_js(
+    page,
+    "[document.documentElement.clientWidth,document.documentElement.clientHeight]"
+  ))
+  outer <- unlist(pz_js(page, "[innerWidth,innerHeight]"))
+  expect_equal(outer - viewport, c(24, 18))
+  metrics <- page$session$Page$getLayoutMetrics()$cssVisualViewport
+  expect_equal(c(metrics$clientWidth, metrics$clientHeight), viewport)
+  path <- withr::local_tempfile(fileext = ".png")
+  # Match recorder crops without the viewport expansion of framed stills.
+  capture <- function() {
+    pz_js(page, paste0(ANNOTATION_LAYER_JS, "?.sync()"))
+    shot <- page$session$Page$captureScreenshot(
+      format = "png",
+      clip = list(
+        x = 0,
+        y = 0,
+        width = viewport[1],
+        height = viewport[2],
+        scale = 1
+      ),
+      fromSurface = TRUE,
+      captureBeyondViewport = FALSE
+    )
+    writeBin(jsonlite::base64_dec(shot$data), path)
+  }
+
+  reference <- viewport_badge_reference(page, "#add-task")
+  pz_js(
+    page,
+    "document.getElementById('edge').style.left=(document.documentElement.clientWidth-30)+'px'"
+  )
+  capture()
+  expect_viewport_badge(
+    page,
+    path,
+    viewport[1] - reference$width,
+    250 - reference$height,
+    reference
+  )
+  expect_lte(
+    annotation_badge_rects(page)[[1]]$left + reference$width,
+    viewport[1] + 1e-6
+  )
+  expect_equal(
+    png_dimensions(path),
+    as.integer(round(viewport * page_dpr(page)))
+  )
+
+  pz_js(
+    page,
+    "document.getElementById('edge').style.left=(document.documentElement.clientWidth+1)+'px'"
+  )
+  capture()
+  expect_equal(annotation_badge_rects(page)[[1]]$left, viewport[1] + 1)
+
+  pz_js(page, "document.getElementById('edge').style.left='400px'")
+  viewport_badge_reference(page, "#add-task", pad = 10)
+  pz_js(
+    page,
+    "const edge=document.getElementById('edge'); edge.style.width='0px'; edge.style.height='0px'; edge.style.left=document.documentElement.clientWidth+'px'"
+  )
+  capture()
+  expect_equal(annotation_badge_rects(page)[[1]]$left, viewport[1] - 10)
+
+  pz_js(page, "document.getElementById('edge').style.left='400px'")
+  viewport_badge_reference(page, "#add-task", pad = c(-40, 0, 50, 10))
+  pz_js(
+    page,
+    "document.getElementById('edge').style.top=document.documentElement.clientHeight+'px'"
+  )
+  capture()
+  expect_equal(annotation_badge_rects(page)[[1]]$bottom, viewport[2] + 40)
+
+  pz_js(
+    page,
+    "document.getElementById('edge').style.cssText='position:absolute;left:400px;top:250px;width:30px;height:30px'"
+  )
+  reference <- viewport_badge_reference(page, "A", pad = c(-40, 0, 50, 0))
+  pz_js(
+    page,
+    "document.getElementById('edge').style.top=(document.documentElement.clientHeight-30)+'px'"
+  )
+  capture()
+  expect_viewport_badge(
+    page,
+    path,
+    400,
+    viewport[2] - reference$height,
+    reference
+  )
+  expect_png_pixel(
+    page,
+    path,
+    402,
+    viewport[2] - reference$height - 1 / 64 + 4,
+    c(255, 0, 255)
   )
 })
