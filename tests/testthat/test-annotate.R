@@ -325,6 +325,17 @@ test_that("a final clear retains the unannotated frame before the end hold", {
   skip_if_no_av()
   skip_if_not_installed("png")
   page <- annotation_page()
+  # Styled scrollbars exercise classic gutters on overlay-scrollbar
+  # platforms: the screencast surface is wider than the client viewport, so
+  # settle captures that clip to the client area would mix frame sizes.
+  pz_js(
+    page,
+    "(() => { const s = document.createElement('style'); s.textContent = '::-webkit-scrollbar { width: 15px; height: 15px }'; document.head.appendChild(s); return true; })()"
+  )
+  expect_lt(
+    pz_js(page, "window.visualViewport.width"),
+    pz_js(page, "window.innerWidth")
+  )
   pz_js(page, "document.getElementById('box').style.background = '#0000ff'")
   path <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(
@@ -377,6 +388,12 @@ test_that("a final clear retains the unannotated frame before the end hold", {
   # Polling after clear would mask its obligation to retain the completed state.
   cleared <- tail(rec$files, 1)
   pz_record_stop(page)
+  # Screencast frames and settle captures must be the same size: a
+  # recording that mixes frame sizes corrupts the encoded output.
+  expect_frame_files_size(rec$files, png_dimensions(rec$files[[1]]))
+  # A silently failing settle capture would leave the polls satisfied by
+  # later screencast frames instead of the retained completion frame.
+  expect_equal(rec$n_errors, 0)
   expect_equal(max(abs(png::readPNG(cleared) - reference)), 0)
   expect_equal(max(abs(png::readPNG(tail(rec$files, 1)) - reference)), 0)
 })
