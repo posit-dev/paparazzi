@@ -31,9 +31,11 @@ focus.
 }
 \details{
 While recording with a visible cursor, paparazzi animates a drag
-across the selected text. The browser's Range API sets the exact
-selection; the cursor movement doesn't select it. Outside a recording,
-selection is instant and leaves the cursor where it was.
+across the text, then sets the exact selection with the browser's Range
+API. The drag sends real mouse-move events, which can trigger page hover
+effects such as tooltips or hover menus. Outside a recording, selection
+is instant and leaves the cursor where it was, without sending mouse-move
+events.
 
 A contenteditable target is focused too (dragging across editable
 text focuses it, and that focus is where the typing lands); a static

@@ -601,9 +601,11 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 #' focus.
 #'
 #' While recording with a visible cursor, paparazzi animates a drag
-#' across the selected text. The browser's Range API sets the exact
-#' selection; the cursor movement doesn't select it. Outside a recording,
-#' selection is instant and leaves the cursor where it was.
+#' across the text, then sets the exact selection with the browser's Range
+#' API. The drag sends real mouse-move events, which can trigger page hover
+#' effects such as tooltips or hover menus. Outside a recording, selection
+#' is instant and leaves the cursor where it was, without sending mouse-move
+#' events.
 #'
 #' A contenteditable target is focused too (dragging across editable
 #' text focuses it, and that focus is where the typing lands); a static
@@ -651,11 +653,12 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
 
   els <- action_elements(ctx, target)
   el_scroll_into_view(els)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
 
   res <- els_values(
     els,
     select_text_js,
-    args = list(list(value = text)),
+    args = list(list(value = text), list(value = !staged)),
     doing = "working with"
   )
   if (!identical(res$status, "ok")) {
@@ -667,59 +670,10 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
       class = "paparazzi_error_text"
     )
   }
-  rect <- action_target_rect(els)
-  stage_follow_without_glide(ctx, rect)
-  if (
-    recorder_active(ctx$page) &&
-      cursor_visible(ctx$page) &&
-      !is.null(res$from) &&
-      !is.null(res$to)
-  ) {
-    from <- structure(c(x = res$from$x, y = res$from$y), rect = rect)
-    to <- c(x = res$to$x, y = res$to$y)
-    withr::defer({
-      if (isTRUE(page_cursor(ctx$page)$pressed)) {
-        try(cursor_press(ctx, FALSE), silent = TRUE)
-      }
-    })
-    stage_move_cursor(ctx, from)
-    dispatch_mouse(
-      ctx,
-      "selecting text in",
-      els$description,
-      "mouseMoved",
-      from,
-      button = "none",
-      buttons = 0,
-      clickCount = 0
-    )
-    pump_loop(ctx$page$child_loop, 0.15)
-    cursor_press(ctx, TRUE)
-    pump_loop(ctx$page$child_loop, 0.16)
-    stage_drag_carry(ctx, from, to, function(point) {
-      dispatch_mouse(
-        ctx,
-        "selecting text in",
-        els$description,
-        "mouseMoved",
-        point,
-        button = "none",
-        buttons = 0,
-        clickCount = 0
-      )
-    })
-    dispatch_mouse(
-      ctx,
-      "selecting text in",
-      els$description,
-      "mouseMoved",
-      to,
-      button = "none",
-      buttons = 0,
-      clickCount = 0
-    )
-    cursor_press(ctx, FALSE)
-    pump_loop(ctx$page$child_loop, 0.2)
+  if (staged) {
+    select_text_drag(ctx, els, text, res)
+  } else {
+    stage_follow_without_glide(ctx, action_target_rect(els))
   }
   stage_action_pause(ctx)
   ctx_return(ctx)
@@ -1159,6 +1113,76 @@ action_target_rect <- function(els, call = caller_env()) {
   )
 }
 
+select_text_drag <- function(ctx, els, text, range) {
+  withr::defer({
+    if (isTRUE(page_cursor(ctx$page)$pressed)) {
+      try(cursor_press(ctx, FALSE), silent = TRUE)
+    }
+    # Hover handlers can replace text nodes during the drag.
+    selected <- els_values(
+      els,
+      select_text_js,
+      args = list(list(value = text)),
+      doing = "working with"
+    )
+    if (!identical(selected$status, "ok")) {
+      cli::cli_abort(
+        c(
+          "Can't finish selecting {.str {text}} in {els$description}.",
+          i = "The target must still be attached and contain the exact text."
+        ),
+        class = "paparazzi_error_text"
+      )
+    }
+  })
+  rect <- action_target_rect(els)
+  stage_follow_without_glide(ctx, rect)
+  if (is.null(range$from) || is.null(range$to)) {
+    return(ctx_return(ctx))
+  }
+  from <- structure(c(x = range$from$x, y = range$from$y), rect = rect)
+  to <- c(x = range$to$x, y = range$to$y)
+  stage_move_cursor(ctx, from)
+  dispatch_mouse(
+    ctx,
+    "selecting text in",
+    els$description,
+    "mouseMoved",
+    from,
+    button = "none",
+    buttons = 0,
+    clickCount = 0
+  )
+  pump_loop(ctx$page$child_loop, 0.15)
+  cursor_press(ctx, TRUE)
+  pump_loop(ctx$page$child_loop, 0.16)
+  stage_drag_carry(ctx, from, to, function(point) {
+    dispatch_mouse(
+      ctx,
+      "selecting text in",
+      els$description,
+      "mouseMoved",
+      point,
+      button = "none",
+      buttons = 0,
+      clickCount = 0
+    )
+  })
+  dispatch_mouse(
+    ctx,
+    "selecting text in",
+    els$description,
+    "mouseMoved",
+    to,
+    button = "none",
+    buttons = 0,
+    clickCount = 0
+  )
+  cursor_press(ctx, FALSE)
+  pump_loop(ctx$page$child_loop, 0.2)
+  ctx_return(ctx)
+}
+
 el_actionable_point <- function(ctx, els, call = caller_env()) {
   point <- NULL
   blocker <- NULL
@@ -1506,8 +1530,11 @@ select_all_js <- "function() {
   sel.addRange(range);
 }"
 
-select_text_js <- "function(text) {
+select_text_js <- "function(text, install = true) {
   const el = this[0];
+  if (!el || !el.isConnected) {
+    return { status: 'detached' };
+  }
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   const nodes = [];
   let full = '';
@@ -1539,9 +1566,11 @@ select_text_js <- "function(text) {
   range.setEnd(endNode, endOffset);
   const sel = window.getSelection();
   sel.removeAllRanges();
-  sel.addRange(range);
-  if (el.isContentEditable) {
-    el.focus();
+  if (install) {
+    sel.addRange(range);
+    if (el.isContentEditable) {
+      el.focus();
+    }
   }
   const rects = range.getClientRects();
   const first = rects[0], last = rects[rects.length - 1];

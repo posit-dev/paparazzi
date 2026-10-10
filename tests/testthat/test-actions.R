@@ -1054,6 +1054,7 @@ test_that("recorded selection visually drags across a wrapped inline range", {
   from <- unlist(ends[[1]])
   to <- unlist(ends[[2]])
   expect_gt(to[[2]], from[[2]])
+  pz_act_select_text(page, "playful", target = "#editor")
   page |> pz_stage(cursor_scale = 1)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
@@ -1071,6 +1072,7 @@ test_that("recorded selection visually drags across a wrapped inline range", {
         window.__selectionMoves.push({
           point: [e.clientX, e.clientY], cursor: [m.e, m.f],
           pressed: inner.style.transform === 'scale(0.8)',
+          selected: window.getSelection().toString(),
           buttons: e.buttons, trusted: e.isTrusted
         });
       });
@@ -1078,8 +1080,24 @@ test_that("recorded selection visually drags across a wrapped inline range", {
     })()"
   )
 
+  at_release <- list(selection = NA_character_, pressed = NA)
+  real_cursor_press <- cursor_press
+  local_mocked_bindings(
+    cursor_press = function(ctx, pressed) {
+      real_cursor_press(ctx, pressed)
+      if (!pressed) {
+        at_release <<- list(
+          selection = pz_js(ctx, "window.getSelection().toString()"),
+          pressed = page_cursor(ctx$page)$pressed
+        )
+      }
+      ctx_return(ctx)
+    }
+  )
+
   pz_act_select_text(page, "galapagos penguins", target = "#rich")
 
+  expect_equal(at_release, list(selection = "", pressed = FALSE))
   expect_equal(
     pz_js(page, "window.getSelection().toString()"),
     "galapagos penguins"
@@ -1108,6 +1126,11 @@ test_that("recorded selection visually drags across a wrapped inline range", {
   expect_true(all(vapply(
     samples,
     function(s) s$trusted && s$buttons == 0,
+    logical(1)
+  )))
+  expect_true(all(vapply(
+    samples,
+    function(s) identical(s$selected, ""),
     logical(1)
   )))
   points <- t(vapply(samples, function(s) unlist(s$point), numeric(2)))
@@ -1191,10 +1214,12 @@ test_that("a failed selection carry releases the overlay press", {
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   page |> pz_cursor_move("#rich", duration = 0)
+  during <- NULL
   real_dispatch_mouse <- dispatch_mouse
   local_mocked_bindings(
     dispatch_mouse = function(ctx, action, target, type, ...) {
       if (isTRUE(page_cursor(ctx$page)$pressed)) {
+        during <<- pz_js(ctx, "window.getSelection().toString()")
         cli::cli_abort("simulated selection carry failure")
       }
       real_dispatch_mouse(ctx, action, target, type, ...)
@@ -1206,6 +1231,7 @@ test_that("a failed selection carry releases the overlay press", {
     "simulated selection carry failure"
   )
 
+  expect_identical(during, "")
   expect_false(page_cursor(page)$pressed)
   expect_equal(cursor_overlay_scale(page), page_stage(page)$cursor_scale)
   expect_equal(
@@ -1213,6 +1239,119 @@ test_that("a failed selection carry releases the overlay press", {
     "galapagos penguins"
   )
   expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
+})
+
+test_that("recorded selection re-derives its range after inline nodes change", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(cursor_scale = 1, typing = "instant")
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  page |> pz_cursor_move("#rich", duration = 0)
+  pz_js(
+    page,
+    "(() => {
+      window.__changed = false;
+      document.addEventListener('mousemove', function mutate() {
+        const inner = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner');
+        if (inner.style.transform !== 'scale(0.8)') return;
+        window.__beforeMutation = [window.getSelection().toString(), document.activeElement.id];
+        document.getElementById('editor').innerHTML = 'sea <em>ot</em><strong>ters</strong> are playful';
+        window.__changed = true;
+        document.removeEventListener('mousemove', mutate);
+      });
+      return true;
+    })()"
+  )
+
+  pz_act_select_text(page, "otters", target = "#editor")
+
+  expect_true(pz_js(page, "window.__changed"))
+  expect_equal(unlist(pz_js(page, "window.__beforeMutation")), c("", ""))
+  expect_equal(pz_js(page, "window.getSelection().toString()"), "otters")
+  expect_true(pz_js(page, "window.getSelection().anchorNode.isConnected"))
+  expect_equal(
+    pz_js(page, "window.getSelection().anchorNode.parentElement.tagName"),
+    "EM"
+  )
+  expect_equal(
+    pz_js(page, "window.getSelection().extentNode.parentElement.tagName"),
+    "STRONG"
+  )
+  expect_equal(pz_js(page, "document.activeElement.id"), "editor")
+  pz_act_type(page, "penguins")
+  replaced <- pz_js(page, "document.getElementById('editor').textContent")
+  # Native editing can preserve an inline boundary space as a nonbreaking space.
+  expect_equal(
+    gsub("\u00a0", " ", replaced, fixed = TRUE),
+    "sea penguins are playful"
+  )
+})
+
+test_that("recorded selection fails loudly when its text disappears during the carry", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(cursor_scale = 1)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  page |> pz_cursor_move("#rich", duration = 0)
+  pz_js(
+    page,
+    "(() => {
+      window.__changed = false;
+      document.addEventListener('mousemove', function mutate() {
+        const inner = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner');
+        if (inner.style.transform !== 'scale(0.8)') return;
+        document.getElementById('editor').textContent = 'seals are playful';
+        window.__changed = true;
+        document.removeEventListener('mousemove', mutate);
+      });
+      return true;
+    })()"
+  )
+
+  expect_error(
+    pz_act_select_text(page, "otters", target = "#editor"),
+    class = "paparazzi_error_text"
+  )
+
+  expect_true(pz_js(page, "window.__changed"))
+  expect_false(page_cursor(page)$pressed)
+  expect_equal(cursor_overlay_scale(page), 1)
+  expect_equal(pz_js(page, "window.getSelection().toString()"), "")
+})
+
+test_that("recorded selection refuses a target detached during the carry", {
+  skip_if_no_av()
+  page <- local_advanced_page()
+  page |> pz_stage(cursor_scale = 1)
+  pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
+  defer_record_stop(page)
+  page |> pz_cursor_move("#rich", duration = 0)
+  pz_js(
+    page,
+    "(() => {
+      window.__changed = false;
+      document.addEventListener('mousemove', function mutate() {
+        const inner = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner');
+        if (inner.style.transform !== 'scale(0.8)') return;
+        document.getElementById('editor').remove();
+        window.__changed = true;
+        document.removeEventListener('mousemove', mutate);
+      });
+      return true;
+    })()"
+  )
+
+  expect_error(
+    pz_act_select_text(page, "otters", target = "#editor"),
+    class = "paparazzi_error_text"
+  )
+
+  expect_true(pz_js(page, "window.__changed"))
+  expect_false(page_cursor(page)$pressed)
+  expect_equal(cursor_overlay_scale(page), 1)
+  expect_equal(pz_js(page, "window.getSelection().toString()"), "")
 })
 
 test_that("pz_act_select_text lets typing replace the selection", {
