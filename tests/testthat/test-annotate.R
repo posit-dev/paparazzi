@@ -330,7 +330,7 @@ test_that("a final clear retains the unannotated frame before the end hold", {
   # settle captures that clip to the client area would mix frame sizes.
   pz_js(
     page,
-    "(() => { const s = document.createElement('style'); s.textContent = '::-webkit-scrollbar { width: 15px; height: 15px }'; document.head.appendChild(s); return true; })()"
+    "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>')"
   )
   expect_lt(
     pz_js(page, "window.visualViewport.width"),
@@ -393,7 +393,7 @@ test_that("a final clear retains the unannotated frame before the end hold", {
   expect_frame_files_size(rec$files, png_dimensions(rec$files[[1]]))
   # A silently failing settle capture would leave the polls satisfied by
   # later screencast frames instead of the retained completion frame.
-  expect_equal(rec$n_errors, 0)
+  expect_equal(rec$n_errors, 0L)
   expect_equal(max(abs(png::readPNG(cleared) - reference)), 0)
   expect_equal(max(abs(png::readPNG(tail(rec$files, 1)) - reference)), 0)
 })
