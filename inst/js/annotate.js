@@ -252,6 +252,8 @@ function(root) {
   };
   const sync = () => {
     if (!entries.size) return;
+    // Chromium's fixed-point layout quantizes to 1/64px; bias far-edge clamps inward.
+    const layoutQuantum = 1 / 64;
     const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
     layer.style.zoom = String(1 / zoom);
     for (const entry of entries.values()) {
@@ -365,8 +367,33 @@ function(root) {
         clipped.style.clipPath = `inset(${inset(clip.top - top)} ${inset(left + w - clip.right)} ${inset(top + h - clip.bottom)} ${inset(clip.left - left)})`;
         const badge = box.querySelector('span');
         if (badge) {
-          badge.style.left = Math.max(0, clip.left - left) + 'px';
-          badge.style.top = Math.max(0, clip.top - top) + 'px';
+          let x = Math.max(left, clip.left), y = Math.max(top, clip.top);
+          badge.style.transform = 'translateY(-100%)';
+          const inX = r.width === 0 ? r.left >= 0 && r.left < innerWidth :
+            Math.max(r.left, clip.left, 0) < Math.min(r.right, clip.right, innerWidth);
+          const inY = r.height === 0 ? r.top >= 0 && r.top < innerHeight :
+            Math.max(r.top, clip.top, 0) < Math.min(r.bottom, clip.bottom, innerHeight);
+          // Off-viewport badges stay attached for target-framed captures.
+          if (inX && inY) {
+            // Layout lengths exclude reveal transforms and retain subpixel precision.
+            const style = getComputedStyle(badge);
+            const width = parseFloat(style.width) + parseFloat(style.paddingLeft) +
+              parseFloat(style.paddingRight);
+            const height = parseFloat(style.height) + parseFloat(style.paddingTop) +
+              parseFloat(style.paddingBottom);
+            const maxX = Math.max(0, innerWidth - width);
+            const maxY = Math.max(0, innerHeight - height);
+            x = x < 0 ? 0 : x > maxX ? Math.max(0, maxX - layoutQuantum) : x;
+            const preferredY = y - height;
+            const placedY = preferredY < 0 ? 0 : preferredY > maxY ?
+              Math.max(0, maxY - layoutQuantum) : preferredY;
+            if (placedY === 0 && preferredY !== 0) {
+              badge.style.transform = 'none';
+              y = 0;
+            } else y = placedY + height;
+          }
+          badge.style.left = (x - left) + 'px';
+          badge.style.top = (y - top) + 'px';
         }
         if (entry.kind === 'circle' || (entry.kind === 'box' && entry.reveal === 'draw')) {
           const svg = box.querySelector('svg');

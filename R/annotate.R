@@ -8,9 +8,14 @@ NULL
 #' in screenshots and recordings until cleared with [pz_annotate_clear()].
 #' Annotations belong to the current document; navigating away removes them.
 #' Marks respect the target's overflow containers (axis-aligned clipping only,
-#' not a custom `overflow-clip-margin`). Their badges sit above the visible
-#' mark's top-left corner, outside those clips. Badges size to their labels,
-#' wrapping long labels at 20em rather than at the target's width. On sides
+#' not a custom `overflow-clip-margin`). Badges prefer a position above the
+#' visible mark's top-left corner, outside those clips. For targets inside the
+#' viewport, paparazzi shifts settled badges just enough to fit, overlapping
+#' the target if needed at the top edge. Badges larger than the viewport align
+#' with its top or left edge and may still be clipped; paparazzi does not resize
+#' them. Off-viewport targets keep their badges attached, and a screenshot's
+#' frame crop can still exclude a badge. Badges size to their labels, wrapping
+#' long labels at 20em rather than at the target's width. On sides
 #' where the target is not cut off, the clip leaves room for the mark's `pad`
 #' so its outline stays intact. A mark and its badge hide while the target is
 #' disconnected, not rendered, `visibility: hidden` with no visible descendants,

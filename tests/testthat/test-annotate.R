@@ -2812,17 +2812,24 @@ viewport_badge_reference <- function(page, label, pad = 0) {
 }
 
 expect_viewport_badge <- function(page, path, x, y, reference) {
+  viewport <- unlist(pz_js(page, "[innerWidth,innerHeight]"))
+  # Far-edge clamps move one Chromium layout unit inward; near edges pin to zero.
+  if (x > 0 && x == viewport[1] - reference$width) {
+    x <- max(0, x - 1 / 64)
+  }
+  if (y > 0 && y == viewport[2] - reference$height) {
+    y <- max(0, y - 1 / 64)
+  }
   badge <- annotation_badge_rects(page)[[1]]
   expect_equal(c(badge$left, badge$top), c(x, y), tolerance = 0.001)
   expect_equal(
     c(badge$width, badge$height),
     c(reference$width, reference$height)
   )
-  viewport <- unlist(pz_js(page, "[innerWidth,innerHeight]"))
-  expect_gte(badge$left, -0.001)
-  expect_gte(badge$top, -0.001)
-  expect_lte(badge$left + badge$width, viewport[1] + 0.001)
-  expect_lte(badge$bottom, viewport[2] + 0.001)
+  expect_gte(badge$left, -1e-6)
+  expect_gte(badge$top, -1e-6)
+  expect_lte(badge$left + badge$width, viewport[1] + 1e-6)
+  expect_lte(badge$bottom, viewport[2] + 1e-6)
   size <- png_dimensions(path) / page_dpr(page)
   # These points use the expected placement, not the potentially offscreen DOM.
   points <- rbind(
@@ -2949,7 +2956,7 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
   pz_poll(
     function() {
       badge <- annotation_badge_rects(page)[[1]]
-      abs(badge$left + badge$width - 1000) < 0.001
+      abs(badge$left + badge$width - (1000 - 1 / 64)) < 0.001
     },
     timeout = 5,
     loop = page$child_loop,
@@ -2959,7 +2966,7 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
   pz_poll(
     function() {
       badge <- annotation_badge_rects(page)[[1]]
-      abs(badge$left + badge$width - 600) < 0.001
+      abs(badge$left + badge$width - (600 - 1 / 64)) < 0.001
     },
     timeout = 5,
     loop = page$child_loop,
@@ -3096,7 +3103,7 @@ test_that("pop and slide do not feed animated sizes back into badge placement", 
       )
       expect_equal(
         as.numeric(unlist(placement)),
-        c(30 - reference$width, reference$height),
+        c(30 - reference$width - 1 / 64, 0),
         tolerance = 0.001
       )
     }
