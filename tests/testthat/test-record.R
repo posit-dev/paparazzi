@@ -793,6 +793,125 @@ test_that("pz_record_hold extends the video and is a no-op otherwise", {
   expect_identical(res$value, page)
 })
 
+test_that("a hold drain timeout preserves the clock and permits a later hold", {
+  local_mocked_bindings(
+    rec_now = function() 100,
+    pz_poll = function(...) {
+      cli::cli_abort("Timed out.", class = "paparazzi_error_timeout")
+    }
+  )
+  for (held in c(FALSE, TRUE)) {
+    page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
+    rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
+    page_set_recorder(page, rec)
+    rec$held <- held
+    pending <- new.env(parent = emptyenv())
+    rec$pending <- pending
+
+    expect_error(pz_record_hold(page, 1.5), class = "paparazzi_error_timeout")
+    expect_length(rec$holds, 0)
+    expect_equal(rec_vt(rec), 0, tolerance = 0)
+    expect_identical(rec$pending, pending)
+    expect_identical(rec$held, held)
+    expect_true(rec$active)
+    expect_false(rec$paused)
+
+    rec$pending <- NULL
+    pz_record_hold(page, 0.5)
+    expect_equal(rec$holds, list(list(vt = 0, seconds = 0.5)))
+    expect_equal(rec_vt(rec), 0.5, tolerance = 0)
+    expect_identical(rec$held, held)
+  }
+})
+
+test_that("a hold drains a delayed capture before a following annotation", {
+  skip_if_no_av()
+  skip_if_not_installed("png")
+  page <- local_page(
+    record_fixture_file(),
+    width = 320,
+    height = 240,
+    scale = 1
+  )
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record_start(page, out, fps = 10, hold = c(0, 0))
+  defer_record_stop(page)
+  rec <- page_recorder(page)
+  pz_poll(
+    function() length(rec$files) > 0 && is.null(rec$pending),
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "the initial retained frame and an idle capture slot"
+  )
+  rec$held <- TRUE
+  session <- page$session
+  domain <- session$Page
+  delayed_metrics <- NULL
+  wrapped <- domain
+  wrapped$getLayoutMetrics <- function(..., callback_) {
+    domain$getLayoutMetrics(
+      ...,
+      callback_ = function(metrics) {
+        delayed_metrics <<- function() callback_(metrics)
+      }
+    )
+  }
+  session$Page <- wrapped
+  withr::defer({
+    session$Page <- domain
+    if (!is.null(delayed_metrics)) delayed_metrics()
+  })
+  record_capture(rec, page, rec_vt(rec))
+  pz_poll(
+    function() !is.null(delayed_metrics),
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "the delayed layout-metrics response for the pre-hold capture"
+  )
+  session$Page <- domain
+  wait_pending <- record_wait_pending
+  # Release this real capture only at the next drain: without a hold drain,
+  # annotation settling releases it after drawing, with its pre-hold timestamp.
+  local_mocked_bindings(record_wait_pending = function(...) {
+    if (!is.null(delayed_metrics)) {
+      release <- delayed_metrics
+      delayed_metrics <<- NULL
+      release()
+    }
+    wait_pending(...)
+  })
+
+  pz_record_hold(page, 1.5)
+  expect_null(rec$pending)
+  pz_annotate(
+    page,
+    "#box",
+    reveal = "none",
+    pad = 4,
+    color = "lime",
+    stroke_width = 6
+  )
+  anchor <- rec$holds[[1]]$vt
+  has_mark <- function(path) {
+    image <- png::readPNG(path)
+    mark <- image[20:100, 30:150, 1:3]
+    sum(mark[,, 2] > 0.8 & mark[,, 1] < 0.2 & mark[,, 3] < 0.2) > 30
+  }
+  pz_poll(
+    function() any(vapply(rec$files[rec$times > anchor], has_mark, logical(1))),
+    timeout = page$default_timeout,
+    loop = page$child_loop,
+    what = "a retained post-hold frame containing the lime annotation"
+  )
+  before <- rec$files[rec$times <= anchor]
+  expect_gt(length(before), 0)
+  expect_false(any(vapply(before, has_mark, logical(1))))
+  marked <- which(vapply(rec$files, has_mark, logical(1)))
+  expect_gt(length(marked), 0)
+  expect_true(all(rec$times[marked] >= anchor + 1.5))
+  pz_record_stop(page)
+})
+
 test_that("zero holds do not move the first-frame trim origin", {
   rec <- new_recorder("unused.mp4", "mp4", 10, NULL, c(0, 0), FALSE, NULL)
   rec$times <- c(2, 3)

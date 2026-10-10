@@ -441,6 +441,15 @@ pz_record_hold <- function(ctx, seconds) {
     return(ctx_return(ctx))
   }
   camera_settle(ctx$page, rec)
+  held <- rec$held
+  rec$held <- TRUE
+  on.exit(rec$held <- held, add = TRUE)
+  record_wait_pending(
+    rec,
+    ctx$page,
+    "the in-flight frame capture before holding"
+  )
+  # Only used to keep positive pre-first-capture holds, not encode-time splices.
   rec$holds <- c(rec$holds, list(list(vt = rec_vt(rec), seconds = seconds)))
   rec$vt_base <- rec$vt_base + seconds
   ctx_return(ctx)
