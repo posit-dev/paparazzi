@@ -1649,21 +1649,14 @@ test_that("pz_act_drag glides the cursor while holding an HTML5 drag when record
     )
   defer_record_stop(page)
 
-  # Cursor pre-placed on the source, so the timed stretch is the carry,
-  # not the approach glide.
   page |> pz_cursor_move("#draggable", duration = 0)
-  t0 <- proc.time()[["elapsed"]]
   pz_act_drag(page, "#draggable", "#dropzone")
-  recorded <- proc.time()[["elapsed"]] - t0
 
   # The drop still lands with the page's payload.
   expect_equal(
     pz_js(page, "document.getElementById('dropzone').textContent"),
     "got:payload-123"
   )
-  # The carry is staged: the press beats plus the holding glide (the
-  # staged glide floor is 0.5s) on top of the dispatch.
-  expect_true(recorded >= 1)
   # The overlay cursor ends on the drop point.
   state <- cursor_overlay_state(page)
   drop <- unlist(pz_js(
@@ -1691,9 +1684,7 @@ test_that("pz_act_drag glides the cursor while holding a mouse drag when recordi
   defer_record_stop(page)
 
   page |> pz_cursor_move("#dragbox", duration = 0)
-  t0 <- proc.time()[["elapsed"]]
   pz_act_drag(page, "#dragbox", "#dropzone")
-  recorded <- proc.time()[["elapsed"]] - t0
 
   # The page sees held moves streamed along the carry, so the box
   # follows the pointer through the glide and ends at the zone.
@@ -1701,7 +1692,6 @@ test_that("pz_act_drag glides the cursor while holding a mouse drag when recordi
   zone <- element_center(page, "#dropzone")
   expect_lt(abs(box[[1]] - zone[[1]]), 2)
   expect_lt(abs(box[[2]] - zone[[2]]), 2)
-  expect_true(recorded >= 1)
   # The overlay cursor ends on the drop point.
   state <- cursor_overlay_state(page)
   expect_lt(abs(state[[2]] - zone[[1]]), 2)

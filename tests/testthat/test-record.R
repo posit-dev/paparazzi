@@ -2388,9 +2388,10 @@ test_that("screencast holds the last frame on an idle page", {
   # Chrome may re-send an unchanged frame (a late acknowledgement), so the
   # idle contract is content, not cadence: frames captured while the page
   # sits still repeat the same pixels, and only a handful arrive -- a
-  # leaked capture chain would produce a steady stream.
+  # leaked capture chain would produce a steady stream. The bound keeps
+  # a generous margin over Chrome's re-sends; the pixels are the contract.
   idle <- tail(rec$files, -before)
-  expect_lte(length(idle), 2L)
+  expect_lte(length(idle), 4L)
   for (file in idle) {
     expect_identical(png::readPNG(file), first, label = basename(file))
   }

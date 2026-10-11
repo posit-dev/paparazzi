@@ -52,7 +52,7 @@ test_that('ineligible drags do not boot the preview or call the library', {
         page,
         '#preview-source .task-drag-handle',
         '#preview-target .task-drag-handle',
-        preview = gate != 'disabled'
+        preview = TRUE
       ))
       expect_true(pz_js(
         page,
@@ -64,7 +64,10 @@ test_that('ineligible drags do not boot the preview or call the library', {
     rec <- page_recorder(page)
     if (!is.null(rec)) pz_record_stop(page)
   }
-  for (gate in c('unrecorded', 'paused', 'hidden', 'mouse', 'disabled')) {
+  # 'disabled' (preview = FALSE) has pixel-level boot-guard coverage in
+  # test-drag-preview-pixels.R ("disabled previews retain the original
+  # marker"), so it is not re-proven here.
+  for (gate in c('unrecorded', 'paused', 'hidden', 'mouse')) {
     check_gate(gate)
   }
 })
