@@ -2505,6 +2505,7 @@ badge_edge_diagnostics <- function(page) {
       "const root = document.querySelector('#paparazzi-overlay-root');",
       "const badge = root && root.shadowRoot ? root.shadowRoot.querySelector('.pz-annotation span') : null;",
       "const br = badge ? badge.getBoundingClientRect() : null;",
+      "const boxr = box ? box.getBoundingClientRect() : null;",
       "return 'innerWidth=' + innerWidth +",
       "' clientWidth=' + document.documentElement.clientWidth +",
       "' scrollWidth=' + document.documentElement.scrollWidth +",
@@ -2512,6 +2513,8 @@ badge_edge_diagnostics <- function(page) {
       "' dpr=' + devicePixelRatio +",
       "' zoom=' + getComputedStyle(document.documentElement).zoom +",
       "' target=[' + (tr ? [tr.left, tr.right, tr.top].join(',') : 'missing') + ']' +",
+      "' box=' + (box ? 'style(left=' + box.style.left +",
+      "' rect(left=' + boxr.left + ')' : 'missing') +",
       "' badge=' + (badge ?",
       "'style(left=' + badge.style.left + ' top=' + badge.style.top +",
       "' cssWidth=' + getComputedStyle(badge).width +",
@@ -3025,6 +3028,11 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
   # Badges clamp to the client area, which is narrower than the emulated
   # viewport whenever classic scrollbars show, so measure the expected
   # edge from the page instead of hard-coding the requested width.
+  # The clamp biases the far edge inward by one 1/64px layout quantum, but
+  # badge widths come from text metrics, which aren't 1/64-aligned on every
+  # platform (Windows monospace is not), so after Chromium's border-box
+  # rounding the rendered right edge lands anywhere in
+  # [clientWidth - 1/64, clientWidth]. Assert flushness across that band.
   at_right_edge <- function(inner_width) {
     function() {
       sync_badges()
@@ -3035,7 +3043,7 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
       badge <- annotation_badge_rects(page)[[1]]
       isTRUE(
         dims[1] == inner_width &&
-          abs(badge$left + badge$width - (dims[2] - 1 / 64)) < 0.001
+          abs(badge$left + badge$width - dims[2] + 1 / 64) < 1 / 64 + 0.001
       )
     }
   }
@@ -3071,8 +3079,10 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
     page,
     function() {
       sync_badges()
-      abs(annotation_badge_rects(page)[[1]]$top - (250 - reference$height)) <
-        0.001
+      abs(
+        annotation_badge_rects(page)[[1]]$top - (250 - reference$height)
+      ) <
+        1 / 64 + 0.001
     },
     "the badge to return to its preferred above-mark anchor"
   )
@@ -3104,15 +3114,20 @@ test_that("badges reposition themselves when targets move and scroll", {
     page,
     function() {
       badge <- annotation_badge_rects(page)[[1]]
-      isTRUE(abs(badge$left + badge$width - (client_width - 1 / 64)) < 0.001)
+      # Same flushness band as the device-emulated polls above: text-metric
+      # widths aren't 1/64-aligned on every platform, so the clamped right
+      # edge can land anywhere in [clientWidth - 1/64, clientWidth].
+      isTRUE(
+        abs(badge$left + badge$width - client_width + 1 / 64) < 1 / 64 + 0.001
+      )
     },
     "the badge to follow its moved target to the viewport edge"
   )
   badge <- annotation_badge_rects(page)[[1]]
-  expect_equal(
+  expect_lte(badge$left + badge$width, client_width)
+  expect_gte(
     badge$left + badge$width,
-    client_width - 1 / 64,
-    tolerance = 0.001
+    client_width - 1 / 64 - 0.001
   )
   pz_js(
     page,
@@ -3132,7 +3147,8 @@ test_that("badges reposition themselves when targets move and scroll", {
     "the scrolled target's badge to stay at the viewport top"
   )
   badge <- annotation_badge_rects(page)[[1]]
-  expect_equal(c(badge$left, badge$top), c(300, 0), tolerance = 0.001)
+  expect_equal(badge$left, 300, tolerance = 0.001)
+  expect_equal(badge$top, 0, tolerance = 0.001)
 })
 
 test_that("off-viewport badges stay with their targets in framed captures", {
