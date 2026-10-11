@@ -1072,11 +1072,13 @@ test_that("camera metadata records shots, warnings, and frame fallbacks", {
   skip_if_no_av()
   page <- local_record_page()
   out <- withr::local_tempfile(fileext = ".mp4")
-  # Staged before the recording starts, so the recipe drives the crop:
-  # the shots below must still ignore it.
+  # Staged before the recording starts.
   pz_stage_frame(page, "#box", pad = 96, target_box = "annotated")
   pz_record_start(page, out, hold = c(0, 0))
   defer_record_stop(page)
+  # The recording picked the recipe up (it drives the stop-time crop);
+  # the shots below must still ignore it.
+  expect_s3_class(page_recorder(page)$frame, "paparazzi_frame")
   last_move <- function() tail(page_recorder(page)$camera, 1)[[1]]
 
   # Warnings fire on explicit ratio and when, only when set.

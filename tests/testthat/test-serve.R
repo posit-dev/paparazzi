@@ -178,6 +178,13 @@ test_that("new_app constructs even when its port already has a listener", {
   expect_s3_class(app, "PaparazziServe")
 })
 
+test_that("an invalid max_attempts option fails with the option named", {
+  withr::local_options(paparazzi.serve.max_attempts = 0)
+  expect_snapshot(error = TRUE, {
+    pz_serve_shiny(shiny_app_fixture_dir())
+  })
+})
+
 test_that("a child that dies from a taken port exhausts its retries", {
   skip_if_no_shiny()
   # Two attempts prove the retry loop; the production default is five.
