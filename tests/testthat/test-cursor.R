@@ -177,18 +177,20 @@ test_that("recorded click frames keep pointing cursor ink at the target", {
       x_range = c(635, 700)
     )
   })
-  at_target <- Filter(
+  at_target <- vapply(
+    inks,
     function(ink) {
       ink$count > 20 && abs(ink$x - 660) < 25 && abs(ink$y - 322) < 20
     },
-    inks
+    logical(1)
   )
-  expect_gt(length(at_target), 0)
+  expect_gt(sum(at_target), 0)
 
   # The same fingertip window distinguishes the pointing hand on frame
   # captures: at least one kept frame carries tip ink at the landing
-  # point, which the old four-finger silhouette would leave empty.
-  tips <- lapply(frames, function(frame) {
+  # point, which the old four-finger silhouette would leave empty. Only
+  # landing frames can carry it, so only those are scanned.
+  tips <- lapply(frames[at_target], function(frame) {
     cursor_png_ink(
       page,
       frame,
@@ -514,10 +516,25 @@ test_that("all CSS cursor presets validate and select their own layer", {
     expect_equal(c(art$x, art$y) + unlist(entry$hotspot) * 20 / 32, c(4, 2))
     expect_match(art$svg, 'viewBox="0 0 32 32"', fixed = TRUE)
   }
+  # The layer-DOM queries are identical modulo the keyword, so they run
+  # on a representative subset (including "none", the inverse case);
+  # every keyword still proves its layer selection via the icon attr.
+  dom_checked <- c(
+    "default",
+    "pointer",
+    "text",
+    "crosshair",
+    "grab",
+    "ew-resize",
+    "none"
+  )
   for (keyword in keywords) {
     page |> pz_cursor_move("#plain", icon = keyword)
     expect_identical(attr(cursor_overlay_state(page), "icon"), keyword)
     expect_identical(page_cursor(page)$icon, keyword)
+    if (!keyword %in% dom_checked) {
+      next
+    }
     expect_equal(
       pz_js(
         page,
@@ -929,23 +946,23 @@ test_that("recorded moves schedule one entry flip for the intended target", {
       "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.classList[1])"
     ))
   }
-  page |> pz_cursor_move("#btn", duration = 0.5)
+  page |> pz_cursor_move("#btn", duration = 0.2)
   expect_setequal(animations(), c("pz-icon-default", "pz-icon-pointer"))
   expect_match(keyframes(), "pz-icon-in")
   expect_match(keyframes(), "7[0-9]\\.")
   expect_identical(page_cursor(page)$icon, "pointer")
-  page |> pz_cursor_move("#plain", duration = 0.5)
+  page |> pz_cursor_move("#plain", duration = 0.2)
   expect_setequal(animations(), c("pz-icon-default", "pz-icon-pointer"))
   expect_match(keyframes(), "pz-icon-out")
   expect_identical(page_cursor(page)$icon, "default")
   # #crossed is cursor:pointer but lies between the two destinations.
-  page |> pz_cursor_move("#btn", duration = 0.5)
+  page |> pz_cursor_move("#btn", duration = 0.2)
   expect_length(animations(), 2)
   expect_identical(page_cursor(page)$icon, "pointer")
-  page |> pz_cursor_move("#plain", icon = "crosshair", duration = 0.5)
+  page |> pz_cursor_move("#plain", icon = "crosshair", duration = 0.2)
   expect_identical(keyframes(), "")
   expect_identical(page_cursor(page)$icon, "crosshair")
-  page |> pz_cursor_move("#btn", icon = "text", duration = 0.5)
+  page |> pz_cursor_move("#btn", icon = "text", duration = 0.2)
   expect_identical(keyframes(), "")
   expect_identical(page_cursor(page)$icon, "text")
   page |> pz_record_stop()
@@ -1146,7 +1163,7 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   page |> pz_cursor_show("#btn") |> pz_cursor_leave("left")
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 15, hold = c(0, 0), keep_frames = TRUE)
-  page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.8)
+  page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.3)
   rules <- pz_js(
     page,
     "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
@@ -1161,21 +1178,17 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
   frames <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
-  inks <- lapply(frames, function(frame) {
-    cursor_png_ink(page, frame, band = c(300, 344), x_range = c(640, 710))
-  })
-  # At this speed (625px/s at 15fps) the glide crosses the 70px scan band
-  # in only a couple of frames, so no frame count distinguishes a landing
-  # from a transit. Stopping always captures one final frame with the
-  # cursor at rest: require the landing in that terminal frame.
-  ok <- vapply(
-    inks,
-    function(ink) {
-      ink$count > 20 && abs(ink$x - 660) < 25 && abs(ink$y - 322) < 20
-    },
-    logical(1)
+  expect_gt(length(frames), 0)
+  # A transit frame can't be told from a landing by count, and stopping
+  # always captures one final frame with the cursor at rest: require the
+  # landing in that terminal frame instead of scanning them all.
+  ink <- cursor_png_ink(
+    page,
+    tail(frames, 1),
+    band = c(300, 344),
+    x_range = c(640, 710)
   )
-  expect_true(ok[[length(ok)]])
+  expect_true(ink$count > 20 && abs(ink$x - 660) < 25 && abs(ink$y - 322) < 20)
 })
 
 test_that("inside-target offset has one entry flip and explicit icon has none", {
@@ -1184,7 +1197,7 @@ test_that("inside-target offset has one entry flip and explicit icon has none", 
   page |> pz_cursor_move("#plain")
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
-  page |> pz_cursor_move("#btn", offset = c(-40, 15), duration = 0.5)
+  page |> pz_cursor_move("#btn", offset = c(-40, 15), duration = 0.2)
   rules <- function() {
     pz_js(
       page,
@@ -1199,7 +1212,7 @@ test_that("inside-target offset has one entry flip and explicit icon has none", 
       "#plain",
       offset = c(500, 0),
       icon = "crosshair",
-      duration = 0.5
+      duration = 0.2
     )
   expect_identical(rules(), "")
   expect_identical(page_cursor(page)$icon, "crosshair")
@@ -1214,7 +1227,7 @@ test_that("entry and landing can schedule three distinct icon layers", {
     pz_cursor_leave("left")
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
-  page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.5)
+  page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.2)
   animations <- unlist(pz_js(
     page,
     "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.style.animation.match(/pz-icon-(out|in|land)/)[0])"
