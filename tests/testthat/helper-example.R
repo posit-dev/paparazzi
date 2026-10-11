@@ -9,10 +9,13 @@ example_rd_db <- function() {
   }
 }
 
-# Registers one test per Rd with examples, for the `chunk`-th of `n_chunks`
-# round-robin slices over the sorted Rd names. testthat parallelizes by
-# file, so test-example-*.R each claim one slice.
-test_example_chunk <- function(chunk, n_chunks) {
+# The example chunks are split across this many test-example-*.R files.
+example_n_chunks <- 5L
+
+# Registers one test per Rd with examples, for the `chunk`-th of
+# `example_n_chunks` round-robin slices over the sorted Rd names. testthat
+# parallelizes by file, so test-example-*.R each claim one slice.
+test_example_chunk <- function(chunk, n_chunks = example_n_chunks) {
   rd_db <- example_rd_db()
   has_examples <- vapply(
     rd_db,

@@ -88,8 +88,6 @@ test_that("from_root resolves the target from the document, still on the stack",
 
 test_that("pz_find_first/last/nth with a target pin the picked match", {
   page <- local_elements_page()
-  # The out-of-range which below waits out the timeout; keep it short.
-  page$default_timeout <- 0.5
   first <- pz_find_first(page, ".btn")
   nth <- pz_find_nth(page, 3, target = ".btn")
 
@@ -97,6 +95,9 @@ test_that("pz_find_first/last/nth with a target pin the picked match", {
   expect_identical(elements_text(first$scope[[1]]), "Save")
   expect_identical(elements_text(nth$scope[[1]]), "Save   now")
   # An out-of-range which on a target keeps auto-waiting: no match.
+  # The timeout path matters, not its duration; don't wait out the 10s
+  # default (set here so the finds above keep the full budget).
+  page$default_timeout <- 0.5
   expect_error(
     pz_find_nth(page, 99, target = ".btn"),
     class = "paparazzi_error_timeout"

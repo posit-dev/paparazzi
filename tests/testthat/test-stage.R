@@ -741,7 +741,8 @@ test_that("the stage pause holds after each action only while recording", {
 test_that("the stage pause holds after focus and root or scoped blur", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_stage(pause = 0.5)
+  # Distinctive pause value: identifiable among the actions' other pumps.
+  page |> pz_stage(pause = 0.37)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -750,25 +751,32 @@ test_that("the stage pause holds after focus and root or scoped blur", {
     )
 
   field <- pz_find(page, "#name")
+  # record_stop() is safe under the mock: its drain polls run on
+  # later::run_now(), not pump_loop, and there are no camera keyframes.
   pauses <- numeric()
-  with_mocked_bindings(
+  local_mocked_bindings(
     pump_loop = function(loop, duration, ...) {
       pauses <<- c(pauses, duration)
-    },
-    {
-      page |> pz_act_focus("#name")
-      expect_true(pz_js(page, "document.activeElement.id === 'name'"))
-      expect_equal(tail(pauses, 1), 0.5)
-
-      page |> pz_act_blur()
-      expect_false(pz_js(page, "document.activeElement.id === 'name'"))
-      expect_equal(tail(pauses, 1), 0.5)
-
-      field |> pz_act_focus()
-      field |> pz_act_blur()
-      expect_equal(tail(pauses, 1), 0.5)
     }
   )
+
+  page |> pz_act_focus("#name")
+  expect_true(pz_js(page, "document.activeElement.id === 'name'"))
+  expect_equal(tail(pauses, 1), 0.37)
+
+  pauses <- numeric()
+  page |> pz_act_blur()
+  expect_false(pz_js(page, "document.activeElement.id === 'name'"))
+  expect_equal(tail(pauses, 1), 0.37)
+
+  pauses <- numeric()
+  field |> pz_act_focus()
+  expect_equal(tail(pauses, 1), 0.37)
+
+  pauses <- numeric()
+  field |> pz_act_blur()
+  expect_equal(tail(pauses, 1), 0.37)
+
   page |> pz_record_stop()
 
   pauses <- numeric()

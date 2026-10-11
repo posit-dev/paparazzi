@@ -215,4 +215,4 @@ test_that("the tasks theme follows live color scheme changes", {
 # Help-page examples run in the test-example-*.R chunk files
 # (helper-example.R), so this file's worker only pays for the handwritten
 # tasks-example tests above.
-test_example_chunk(0L, 5L)
+test_example_chunk(0L)

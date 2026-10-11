@@ -71,7 +71,14 @@ test_that("pz_record_start/stop record an mp4 with first/last holds", {
   expect_false(start$visible)
   expect_identical(start$value$page, page)
 
-  pz_wait(page, 0.8)
+  # Seven frames at 10 fps give the recording the ~0.6s of real content
+  # the duration floor checks on top of the holds.
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 7L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "seven frames before the stop"
+  )
   stop <- withVisible(pz_record_stop(page))
   expect_false(stop$visible)
   expect_identical(stop$value, page)
@@ -80,7 +87,7 @@ test_that("pz_record_start/stop record an mp4 with first/last holds", {
   info <- recorded_video_info(out)
   expect_equal(info$codec, "h264")
   expect_equal(info$framerate, 10)
-  # ~0.8s recorded + 0.5s + 1s holds
+  # ~0.6s recorded + 0.5s + 1s holds
   expect_gte(info$duration, 2.0)
   expect_lte(info$duration, 3.2)
   # mp4 dimensions are multiples of 4
@@ -94,7 +101,12 @@ test_that("webm encodes", {
 
   out <- withr::local_tempfile(fileext = ".webm")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
-  pz_wait(page, 0.4)
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 4L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "four frames before the webm stop"
+  )
   page |> pz_record_stop()
 
   expect_true(file.exists(out))
@@ -608,7 +620,12 @@ test_that("interactive recordings without a path preview in the viewer", {
   )
   pz_record_start(page, fps = 5, hold = c(0, 0))
   defer_record_stop(page)
-  pz_wait(page, 0.1)
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a frame before the preview stop"
+  )
   preview <- withVisible(pz_record_stop(page))
   expect_true(preview$visible)
   expect_s3_class(preview$value, "paparazzi_preview")
@@ -666,7 +683,12 @@ test_that("pz_record encodes on error and returns ctx invisibly", {
   out <- withr::local_tempfile(fileext = ".mp4")
   expect_error(
     pz_record(page, out, {
-      pz_wait(page, 0.4)
+      pz_poll(
+        function() length(page_recorder(page)$files) >= 1L,
+        timeout = 5,
+        loop = page$page$child_loop,
+        what = "a frame before the error"
+      )
       stop("boom")
     }),
     "boom",
@@ -676,7 +698,14 @@ test_that("pz_record encodes on error and returns ctx invisibly", {
   expect_gt(recorded_video_info(out)$duration, 0)
 
   out2 <- withr::local_tempfile(fileext = ".mp4")
-  res <- withVisible(pz_record(page, out2, pz_wait(page, 0.2)))
+  res <- withVisible(pz_record(page, out2, {
+    pz_poll(
+      function() length(page_recorder(page)$files) >= 1L,
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a frame before the stop"
+    )
+  }))
   expect_false(res$visible)
   expect_identical(res$value, page)
   expect_true(file.exists(out2))
@@ -695,7 +724,12 @@ test_that("an interrupt stops the recorder and permits another recording", {
       page,
       interrupted,
       {
-        pz_wait(page, 0.2)
+        pz_poll(
+          function() length(page_recorder(page)$files) >= 1L,
+          timeout = 5,
+          loop = page$page$child_loop,
+          what = "a frame before the interrupt"
+        )
         stop(condition)
       },
       fps = 5,
@@ -708,7 +742,20 @@ test_that("an interrupt stops the recorder and permits another recording", {
   expect_null(page_recorder(page$page))
   expect_true(file.exists(interrupted))
   next_path <- withr::local_tempfile(fileext = ".mp4")
-  pz_record(page, next_path, pz_wait(page, 0.2), fps = 5, hold = c(0, 0))
+  pz_record(
+    page,
+    next_path,
+    {
+      pz_poll(
+        function() length(page_recorder(page)$files) >= 1L,
+        timeout = 5,
+        loop = page$page$child_loop,
+        what = "a frame before the follow-up recording stops"
+      )
+    },
+    fps = 5,
+    hold = c(0, 0)
+  )
   expect_true(file.exists(next_path))
 })
 
@@ -722,7 +769,12 @@ test_that("block error wins over stop failure and the page can record again", {
         page,
         failed,
         {
-          pz_wait(page, 0.2)
+          pz_poll(
+            function() length(page_recorder(page)$files) >= 1L,
+            timeout = 5,
+            loop = page$page$child_loop,
+            what = "a frame before the block error"
+          )
           stop("block failed")
         },
         fps = 5,
@@ -735,7 +787,20 @@ test_that("block error wins over stop failure and the page can record again", {
   )
   expect_null(page_recorder(page$page))
   next_path <- withr::local_tempfile(fileext = ".mp4")
-  pz_record(page, next_path, pz_wait(page, 0.2), fps = 5, hold = c(0, 0))
+  pz_record(
+    page,
+    next_path,
+    {
+      pz_poll(
+        function() length(page_recorder(page)$files) >= 1L,
+        timeout = 5,
+        loop = page$page$child_loop,
+        what = "a frame before the follow-up recording stops"
+      )
+    },
+    fps = 5,
+    hold = c(0, 0)
+  )
   expect_true(file.exists(next_path))
 })
 
@@ -779,9 +844,19 @@ test_that("pz_record_hold extends the video and is a no-op otherwise", {
 
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
-  pz_wait(page, 0.3)
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 3L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "three frames before the hold"
+  )
   page |> pz_record_hold(1)
-  pz_wait(page, 0.2)
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 6L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "three more frames after the hold"
+  )
   page |> pz_record_stop()
 
   info <- recorded_video_info(out)
@@ -970,7 +1045,20 @@ test_that("gif encodes via gifski", {
   skip_if_no_gifski()
 
   out <- withr::local_tempfile(fileext = ".gif")
-  page |> pz_record(out, pz_wait(page, 0.4), fps = 10, hold = c(0.2, 0.2))
+  page |>
+    pz_record(
+      out,
+      {
+        pz_poll(
+          function() length(page_recorder(page)$files) >= 4L,
+          timeout = 5,
+          loop = page$page$child_loop,
+          what = "four frames before the gif encode"
+        )
+      },
+      fps = 10,
+      hold = c(0.2, 0.2)
+    )
 
   expect_true(file.exists(out))
   if (rlang::is_installed("av")) {
@@ -1044,7 +1132,12 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
       keep_frames = TRUE
     )
   rec <- page_recorder(page)
-  pz_wait(page, 0.3)
+  pz_poll(
+    function() length(rec$files) >= 3L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "three frames of the framed page"
+  )
   page |> pz_record_stop()
   expect_gt(length(captured), 0L)
   expect_true(all(file.exists(rec$files)))
@@ -1352,9 +1445,14 @@ test_that("a main-frame commit abandons a capture, a subframe does not", {
   )
   expect_null(rec$pending)
 
-  # Pump the loop so the stop has frames to encode, then verify the
+  # Let a frame land so the stop has one to encode, then verify the
   # listener is torn down with the recording.
-  pz_wait(page, 0.5)
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a frame for the stop to encode"
+  )
   expect_no_error(pz_record_stop(page))
   expect_null(rec$deregister_navigated)
 })
@@ -1377,8 +1475,13 @@ test_that("a quick restart does not double the capture chain", {
 
   out1 <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out1, fps = 2, hold = c(0, 0))
-  pz_wait(page, 0.3)
   # a tick from the first recording is still scheduled when stop runs
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "the first recording's first frame"
+  )
   page |> pz_record_stop()
 
   out2 <- withr::local_tempfile(fileext = ".mp4")
@@ -1435,7 +1538,14 @@ test_that("a frame crops the recording at encode time", {
   page |>
     pz_record(
       out,
-      pz_wait(page, 0.3),
+      {
+        pz_poll(
+          function() length(page_recorder(page)$files) >= 1L,
+          timeout = 5,
+          loop = page$page$child_loop,
+          what = "a frame of the framed page"
+        )
+      },
       fps = 10,
       hold = c(0, 0),
       frame = pz_frame("#box", pad = 8)
@@ -1463,7 +1573,12 @@ test_that("frame when = start and stop measure at different times", {
       frame = pz_frame("#box", pad = 8)
     )
   pz_js(page, "growBox()")
-  pz_wait(page, 0.3)
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a frame before the stop-time measurement"
+  )
   page |> pz_record_stop()
   # measured against the final layout: the grown 200px-wide box
   expect_equal(recorded_video_info(out_stop)$width, width_at(216))
@@ -1479,7 +1594,12 @@ test_that("frame when = start and stop measure at different times", {
       frame = pz_frame("#box", pad = 8, when = "start")
     )
   pz_js(page, "growBox()")
-  pz_wait(page, 0.3)
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a frame before the stop"
+  )
   page |> pz_record_stop()
   # measured at the start: the original 100px-wide box
   expect_equal(recorded_video_info(out_start)$width, width_at(116))
@@ -1495,7 +1615,12 @@ test_that("a targetless stop frame crops from the start-time scope", {
   page |>
     pz_find("#box") |>
     pz_record_start(out, fps = 10, hold = c(0, 0), frame = pz_frame())
-  pz_wait(page, 0.2)
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a frame before stopping from the root context"
+  )
   # stopping from the root context must not swap the crop to the
   # viewport; it still covers the scope the recording started in
   page |> pz_record_stop()
@@ -1599,9 +1724,23 @@ test_that("a when = start crop is measured before the navigation and stays", {
       hold = c(0, 0),
       frame = pz_frame(when = "start")
     )
-  pz_wait(page, 0.2)
+  rec <- page_recorder(page)
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a frame before the navigation"
+  )
+  before <- length(rec$files)
   pz_nav_goto(page, nav_fixture_url("b"))
-  pz_wait(page, 0.3)
+  # The commit may strand an in-flight capture and mute the recorder
+  # briefly, so give the resumed capture the full default timeout.
+  pz_poll(
+    function() length(rec$files) > before,
+    timeout = page$page$default_timeout,
+    loop = page$page$child_loop,
+    what = "a frame of the navigated document"
+  )
   expect_no_error(pz_record_stop(page))
   # Measured before the navigation: the 100px box as it was, a fixed
   # box in viewport coordinates.
@@ -2044,7 +2183,12 @@ test_that("framed recordings reject viewport resizes and can record again", {
       fps = 10,
       hold = c(0, 0)
     )
-    pz_wait(page, 0.3)
+    pz_poll(
+      function() length(page_recorder(page)$files) >= 1L,
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a frame from the restarted recording"
+    )
     pz_record_stop(page)
     expect_true(file.exists(next_path))
     pz_close(page)
@@ -2072,7 +2216,12 @@ test_that("framed screencasts at a fractional DPR encode without a resize", {
   defer_record_stop(page)
   rec <- page_recorder(page)
   withr::defer(unlink(rec$frames_dir, recursive = TRUE))
-  pz_wait(page, 0.3)
+  pz_poll(
+    function() length(rec$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a screencast frame before stopping"
+  )
   pz_record_stop(page)
 
   expect_true(file.exists(out))
@@ -2573,7 +2722,15 @@ test_that("screencast encodes framed, scaled webm and gif outputs", {
       scale = 0.5
     )
     defer_record_stop(page)
-    pz_wait(page, 0.3)
+    # The webm branch asserts a real 10 fps timeline: stopping right
+    # after the initial screencast frame encodes a one-frame video that
+    # reads as 1000 fps, so wait for a frame at least 0.2s in.
+    pz_poll(
+      function() any(page_recorder(page)$times >= 0.2),
+      timeout = 5,
+      loop = page$page$child_loop,
+      what = "a screencast frame at least 0.2s into the recording"
+    )
     pz_record_stop(page)
     info <- recorded_video_info(out)
     expect_true(file.exists(out))
@@ -2595,7 +2752,12 @@ test_that("screencast stops cleanly and can restart on the same page", {
   pz_record_start(page, first, method = "screencast", hold = c(0, 0))
   defer_record_stop(page)
   old <- page_recorder(page)
-  pz_wait(page, 0.2)
+  pz_poll(
+    function() length(old$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a frame from the first screencast"
+  )
   pz_record_stop(page)
   expect_null(old$deregister_screencast)
   expect_false(dir.exists(old$frames_dir))
@@ -2738,7 +2900,12 @@ test_that("recording input and lifecycle errors are classed", {
     pz_record_start(page, withr::local_tempfile(fileext = ".mp4")),
     class = "paparazzi_error_record"
   )
-  pz_wait(page, 0.2)
+  pz_poll(
+    function() length(page_recorder(page)$files) >= 1L,
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "a frame before the first stop"
+  )
   page |> pz_record_stop()
   expect_error(pz_record_stop(page), class = "paparazzi_error_record")
 })
