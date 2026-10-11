@@ -328,24 +328,17 @@ test_that("Enter implicitly submits a form from a text input", {
   expect_true(pz_js(page, "window.__submitted === true"))
 })
 
-test_that("Enter inserts a newline in a textarea", {
+test_that("Enter and Shift+Enter insert a newline in a textarea", {
   page <- local_actions_page()
-  pz_act_click(page, "#bio")
-  pz_act_type(page, "a")
-  pz_act_press(page, "Enter")
-  pz_act_type(page, "b")
+  for (key in c("Enter", "Shift+Enter")) {
+    pz_js(page, "document.getElementById('bio').value = ''")
+    pz_act_click(page, "#bio")
+    pz_act_type(page, "a")
+    pz_act_press(page, key)
+    pz_act_type(page, "b")
 
-  expect_identical(pz_js(page, "document.getElementById('bio').value"), "a\nb")
-})
-
-test_that("Shift+Enter inserts a newline in a textarea", {
-  page <- local_actions_page()
-  pz_act_click(page, "#bio")
-  pz_act_type(page, "a")
-  pz_act_press(page, "Shift+Enter")
-  pz_act_type(page, "b")
-
-  expect_identical(pz_js(page, "document.getElementById('bio').value"), "a\nb")
+    expect_identical(pz_js(page, "document.getElementById('bio').value"), "a\nb")
+  }
 })
 
 test_that("pz_act_press implies Shift for uppercase keys", {
@@ -454,7 +447,7 @@ test_that("pz_act_type and pz_act_press validate their inputs", {
 
 test_that("an explicit target resolves lazily inside a pinned scope", {
   page <- local_actions_page()
-  page$default_timeout <- 0.5
+  page$default_timeout <- 0.3
   ctx <- pz_find(page, "form")
 
   # The explicit target resolves against the pinned scope, not the
@@ -516,7 +509,7 @@ test_that("pz_act_click waits out a hidden element's transition to visible", {
 
 test_that("pz_act_click on an element that never becomes visible times out", {
   page <- local_actionability_page()
-  page$default_timeout <- 0.5
+  page$default_timeout <- 0.3
   err <- expect_error(
     pz_act_click(page, "#never"),
     class = "paparazzi_error_timeout"
@@ -528,7 +521,7 @@ test_that("pz_act_click on an element that never becomes visible times out", {
 
 test_that("pz_act_click refuses a zero-sized element", {
   page <- local_actionability_page()
-  page$default_timeout <- 0.5
+  page$default_timeout <- 0.3
   # #zero passes checkVisibility() but has an empty box, so the center
   # point is not a place on the element; the click must time out
   # without dispatching into whatever sits at that point.
@@ -538,7 +531,7 @@ test_that("pz_act_click refuses a zero-sized element", {
 
 test_that("pz_act_hover on a hidden element times out", {
   page <- local_actionability_page()
-  page$default_timeout <- 0.5
+  page$default_timeout <- 0.3
   # Hover shares the click pipeline's actionability wait.
   expect_error(pz_act_hover(page, "#never"), class = "paparazzi_error_timeout")
 })
@@ -558,7 +551,7 @@ test_that("a scoped pointer action waits out its pinned element's reveal", {
 
 test_that("pz_act_type with a hidden target times out before typing", {
   page <- local_actionability_page()
-  page$default_timeout <- 0.5
+  page$default_timeout <- 0.3
   expect_error(
     pz_act_type(page, "Ada", target = "#never"),
     class = "paparazzi_error_timeout"
@@ -572,7 +565,7 @@ hit_pointer_log <- function(page) {
 
 test_that("obscured click and hover wait without dispatching to the cover", {
   page <- local_actionability_page()
-  page$default_timeout <- 0.5
+  page$default_timeout <- 0.3
   for (action in list(pz_act_click, pz_act_hover)) {
     err <- expect_error(
       action(page, "#hit-target"),
@@ -588,7 +581,7 @@ test_that("obscured click and hover wait without dispatching to the cover", {
 
 test_that("the obstruction description omits a class suffix when none exists", {
   page <- local_actionability_page()
-  page$default_timeout <- 0.5
+  page$default_timeout <- 0.3
   pz_js(page, "document.getElementById('hit-cover').className = ''")
   err <- expect_error(
     pz_act_click(page, "#hit-target"),
@@ -611,7 +604,7 @@ test_that("click retries the blocked center until the cover disappears", {
 
 test_that("targeted type and drag refuse a covered source", {
   page <- local_actionability_page()
-  page$default_timeout <- 0.5
+  page$default_timeout <- 0.3
   err <- expect_error(
     pz_act_type(page, "Ada", target = "#hit-input"),
     class = "paparazzi_error_obstructed"
@@ -643,7 +636,7 @@ test_that("shadow children, pointer-transparent overlays and labels receive even
 
 test_that("the hit test runs after scrolling a target under a fixed cover", {
   page <- local_actionability_page()
-  page$default_timeout <- 0.5
+  page$default_timeout <- 0.3
   pz_js(page, "document.getElementById('fixed-cover').style.display = 'block'")
   err <- expect_error(
     pz_act_click(page, "#below-hit"),
