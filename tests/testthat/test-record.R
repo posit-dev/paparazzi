@@ -201,6 +201,7 @@ test_that("pause/resume cuts the paused stretch out of the video", {
   skip_if_no_av()
 
   out <- withr::local_tempfile(fileext = ".mp4")
+  t0 <- proc.time()[["elapsed"]]
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
   pz_wait(page, 0.3)
   page |> pz_record_pause()
@@ -209,15 +210,19 @@ test_that("pause/resume cuts the paused stretch out of the video", {
   pz_wait(page, 0.3)
   rec <- page_recorder(page)
   page |> pz_record_stop()
+  t1 <- proc.time()[["elapsed"]]
 
   info <- recorded_video_info(out)
-  # The pause leaves no trace: at 10 fps the two 0.3s active windows
-  # yield ~6-8 frames; a leaked pause would add ~5 more. Frame counts
-  # are stall-proof (slow captures skip ticks and shrink the count,
-  # they never inflate it) in a way wall-clock durations are not.
+  # The pause leaves no trace, in both halves of the contract. Captures
+  # stop: at 10 fps the two 0.3s active windows yield ~6-8 frames and a
+  # leaked pause would add ~5 more (stalls only shrink counts). The
+  # clock freezes: vt excludes the >= 0.5s paused stretch, and a stall
+  # inflates both sides of the bound equally.
   expect_gte(length(rec$files), 2L)
   expect_lte(length(rec$files), 10L)
+  expect_lte(rec$vt_end, (t1 - t0) - 0.5 + 0.05)
   expect_gte(info$duration, 0.4)
+  expect_lte(info$duration, rec$vt_end + 0.2)
 })
 
 test_that("knit recording results distinguish GIF images and video output", {
@@ -1037,14 +1042,15 @@ test_that("frames are resampled to the requested constant fps", {
   out20 <- withr::local_tempfile(fileext = ".mp4")
   info20 <- record_timed(out20, fps = 20, frames = 13)
 
-  # Resampled frame counts track fps; that is the contract. Durations
-  # can't be compared between runs: polling frame counts means a starved
-  # capture chain (record_tick skips ticks while a capture is in flight)
-  # stretches the 20fps run's span arbitrarily (4s measured on CI).
+  # Resampled frame counts track fps; that is the contract. Starved
+  # captures stretch a run's span and therefore inflate its resampled
+  # count (4s of extra span measured on CI), so only lower bounds and
+  # the fps ratio are stall-proof; upper bounds would be wall-coupled.
   expect_gte(info5$duration, 0.4)
   expect_gte(info20$duration, 0.4)
-  expect_lte(info5$frames, 8)
+  expect_gte(info5$frames, 2)
   expect_gte(info20$frames, 8)
+  expect_gte(info20$frames, 2 * info5$frames)
 })
 
 test_that("gif encodes via gifski", {
