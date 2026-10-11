@@ -87,7 +87,7 @@ test_that("pz_record_start/stop record an mp4 with first/last holds", {
   info <- recorded_video_info(out)
   expect_equal(info$codec, "h264")
   expect_equal(info$framerate, 10)
-  # ~0.6s recorded + 0.5s + 1s holds
+  # ~0.7s recorded + 0.5s + 1s holds
   expect_gte(info$duration, 2.0)
   expect_lte(info$duration, 3.2)
   # mp4 dimensions are multiples of 4
