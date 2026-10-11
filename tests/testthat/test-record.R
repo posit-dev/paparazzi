@@ -125,7 +125,7 @@ test_that("captioned videos encode to new relative paths", {
 
     expect_true(file.exists(out))
     expect_gt(recorded_video_info(out)$duration, 0)
-    expect_identical(getwd(), normalizePath(dir, winslash = "/"))
+    expect_identical(getwd(), dir)
   }
 })
 
@@ -147,7 +147,7 @@ test_that("plain videos encode to new relative paths", {
 
     expect_true(file.exists(out))
     expect_gt(recorded_video_info(out)$duration, 0)
-    expect_identical(getwd(), normalizePath(dir, winslash = "/"))
+    expect_identical(getwd(), dir)
   }
 })
 
