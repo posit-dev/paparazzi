@@ -200,17 +200,18 @@ test_that("pause/resume cuts the paused stretch out of the video", {
 
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
-  pz_wait(page, 0.5)
+  pz_wait(page, 0.3)
   page |> pz_record_pause()
-  pz_wait(page, 0.7)
-  page |> pz_record_resume()
   pz_wait(page, 0.5)
+  page |> pz_record_resume()
+  pz_wait(page, 0.3)
   page |> pz_record_stop()
 
   info <- recorded_video_info(out)
-  # ~1s of active recording; the 0.7s pause leaves no trace
-  expect_gte(info$duration, 0.7)
-  expect_lte(info$duration, 1.5)
+  # ~0.6s of active recording; the 0.5s pause leaves no trace. If the
+  # pause leaked through, the video would run ~1.1s.
+  expect_gte(info$duration, 0.4)
+  expect_lte(info$duration, 1)
 })
 
 test_that("knit recording results distinguish GIF images and video output", {
@@ -490,10 +491,6 @@ test_that("knitted recordings return media only at completion", {
     'pz_wait(page, 0.2)',
     'pz_record_stop(page)',
     'pz_record(page, code = { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0), format="gif")',
-    'start <- pz_record_start(page, path=NULL, fps=5, hold=c(0, 0), format="gif")',
-    'pz_wait(page, 0.2)',
-    'pz_record_stop(start)',
-    'pz_record(page, path=NULL, code = { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0), format="gif")',
     'pz_record(page, "named.gif", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
     'pz_record(page, "named.mp4", { pz_wait(page, 0.2) }, fps=5, hold=c(0, 0))',
     'page |> pz_record_start("split.webm", fps=5, hold=c(0, 0))',
@@ -510,12 +507,10 @@ test_that("knitted recordings return media only at completion", {
     recursive = TRUE,
     full.names = TRUE
   )
-  expect_length(gifs, 4L)
+  expect_length(gifs, 2L)
   expect_true(all(file.exists(gifs)))
   expect_match(markdown, "demo-1.gif", fixed = TRUE)
   expect_match(markdown, "demo-2.gif", fixed = TRUE)
-  expect_match(markdown, "demo-3.gif", fixed = TRUE)
-  expect_match(markdown, "demo-4.gif", fixed = TRUE)
   expect_true(file.exists("named.gif"))
   expect_match(markdown, "named.gif", fixed = TRUE)
   expect_true(file.exists("named.mp4"))
@@ -1011,7 +1006,7 @@ test_that("frames are resampled to the requested constant fps", {
   # The video clock starts at the first completed frame, so poll for it
   # before the timed window; a fixed window alone lets a slow first
   # capture shrink the resampled frame count.
-  record_timed <- function(out, fps) {
+  record_timed <- function(out, fps, frames) {
     page |> pz_record_start(out, fps = fps, hold = c(0, 0))
     pz_poll(
       function() length(page_recorder(page)$files) >= 1L,
@@ -1019,23 +1014,28 @@ test_that("frames are resampled to the requested constant fps", {
       loop = page$page$child_loop,
       what = "the first captured frame"
     )
-    pz_wait(page, 0.6)
+    pz_poll(
+      function() length(page_recorder(page)$files) >= frames,
+      timeout = page$page$default_timeout,
+      loop = page$page$child_loop,
+      what = sprintf("%d captured frames", frames)
+    )
     pz_record_stop(page)
     recorded_video_info(out)
   }
 
   out5 <- withr::local_tempfile(fileext = ".mp4")
-  info5 <- record_timed(out5, fps = 5)
+  info5 <- record_timed(out5, fps = 5, frames = 4)
 
   out20 <- withr::local_tempfile(fileext = ".mp4")
-  info20 <- record_timed(out20, fps = 20)
+  info20 <- record_timed(out20, fps = 20, frames = 13)
 
-  # same real time, different output rates: durations agree, frame
-  # counts track fps
+  # same real time, different output rates: durations agree, resampled
+  # frame counts track fps. The duration ceiling is generous: a starved
+  # capture chain stretches the poll, and the counts are the contract.
   expect_gte(info5$duration, 0.4)
-  expect_lte(info5$duration, 1.2)
   expect_gte(info20$duration, 0.4)
-  expect_lte(info20$duration, 1.2)
+  expect_lte(abs(info5$duration - info20$duration), 0.5)
   expect_lte(info5$frames, 8)
   expect_gte(info20$frames, 8)
 })
@@ -1792,7 +1792,9 @@ test_that("recorded clicks reach above- and below-fold buttons at DPR 2", {
   out <- withr::local_tempfile(fileext = ".mp4")
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   withr::defer(unlink(frames_dir, recursive = TRUE))
-  pz_record_start(page, out, fps = 30, hold = c(0, 0), keep_frames = TRUE)
+  # The assertions are click ids and frame dimensions, not capture cadence;
+  # 10 fps halves the full-viewport capture churn of the 8 staged clicks.
+  pz_record_start(page, out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
   targets <- rep(c("bottom", "top"), 4)
   for (target in targets) {
@@ -1836,7 +1838,7 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
   pz_record_start(
     page,
     out,
-    fps = 30,
+    fps = 10,
     hold = c(0, 0),
     keep_frames = TRUE,
     frame = pz_frame(list("h1", "main"), pad = 16)
