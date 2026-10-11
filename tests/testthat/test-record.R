@@ -207,13 +207,17 @@ test_that("pause/resume cuts the paused stretch out of the video", {
   pz_wait(page, 0.5)
   page |> pz_record_resume()
   pz_wait(page, 0.3)
+  rec <- page_recorder(page)
   page |> pz_record_stop()
 
   info <- recorded_video_info(out)
-  # ~0.6s of active recording; the 0.5s pause leaves no trace. If the
-  # pause leaked through, the video would run ~1.1s.
+  # The pause leaves no trace: at 10 fps the two 0.3s active windows
+  # yield ~6-8 frames; a leaked pause would add ~5 more. Frame counts
+  # are stall-proof (slow captures skip ticks and shrink the count,
+  # they never inflate it) in a way wall-clock durations are not.
+  expect_gte(length(rec$files), 2L)
+  expect_lte(length(rec$files), 10L)
   expect_gte(info$duration, 0.4)
-  expect_lte(info$duration, 1)
 })
 
 test_that("knit recording results distinguish GIF images and video output", {
@@ -1034,12 +1038,11 @@ test_that("frames are resampled to the requested constant fps", {
   info20 <- record_timed(out20, fps = 20, frames = 13)
 
   # Resampled frame counts track fps; that is the contract. Durations
-  # are only loosely bounded: polling frame counts means a starved
+  # can't be compared between runs: polling frame counts means a starved
   # capture chain (record_tick skips ticks while a capture is in flight)
-  # stretches the 20fps run's span relative to the 5fps run's.
+  # stretches the 20fps run's span arbitrarily (4s measured on CI).
   expect_gte(info5$duration, 0.4)
   expect_gte(info20$duration, 0.4)
-  expect_lte(abs(info5$duration - info20$duration), 1.5)
   expect_lte(info5$frames, 8)
   expect_gte(info20$frames, 8)
 })
