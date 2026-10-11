@@ -516,10 +516,10 @@ test_that("all CSS cursor presets validate and select their own layer", {
     expect_equal(c(art$x, art$y) + unlist(entry$hotspot) * 20 / 32, c(4, 2))
     expect_match(art$svg, 'viewBox="0 0 32 32"', fixed = TRUE)
   }
-  # The layer-DOM queries are identical modulo the keyword, so they run
-  # on a representative subset (including "none", the inverse case);
-  # every keyword still proves its layer selection via the icon attr.
-  dom_checked <- c(
+  # The per-keyword art check (children.length) runs on a representative
+  # subset including "none", the inverse case; the keyword-independent
+  # exactly-one-visible check runs every iteration.
+  art_checked <- c(
     "default",
     "pointer",
     "text",
@@ -532,7 +532,14 @@ test_that("all CSS cursor presets validate and select their own layer", {
     page |> pz_cursor_move("#plain", icon = keyword)
     expect_identical(attr(cursor_overlay_state(page), "icon"), keyword)
     expect_identical(page_cursor(page)$icon, keyword)
-    if (!keyword %in% dom_checked) {
+    expect_equal(
+      pz_js(
+        page,
+        "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').length"
+      ),
+      1
+    )
+    if (!keyword %in% art_checked) {
       next
     }
     expect_equal(
@@ -546,13 +553,6 @@ test_that("all CSS cursor presets validate and select their own layer", {
       ) >
         0,
       keyword != "none"
-    )
-    expect_equal(
-      pz_js(
-        page,
-        "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').length"
-      ),
-      1
     )
   }
   for (fn in list(

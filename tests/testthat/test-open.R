@@ -166,10 +166,11 @@ test_that("new-session Shiny waits anchor to the destination commit", {
 test_that("auto routes Shiny app files and shared handles to idle wait", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  # App-file routing to the idle wait is covered by the recognized-names
-  # test; here the shared handle is the interesting arm.
+  # The only end-to-end proof that wait = "auto" routes both an app
+  # file and a shared handle to the Shiny idle wait.
+  app_file <- file.path(shiny_idle_fixture(), "app.R")
   app <- local_shiny_app(shiny_idle_fixture())
-  for (x in list(app)) {
+  for (x in list(app_file, app)) {
     page <- pz_open(x, timeout = 5)
     expect_true(shiny_idle_state(page)$connected)
     expect_equal(shiny_idle_state(page)$text, "reactive ready")
