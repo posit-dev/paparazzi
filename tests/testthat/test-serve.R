@@ -467,7 +467,9 @@ test_that("Quarto projects use their output URL", {
   )
   path <- file.path(dir, "index.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
-  server <- pz_serve_quarto(dir, render = TRUE)
+  # render = FALSE is the shipped default; render = TRUE coverage lives
+  # in the document test above.
+  server <- pz_serve_quarto(dir)
   withr::defer(server$stop())
   page <- local_page(server)
   expect_identical(
