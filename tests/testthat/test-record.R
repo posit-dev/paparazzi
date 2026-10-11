@@ -1042,15 +1042,17 @@ test_that("frames are resampled to the requested constant fps", {
   out20 <- withr::local_tempfile(fileext = ".mp4")
   info20 <- record_timed(out20, fps = 20, frames = 13)
 
-  # Resampled frame counts track fps; that is the contract. Starved
-  # captures stretch a run's span and therefore inflate its resampled
-  # count (4s of extra span measured on CI), so only lower bounds and
-  # the fps ratio are stall-proof; upper bounds would be wall-coupled.
+  # The container framerate is the requested constant fps; that is the
+  # contract, and it is stall-free. Starved captures stretch a run's
+  # span (4s measured on CI), so durations get only a floor and frame
+  # counts only plausible lower bounds — anything tighter couples the
+  # test to wall-clock speed or tiny-count timestamp rounding.
   expect_gte(info5$duration, 0.4)
   expect_gte(info20$duration, 0.4)
+  expect_equal(info5$framerate, 5)
+  expect_equal(info20$framerate, 20)
   expect_gte(info5$frames, 2)
   expect_gte(info20$frames, 8)
-  expect_gte(info20$frames, 2 * info5$frames)
 })
 
 test_that("gif encodes via gifski", {

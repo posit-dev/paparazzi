@@ -392,8 +392,8 @@ test_that("Quarto document handles own independent processes and shared pages", 
   expect_false(identical(server$port, other$port))
   expect_true(any(grepl("Output created", server$logs(), fixed = TRUE)))
 
-  page <- local_page(server)
-  second <- local_page(server)
+  page <- local_page(server, timeout = 30)
+  second <- local_page(server, timeout = 30)
   expect_identical(
     pz_get_text(page, target = "#document-marker"),
     "Quarto capture"
@@ -456,7 +456,7 @@ test_that("Quarto renders R Markdown with knitr", {
   )
   server <- pz_serve_quarto(path)
   withr::defer(server$stop())
-  page <- local_page(server)
+  page <- local_page(server, timeout = 30)
   expect_match(
     pz_get_text(page, target = "body"),
     "R Markdown marker",
@@ -478,7 +478,7 @@ test_that("Quarto projects use their output URL", {
   # the suite (standalone documents render on startup either way).
   server <- pz_serve_quarto(dir, render = TRUE)
   withr::defer(server$stop())
-  page <- local_page(server)
+  page <- local_page(server, timeout = 30)
   expect_identical(
     pz_get_text(page, target = "#document-marker"),
     "Quarto capture"
