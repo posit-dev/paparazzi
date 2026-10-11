@@ -54,6 +54,8 @@ test_that("all find variants return visibly, including root no-ops", {
 
 test_that("pz_find auto-waits for a match and times out with no match", {
   page <- local_elements_page()
+  # The timeout path matters, not its duration; don't wait out the 10s default.
+  page$default_timeout <- 0.5
   err <- expect_error(
     pz_find(page, ".never"),
     class = "paparazzi_error_timeout"
@@ -86,6 +88,8 @@ test_that("from_root resolves the target from the document, still on the stack",
 
 test_that("pz_find_first/last/nth with a target pin the picked match", {
   page <- local_elements_page()
+  # The out-of-range which below waits out the timeout; keep it short.
+  page$default_timeout <- 0.5
   first <- pz_find_first(page, ".btn")
   nth <- pz_find_nth(page, 3, target = ".btn")
 
