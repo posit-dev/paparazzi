@@ -150,9 +150,8 @@ test_that("camera zoom and reset change MP4 and GIF content, not dimensions", {
       loop = page$page$child_loop,
       what = "a baseline frame before the camera move"
     )
-    pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.2)
+    pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.2, wait = TRUE)
     zoom_end <- rec$camera[[length(rec$camera)]]$end
-    pz_wait(page, 0.25)
     # Retained frames are raw captures; the zoom applies at encode. Poll
     # that a capture landed at full zoom so the zoomed window is on the
     # record before the reset starts shrinking it.
@@ -163,7 +162,6 @@ test_that("camera zoom and reset change MP4 and GIF content, not dimensions", {
       what = "a frame captured at full zoom"
     )
     pz_camera_reset(page)
-    pz_wait(page, 0.2)
     suppressWarnings(pz_record_stop(page))
     info <- recorded_video_info(out)
     expect_equal(c(info$width, info$height), c(640, 480))
@@ -234,9 +232,8 @@ test_that("framed camera uses final home, scale and each method's capture densit
       loop = page$page$child_loop,
       what = "a baseline frame before the camera move"
     )
-    pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.15)
+    pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.15, wait = TRUE)
     zoom_end <- rec$camera[[length(rec$camera)]]$end
-    pz_wait(page, 0.25)
     pz_js(page, "document.getElementById('home').style.width = '480px'")
     # Retained frames are raw captures; the zoom applies at encode. Poll
     # that a capture landed at full zoom before the reset starts shrinking
@@ -248,7 +245,6 @@ test_that("framed camera uses final home, scale and each method's capture densit
       what = "a frame captured at full zoom"
     )
     pz_camera_reset(page)
-    pz_wait(page, 0.15)
     suppressWarnings(pz_record_stop(page))
     size <- if (method == "poll") c(480, 300) else c(240, 148)
     info <- recorded_video_info(out)
