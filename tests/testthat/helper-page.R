@@ -10,7 +10,7 @@ fixture_file <- function() {
   test_path("fixtures", "page.html")
 }
 
-# One static server per fixture root per worker process: pz_open() on an
+# One static server per fixture file per worker process: pz_open() on an
 # .html path would otherwise start (and stop) a fresh httpuv server for
 # every page. Only package fixtures and shipped examples are cached; pages
 # built in per-test tempdirs keep their own short-lived servers so their
@@ -23,6 +23,12 @@ fixture_server <- function(path) {
   if (is.null(server)) {
     testthat::skip_if_not_installed("httpuv")
     server <- pz_serve_static(path)
+    # teardown_env() only exists while testthat runs a suite; in an
+    # interactive load_all() session skip the cache (the server handle's
+    # finalizer is the cleanup).
+    if (!testthat::is_testing()) {
+      return(server)
+    }
     assign(key, server, envir = the_fixture_servers)
     withr::defer(server$stop(), envir = testthat::teardown_env())
   }
@@ -30,10 +36,15 @@ fixture_server <- function(path) {
 }
 
 fixture_roots <- function() {
-  normalizePath(
-    c(test_path("fixtures"), dirname(pz_example("tasks"))),
-    winslash = "/"
-  )
+  roots <- mget("roots", envir = the_fixture_servers, ifnotfound = list(NULL))[[1]]
+  if (is.null(roots)) {
+    roots <- normalizePath(
+      c(test_path("fixtures"), dirname(pz_example("tasks"))),
+      winslash = "/"
+    )
+    assign("roots", roots, envir = the_fixture_servers)
+  }
+  roots
 }
 
 # Route an .html fixture/example path through the cached server; pass

@@ -1030,12 +1030,13 @@ test_that("frames are resampled to the requested constant fps", {
   out20 <- withr::local_tempfile(fileext = ".mp4")
   info20 <- record_timed(out20, fps = 20, frames = 13)
 
-  # same real time, different output rates: durations agree, resampled
-  # frame counts track fps. The duration ceiling is generous: a starved
-  # capture chain stretches the poll, and the counts are the contract.
+  # Resampled frame counts track fps; that is the contract. Durations
+  # are only loosely bounded: polling frame counts means a starved
+  # capture chain (record_tick skips ticks while a capture is in flight)
+  # stretches the 20fps run's span relative to the 5fps run's.
   expect_gte(info5$duration, 0.4)
   expect_gte(info20$duration, 0.4)
-  expect_lte(abs(info5$duration - info20$duration), 0.5)
+  expect_lte(abs(info5$duration - info20$duration), 1.5)
   expect_lte(info5$frames, 8)
   expect_gte(info20$frames, 8)
 })

@@ -337,7 +337,11 @@ test_that("Enter and Shift+Enter insert a newline in a textarea", {
     pz_act_press(page, key)
     pz_act_type(page, "b")
 
-    expect_identical(pz_js(page, "document.getElementById('bio').value"), "a\nb")
+    expect_equal(
+      pz_js(page, "document.getElementById('bio').value"),
+      "a\nb",
+      label = key
+    )
   }
 })
 
