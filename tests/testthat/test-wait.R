@@ -1,7 +1,7 @@
 test_that("Shiny idle waits for a slow reactive output and holds for 200ms", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  page <- pz_open(shiny_idle_fixture(), wait = "none")
+  page <- pz_open(shared_shiny_idle_app(), wait = "none")
   withr::defer(pz_close(page))
   result <- withVisible(pz_wait_for_shiny_idle(page, timeout = 5))
   expect_false(result$visible)
@@ -19,7 +19,7 @@ test_that("Shiny idle waits for a slow reactive output and holds for 200ms", {
 test_that("Shiny idle restarts its stability window when busy returns", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
   # start precedes each pz_js so the 600ms pulse provably starts after
   # the reference, and the pulse must outlive the wait's observer
@@ -44,7 +44,7 @@ test_that("Shiny idle restarts its stability window when busy returns", {
 test_that("Shiny idle restarts the hold when busy returns mid-window", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
   pz_js(
     page,
@@ -58,7 +58,7 @@ test_that("Shiny idle restarts the hold when busy returns mid-window", {
 test_that("Shiny idle counts brief busy and recalculating pulses inside the hold", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
 
   for (kind in c("busy", "recalculating")) {
@@ -110,7 +110,7 @@ test_that("Shiny idle counts brief busy and recalculating pulses inside the hold
 test_that("Shiny idle resets the hold on Shiny connection events", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
   pz_js(
     page,
@@ -138,7 +138,7 @@ test_that("Shiny idle resets the hold on Shiny connection events", {
 test_that("Shiny idle deadline cleans page listeners and observer", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
   listeners <- paste0(
     "['shiny:connected', 'shiny:disconnected', 'shiny:busy', 'shiny:idle']",
@@ -240,7 +240,7 @@ test_that("Shiny idle on non-Shiny pages fails clearly", {
 test_that("Shiny idle times out while the page remains busy", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
   pz_js(page, "document.documentElement.classList.add('shiny-busy')")
   expect_error(
@@ -777,7 +777,7 @@ test_that("explicit post-action navigation waits for Shiny output", {
 
 test_that("post-action auto waits for app-backed Shiny but not a different origin", {
   skip_if_no_shiny()
-  page <- pz_open(shiny_idle_fixture(), wait = "shiny")
+  page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
   pz_js(page, "setTimeout(() => location.reload(), 100)", await = FALSE)
   pz_wait_for_navigation(page, timeout = 5)
