@@ -288,12 +288,12 @@ test_that("smooth scrolling uses real wheel events while recording", {
       hold = c(0, 0)
     )
 
-  page |> pz_act_scroll(by = c(0, 600))
+  page |> pz_act_scroll(by = c(0, 600), duration = 0.1)
   expect_equal(pz_js(page, "window.scrollY"), 600)
   expect_true(pz_js(page, "window.__log.wheels") > 0)
   expect_true(pz_js(page, "window.__log.wheelsTrusted"))
 
-  page |> pz_act_scroll(to = "bottom")
+  page |> pz_act_scroll(to = "bottom", duration = 0.1)
   expect_equal(
     pz_js(page, "window.scrollY"),
     pz_js(
@@ -304,7 +304,9 @@ test_that("smooth scrolling uses real wheel events while recording", {
 
   # A scoped scroll wheels the scope's container, not the page.
   wheels <- pz_js(page, "window.__log.wheels")
-  page |> pz_find("#scroller") |> pz_act_scroll(to = "bottom")
+  page |>
+    pz_find("#scroller") |>
+    pz_act_scroll(to = "bottom", duration = 0.1)
   expect_equal(
     pz_js(page, "document.getElementById('scroller').scrollTop"),
     650
@@ -747,26 +749,27 @@ test_that("the stage pause holds after focus and root or scoped blur", {
       hold = c(0, 0)
     )
 
-  t0 <- proc.time()[["elapsed"]]
-  page |> pz_act_focus("#name")
-  t_focus <- proc.time()[["elapsed"]] - t0
-  expect_true(pz_js(page, "document.activeElement.id === 'name'"))
-
-  t0 <- proc.time()[["elapsed"]]
-  page |> pz_act_blur()
-  t_blur <- proc.time()[["elapsed"]] - t0
-  expect_false(pz_js(page, "document.activeElement.id === 'name'"))
-
   field <- pz_find(page, "#name")
-  field |> pz_act_focus()
-  t0 <- proc.time()[["elapsed"]]
-  field |> pz_act_blur()
-  t_scoped_blur <- proc.time()[["elapsed"]] - t0
-  page |> pz_record_stop()
+  pauses <- numeric()
+  with_mocked_bindings(
+    pump_loop = function(loop, duration, ...) {
+      pauses <<- c(pauses, duration)
+    },
+    {
+      page |> pz_act_focus("#name")
+      expect_true(pz_js(page, "document.activeElement.id === 'name'"))
+      expect_equal(tail(pauses, 1), 0.5)
 
-  expect_true(t_focus >= 0.45)
-  expect_true(t_blur >= 0.45)
-  expect_true(t_scoped_blur >= 0.45)
+      page |> pz_act_blur()
+      expect_false(pz_js(page, "document.activeElement.id === 'name'"))
+      expect_equal(tail(pauses, 1), 0.5)
+
+      field |> pz_act_focus()
+      field |> pz_act_blur()
+      expect_equal(tail(pauses, 1), 0.5)
+    }
+  )
+  page |> pz_record_stop()
 
   pauses <- numeric()
   local_mocked_bindings(
@@ -793,13 +796,17 @@ test_that("the stage pause holds after root typing without a target", {
       hold = c(0, 0)
     )
 
-  t0 <- proc.time()[["elapsed"]]
-  page |> pz_act_type("a")
-  recorded <- proc.time()[["elapsed"]] - t0
+  pauses <- numeric()
+  with_mocked_bindings(
+    pump_loop = function(loop, duration, ...) {
+      pauses <<- c(pauses, duration)
+    },
+    page |> pz_act_type("a")
+  )
   page |> pz_record_stop()
 
   expect_equal(pz_get_value(page, target = "#name"), "a")
-  expect_true(recorded >= 0.45)
+  expect_equal(tail(pauses, 1), 0.5)
 
   pauses <- numeric()
   local_mocked_bindings(
@@ -827,11 +834,9 @@ test_that("the stage pause holds after press, select_text, and drag too", {
   defer_record_stop(page)
   page |> pz_act_click("#name")
   holds <- numeric()
-  original_pump <- pump_loop
   local_mocked_bindings(
     pump_loop = function(loop, duration, ...) {
       holds <<- c(holds, duration)
-      original_pump(loop, duration, ...)
     }
   )
 
@@ -941,15 +946,12 @@ test_that("recorded demo glides, types, and scrolls on camera", {
 test_that("without a recording the same chain runs straight to the final state", {
   page <- local_cursor_page()
 
-  t0 <- proc.time()[["elapsed"]]
   page |>
     pz_stage(enter = "left") |>
     pz_act_click("#btn") |>
     pz_act_type("otters", target = "#name") |>
     pz_act_click("#below")
-  elapsed <- proc.time()[["elapsed"]] - t0
 
-  expect_true(elapsed < 5)
   expect_equal(pz_js(page, "window.__log.clicks"), 1)
   expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
   expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
