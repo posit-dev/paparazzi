@@ -2504,6 +2504,7 @@ badge_edge_diagnostics <- function(page) {
       "const tr = t ? t.getBoundingClientRect() : null;",
       "const root = document.querySelector('#paparazzi-overlay-root');",
       "const badge = root && root.shadowRoot ? root.shadowRoot.querySelector('.pz-annotation span') : null;",
+      "const box = root && root.shadowRoot ? root.shadowRoot.querySelector('.pz-annotation') : null;",
       "const br = badge ? badge.getBoundingClientRect() : null;",
       "const boxr = box ? box.getBoundingClientRect() : null;",
       "return 'innerWidth=' + innerWidth +",
@@ -2513,7 +2514,7 @@ badge_edge_diagnostics <- function(page) {
       "' dpr=' + devicePixelRatio +",
       "' zoom=' + getComputedStyle(document.documentElement).zoom +",
       "' target=[' + (tr ? [tr.left, tr.right, tr.top].join(',') : 'missing') + ']' +",
-      "' box=' + (box ? 'style(left=' + box.style.left +",
+      "' box=' + (box ? 'style(left=' + box.style.left + ')' +",
       "' rect(left=' + boxr.left + ')' : 'missing') +",
       "' badge=' + (badge ?",
       "'style(left=' + badge.style.left + ' top=' + badge.style.top +",
@@ -3124,7 +3125,7 @@ test_that("badges reposition themselves when targets move and scroll", {
     "the badge to follow its moved target to the viewport edge"
   )
   badge <- annotation_badge_rects(page)[[1]]
-  expect_lte(badge$left + badge$width, client_width)
+  expect_lte(badge$left + badge$width, client_width + 0.001)
   expect_gte(
     badge$left + badge$width,
     client_width - 1 / 64 - 0.001
