@@ -365,6 +365,9 @@ wait_for_load <- function(page, timeout, call = caller_env()) {
       ))
     },
     timeout = timeout,
+    # Load settles in milliseconds; the default 0.1s poll interval would
+    # dominate the wait on every page open.
+    interval = 0.02,
     loop = page$child_loop,
     what = "page load",
     call = call

@@ -10,6 +10,52 @@ fixture_file <- function() {
   test_path("fixtures", "page.html")
 }
 
+# One static server per fixture root per worker process: pz_open() on an
+# .html path would otherwise start (and stop) a fresh httpuv server for
+# every page. Only package fixtures and shipped examples are cached; pages
+# built in per-test tempdirs keep their own short-lived servers so their
+# ports are released when the page closes.
+the_fixture_servers <- new.env(parent = emptyenv())
+
+fixture_server <- function(path) {
+  key <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  server <- mget(key, envir = the_fixture_servers, ifnotfound = list(NULL))[[1]]
+  if (is.null(server)) {
+    testthat::skip_if_not_installed("httpuv")
+    server <- pz_serve_static(path)
+    assign(key, server, envir = the_fixture_servers)
+    withr::defer(server$stop(), envir = testthat::teardown_env())
+  }
+  server
+}
+
+fixture_roots <- function() {
+  normalizePath(
+    c(test_path("fixtures"), dirname(pz_example("tasks"))),
+    winslash = "/"
+  )
+}
+
+# Route an .html fixture/example path through the cached server; pass
+# everything else (handles, URLs, directories, tempfile pages) through.
+as_shared_fixture <- function(x) {
+  if (
+    !httpuv_available() ||
+      !is.character(x) ||
+      length(x) != 1 ||
+      dir.exists(x) ||
+      !file.exists(x) ||
+      !grepl("[.]html$", x, ignore.case = TRUE)
+  ) {
+    return(x)
+  }
+  dir <- normalizePath(dirname(x), winslash = "/")
+  if (!dir %in% fixture_roots()) {
+    return(x)
+  }
+  fixture_server(x)
+}
+
 elements_fixture_file <- function() {
   test_path("fixtures", "elements.html")
 }
@@ -18,15 +64,13 @@ elements_fixture_file <- function() {
 # calling test exits.
 local_page <- function(x = fixture_file(), ..., .env = parent.frame()) {
   skip_if_no_chrome()
-  pz_local_page(x, ..., .env = .env)
+  pz_local_page(as_shared_fixture(x), ..., .env = .env)
 }
 
 local_task_page <- function(..., .env = parent.frame()) {
   skip_if_no_chrome()
   testthat::skip_if_not_installed("httpuv")
-  server <- pz_serve_static(pz_example("tasks"))
-  withr::defer(server$stop(), envir = .env)
-  page <- local_page(server, ..., .env = .env)
+  page <- local_page(fixture_server(pz_example("tasks")), ..., .env = .env)
   testthat::expect_true(pz_js(
     page,
     "Array.from(document.styleSheets).every(sheet => { void sheet.cssRules; return true; })"

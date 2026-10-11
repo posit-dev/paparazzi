@@ -1,7 +1,10 @@
 test_that("pz_open serves a local HTML file over HTTP and pz_close stops the server", {
   skip_if_no_chrome()
   testthat::skip_if_not_installed("httpuv")
-  page <- local_page()
+  # pz_open() directly, not local_page(): the owned-server lifecycle under
+  # test is what local_page()'s shared fixture server deliberately bypasses.
+  page <- pz_open(fixture_file())
+  withr::defer(try(pz_close(page), silent = TRUE))
   expect_s3_class(page, "PaparazziPage")
   expect_s3_class(page, "PaparazziContext")
   expect_false(page$is_closed())
