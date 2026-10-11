@@ -623,23 +623,9 @@ test_that("nav_snapshot treats a chromote swap error as in-flight", {
 test_that("a completed bfcache restore is caught once after history.back()", {
   skip_if_no_chrome()
   testthat::skip_if_not_installed("httpuv")
-  port <- free_port()
-  fixture <- test_path("fixtures", "nav-cache")
-  server <- processx::process$new(
-    file.path(R.home("bin"), "Rscript"),
-    args = c(
-      "-e",
-      "httpuv::runServer('127.0.0.1', as.integer(commandArgs(TRUE)[[1]]), list(staticPaths = list('/' = httpuv::staticPath(commandArgs(TRUE)[[2]]))))",
-      as.character(port),
-      fixture
-    ),
-    stdout = tempfile(),
-    stderr = "2>&1",
-    cleanup = TRUE
-  )
-  withr::defer(if (server$is_alive()) server$kill())
-  expect_true(wait_until(function() app_port_reachable(port), timeout = 5))
-  page <- local_page(paste0("http://127.0.0.1:", port, "/a.html"))
+  server <- pz_serve_static(test_path("fixtures", "nav-cache"))
+  withr::defer(server$stop())
+  page <- local_page(paste0(server$url, "a.html"))
   identity <- pz_js(page, "window.identity")
   origin <- pz_js(page, "performance.timeOrigin")
 

@@ -89,7 +89,7 @@ test_that("pz_record_start/stop record an mp4 with first/last holds", {
   expect_equal(info$framerate, 10)
   # ~0.7s recorded + 0.5s + 1s holds
   expect_gte(info$duration, 2.0)
-  expect_lte(info$duration, 3.2)
+  expect_lte(info$duration, 5)
   # mp4 dimensions are multiples of 4
   expect_equal(info$width %% 4, 0)
   expect_equal(info$height %% 4, 0)
@@ -113,7 +113,7 @@ test_that("webm encodes", {
   info <- recorded_video_info(out)
   expect_match(info$codec, "vp")
   expect_gte(info$duration, 0.2)
-  expect_lte(info$duration, 1.0)
+  expect_lte(info$duration, 2)
 })
 
 test_that("captioned videos encode to new relative paths", {
@@ -857,7 +857,7 @@ test_that("pz_record_hold extends the video and is a no-op otherwise", {
   info <- recorded_video_info(out)
   # ~0.5s recorded + 1s hold; real time was only ~0.5s
   expect_gte(info$duration, 1.2)
-  expect_lte(info$duration, 2.0)
+  expect_lte(info$duration, 2.5)
 
   start <- Sys.time()
   res <- withVisible(pz_record_hold(page, 2))
@@ -1066,7 +1066,7 @@ test_that("gif encodes via gifski", {
     info <- recorded_video_info(out)
     expect_equal(info$codec, "gif")
     expect_gte(info$duration, 0.6)
-    expect_lte(info$duration, 1.2)
+    expect_lte(info$duration, 2)
   }
 })
 

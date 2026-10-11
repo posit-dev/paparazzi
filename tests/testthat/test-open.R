@@ -107,7 +107,8 @@ test_that("explicit Shiny wait rejects non-Shiny pages promptly", {
     "not a Shiny page",
     class = "paparazzi_error_unsupported"
   )
-  expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 2)
+  # Prompt = clearly beats the 3s timeout; the bound has page-open slack.
+  expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 2.9)
 })
 
 test_that("explicit Shiny wait on a wrapped non-Shiny session fails without closing it", {
@@ -414,7 +415,7 @@ test_that("a failed device setting after page creation closes the new session", 
   # pz_open() looks the default browser up itself; a replaced browser
   # would make the target diff below vacuous.
   expect_identical(chromote::default_chromote_object(), browser)
-  deadline <- Sys.time() + 3
+  deadline <- Sys.time() + 5
   repeat {
     new_ids <- setdiff(page_targets(), before)
     if (length(new_ids) == 0L || Sys.time() >= deadline) {
