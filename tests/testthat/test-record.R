@@ -855,9 +855,10 @@ test_that("pz_record_hold extends the video and is a no-op otherwise", {
   page |> pz_record_stop()
 
   info <- recorded_video_info(out)
-  # ~0.5s recorded + 1s hold; real time was only ~0.5s
+  # ~0.5s recorded + 1s hold. No upper bound: the real-time span is
+  # unbounded under CI load (macOS measured 2.3s), and the lower bound
+  # is the contract — without the hold the video would run ~0.5s.
   expect_gte(info$duration, 1.2)
-  expect_lte(info$duration, 2.5)
 
   start <- Sys.time()
   res <- withVisible(pz_record_hold(page, 2))
