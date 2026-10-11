@@ -108,6 +108,9 @@ test_that("captioned videos encode to new relative paths", {
   skip_if_no_av()
   page <- local_record_page()
   dir <- withr::local_tempdir()
+  # Windows runners set TEMP to the 8.3 short path (RUNNER~1); normalize so
+  # the working directory doesn't differ from the recorded path spelling.
+  dir <- normalizePath(dir, winslash = "/")
   withr::local_dir(dir)
   dir.create("sub")
 
@@ -130,6 +133,7 @@ test_that("plain videos encode to new relative paths", {
   skip_if_no_av()
   page <- local_record_page()
   dir <- withr::local_tempdir()
+  dir <- normalizePath(dir, winslash = "/")
   withr::local_dir(dir)
   dir.create("sub")
 
