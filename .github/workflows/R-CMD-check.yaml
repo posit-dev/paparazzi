@@ -21,9 +21,9 @@ jobs:
         config:
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,   r: 'release'}
-          - {os: ubuntu-latest,   r: 'oldrel-1'}
+          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release', cpus: 2}
+          - {os: ubuntu-latest,   r: 'release', cpus: 2}
+          - {os: ubuntu-latest,   r: 'oldrel-1', cpus: 2}
           # Simulated CRAN: NOT_CRAN is false, so browser and system-tool
           # tests must skip; setup-cran-guard.R fails the run if they don't.
           - {os: ubuntu-latest,   r: 'release', cran: true}
@@ -32,8 +32,9 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
-      # Each test worker starts Chrome; shared runners can starve concurrent browsers.
-      TESTTHAT_CPUS: 1
+      # Each test worker starts Chrome; shared runners can starve concurrent
+      # browsers. Trial: 2 workers on ubuntu (4 vCPUs); watch flake rate.
+      TESTTHAT_CPUS: ${{ matrix.config.cpus || 1 }}
       # setup-r exports NOT_CRAN=true only when it is not already set, so the
       # as-cran jobs can override it here.
       NOT_CRAN: ${{ matrix.config.cran && 'false' || 'true' }}
