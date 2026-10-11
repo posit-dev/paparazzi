@@ -166,9 +166,10 @@ test_that("new-session Shiny waits anchor to the destination commit", {
 test_that("auto routes Shiny app files and shared handles to idle wait", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  app_file <- file.path(shiny_idle_fixture(), "app.R")
+  # App-file routing to the idle wait is covered by the recognized-names
+  # test; here the shared handle is the interesting arm.
   app <- local_shiny_app(shiny_idle_fixture())
-  for (x in list(app_file, app)) {
+  for (x in list(app)) {
     page <- pz_open(x, timeout = 5)
     expect_true(shiny_idle_state(page)$connected)
     expect_equal(shiny_idle_state(page)$text, "reactive ready")
@@ -211,19 +212,6 @@ test_that("pz_open owns an app started from a directory", {
   expect_no_error(pz_close(page))
 })
 
-test_that("pz_open owns an app.R file", {
-  skip_if_no_chrome()
-  skip_if_no_shiny()
-  dir <- withr::local_tempdir()
-  app_file <- file.path(dir, "app.R")
-  file.copy(shiny_app_fixture_file(), app_file)
-  page <- pz_open(app_file)
-  withr::defer(pz_close(page))
-  port <- as.integer(pz_js(page, "location.port"))
-  expect_true(app_port_reachable(port))
-  pz_close(page)
-  expect_true(wait_until(function() !app_port_reachable(port)))
-})
 
 test_that("a page opened on a handle does not own the app", {
   skip_if_no_chrome()
@@ -496,7 +484,7 @@ test_that("pz_open starts recognized Shiny app file names", {
   skip_if_no_chrome()
   skip_if_no_shiny()
   dir <- withr::local_tempdir()
-  for (f in c("app-main.R", "user_app.R")) {
+  for (f in c("app.R", "app-main.R", "user_app.R")) {
     path <- file.path(dir, f)
     file.copy(shiny_app_fixture_file(), path)
     page <- pz_open(path)

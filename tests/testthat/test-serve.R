@@ -9,16 +9,25 @@ test_that("pz_serve_shiny starts an app from a directory", {
 })
 
 test_that("pz_serve_shiny starts an app from an app file", {
-  app <- local_shiny_app(shiny_app_fixture_file())
+  # quiet = TRUE suppresses shiny's own banner but not the app's output.
+  app <- local_shiny_app(
+    shiny_app_fixture_file(),
+    shiny_options = list(quiet = TRUE)
+  )
 
   expect_true(app$is_running())
   expect_true(app_port_reachable(app$port))
   expect_true(any(grepl("PAPARAZZI_FIXTURE_APP_FILE", app$logs())))
+  expect_false(any(grepl("Listening on", app$logs(), fixed = TRUE)))
 })
 
 test_that("app stdout and stderr share readable logs mid-run and after stop", {
   app <- local_shiny_app(shiny_app_fixture_dir())
-  markers <- c("PAPARAZZI_FIXTURE_STDOUT", "PAPARAZZI_FIXTURE_STDERR")
+  markers <- c(
+    "PAPARAZZI_FIXTURE_STDOUT",
+    "PAPARAZZI_FIXTURE_STDERR",
+    "PAPARAZZI_FIXTURE_APP"
+  )
   has_markers <- function(logs) {
     all(vapply(
       markers,
@@ -42,18 +51,6 @@ test_that("envvars reach the app process", {
   )
 
   expect_true(any(grepl("marker: marker-123", app$logs(), fixed = TRUE)))
-})
-
-test_that("shiny_options are passed to runApp", {
-  # quiet = TRUE suppresses shiny's "Listening on" banner; the app must
-  # still start, proving readiness doesn't depend on log scraping.
-  app <- local_shiny_app(
-    shiny_app_fixture_dir(),
-    shiny_options = list(quiet = TRUE)
-  )
-
-  expect_true(app_port_reachable(app$port))
-  expect_false(any(grepl("Listening on", app$logs(), fixed = TRUE)))
 })
 
 test_that("appDir in shiny_options is rejected before an app process can start", {
@@ -108,14 +105,6 @@ test_that("stop shuts the app down and is idempotent", {
   expect_false(app$is_running())
   expect_no_error(app$stop())
   expect_true(wait_until(function() !app_port_reachable(port)))
-})
-
-test_that("logs stay readable after stop", {
-  skip_if_no_shiny()
-  app <- pz_serve_shiny(shiny_app_fixture_dir())
-  app$stop()
-
-  expect_true(any(grepl("PAPARAZZI_FIXTURE_APP", app$logs(), fixed = TRUE)))
 })
 
 test_that("withr::defer(app$stop()) cleans up on scope exit", {
@@ -191,6 +180,8 @@ test_that("new_app constructs even when its port already has a listener", {
 
 test_that("a child that dies from a taken port exhausts its retries", {
   skip_if_no_shiny()
+  # Two attempts prove the retry loop; the production default is five.
+  withr::local_options(paparazzi.serve.max_attempts = 2)
   err <- expect_error(
     pz_serve_shiny(shiny_app_fixture_port_taken(), timeout = 5),
     class = "paparazzi_error_app_startup",
