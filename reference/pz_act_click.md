@@ -94,23 +94,15 @@ or
 
 ``` r
 page <- pz_open(pz_example("tasks"))
-#> Error in startup(port = port, ...): Chrome debugging port not open after 10 seconds.
 page |> pz_act_click("#toggle-help")
-#> Error in pz_act_click(page, "#toggle-help"): `ctx` must be a paparazzi context (from `pz_open()` or `pz_find*()`),
-#> not a function.
 pz_get_text(page, target = "#toggle-help")
-#> Error in pz_get_text(page, target = "#toggle-help"): `ctx` must be a paparazzi context (from `pz_open()` or `pz_find*()`),
-#> not a function.
+#> [1] "Hide help"
 
 # In a scoped context, target = NULL clicks the scope element
 page |>
   pz_find(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank"))) |>
   pz_act_click()
-#> Error in pz_find(page, pz_loc(".task-done", within = pz_loc(".task", has_text = "bank"))): `ctx` must be a paparazzi context (from `pz_open()` or `pz_find*()`),
-#> not a function.
 pz_get_count(page, target = ".task.done")
-#> Error in pz_get_count(page, target = ".task.done"): `ctx` must be a paparazzi context (from `pz_open()` or `pz_find*()`),
-#> not a function.
+#> [1] 2
 pz_close(page)
-#> Error in pz_close(page): `page` must be a page from `pz_open()`.
 ```
