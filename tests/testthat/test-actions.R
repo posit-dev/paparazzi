@@ -1641,7 +1641,7 @@ test_that("pz_act_drag routes an HTML5 source through the drag pipeline", {
   expect_true(drops$isTrusted)
 })
 
-test_that("pz_act_drag glides the cursor while holding an HTML5 drag when recording", {
+test_that("a recorded HTML5 drag drops and rests the overlay on the target", {
   skip_if_no_av()
   page <- local_advanced_page()
   page |> pz_stage(pause = 0)
@@ -1653,6 +1653,7 @@ test_that("pz_act_drag glides the cursor while holding an HTML5 drag when record
     )
   defer_record_stop(page)
 
+  # Cursor pre-placed on the source: the carry, not the approach glide.
   page |> pz_cursor_move("#draggable", duration = 0)
   pz_act_drag(page, "#draggable", "#dropzone")
 
@@ -1675,7 +1676,7 @@ test_that("pz_act_drag glides the cursor while holding an HTML5 drag when record
   pz_record_stop(page)
 })
 
-test_that("pz_act_drag glides the cursor while holding a mouse drag when recording", {
+test_that("a recorded mouse drag drops and rests the overlay on the target", {
   skip_if_no_av()
   page <- local_advanced_page()
   page |> pz_stage(pause = 0)
@@ -1687,6 +1688,7 @@ test_that("pz_act_drag glides the cursor while holding a mouse drag when recordi
     )
   defer_record_stop(page)
 
+  # Cursor pre-placed on the source: the carry, not the approach glide.
   page |> pz_cursor_move("#dragbox", duration = 0)
   pz_act_drag(page, "#dragbox", "#dropzone")
 

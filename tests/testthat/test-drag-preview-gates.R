@@ -306,15 +306,12 @@ test_that('a timed-out capture cannot display or retain the source after late co
     'window.__previewController.source === null && window.__previewController.image === null'
   ))
   pz_js(page, 'window.__releasePreviewCapture()')
-  # Poll the completion count so the late capture provably landed before
-  # the negative assertions; a fixed pump would pass vacuously on a slow
-  # runner that simply hasn't run the regression path yet.
-  pz_poll(
-    function() isTRUE(pz_js(page, 'window.__previewCaptures') == 1),
-    timeout = 3,
-    loop = page$child_loop,
-    what = "the late capture to complete"
-  )
+  # The capture counter increments when toPng is called, before the
+  # promise, so no poll can prove the late continuation ran; the correct
+  # path is invisible by design. Give it an idle window: these negative
+  # assertions are only meaningful after the continuation had time to
+  # (wrongly) display or retain.
+  pump_loop(page$child_loop, 0.3)
   expect_true(drag_preview_absent(page))
   expect_true(pz_js(
     page,

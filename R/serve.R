@@ -455,7 +455,12 @@ app_start <- function(
   call = caller_env()
 ) {
   max_attempts <- getOption("paparazzi.serve.max_attempts", 5)
-  check_number_whole(max_attempts, min = 1)
+  check_number_whole(
+    max_attempts,
+    min = 1,
+    arg = "options(paparazzi.serve.max_attempts)",
+    call = call
+  )
   for (attempt in seq_len(max_attempts)) {
     port <- shiny_options$port %||% random_port()
     if (app_port_connectable(port)) {

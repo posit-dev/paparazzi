@@ -87,7 +87,9 @@ test_that("pz_record_start/stop record an mp4 with first/last holds", {
   info <- recorded_video_info(out)
   expect_equal(info$codec, "h264")
   expect_equal(info$framerate, 10)
-  # ~0.7s recorded + 0.5s + 1s holds
+  # ~0.7s recorded + 0.5s + 1s holds. The floor carries the hold contract
+  # (placement is covered frame-exactly by the explicit-hold tests); the
+  # ceiling is a stall guard only — CI measured 4.4s under runner load.
   expect_gte(info$duration, 2.0)
   expect_lte(info$duration, 5)
   # mp4 dimensions are multiples of 4
@@ -2390,8 +2392,9 @@ test_that("screencast holds the last frame on an idle page", {
   # Chrome may re-send an unchanged frame (a late acknowledgement), so the
   # idle contract is content, not cadence: frames captured while the page
   # sits still repeat the same pixels, and only a handful arrive -- a
-  # leaked capture chain would produce a steady stream. The bound keeps
-  # a generous margin over Chrome's re-sends; the pixels are the contract.
+  # leaked capture chain would produce a steady stream of them. The count
+  # bound is the leak check (with margin over Chrome's re-sends); the
+  # pixel loop below only confirms the frames that arrive are unchanged.
   idle <- tail(rec$files, -before)
   expect_lte(length(idle), 4L)
   for (file in idle) {

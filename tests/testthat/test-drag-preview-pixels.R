@@ -437,9 +437,10 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
   })
   carry <- boxes[seq_len(first_settle_frame - 1L)]
   carry <- Filter(Negate(is.null), carry)
-  # A mid-flight frame sits strictly between the source row and the
-  # resting spot one row up; bounding by the resting y (not the target's)
-  # keeps a settled frame from satisfying the predicate vacuously.
+  # A passing frame must be genuinely mid-flight: strictly between the
+  # source row and the resting spot one row up. Bounding by the resting
+  # y (not the target's) excludes end-of-carry frames already parked at
+  # the resting row.
   expect_true(any(vapply(
     carry,
     function(box) {

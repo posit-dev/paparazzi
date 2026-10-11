@@ -36,7 +36,9 @@ fixture_server <- function(path) {
 }
 
 fixture_roots <- function() {
-  roots <- mget("roots", envir = the_fixture_servers, ifnotfound = list(NULL))[[1]]
+  roots <- mget("roots", envir = the_fixture_servers, ifnotfound = list(NULL))[[
+    1
+  ]]
   if (is.null(roots)) {
     roots <- normalizePath(
       c(test_path("fixtures"), dirname(pz_example("tasks"))),
