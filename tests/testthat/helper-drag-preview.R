@@ -129,7 +129,6 @@ drag_preview_retained_checkpoint <- function(page, verify = NULL, timeout = 3) {
   result$path
 }
 
-
 # Count the real library call, not just controller creation. In unsafe cases the
 # wrapper must remain uncalled: failing after capture is a privacy failure.
 drag_preview_counted_boot <- function(boot, replacement = NULL) {

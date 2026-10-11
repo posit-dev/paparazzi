@@ -42,7 +42,6 @@ test_that("the retained-pixel instrument distinguishes the task marker color", {
   expect_true(file.exists(path))
 })
 
-
 test_that('disabled previews retain the original marker but never carry it', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
@@ -88,7 +87,6 @@ test_that('disabled previews retain the original marker but never carry it', {
   pz_record_stop(page)
   expect_true(file.exists(carried))
 })
-
 
 test_that('retained carry and settle pixels follow the same task row for to and by', {
   skip_if_no_av()
@@ -397,7 +395,6 @@ test_that('retained carry and settle pixels follow the same task row for to and 
   }
 })
 
-
 test_that('the unpaused production path records carry and a one-row-up settle', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
@@ -468,7 +465,6 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
   pz_record_stop(page)
   expect_true(file.exists(out))
 })
-
 
 test_that('a loaded local font and image survive the production drag carry', {
   skip_if_no_av()
@@ -623,7 +619,6 @@ test_that('a loaded local font and image survive the production drag carry', {
   pz_record_stop(page)
   expect_true(file.exists(carried))
 })
-
 
 test_that('content-box captures preserve the measured border box and far-edge pixels', {
   skip_if_no_av()

@@ -98,7 +98,6 @@ test_that('redaction rejects unsafe capture before the library while preserving 
   }
 })
 
-
 test_that('optional capture, decode, show, move and settle failures warn once and keep the drop', {
   skip_if_no_av()
   check_failure <- function(method) {
@@ -200,7 +199,6 @@ test_that('optional capture, decode, show, move and settle failures warn once an
     check_failure(method)
   }
 })
-
 
 test_that('unsafe font stylesheets skip capture without mutations or changing the native drop', {
   skip_if_no_av()
@@ -314,7 +312,6 @@ test_that('unsafe font stylesheets skip capture without mutations or changing th
   }
 })
 
-
 test_that('dragstart transforms and filters deliberately disable the captured preview, not the drop', {
   skip_if_no_av()
   check_footprint <- function(property) {
@@ -401,7 +398,6 @@ test_that('dragstart transforms and filters deliberately disable the captured pr
     check_footprint(property)
   }
 })
-
 
 test_that('a real missing local image disables capture without blocking the drag', {
   skip_if_no_av()
@@ -498,7 +494,6 @@ test_that('a real missing local image disables capture without blocking the drag
   expect_false(page_cursor(page)$pressed)
   pz_record_stop(page)
 })
-
 
 test_that('SVG use and iframe skip capture before copying outside the source subtree', {
   skip_if_no_av()
@@ -602,7 +597,6 @@ test_that('SVG use and iframe skip capture before copying outside the source sub
   # iframe contentDocument.body also lies outside the source-document subtree.
   check_use(FALSE, iframe = TRUE)
 })
-
 
 test_that('unknown preview failures preserve literal messages and omit multiline stacks', {
   message <- 'unfamiliar {value} at the source\n    at prepare (<anonymous>:1:2)\n    at run (<anonymous>:3:4)'

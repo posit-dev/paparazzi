@@ -14,7 +14,6 @@ test_that('preview is named-only and validates a single nonmissing boolean', {
   )
 })
 
-
 test_that('ineligible drags do not boot the preview or call the library', {
   skip_if_no_av()
   check_gate <- function(gate) {
@@ -70,7 +69,6 @@ test_that('ineligible drags do not boot the preview or call the library', {
   }
 })
 
-
 test_that('file pages explain unreadable stylesheets and link to drag preview help', {
   skip_if_no_av()
   page <- local_page(
@@ -121,7 +119,6 @@ test_that('file pages explain unreadable stylesheets and link to drag preview he
     'document.querySelectorAll(".task")[1] === window.__previewSource'
   ))
 })
-
 
 test_that('real carry errors and interrupts propagate unchanged despite failing cleanup', {
   skip_if_no_av()
@@ -190,7 +187,6 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
   check_unwind(TRUE)
 })
 
-
 test_that('failed interception disposes the prepared image without displaying it', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
@@ -245,7 +241,6 @@ test_that('failed interception disposes the prepared image without displaying it
   expect_false(page_cursor(page)$pressed)
   pz_record_stop(page)
 })
-
 
 test_that('a timed-out capture cannot display or retain the source after late completion', {
   skip_if_no_av()
@@ -318,7 +313,6 @@ test_that('a timed-out capture cannot display or retain the source after late co
   pz_record_stop(page)
 })
 
-
 test_that('settling never guesses a replacement row or an unrendered source box', {
   skip_if_no_av()
   check_skip <- function(mutation) {
@@ -369,7 +363,6 @@ test_that('settling never guesses a replacement row or an unrendered source box'
     check_skip(mutation)
   }
 })
-
 
 test_that('a source that gains an iframe after the drop loses its preview silently', {
   skip_if_no_av()
