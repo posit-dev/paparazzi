@@ -2494,6 +2494,49 @@ annotation_badge_rects <- function(page) {
   )
 }
 
+# Poll-timeout forensics: report the page state the badge polls depend on, so
+# a platform-only timeout names what actually held instead of just naming it.
+badge_edge_diagnostics <- function(page) {
+  pz_js(
+    page,
+    paste0(
+      "(() => { const t = document.getElementById('edge');",
+      "const tr = t ? t.getBoundingClientRect() : null;",
+      "const root = document.querySelector('#paparazzi-overlay-root');",
+      "const badge = root && root.shadowRoot ? root.shadowRoot.querySelector('.pz-annotation span') : null;",
+      "const br = badge ? badge.getBoundingClientRect() : null;",
+      "return 'innerWidth=' + innerWidth +",
+      "' clientWidth=' + document.documentElement.clientWidth +",
+      "' scrollWidth=' + document.documentElement.scrollWidth +",
+      "' scrollY=' + window.scrollY +",
+      "' dpr=' + devicePixelRatio +",
+      "' zoom=' + getComputedStyle(document.documentElement).zoom +",
+      "' target=[' + (tr ? [tr.left, tr.right, tr.top].join(',') : 'missing') + ']' +",
+      "' badge=' + (badge ?",
+      "'style(left=' + badge.style.left + ' top=' + badge.style.top +",
+      "' cssWidth=' + getComputedStyle(badge).width +",
+      "' display=' + getComputedStyle(badge).display +')' +",
+      "' rect(left=' + br.left + ' width=' + br.width + ' top=' + br.top + ')' :",
+      "'missing'); })()"
+    )
+  )
+}
+
+# Run a placement poll and, when it times out, fail with the page state the
+# predicate was working against.
+expect_poll_badge <- function(page, predicate, what) {
+  tryCatch(
+    pz_poll(predicate, timeout = 5, loop = page$child_loop, what = what),
+    paparazzi_error_timeout = function(e) {
+      testthat::fail(paste(
+        conditionMessage(e),
+        badge_edge_diagnostics(page),
+        sep = "\n"
+      ))
+    }
+  )
+}
+
 local_clipped_badge_page <- function(.env = parent.frame()) {
   page <- local_page(.env = .env)
   pz_js(
@@ -2997,45 +3040,41 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
     }
   }
   pz_js(page, "document.getElementById('edge').style.left='calc(100vw - 30px)'")
-  pz_poll(
+  expect_poll_badge(
+    page,
     at_right_edge(1000),
-    timeout = 5,
-    loop = page$child_loop,
-    what = "the badge to reach its right-edge viewport placement"
+    "the badge to reach its right-edge viewport placement"
   )
   page |> pz_device(width = 600, height = 400)
-  pz_poll(
+  expect_poll_badge(
+    page,
     at_right_edge(600),
-    timeout = 5,
-    loop = page$child_loop,
-    what = "the badge to follow the resized viewport edge"
+    "the badge to follow the resized viewport edge"
   )
   pz_js(
     page,
     "document.getElementById('edge').style.left='300px'; document.body.style.height='1200px'; window.scrollTo(0,250)"
   )
-  pz_poll(
+  expect_poll_badge(
+    page,
     function() {
       sync_badges()
       abs(annotation_badge_rects(page)[[1]]$top) < 0.001
     },
-    timeout = 5,
-    loop = page$child_loop,
-    what = "the scrolled target's badge to stay at the viewport top"
+    "the scrolled target's badge to stay at the viewport top"
   )
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   expect_viewport_badge(page, path, 300, 0, reference)
   pz_js(page, "window.scrollTo(0,0)")
-  pz_poll(
+  expect_poll_badge(
+    page,
     function() {
       sync_badges()
       abs(annotation_badge_rects(page)[[1]]$top - (250 - reference$height)) <
         0.001
     },
-    timeout = 5,
-    loop = page$child_loop,
-    what = "the badge to return to its preferred above-mark anchor"
+    "the badge to return to its preferred above-mark anchor"
   )
 })
 
@@ -3061,14 +3100,13 @@ test_that("badges reposition themselves when targets move and scroll", {
       "px'"
     )
   )
-  pz_poll(
+  expect_poll_badge(
+    page,
     function() {
       badge <- annotation_badge_rects(page)[[1]]
       isTRUE(abs(badge$left + badge$width - (client_width - 1 / 64)) < 0.001)
     },
-    timeout = 5,
-    loop = page$child_loop,
-    what = "the badge to follow its moved target to the viewport edge"
+    "the badge to follow its moved target to the viewport edge"
   )
   badge <- annotation_badge_rects(page)[[1]]
   expect_equal(
@@ -3086,13 +3124,12 @@ test_that("badges reposition themselves when targets move and scroll", {
       "window.scrollTo(0,250)"
     )
   )
-  pz_poll(
+  expect_poll_badge(
+    page,
     function() {
       isTRUE(abs(annotation_badge_rects(page)[[1]]$top) < 0.001)
     },
-    timeout = 5,
-    loop = page$child_loop,
-    what = "the scrolled target's badge to stay at the viewport top"
+    "the scrolled target's badge to stay at the viewport top"
   )
   badge <- annotation_badge_rects(page)[[1]]
   expect_equal(c(badge$left, badge$top), c(300, 0), tolerance = 0.001)
