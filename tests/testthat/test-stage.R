@@ -779,12 +779,8 @@ test_that("the stage pause holds after focus and root or scoped blur", {
 
   page |> pz_record_stop()
 
+  # Not recording: no pause pumps at all (the mock above still stands).
   pauses <- numeric()
-  local_mocked_bindings(
-    pump_loop = function(loop, duration, ...) {
-      pauses <<- c(pauses, duration)
-    }
-  )
   page |> pz_act_focus("#name")
   page |> pz_act_blur()
   field |> pz_act_focus()

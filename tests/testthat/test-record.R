@@ -71,13 +71,13 @@ test_that("pz_record_start/stop record an mp4 with first/last holds", {
   expect_false(start$visible)
   expect_identical(start$value$page, page)
 
-  # Seven frames at 10 fps give the recording the ~0.6s of real content
+  # Eight frames at 10 fps give the recording the ~0.7s of real content
   # the duration floor checks on top of the holds.
   pz_poll(
-    function() length(page_recorder(page)$files) >= 7L,
+    function() length(page_recorder(page)$files) >= 8L,
     timeout = 5,
     loop = page$page$child_loop,
-    what = "seven frames before the stop"
+    what = "eight frames before the stop"
   )
   stop <- withVisible(pz_record_stop(page))
   expect_false(stop$visible)
@@ -2722,14 +2722,18 @@ test_that("screencast encodes framed, scaled webm and gif outputs", {
       scale = 0.5
     )
     defer_record_stop(page)
-    # The webm branch asserts a real 10 fps timeline: stopping right
-    # after the initial screencast frame encodes a one-frame video that
-    # reads as 1000 fps, so wait for a frame at least 0.2s in.
+    # The webm branch asserts a real 10 fps timeline: stopping after
+    # one frame encodes a one-frame video that reads as 1000 fps, so
+    # wait for a 0.2s span between frames (a single late frame would
+    # pass an absolute-time poll but still encode alone).
     pz_poll(
-      function() any(page_recorder(page)$times >= 0.2),
+      function() {
+        times <- page_recorder(page)$times
+        length(times) >= 2L && diff(range(times)) >= 0.2
+      },
       timeout = 5,
       loop = page$page$child_loop,
-      what = "a screencast frame at least 0.2s into the recording"
+      what = "screencast frames spanning at least 0.2s"
     )
     pz_record_stop(page)
     info <- recorded_video_info(out)
