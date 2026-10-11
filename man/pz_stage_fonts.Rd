@@ -52,7 +52,9 @@ the page directly.
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
-  pz_stage_fonts(pz_font_google("Silkscreen")) |>
+  # on_error = "warn" keeps unattended renders (CI, pkgdown) going when
+  # the font CDN is unreachable; drop it to make a missing font fatal.
+  pz_stage_fonts(pz_font_google("Silkscreen"), on_error = "warn") |>
   # font_family takes a CSS family string; use the staged family with
   # a generic fallback
   pz_stage_annotate(font_family = '"Silkscreen", sans-serif') |>
