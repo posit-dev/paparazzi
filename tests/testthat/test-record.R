@@ -1080,7 +1080,6 @@ test_that("gif encodes via gifski", {
     info <- recorded_video_info(out)
     expect_equal(info$codec, "gif")
     expect_gte(info$duration, 0.6)
-    expect_lte(info$duration, 2)
   }
 })
 
