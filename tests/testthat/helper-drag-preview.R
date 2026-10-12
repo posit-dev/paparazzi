@@ -74,11 +74,13 @@ drag_preview_marker_box <- function(
 
 # Verifiers for drag_preview_retained_checkpoint(): does a retained frame show
 # the marker in `color` at `point`, anywhere, or nowhere at all?
+# Verify tighter than the pixel assertions (1.5px) so a verified frame
+# can't fail them on the margin.
 drag_preview_marker_at <- function(
   page,
   point,
   color = c(8, 200, 80),
-  tolerance = 2
+  tolerance = 1
 ) {
   point <- unlist(point)
   function(path) {
@@ -100,7 +102,13 @@ drag_preview_marker_absent <- function(page, color = c(8, 200, 80)) {
 # until the recorder writes a frame beyond `before` and, when `verify` is set,
 # until that frame's content matches, so a slow runner cannot hand back a
 # frame captured before the DOM state the caller just created.
-drag_preview_retained_checkpoint <- function(page, verify = NULL, timeout = 3) {
+# The 10s budget covers starved runners: each verify is a canvas-decode
+# round-trip (~1s under contention) and stale-but-late frames consume polls.
+drag_preview_retained_checkpoint <- function(
+  page,
+  verify = NULL,
+  timeout = 10
+) {
   before <- length(page_recorder(page)$files)
   fresh <- function() {
     files <- page_recorder(page)$files

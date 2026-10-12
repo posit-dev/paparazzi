@@ -398,7 +398,9 @@ test_that('retained carry and settle pixels follow the same task row for to and 
 test_that('the unpaused production path records carry and a one-row-up settle', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
-  pz_stage(page, pause = 0, cursor_speed = 120)
+  # Slow carry (glide clamps at 2s): the mid-flight assertion needs screencast
+  # frames during the carry even when a starved runner delivers them late.
+  pz_stage(page, pause = 0, cursor_speed = 40)
   drag_preview_task_marker(page)
   out <- withr::local_tempfile(fileext = '.mp4')
   frames <- paste0(tools::file_path_sans_ext(out), '_frames')
