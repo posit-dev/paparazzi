@@ -26,7 +26,7 @@ demo <- pz_open(
   height = 720,
   color_scheme = "light"
 )
-demo |> pz_stage(enter = "bottom", pause = 0.3)
+demo <- demo |> pz_stage(enter = "bottom", pause = 0.3)
 fern <- pz_loc(".task", has_text = "Repot the fern")
 
 demo |>
@@ -110,9 +110,7 @@ page |>
     )
   )
 
-page |>
-  pz_annotate_clear() |>
-  pz_stage_annotate(font_family = NULL)
+page |> pz_annotate_clear()
 ```
 
 **Actions** like `pz_act_type()` and `pz_act_click()` use the page the way a person using it would, with real mouse and keyboard events. Each action takes the page first and returns it, so a script reads as one chain of steps joined by `|>`. Let's add a new task, **Repot the fern**, by typing it into the title field and clicking Add:
@@ -191,12 +189,12 @@ The steps are the ones we ran before, but in the recording it looks as though a 
 
 paparazzi calls these animations **staging**: the cursor moving between elements, paparazzi typing one character at a time, and the pauses between steps. paparazzi stages steps only while it records. When we ran the same steps earlier, outside a recording, paparazzi skipped the animations and ran them at full speed.
 
-`pz_stage()` changes how paparazzi stages steps. It can set where the cursor enters, how fast it moves, how big it is, how fast paparazzi types, and how long to pause after each step. Some functions also take a setting for a single step, like `duration` in `pz_cursor_move()` or `effect` in `pz_act_click()`, for complete control. But `pz_stage()` is the best way to set them once for every step, and the settings last until you change them.
+`pz_stage()` changes how paparazzi stages steps. It can set where the cursor enters, how fast it moves, how big it is, how fast paparazzi types, and how long to pause after each step. Some functions also take a setting for a single step, like `duration` in `pz_cursor_move()` or `effect` in `pz_act_click()`, for complete control. But `pz_stage()` is the best way to set them once for every step.
 
-For the final video, the cursor will glide in from the bottom of the frame, and each step will pause for 0.3 seconds so we don't lose our viewers between steps:
+Staged settings belong to the chain, not the page. `pz_stage()` hands them to the next step, and each step passes them on; a new chain from `page` starts from the defaults again. To keep the same settings for every chain, assign the staged page and start each chain from it. For the final video, the cursor will glide in from the bottom of the frame, and each step will pause for 0.3 seconds so we don't lose our viewers between steps:
 
 ```{r}
-page |> pz_stage(enter = "bottom", pause = 0.3)
+page <- page |> pz_stage(enter = "bottom", pause = 0.3)
 ```
 
 ## Frame the shot
@@ -279,7 +277,7 @@ page |>
   )
 ```
 
-The ring is crimson unless you pass a CSS color as `effect_color`, and `effect = "none"` turns click feedback off. To change every click on the page, set `pz_stage(click_effect = "ring")`, and `click_effect_color` for the ring's color.
+The ring is crimson unless you pass a CSS color as `effect_color`, and `effect = "none"` turns click feedback off. To change every click on the page, assign a staged page: `page <- page |> pz_stage(click_effect = "ring")`, with `click_effect_color` for the ring's color.
 
 ## Work in one part of the page
 

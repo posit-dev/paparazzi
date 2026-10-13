@@ -139,11 +139,12 @@ For your own app, give `pz_local_page()` the path to the app's directory. To sha
 
 ## Record a demo
 
-You record a Shiny app the same way as any other page. Here, we'll stage the page so the cursor glides in from the left and each step pauses for 0.4 seconds, then wrap the steps in `pz_record()`:
+You record a Shiny app the same way as any other page. Here, we'll stage the page so the cursor glides in from the left and each step pauses for 0.4 seconds, then wrap the steps in `pz_record()`. Assigning the staged page is what carries the settings into the recording:
 
 ```{r, fig.alt = "A cursor glides to the title input, types Water the plants, and clicks Add. The task count changes from 4 to 5 and the new task appears at the end of the list."}
+page <- page |> pz_stage(enter = "left", pause = 0.4)
+
 page |>
-  pz_stage(enter = "left", pause = 0.4) |>
   pz_record(
     code = {
       page |>

@@ -49,7 +49,7 @@ card <- pz_frame("main", pad = 12, when = "start") # [3] Frame the card
 
    The viewport is 800 by 900 pixels with the light color scheme, and each section records at the same frame rate and size, so the three videos match.
 
-2. `pz_stage()` sets how paparazzi stages every step on this page: the cursor glides in from the top when it first appears, and each step pauses for 0.2 seconds, so the viewer can keep up.
+2. `pz_stage()` stages every step: the cursor glides in from the top when it first appears, and each step pauses for 0.2 seconds, so the viewer can keep up. Assigning the staged page back to `page` keeps these settings for every chain that starts from it.
 
 3. `card` frames the recordings on the task tracker's card. With `when = "start"`, paparazzi measures the card when each recording starts, so the frame stays put while the list changes. The last section uses its own frame, for a reason we'll get to.
 
@@ -138,19 +138,17 @@ page |>
 
 paparazzi shows one caption at a time. Each call to `pz_annotate_caption()` replaces the caption on screen, and while recording, the old caption fades out as the new one appears. That makes it easy to give each step its own caption, so the caption always describes what the viewer is watching. The steps fall into four groups:
 
-1. **Slow down.** `pz_stage()` slows the cursor to 350 pixels per second and typing to 10 characters per second, and pauses 0.6 seconds after each step instead of 0.2. Staged settings stay on the page until we change them, so we'll restore the faster pace after this section.
+1. **Slow down.** `pz_stage()` slows the cursor to 350 pixels per second and typing to 10 characters per second, and pauses 0.6 seconds after each step instead of 0.2. Staged settings belong to the chain, so the slowdown lasts to the end of this chunk and the next section returns to the pace we staged on `page` at the start.
 2. **Rename a task.** `pz_find()` narrows the chain to the dentist task, so `.task-edit` and `.task-title` mean that task's Edit button and title. Clicking Edit makes the title editable, and `pz_act_select_text()` selects the word "dentist". `pz_find_reset()` returns to the whole page before typing: with a scope, `pz_act_type()` would click the task first and lose the selection. Without a target, it types into the focused title, replacing the selected word, and Enter saves the new title.
 3. **Reorder the list.** `pz_annotate_spotlight()` dims everything but the list, drawing the viewer's attention to the drag action. `pz_act_drag()` drags "Water the plants" onto "File tax return", using the same mouse input a person would. While paparazzi records, the cursor carries an image of the task as it glides. The spotlight's id is always `"spotlight"`, so `pz_annotate_clear(id = "spotlight")` removes it once the task lands.
 4. **Finish a task.** `pz_find()` narrows the chain again so `.task-done` means the tax task's Done button. Then a click on the Open filter hides finished tasks, and `pz_expect_visible()` checks that "Water the plants" is still in the list.
 
 This section never moves the camera. The list fits in the frame, and the spotlight already shows the viewer where to look. Use the camera when the action is too small to see, not for every step.
 
-Before the next section, we'll clear the annotations and return to the pace we set at the start:
+Before the next section, we'll clear the annotations:
 
 ```{r}
-page |>
-  pz_annotate_clear() |>
-  pz_stage(cursor_speed = NULL, typing_speed = NULL, pause = 0.2)
+page |> pz_annotate_clear()
 ```
 
 ## Hide private details

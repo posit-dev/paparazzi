@@ -94,7 +94,7 @@ page |> pz_annotate_clear()
 
 `pad` grows the mark beyond the element's box, with one number for all sides or `c(top, right, bottom, left)`. `color` sets the outline and badge to any CSS color, and `stroke_width` sets the outline's thickness in CSS pixels. `font_family` and `font_size` style the badge text.
 
-paparazzi fills each badge with the mark's color and writes its text in white; `label_fill` and `label_text_color` change that for one call. When you leave out the color, stroke width, or fonts, paparazzi uses the page's defaults, which you can change with `pz_stage_annotate()`, as [Styling defaults] explains.
+paparazzi fills each badge with the mark's color and writes its text in white; `label_fill` and `label_text_color` change that for one call. When you leave out the color, stroke width, or fonts, paparazzi uses the staged defaults, which you can change with `pz_stage_annotate()`, as [Styling defaults] explains.
 
 Here, an amber highlight covers the title field, and a blue box with a monospace badge fits snugly around the Add button:
 
@@ -275,7 +275,7 @@ The second `id = "mark"` call replaced the box around the title field, so only t
 
 ## Styling defaults
 
-`pz_stage_annotate()` sets your annotation styles once for every later annotation on the page. It sets the color, stroke width, font family, and badge size for every annotation, the bubble colors and distance for callouts, and the side for captions. Arguments to individual annotation functions override these defaults for that call.
+`pz_stage_annotate()` sets your annotation styles once for the annotations that follow it in a chain. It sets the color, stroke width, font family, and badge size for every annotation, the bubble colors and distance for callouts, and the side for captions. Arguments to individual annotation functions override these defaults for that call. To use the same styles across chains, assign the staged page (`page <- page |> pz_stage_annotate(...)`) and start each chain from it.
 
 Let's make later annotations blue, with large monospace badges:
 
@@ -292,17 +292,10 @@ page |>
   )
 ```
 
-Staged styles stay on the page until you change them. Passing `NULL` restores a default: crimson (`#e11d48`) marks with 3 pixel lines, sans-serif badges with 14 pixel text, callouts filled with their accent color, 24 pixels from their element (8 without a line), and captions at the bottom. We'll clear the box and restore the defaults:
+Staged styles last to the end of the chain, so the blue monospace styling above applied to that chain alone. Within a chain, passing `NULL` restores a default for the rest of it: crimson (`#e11d48`) marks with 3 pixel lines, sans-serif badges with 14 pixel text, callouts filled with their accent color, 24 pixels from their element (8 without a line), and captions at the bottom. We'll clear the box:
 
 ```{r}
 page |> pz_annotate_clear()
-
-page |>
-  pz_stage_annotate(
-    color = NULL,
-    font_family = NULL,
-    font_size = NULL
-  )
 ```
 
 Callout bubbles and their badges follow the callout's `color` unless you set `fill` per call or with `pz_stage_annotate()`. paparazzi chooses black or white text for the higher WCAG contrast ratio against the fill unless you set `text_color` per call or in staging. Staging `fill = NULL` and `text_color = NULL` restores these defaults. Mark badges follow their mark's color unless you pass `label_fill` or `label_text_color`.
@@ -311,7 +304,7 @@ Callout bubbles and their badges follow the callout's `color` unless you set `fi
 
 A `font_family` string names a font that Chrome can already find, like a generic family such as `"monospace"` or a font installed on the machine running Chrome. To use a web font, you first load it into the page with `pz_stage_fonts()`. You describe the font with `pz_font_google()`, `pz_font_bunny()`, or, for a font file on disk, `pz_font_file()`. `pz_stage_fonts()` waits until the font has loaded, so paparazzi never draws an annotation in a fallback font while the font downloads.
 
-A handwritten font makes a callout look like a note written over the screenshot. We'll stage Patrick Hand from Google Fonts and make it the default for later annotations:
+A handwritten font makes a callout look like a note written over the screenshot. We'll stage Patrick Hand from Google Fonts and make it the default for the annotations that follow:
 
 ```{r web-font, fig.alt = "The new-task form with a crimson callout below the attachment field, pointing up at it and reading Optional: attach a file in a handwritten font."}
 hand <- pz_font_google("Patrick Hand")
@@ -328,14 +321,12 @@ page |>
   )
 ```
 
-You can pass the font object anywhere `font_family` takes a string, as long as you've staged it on the page. It stands for the CSS font family `'"Patrick Hand", sans-serif'`, so the browser falls back to sans-serif for characters the font lacks. Captions and keystroke callouts use the staged `font_family` too, and staged fonts stay with the page when it navigates to a new document.
+You can pass the font object anywhere `font_family` takes a string, as long as you've staged it on the page. It stands for the CSS font family `'"Patrick Hand", sans-serif'`, so the browser falls back to sans-serif for characters the font lacks. Captions and keystroke callouts use the staged `font_family` too. Note the two kinds of staging here: the font itself loads into the page and stays when it navigates to a new document, while the `font_family` default rides the chain like any staged style.
 
 Chrome downloads Google and Bunny fonts, so staging them needs a network connection. `pz_font_file()` reads the font file in R, so it works offline.
 
 ```{r}
-page |>
-  pz_annotate_clear() |>
-  pz_stage_annotate(font_family = NULL, font_size = NULL)
+page |> pz_annotate_clear()
 ```
 
 ## Framing stills
@@ -394,7 +385,7 @@ The recording chain ends the chunk, so paparazzi stops the recording and adds it
 
 ## Keystroke callouts
 
-`pz_act_press()` can show the keys it presses as keycaps, a callout that paparazzi draws only in recordings. Set [`show_keys`](../reference/pz_act_press.html) to choose how the keycaps look: `"words"` spells out modifier names, `"mac"` uses Mac symbols, and `"both"` shows `Mod` as `Ctrl / ⌘`. The default is `"none"`, and [`pz_stage(show_keys = ...)`](../reference/pz_stage.html) changes it for every later key press on the page.
+`pz_act_press()` can show the keys it presses as keycaps, a callout that paparazzi draws only in recordings. Set [`show_keys`](../reference/pz_act_press.html) to choose how the keycaps look: `"words"` spells out modifier names, `"mac"` uses Mac symbols, and `"both"` shows `Mod` as `Ctrl / ⌘`. The default is `"none"`, and [`pz_stage(show_keys = ...)`](../reference/pz_stage.html) changes it for the key presses that follow it in the chain.
 
 The task tracker adds a task when you press Enter in the title field, so we'll show Enter with Mac symbols:
 
