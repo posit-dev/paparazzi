@@ -39,6 +39,11 @@
 
 ## Browser Test Reliability
 
+These rules serve the failure-interpretability principle in
+`.agents/TESTING.md`: a test is worth keeping only if its failure names
+the problem. Use that file when writing tests and when auditing the
+suite for flakes.
+
 1. **Poll for the asserted condition; never pump a fixed duration and then
    assert arrival.** Reserve fixed `pump_loop()` windows for idle time; when
    later assertions require something to have arrived, poll with
