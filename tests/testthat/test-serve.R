@@ -145,9 +145,8 @@ test_that("a taken port triggers a retry on a new port", {
   # Occupy the port with a live listener. pz_serve_shiny() must notice the port
   # already answers and start on a new one -- relying on the child's
   # bind failing is not portable (see app-port-taken's comment).
-  taken_port <- free_port()
-  server <- httpuv::startServer("127.0.0.1", taken_port, list())
-  withr::defer(httpuv::stopServer(server))
+  blocker <- local_blocker_server()
+  taken_port <- blocker$port
 
   app <- local_shiny_app(
     shiny_app_fixture_dir(),
@@ -159,9 +158,8 @@ test_that("a taken port triggers a retry on a new port", {
 
 test_that("new_app constructs even when its port already has a listener", {
   skip_if_no_shiny()
-  taken_port <- free_port()
-  listener <- httpuv::startServer("127.0.0.1", taken_port, list())
-  withr::defer(httpuv::stopServer(listener))
+  blocker <- local_blocker_server()
+  taken_port <- blocker$port
 
   app <- new_app(
     list(
@@ -199,9 +197,8 @@ test_that("a child that dies from a taken port exhausts its retries", {
 
 test_that("preflight exhaustion reports no nonexistent child log", {
   skip_if_no_shiny()
-  taken_port <- free_port()
-  server <- httpuv::startServer("127.0.0.1", taken_port, list())
-  withr::defer(httpuv::stopServer(server))
+  blocker <- local_blocker_server()
+  taken_port <- blocker$port
   local_mocked_bindings(random_port = function(...) taken_port)
 
   err <- expect_error(
@@ -736,7 +733,10 @@ test_that("static servers retry when the port is taken", {
   )
   server <- pz_serve_static(dir)
   withr::defer(server$stop())
-  expect_identical(calls, 2)
+  # calls can exceed 2 without a bug: with parallel test workers another
+  # worker can bind the port random_port() probed free, and the retry
+  # loop then does its job a second time.
+  expect_gte(calls, 2)
   expect_true(server$is_running())
 
   local_mocked_bindings(

@@ -24,6 +24,25 @@ shiny_app_fixture_port_taken <- function() {
   test_path("fixtures", "shiny-app-lifecycle", "app-port-taken")
 }
 
+# A live httpuv server occupying a port, for tests that need a taken
+# port. Retries the pick+bind pair: with parallel test workers, a port
+# free_port() probed as free can be bound by another worker before this
+# worker's startServer() lands.
+local_blocker_server <- function(.env = parent.frame()) {
+  for (i in 1:20) {
+    port <- free_port()
+    server <- tryCatch(
+      httpuv::startServer("127.0.0.1", port, list()),
+      error = function(e) NULL
+    )
+    if (!is.null(server)) {
+      withr::defer(httpuv::stopServer(server), envir = .env)
+      return(list(port = port, server = server))
+    }
+  }
+  testthat::skip("could not bind a blocker port")
+}
+
 # A port nothing is listening on, found by trial bind. Used to hand
 # httpuv a known-free port when a test needs to occupy one.
 free_port <- function() {
