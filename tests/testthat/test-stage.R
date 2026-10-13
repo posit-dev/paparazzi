@@ -1034,8 +1034,8 @@ test_that("recorded demo glides, types, and scrolls on camera", {
     pz_stage(enter = "left", typing_speed = 6) |>
     pz_record_start(out, fps = 15, hold = c(0, 0.2), keep_frames = TRUE)
 
-  # The recorder's first capture is its slowest (cold renderer on a fresh
-  # page); the entrance glide must be sampled by a warm pipeline.
+  # The recorder's first capture is its slowest (cold renderer on a
+  # fresh page); warm the pipeline before the actions begin.
   rec <- page_recorder(page)
   pz_poll(
     function() length(rec$files) >= 1L,
@@ -1046,7 +1046,44 @@ test_that("recorded demo glides, types, and scrolls on camera", {
 
   page |>
     pz_act_click("#btn") |>
-    pz_act_type("otters", target = "#name") |>
+    pz_act_type("otters", target = "#name")
+
+  # The cursor rests at the button through typing, so wait until a
+  # retained frame carries its ink at the landing point before moving
+  # on. The glide's schedule and off-frame start are pinned by the
+  # overlay-level entrance tests in test-cursor.R; sampling ink
+  # mid-glide would race the capture pump against the animation's
+  # wall clock, and a failure would implicate the test's own timing
+  # rather than the product.
+  scanned <- 0L
+  pz_poll(
+    function() {
+      if (length(rec$files) <= scanned) {
+        return(FALSE)
+      }
+      fresh <- rec$files[seq.int(scanned + 1L, length(rec$files))]
+      scanned <<- length(rec$files)
+      any(vapply(
+        fresh,
+        function(f) {
+          ink <- tryCatch(
+            cursor_png_ink(page, f, band = c(300, 344), x_range = c(635, 700)),
+            error = function(e) NULL
+          )
+          !is.null(ink) &&
+            ink$count > 20 &&
+            abs(ink$x - 660) < 25 &&
+            abs(ink$y - 322) < 20
+        },
+        logical(1)
+      ))
+    },
+    timeout = 5,
+    loop = page$page$child_loop,
+    what = "cursor ink at the button in a retained frame"
+  )
+
+  page |>
     pz_act_click("#below") |>
     pz_record_stop()
 
@@ -1065,24 +1102,6 @@ test_that("recorded demo glides, types, and scrolls on camera", {
   on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
   frames <- list.files(frames_dir, full.names = TRUE)
   expect_true(length(frames) >= 10)
-
-  # The glide: cursor ink in the button's band enters from the left
-  # (enter = "left") and travels to the button at x = 660. The frames
-  # only need to catch the cursor well short of the button (x < 500)
-  # and then near it (x > 550); the off-frame START is pinned by the
-  # overlay-level entrance tests in test-cursor.R, not re-asserted here.
-  inks <- lapply(frames, function(f) {
-    cursor_png_ink(page, f, band = c(290, 360))
-  })
-  xs <- vapply(
-    inks,
-    function(ink) if (ink$count > 20) ink$x else NA_real_,
-    numeric(1)
-  )
-  xs <- xs[!is.na(xs)]
-  expect_true(length(xs) >= 2)
-  expect_true(min(xs) < 500)
-  expect_true(max(xs) > 550)
 
   # The typing: near-black ink in the input's text rect (x 95-175;
   # the cursor sits at x 200 and the scroller's text at x 450+) grows
