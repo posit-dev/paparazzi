@@ -401,32 +401,63 @@ test_that("smooth scrolling uses real wheel events while recording", {
       hold = c(0, 0)
     )
 
+  # pz_act_scroll() returns once the scroll position has settled, and
+  # per-event wheel rounding is corrected to the target, so the page ends
+  # on target within the correction threshold.
   page |> pz_act_scroll(by = c(0, 600), duration = 0.1)
-  expect_equal(pz_js(page, "window.scrollY"), 600)
+  expect_true(abs(pz_js(page, "window.scrollY") - 600) <= 2)
   expect_true(pz_js(page, "window.__log.wheels") > 0)
   expect_true(pz_js(page, "window.__log.wheelsTrusted"))
 
   page |> pz_act_scroll(to = "bottom", duration = 0.1)
-  expect_equal(
-    pz_js(page, "window.scrollY"),
-    pz_js(
-      page,
-      "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
-    )
+  bottom <- pz_js(
+    page,
+    "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
   )
+  expect_true(abs(pz_js(page, "window.scrollY") - bottom) <= 2)
 
   # A scoped scroll wheels the scope's container, not the page.
   wheels <- pz_js(page, "window.__log.wheels")
   page |>
     pz_find("#scroller") |>
     pz_act_scroll(to = "bottom", duration = 0.1)
-  expect_equal(
-    pz_js(page, "document.getElementById('scroller').scrollTop"),
-    650
+  expect_true(
+    abs(pz_js(page, "document.getElementById('scroller').scrollTop") - 650) <= 2
   )
   expect_true(pz_js(page, "window.__log.wheels") > wheels)
 
   page |> pz_record_stop()
+})
+
+test_that("wheel_position_settled returns the position once it holds still", {
+  loop <- later::create_loop()
+  withr::defer(later::destroy_loop(loop))
+  ctx <- list(page = list(child_loop = loop))
+
+  reads <- 0L
+  settled <- wheel_position_settled(ctx, function() {
+    reads <<- reads + 1L
+    # Mid-flight for the first few reads, then parked at the target.
+    list(left = 0, top = min(reads, 4L))
+  })
+  expect_gt(reads, 4L)
+  expect_identical(settled$top, 4L)
+})
+
+test_that("wheel_position_settled falls back to the latest read when never still", {
+  loop <- later::create_loop()
+  withr::defer(later::destroy_loop(loop))
+  ctx <- list(page = list(child_loop = loop))
+
+  reads <- 0L
+  start <- Sys.time()
+  settled <- wheel_position_settled(ctx, function() {
+    reads <<- reads + 1L
+    list(left = 0, top = reads)
+  })
+  elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
+  expect_identical(settled$top, reads)
+  expect_gte(elapsed, wheel_settle_timeout_secs * 0.9)
 })
 
 test_that("staged root offsets and directions correct incomplete wheels", {
