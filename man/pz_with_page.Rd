@@ -10,28 +10,30 @@ pz_with_page(x, code, ...)
 pz_local_page(x, ..., .env = caller_env())
 }
 \arguments{
-\item{x}{An open page, or anything \code{\link[=pz_open]{pz_open()}} accepts.}
+\item{x}{An open page or context, or anything \code{\link[=pz_open]{pz_open()}} accepts.}
 
 \item{code}{Code to run while the page is open. An expression (evaluated
 as-is; useful when \code{x} is an already-open page the code can reference)
-or a function, called with the page as its only argument. A braced
-\code{{ }} block is always treated as an expression, even if it returns a
-function.}
+or a function, called with the page (or context) as its only argument. A
+braced \code{{ }} block is always treated as an expression, even if it
+returns a function.}
 
-\item{...}{Passed to \code{\link[=pz_open]{pz_open()}} when \code{x} is not already a page.}
+\item{...}{Passed to \code{\link[=pz_open]{pz_open()}} when \code{x} is not already a page or context.}
 
 \item{.env}{The frame whose exit closes the page.}
 }
 \value{
-\code{\link[=pz_with_page]{pz_with_page()}} returns the page invisibly; \code{\link[=pz_local_page]{pz_local_page()}}
-returns it visibly.
+\code{\link[=pz_with_page]{pz_with_page()}} returns the page (or context) invisibly;
+\code{\link[=pz_local_page]{pz_local_page()}} returns it visibly.
 }
 \description{
 \code{\link[=pz_with_page]{pz_with_page()}} evaluates \code{code} with the page open and closes it on exit,
 including on error. \code{\link[=pz_local_page]{pz_local_page()}} opens a page and closes it when the
 calling frame (e.g. a test) exits, via \code{\link[withr:defer]{withr::defer()}}. Both accept an
-already-open page or anything \code{\link[=pz_open]{pz_open()}} accepts, and always close on
-exit: the block owns the resource.
+already-open page or context (e.g. the staged result of \code{\link[=pz_stage]{pz_stage()}}) or
+anything \code{\link[=pz_open]{pz_open()}} accepts, and always close the underlying page on
+exit: the block owns the resource. A context is passed through as itself,
+so its staged settings reach the code it flows into.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}

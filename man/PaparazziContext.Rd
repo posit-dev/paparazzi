@@ -60,6 +60,9 @@ overlay, captions) -- lives on the page.
   \itemize{
     \item \href{#method-PaparazziContext-initialize}{\code{PaparazziContext$new()}}
     \item \href{#method-PaparazziContext-print}{\code{PaparazziContext$print()}}
+    \item \href{#method-PaparazziContext-close}{\code{PaparazziContext$close()}}
+    \item \href{#method-PaparazziContext-view}{\code{PaparazziContext$view()}}
+    \item \href{#method-PaparazziContext-is_closed}{\code{PaparazziContext$is_closed()}}
     \item \href{#method-PaparazziContext-clone}{\code{PaparazziContext$clone()}}
   }
 }
@@ -104,6 +107,45 @@ running stops it instead and, interactively, shows the video.
     \describe{
       \item{\code{...}}{Unused; included for compatibility with the \code{print()} generic.}
     }
+    \if{html}{\out{</div>}}
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PaparazziContext-close"></a>}}
+\if{latex}{\out{\hypertarget{method-PaparazziContext-close}{}}}
+\subsection{\code{PaparazziContext$close()}}{
+  Close the root page's browser tab (its chromote
+session). Idempotent. Delegates to the root page; a
+\code{PaparazziPage}'s own \code{close()} runs for pages.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PaparazziContext$close()}
+    \if{html}{\out{</div>}}
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PaparazziContext-view"></a>}}
+\if{latex}{\out{\hypertarget{method-PaparazziContext-view}{}}}
+\subsection{\code{PaparazziContext$view()}}{
+  Open the live browser view (DevTools) of the root
+page.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PaparazziContext$view()}
+    \if{html}{\out{</div>}}
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PaparazziContext-is_closed"></a>}}
+\if{latex}{\out{\hypertarget{method-PaparazziContext-is_closed}{}}}
+\subsection{\code{PaparazziContext$is_closed()}}{
+  Has the root page been closed?
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PaparazziContext$is_closed()}
     \if{html}{\out{</div>}}
   }
 }

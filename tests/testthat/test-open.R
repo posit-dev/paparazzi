@@ -395,6 +395,41 @@ test_that("pz_close closes the page behind a context", {
   expect_true(page$is_closed())
 })
 
+test_that("close() and is_closed() on a staged context act on the root page", {
+  skip_if_no_chrome()
+  page <- pz_open(fixture_file())
+  staged <- page |> pz_stage(cursor = TRUE)
+
+  expect_false(staged$is_closed())
+  expect_identical(staged$close(), staged)
+  expect_true(page$is_closed())
+  expect_true(staged$is_closed())
+})
+
+test_that("block helpers accept staged contexts and manage their root page", {
+  skip_if_no_chrome()
+  page <- pz_open(fixture_file())
+
+  # pz_with_page() hands the block the context itself -- staging intact
+  # -- and closes the root page on exit, error or not.
+  staged <- page |> pz_stage(pause = 2)
+  expect_identical(pz_with_page(staged, function(ctx) ctx), staged)
+  expect_equal(ctx_stage(staged)$pause, 2)
+  expect_true(page$is_closed())
+
+  # pz_local_page() ties the same lifetime to the calling frame and
+  # returns the staged context.
+  page <- pz_open(fixture_file())
+  kept <- NULL
+  local({
+    kept <<- pz_local_page(page |> pz_stage(cursor = TRUE))
+    expect_true(isTRUE(ctx_stage(kept)$cursor))
+    expect_false(kept$is_closed())
+  })
+  expect_true(kept$is_closed())
+  expect_true(page$is_closed())
+})
+
 test_that("a failed device setting after page creation closes the new session", {
   skip_if_no_chrome()
   browser <- chromote::default_chromote_object()

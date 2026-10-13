@@ -130,3 +130,39 @@ test_that("app cannot be replaced through its binding", {
   expect_error(page$app <- NULL)
   expect_identical(page$app, app)
 })
+
+test_that("contexts delegate close(), view(), and is_closed() to the root page", {
+  mock <- R6::R6Class(
+    "MockRoot",
+    public = list(
+      viewed = FALSE,
+      closed = FALSE,
+      view = function() self$viewed <- TRUE,
+      close = function() self$closed <- TRUE,
+      is_closed = function() self$closed
+    )
+  )$new()
+  ctx <- PaparazziContext$new(mock)
+
+  expect_false(ctx$is_closed())
+  ctx$view()
+  expect_true(mock$viewed)
+  ctx$close()
+  expect_true(mock$closed)
+  expect_true(ctx$is_closed())
+
+  # A page's own bindings win R6 dispatch, so pages keep their
+  # page-specific close() (recorder cleanup, object release).
+  expect_false(identical(
+    PaparazziPage$public_methods$close,
+    PaparazziContext$public_methods$close
+  ))
+  expect_false(identical(
+    PaparazziPage$public_methods$view,
+    PaparazziContext$public_methods$view
+  ))
+  expect_false(identical(
+    PaparazziPage$public_methods$is_closed,
+    PaparazziContext$public_methods$is_closed
+  ))
+})

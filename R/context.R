@@ -85,6 +85,26 @@ PaparazziContext <- R6::R6Class(
       }
       inspect_summary_print(self)
       invisible(self)
+    },
+
+    #' @description Close the root page's browser tab (its chromote
+    #'   session). Idempotent. Delegates to the root page; a
+    #'   `PaparazziPage`'s own `close()` runs for pages.
+    close = function() {
+      self$page$close()
+      invisible(self)
+    },
+
+    #' @description Open the live browser view (DevTools) of the root
+    #'   page.
+    view = function() {
+      self$page$view()
+      invisible(self)
+    },
+
+    #' @description Has the root page been closed?
+    is_closed = function() {
+      self$page$is_closed()
     }
   ),
   # Staged contexts are used exactly like pages (page <- page |>

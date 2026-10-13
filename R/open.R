@@ -201,20 +201,22 @@ pz_close <- function(page) {
 #' [pz_with_page()] evaluates `code` with the page open and closes it on exit,
 #' including on error. [pz_local_page()] opens a page and closes it when the
 #' calling frame (e.g. a test) exits, via [withr::defer()]. Both accept an
-#' already-open page or anything [pz_open()] accepts, and always close on
-#' exit: the block owns the resource.
+#' already-open page or context (e.g. the staged result of [pz_stage()]) or
+#' anything [pz_open()] accepts, and always close the underlying page on
+#' exit: the block owns the resource. A context is passed through as itself,
+#' so its staged settings reach the code it flows into.
 #'
-#' @param x An open page, or anything [pz_open()] accepts.
+#' @param x An open page or context, or anything [pz_open()] accepts.
 #' @param code Code to run while the page is open. An expression (evaluated
 #'   as-is; useful when `x` is an already-open page the code can reference)
-#'   or a function, called with the page as its only argument. A braced
-#'   `{ }` block is always treated as an expression, even if it returns a
-#'   function.
-#' @param ... Passed to [pz_open()] when `x` is not already a page.
+#'   or a function, called with the page (or context) as its only argument. A
+#'   braced `{ }` block is always treated as an expression, even if it
+#'   returns a function.
+#' @param ... Passed to [pz_open()] when `x` is not already a page or context.
 #' @param .env The frame whose exit closes the page.
 #'
-#' @return [pz_with_page()] returns the page invisibly; [pz_local_page()]
-#'   returns it visibly.
+#' @return [pz_with_page()] returns the page (or context) invisibly;
+#'   [pz_local_page()] returns it visibly.
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' path <- file.path(tempdir(), "task-list.png")
@@ -234,23 +236,34 @@ pz_close <- function(page) {
 #'
 #' @export
 pz_with_page <- function(x, code, ...) {
-  page <- if (is_pz_page(x)) x else pz_open(x, ...)
+  # A context (e.g. the staged result of pz_stage()) manages the
+  # lifetime of its root page but flows through `code` as itself, so
+  # staging survives into the block.
+  if (inherits(x, "PaparazziContext")) {
+    page <- x$page
+  } else {
+    page <- x <- pz_open(x, ...)
+  }
   withr::defer(pz_close(page))
   expr <- substitute(code)
   value <- eval(expr, envir = parent.frame())
   is_block <- is.call(expr) && identical(expr[[1]], quote(`{`))
   if (!is_block && is_function(value)) {
-    value <- value(page)
+    value <- value(x)
   }
-  invisible(page)
+  invisible(x)
 }
 
 #' @rdname pz_with_page
 #' @export
 pz_local_page <- function(x, ..., .env = caller_env()) {
-  page <- if (is_pz_page(x)) x else pz_open(x, ...)
+  if (inherits(x, "PaparazziContext")) {
+    page <- x$page
+  } else {
+    page <- x <- pz_open(x, ...)
+  }
   withr::defer(pz_close(page), envir = .env)
-  page
+  x
 }
 
 # Chrome deletes its default headless profile (a scoped_dir* under the user's
