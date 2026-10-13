@@ -689,14 +689,17 @@ scroll_staged <- function(
 }
 
 wheel_settle_secs <- 0.1
+wheel_settle_timeout_secs <- 2
 
 # The last wheel events can still be in flight when stage_wheel() returns;
 # correcting against a mid-flight position snaps to the target and the late
-# events then push past it. Decide on a position that has held still.
-wheel_position_settled <- function(ctx, read, call = caller_env()) {
+# events then push past it. Decide on a position that has held still. A
+# page that never holds still (auto-scrolling JS) falls back to correcting
+# against the latest read rather than failing the scroll.
+wheel_position_settled <- function(ctx, read) {
   last <- NULL
   stable_since <- NULL
-  pz_poll(
+  expect_retry(
     fn = function() {
       pos <- unlist(read()[c("left", "top")])
       now <- Sys.time()
@@ -704,13 +707,13 @@ wheel_position_settled <- function(ctx, read, call = caller_env()) {
         last <<- pos
         stable_since <<- now
       }
-      as.numeric(difftime(now, stable_since, units = "secs")) >=
-        wheel_settle_secs
+      list(
+        pass = as.numeric(difftime(now, stable_since, units = "secs")) >=
+          wheel_settle_secs
+      )
     },
-    timeout = ctx$page$default_timeout,
-    loop = ctx$page$child_loop,
-    what = "the scroll position to settle",
-    call = call
+    timeout = wheel_settle_timeout_secs,
+    loop = ctx$page$child_loop
   )
   read()
 }

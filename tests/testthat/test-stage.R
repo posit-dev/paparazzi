@@ -316,6 +316,37 @@ test_that("smooth scrolling uses real wheel events while recording", {
   page |> pz_record_stop()
 })
 
+test_that("wheel_position_settled returns the position once it holds still", {
+  loop <- later::create_loop()
+  withr::defer(later::destroy_loop(loop))
+  ctx <- list(page = list(child_loop = loop))
+
+  reads <- 0L
+  settled <- wheel_position_settled(ctx, function() {
+    reads <<- reads + 1L
+    # Mid-flight for the first few reads, then parked at the target.
+    list(left = 0, top = min(reads, 4L))
+  })
+  expect_gt(reads, 4L)
+  expect_identical(settled$top, 4L)
+})
+
+test_that("wheel_position_settled falls back to the latest read when never still", {
+  loop <- later::create_loop()
+  withr::defer(later::destroy_loop(loop))
+  ctx <- list(page = list(child_loop = loop))
+
+  reads <- 0L
+  start <- Sys.time()
+  settled <- wheel_position_settled(ctx, function() {
+    reads <<- reads + 1L
+    list(left = 0, top = reads)
+  })
+  elapsed <- as.numeric(difftime(Sys.time(), start, units = "secs"))
+  expect_identical(settled$top, reads)
+  expect_gte(elapsed, wheel_settle_timeout_secs * 0.9)
+})
+
 test_that("staged root offsets and directions correct incomplete wheels", {
   page <- local_cursor_page()
   pz_js(
