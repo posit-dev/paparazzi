@@ -83,10 +83,12 @@ path <- file.path(tempdir(), "tasks.png")
 page <- page |> pz_stage_annotate(color = "#2563eb", font_size = 16)
 page |> pz_annotate("#add-task", label = TRUE) |> pz_screenshot(path)
 
-# A one-off pipeline can undo a default with NULL
+# A one-off pipeline can undo a default with NULL: its callout uses
+# the built-in red again
 page |>
   pz_stage_annotate(color = NULL) |>
-  pz_screenshot(path, frame = pz_frame("#new-task", pad = 16, target_box = "annotated"))
+  pz_annotate("#task-title", label = TRUE) |>
+  pz_screenshot(path, frame = pz_frame("#task-title", pad = 16, target_box = "annotated"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

@@ -97,7 +97,8 @@ test_that("staged settings reach only pipelines from the staged context", {
 
   # An unassigned stage reaches nothing: pipelines from the page
   # variable resolve the built-in defaults (the overlay scale stays
-  # 1.75 because cursor = TRUE never reached this show).
+  # 1.75 because the unassigned cursor_scale never reached this
+  # pipeline's show).
   page |> pz_stage(cursor_scale = 2)
   page |> pz_cursor_show("#btn")
   expect_equal(cursor_overlay_scale(page), 1.75)

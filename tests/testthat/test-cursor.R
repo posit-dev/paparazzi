@@ -713,7 +713,7 @@ test_that("cursor state tracks presses, carries, and resets", {
   page |> pz_cursor_move("#btn")
   cursor_press(page, TRUE)
   # cursor = FALSE resolves at capture: the staged pipeline's still
-  # hides the drawn cursor, which also unpreses it
+  # hides the drawn cursor, which also unpresses it
   staged <- page |> pz_stage(cursor = FALSE)
   staged |> pz_screenshot(withr::local_tempfile(fileext = ".png"))
   expect_false(page_cursor(page)$pressed)
