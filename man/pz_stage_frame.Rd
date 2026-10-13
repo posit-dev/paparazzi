@@ -38,7 +38,7 @@ screenshot and recording started from the staged context resolves its
 own \verb{frame =} field by field, and an unset field takes the staged
 value if one is set, else the built-in default. \code{frame = FALSE}
 disables framing for a single call. The staged frame applies to the
-pipeline the staged context flows through -- \code{\link[=pz_find*]{pz_find*()}} contexts
+pipeline the staged context flows through -- \verb{pz_find*()} contexts
 inherit it -- while a fresh pipeline from the original context starts
 from the defaults; assign the result
 (\code{page <- page |> pz_stage_frame(...)}) to set page-wide defaults.

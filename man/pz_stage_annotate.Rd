@@ -64,7 +64,7 @@ default.}
 Sets style defaults for new annotations in screenshots and recordings.
 An omitted argument leaves its setting alone, an explicit \code{NULL}
 restores the built-in default, and a value sets it. The defaults
-apply to the pipeline the staged context flows through: \code{\link[=pz_find*]{pz_find*()}}
+apply to the pipeline the staged context flows through: \verb{pz_find*()}
 contexts inherit them, while a fresh pipeline from the original
 context starts from the defaults -- assign the result
 (\code{page <- page |> pz_stage_annotate(...)}) to set page-wide defaults.
