@@ -125,7 +125,7 @@ reference:
   - title: Framing and camera
     desc: >
       Choose the part of the page that a screenshot or recording shows with
-      `pz_frame()`, and set a default for the page with `pz_stage_frame()`.
+      `pz_frame()`, and set a default for the chain with `pz_stage_frame()`.
       During a recording, the camera zooms in on part of the frame and back
       out without changing the live page.
     contents:
