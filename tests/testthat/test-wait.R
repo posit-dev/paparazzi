@@ -647,7 +647,7 @@ test_that("nav_settle timeout reports the last read against the snapshot", {
     class = "paparazzi_error_timeout"
   )
   msg <- conditionMessage(err)
-  expect_match(msg, "Last read: readyState", fixed = TRUE)
+  expect_match(msg, "Last good read: readyState", fixed = TRUE)
   expect_match(msg, "loaderId", fixed = TRUE)
   expect_match(msg, "Pre-action snapshot: complete=TRUE", fixed = TRUE)
   expect_match(
@@ -657,11 +657,53 @@ test_that("nav_settle timeout reports the last read against the snapshot", {
   )
 })
 
+test_that("nav_settle timeout keeps the last good read when later reads fail", {
+  loop <- later::create_loop()
+  withr::defer(later::destroy_loop(loop))
+  ctx <- list(
+    page = list(
+      child_loop = loop,
+      session = list(
+        Page = list(
+          getFrameTree = function(timeout_ = NULL) {
+            list(frameTree = list(frame = list(loaderId = "old")))
+          }
+        )
+      )
+    )
+  )
+  reads <- 0L
+  local_mocked_bindings(
+    pz_js = function(...) {
+      reads <<- reads + 1L
+      if (reads > 2L) {
+        stop("Execution context was destroyed")
+      }
+      "[true,3.5]"
+    }
+  )
+
+  err <- expect_error(
+    nav_settle(
+      ctx,
+      settle = 0.005,
+      timeout = 0.4,
+      snapshot = list(complete = TRUE, origin = 3.5)
+    ),
+    class = "paparazzi_error_timeout"
+  )
+  msg <- conditionMessage(err)
+  expect_match(msg, "Last good read: readyState", fixed = TRUE)
+  expect_match(msg, "final read before the timeout failed", fixed = TRUE)
+  expect_false(grepl("Every read failed", msg, fixed = TRUE))
+})
+
 test_that("nav_settle_detail covers reads that never succeed", {
   expect_match(
     nav_settle_detail(
       NULL,
-      NULL,
+      read_failed = TRUE,
+      stable_for = NULL,
       settle = 0.5,
       snapshot = list(complete = FALSE, origin = NULL),
       action_loader = NULL

@@ -422,11 +422,14 @@ nav_settle <- function(
     )
   }
   last <- NULL
+  last_ok <- NULL
+  last_poll <- NULL
   stable_since <- NULL
   pz_poll(
     fn = function() {
       s <- read()
       now <- Sys.time()
+      last_poll <<- now
       if (is.null(s) || !identical(last, s)) {
         last <<- s
         stable_since <<- now
@@ -434,6 +437,7 @@ nav_settle <- function(
       if (is.null(s)) {
         return(FALSE)
       }
+      last_ok <<- s
       # simplifyVector = FALSE keeps the boolean a boolean: the mixed
       # [boolean, number] JSON would coerce TRUE to 1 otherwise.
       state <- jsonlite::fromJSON(s$js, simplifyVector = FALSE)
@@ -445,7 +449,16 @@ nav_settle <- function(
     loop = ctx$page$child_loop,
     what = "the navigation to complete",
     detail = function() {
-      nav_settle_detail(last, stable_since, settle, snapshot, action_loader)
+      nav_settle_detail(
+        last_ok,
+        read_failed = is.null(last),
+        stable_for = if (!is.null(stable_since)) {
+          as.numeric(difftime(last_poll, stable_since, units = "secs"))
+        },
+        settle,
+        snapshot,
+        action_loader
+      )
     },
     call = call
   )
@@ -454,27 +467,30 @@ nav_settle <- function(
 # Reported on nav_settle() timeout so a flake shows which settle condition
 # never held (a single poll gives no visibility otherwise).
 nav_settle_detail <- function(
-  last,
-  stable_since,
+  last_ok,
+  read_failed,
+  stable_for,
   settle,
   snapshot,
   action_loader
 ) {
-  if (is.null(last)) {
+  if (is.null(last_ok)) {
     return(
       "Every read failed; the renderer was mid-navigation for the whole timeout."
     )
   }
-  state <- jsonlite::fromJSON(last$js, simplifyVector = FALSE)
+  state <- jsonlite::fromJSON(last_ok$js, simplifyVector = FALSE)
   ready <- isTRUE(state[[1]])
-  happened <- nav_happened(state[[2]], last$loader, snapshot, action_loader)
-  stable_for <- as.numeric(difftime(Sys.time(), stable_since, units = "secs"))
+  happened <- nav_happened(state[[2]], last_ok$loader, snapshot, action_loader)
   snapshot_origin <- snapshot$origin %||% "none (in flight)"
   action_loader <- action_loader %||% "none"
   lines <- c(
     cli::format_inline(
-      "Last read: readyState {.val {if (ready) 'complete' else 'incomplete'}}, timeOrigin {.val {state[[2]]}}, loaderId {.val {last$loader}}."
+      "Last good read: readyState {.val {if (ready) 'complete' else 'incomplete'}}, timeOrigin {.val {state[[2]]}}, loaderId {.val {last_ok$loader}}."
     ),
+    if (read_failed) {
+      "The final read before the timeout failed; the renderer was mid-navigation."
+    },
     cli::format_inline(
       "Pre-action snapshot: complete={snapshot$complete}, timeOrigin {.val {snapshot_origin}}, action loaderId {.val {action_loader}}."
     ),
