@@ -54,14 +54,19 @@ the mechanics, this file states the property they buy.
    poll-based capture that property is cosmetic and belongs to manual
    QA or paint-driven (screencast) capture only.
 3. **Polls move load off the suspect list.** `pz_poll()` /
-   `expect_retry()` convert "did it happen within a fixed window" into
-   "did it ever happen", so a slow runner changes the test's duration,
-   not its verdict. A test that fails only under load is asserting a
-   timing contract nobody signed.
+   `expect_retry()` turn a tight timing window into a generous
+   deadline: a slow runner changes the test's duration rather than its
+   verdict — but only while the timeout has ample headroom over the
+   expected latency, since a poll still gives up when its deadline
+   passes. Size timeouts for the slowest runner, not the typical one.
+   A test that fails only under load is asserting a timing contract
+   nobody signed.
 4. **A failing assertion should fail loudly and name what never
    happened.** A poll that gives up must abort with what it waited
-   for; never return `NULL` or an empty vector that downstream
-   expressions quietly absorb into a pass.
+   for, or return a sentinel such as `NA_character_` that downstream
+   assertions treat as a failure; never return `NULL` or an empty
+   vector that expressions like `file.exists()` or `all(logical(0))`
+   quietly absorb into a pass.
 5. **When deleting an uninterpretable assertion, record the trade.**
    Say in the test comment what coverage was given up, where the
    property is pinned instead (usually a schedule-level test), or why

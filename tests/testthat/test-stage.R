@@ -1044,17 +1044,16 @@ test_that("recorded demo glides, types, and scrolls on camera", {
     what = "a baseline frame before the entrance glide"
   )
 
-  page |>
-    pz_act_click("#btn") |>
-    pz_act_type("otters", target = "#name")
+  page |> pz_act_click("#btn")
 
-  # The cursor rests at the button through typing, so wait until a
-  # retained frame carries its ink at the landing point before moving
-  # on. The glide's schedule and off-frame start are pinned by the
-  # overlay-level entrance tests in test-cursor.R; sampling ink
-  # mid-glide would race the capture pump against the animation's
-  # wall clock, and a failure would implicate the test's own timing
-  # rather than the product.
+  # The click leaves the cursor drawn at the button until the next
+  # action, so wait until a retained frame carries its ink there.
+  # (Typing would glide the cursor to #name and hide it while the
+  # characters land.) The glide's schedule and off-frame start are
+  # pinned by the overlay-level entrance tests in test-cursor.R;
+  # sampling ink mid-glide would race the capture pump against the
+  # animation's wall clock, and a failure would implicate the test's
+  # own timing rather than the product.
   scanned <- 0L
   pz_poll(
     function() {
@@ -1066,14 +1065,13 @@ test_that("recorded demo glides, types, and scrolls on camera", {
       any(vapply(
         fresh,
         function(f) {
-          ink <- tryCatch(
-            cursor_png_ink(page, f, band = c(300, 344), x_range = c(635, 700)),
-            error = function(e) NULL
+          ink <- cursor_png_ink(
+            page,
+            f,
+            band = c(300, 344),
+            x_range = c(635, 700)
           )
-          !is.null(ink) &&
-            ink$count > 20 &&
-            abs(ink$x - 660) < 25 &&
-            abs(ink$y - 322) < 20
+          ink$count > 20 && abs(ink$x - 660) < 25 && abs(ink$y - 322) < 20
         },
         logical(1)
       ))
@@ -1084,6 +1082,7 @@ test_that("recorded demo glides, types, and scrolls on camera", {
   )
 
   page |>
+    pz_act_type("otters", target = "#name") |>
     pz_act_click("#below") |>
     pz_record_stop()
 
