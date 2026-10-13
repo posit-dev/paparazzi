@@ -206,7 +206,8 @@ test_that("recorded click frames keep pointing cursor ink at the target", {
 test_that("cursor = TRUE draws a static cursor in screenshots; FALSE never draws", {
   page <- local_cursor_page()
   staged <- page |> pz_stage(cursor = TRUE)
-  expect_equal(cursor_overlay_state(staged)[[1]], 1)
+  # Staging only derives the context; the overlay resolves at capture.
+  expect_null(cursor_overlay_state(staged))
 
   staged |> pz_cursor_move("#btn")
   shot <- withr::local_tempfile(fileext = ".png")
@@ -252,9 +253,13 @@ test_that("changing cursor_scale redraws a visible recording cursor", {
       hold = c(0, 0)
     )
   page |> pz_cursor_move("#btn")
+  # Staging only derives the context; the new scale resolves at the
+  # next point that draws the cursor, here the recorded hover.
   page <- page |> pz_stage(cursor_scale = 1)
+  page |> pz_act_hover("#plain")
   expect_equal(cursor_overlay_scale(page), 1)
   page <- page |> pz_stage(cursor_scale = NULL)
+  page |> pz_act_hover("#crossed")
   expect_equal(cursor_overlay_scale(page), 1.75)
   page |> pz_record_stop()
 })
@@ -271,9 +276,10 @@ test_that("the overlay is excluded from resolution and hit-testing", {
 
 test_that("the overlay survives navigation with its size and last position", {
   page <- local_cursor_page()
-  page |> pz_stage(cursor_scale = 2) |> pz_cursor_move("#btn")
+  staged <- page |> pz_stage(cursor_scale = 2)
+  staged |> pz_cursor_move("#btn")
   before_path <- withr::local_tempfile(fileext = ".png")
-  page |> pz_screenshot(before_path)
+  staged |> pz_screenshot(before_path)
   before <- cursor_png_ink(page, before_path, band = c(280, 370))
 
   pz_nav_reload(page)
@@ -292,7 +298,7 @@ test_that("the overlay survives navigation with its size and last position", {
   expect_equal(st[[1]], 1)
   expect_equal(st[2:3], c(660, 322))
   after_path <- withr::local_tempfile(fileext = ".png")
-  page |> pz_screenshot(after_path)
+  staged |> pz_screenshot(after_path)
   after <- cursor_png_ink(page, after_path, band = c(280, 370))
   expect_equal(after$height, before$height)
   # And the re-injected overlay is still excluded from resolution.
@@ -706,8 +712,10 @@ test_that("cursor state tracks presses, carries, and resets", {
 
   page |> pz_cursor_move("#btn")
   cursor_press(page, TRUE)
-  # cursor = FALSE hides the drawn cursor, which also unpreses it
-  page |> pz_stage(cursor = FALSE)
+  # cursor = FALSE resolves at capture: the staged pipeline's still
+  # hides the drawn cursor, which also unpreses it
+  staged <- page |> pz_stage(cursor = FALSE)
+  staged |> pz_screenshot(withr::local_tempfile(fileext = ".png"))
   expect_false(page_cursor(page)$pressed)
 })
 

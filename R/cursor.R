@@ -669,6 +669,27 @@ cursor_drawn <- function(ctx) {
   cursor_visible(ctx) && !isTRUE(page_cursor_peek(ctx$page)$resting)
 }
 
+# Reconcile the overlay's drawn state to the context about to capture.
+# Staging resolves at capture time, so a still shows the cursor only
+# when the capturing context resolves cursor_visible() (a staged
+# cursor = TRUE, or an explicit pz_cursor_show() still in effect), and
+# hides any overlay an earlier chain left drawn otherwise. Position and
+# existence stay page-global: the cursor lands at its current point, or
+# the viewport center when it has never been shown.
+cursor_sync <- function(ctx) {
+  cur <- page_cursor_peek(ctx$page)
+  if (cursor_drawn(ctx)) {
+    if (is.null(cur) || is.null(cur$x)) {
+      cursor_apply(ctx, cursor_current_point(ctx))
+    } else {
+      cursor_draw(ctx, visible = TRUE, pressed = isTRUE(cur$pressed))
+    }
+  } else if (!is.null(cur) && !is.null(cur$x)) {
+    cursor_draw(ctx, visible = FALSE)
+  }
+  ctx_return(ctx)
+}
+
 cursor_press <- function(ctx, pressed) {
   if (!cursor_drawn(ctx)) {
     return(ctx_return(ctx))

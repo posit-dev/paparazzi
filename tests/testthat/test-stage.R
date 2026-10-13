@@ -42,45 +42,54 @@ test_that("staged settings are pipeline-scoped, not page state", {
 })
 
 test_that("assignment carries a staged cursor into stills", {
-  page <- local_cursor_page()
+  # A pinned viewport puts the never-shown cursor at (500, 350): the
+  # band below holds only the cursor's ink, clear of the fixture's
+  # dark button and inputs.
+  page <- local_page(cursor_fixture_file(), width = 1000, height = 700)
   staged <- page |> pz_stage(cursor = TRUE)
 
-  # The staged context's pipelines show the statically drawn cursor.
-  # (The drawn overlay is page-global DOM state; what the assignment
-  # controls is which pipelines resolve cursor = TRUE.)
+  # The staged pipeline resolves cursor = TRUE at capture: the still
+  # draws the static cursor at its current point (the viewport center
+  # when it has never been shown).
   shot <- withr::local_tempfile(fileext = ".png")
   staged |> pz_screenshot(shot)
-  ink <- cursor_png_ink(page, shot, band = c(200, 400))
+  ink <- cursor_png_ink(page, shot, band = c(280, 430))
   expect_gt(ink$count, 50)
+
+  # The overlay that capture leaves drawn is page-global DOM; a still
+  # from the unstaged page resolves cursor = NULL (auto, not recording)
+  # and hides it at capture.
+  page |> pz_screenshot(shot)
+  expect_equal(cursor_png_ink(page, shot, band = c(280, 430))$count, 0)
 })
 
 test_that("staging never leaks cursor ink into pipelines from the page", {
-  page <- local_cursor_page()
+  page <- local_page(cursor_fixture_file(), width = 1000, height = 700)
   shot <- withr::local_tempfile(fileext = ".png")
 
   # An unassigned stage touches no DOM: pipelines from `page` resolve
   # the defaults, so a still shows no cursor ink.
   page |> pz_stage(cursor = TRUE)
   page |> pz_screenshot(shot)
-  expect_equal(cursor_png_ink(page, shot, band = c(200, 400))$count, 0)
+  expect_equal(cursor_png_ink(page, shot, band = c(280, 430))$count, 0)
 
   # Assignment carries cursor = TRUE into the staged pipeline: its
   # still resolves the overlay at capture time and draws the cursor.
   staged <- page |> pz_stage(cursor = TRUE)
   staged |> pz_screenshot(shot)
-  expect_gt(cursor_png_ink(page, shot, band = c(200, 400))$count, 50)
+  expect_gt(cursor_png_ink(page, shot, band = c(280, 430))$count, 50)
 
   # A still from the unstaged page hides the overlay the staged capture
   # left drawn: visibility resolves per capture from the context, so
   # one chain's staging never reaches another's captures.
   page |> pz_screenshot(shot)
-  expect_equal(cursor_png_ink(page, shot, band = c(200, 400))$count, 0)
+  expect_equal(cursor_png_ink(page, shot, band = c(280, 430))$count, 0)
 
   # cursor = FALSE resolves the same way: hiding at capture, not
   # leaving a stale overlay for any chain that captures next.
   hidden <- page |> pz_stage(cursor = FALSE)
   hidden |> pz_screenshot(shot)
-  expect_equal(cursor_png_ink(page, shot, band = c(200, 400))$count, 0)
+  expect_equal(cursor_png_ink(page, shot, band = c(280, 430))$count, 0)
 })
 
 test_that("staged settings reach only pipelines from the staged context", {
@@ -692,6 +701,24 @@ test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
   expect_equal(st[2:3], c(660, 322))
   page |> pz_record_stop()
   expect_equal(pz_js(page, "window.__log.clicks"), 2)
+})
+
+test_that("recording reconciles overlay visibility from the recording context", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  # An explicit show leaves the overlay drawn; cursor = FALSE staged on
+  # the recording chain means it must not appear in the video either.
+  page |> pz_cursor_show("#btn")
+  staged <- page |> pz_stage(cursor = FALSE)
+  staged |>
+    pz_record_start(
+      withr::local_tempfile(fileext = ".mp4"),
+      fps = 10,
+      hold = c(0, 0)
+    ) |>
+    pz_act_click("#btn")
+  expect_equal(cursor_overlay_state(page)[[1]], 0)
+  page |> pz_record_stop()
 })
 
 test_that("a nested scroller over the viewport center never eats root wheels", {

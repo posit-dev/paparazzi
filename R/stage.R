@@ -124,7 +124,6 @@ pz_stage <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  page <- ctx$page
   overrides <- ctx$staging$overrides %||% list()
 
   if (!missing(cursor)) {
@@ -224,28 +223,6 @@ pz_stage <- function(
     }
   }
   ctx <- stage_derive(ctx, overrides)
-
-  stage <- ctx_stage(ctx)
-  cur <- page_cursor_peek(page)
-  if (identical(stage$cursor, FALSE)) {
-    if (!is.null(cur) && !is.null(cur$x)) {
-      cursor_draw(ctx, visible = FALSE)
-    }
-  } else if (isTRUE(stage$cursor) && cursor_drawn(ctx)) {
-    point <- cursor_current_point(ctx)
-    if (is.null(cur) || is.null(cur$x)) {
-      cursor_apply(ctx, point)
-    } else {
-      cursor_draw(ctx, visible = TRUE)
-    }
-  } else if (
-    !missing(cursor_scale) &&
-      !is.null(cur) &&
-      !is.null(cur$x) &&
-      cursor_drawn(ctx)
-  ) {
-    cursor_draw(ctx, visible = TRUE)
-  }
   ctx_return(ctx)
 }
 

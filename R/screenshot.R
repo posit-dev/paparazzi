@@ -256,6 +256,7 @@ clip_rects_union <- function(ctx, rects, call = caller_env()) {
 # exactly the current dpr (chromote passes scale/pixel_ratio for the
 # same reason).
 screenshot_capture <- function(ctx, clip, call = caller_env()) {
+  cursor_sync(ctx)
   pz_js(
     ctx,
     paste0(ANNOTATION_LAYER_JS, "?.sync()")

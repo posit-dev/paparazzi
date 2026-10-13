@@ -220,6 +220,19 @@ pz_record_start <- function(
   rec$frames_dir <- record_frames_dir(path, keep_frames)
 
   page_set_recorder(page, rec)
+  rec_ctx <- PaparazziContext$new(
+    page,
+    scope = ctx$scope,
+    recording = rec,
+    staging = ctx$staging
+  )
+  # The recording chain resolves cursor visibility from its own
+  # staging, so hide an overlay an earlier chain left drawn before
+  # frames flow (auto staging stays visible while recording).
+  cur <- page_cursor_peek(page)
+  if (!is.null(cur) && !is.null(cur$x) && !cursor_visible(rec_ctx)) {
+    cursor_draw(rec_ctx, visible = FALSE)
+  }
   # A commit can drop a capture in flight (see record_nav_rebased), so
   # track main-frame commits for the whole recording. The listener also
   # keeps the Page domain enabled, letting the device-zoom script
@@ -252,12 +265,7 @@ pz_record_start <- function(
       loop = page$child_loop
     )
   }
-  invisible(PaparazziContext$new(
-    page,
-    scope = ctx$scope,
-    recording = rec,
-    staging = ctx$staging
-  ))
+  invisible(rec_ctx)
 }
 
 #' Stop a recording and write the video
