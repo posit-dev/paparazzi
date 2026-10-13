@@ -45,7 +45,7 @@ test_that("the retained-pixel instrument distinguishes the task marker color", {
 test_that('disabled previews retain the original marker but never carry it', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
-  pz_stage(page, pause = 0)
+  page <- pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
   out <- withr::local_tempfile(fileext = '.mp4')
   frames <- paste0(tools::file_path_sans_ext(out), '_frames')
@@ -103,7 +103,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
       height = 1100,
       scale = if (case$geometry) 2 else 1
     )
-    pz_stage(page, pause = 0, cursor_speed = 120)
+    page <- pz_stage(page, pause = 0, cursor_speed = 120)
     drag_preview_task_marker(page)
     if (case$geometry) {
       pz_js(
@@ -400,7 +400,7 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
   page <- local_task_page(width = 800, height = 900)
   # Slow carry (glide clamps at 2s): the mid-flight assertion needs screencast
   # frames during the carry even when a starved runner delivers them late.
-  pz_stage(page, pause = 0, cursor_speed = 40)
+  page <- pz_stage(page, pause = 0, cursor_speed = 40)
   drag_preview_task_marker(page)
   out <- withr::local_tempfile(fileext = '.mp4')
   frames <- paste0(tools::file_path_sans_ext(out), '_frames')
@@ -475,7 +475,7 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
 test_that('a loaded local font and image survive the production drag carry', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900, timeout = 5)
-  pz_stage(page, pause = 0, cursor_speed = 120)
+  page <- pz_stage(page, pause = 0, cursor_speed = 120)
   drag_preview_task_marker(page)
   font <- pz_font_file(
     'PreviewTest',
@@ -629,7 +629,7 @@ test_that('a loaded local font and image survive the production drag carry', {
 test_that('content-box captures preserve the measured border box and far-edge pixels', {
   skip_if_no_av()
   page <- local_page(width = 800, height = 600)
-  pz_stage(page, pause = 0)
+  page <- pz_stage(page, pause = 0)
   expect_true(pz_js(
     page,
     "(() => {

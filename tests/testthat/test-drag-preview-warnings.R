@@ -2,7 +2,7 @@ test_that('redaction rejects unsafe capture before the library while preserving 
   skip_if_no_av()
   check_redaction <- function(case) {
     page <- local_task_page(width = 800, height = 900)
-    pz_stage(page, pause = 0)
+    page <- pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     if (
       case %in% c('unrelated-fill', 'unrelated-blur', 'unavailable', 'invalid')
@@ -102,7 +102,7 @@ test_that('optional capture, decode, show, move and settle failures warn once an
   skip_if_no_av()
   check_failure <- function(method) {
     page <- local_task_page(width = 800, height = 900)
-    pz_stage(page, pause = 0)
+    page <- pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     pz_record_start(
       page,
@@ -204,7 +204,7 @@ test_that('unsafe font stylesheets skip capture without mutations or changing th
   skip_if_no_av()
   check_sheet <- function(case) {
     page <- local_task_page(width = 800, height = 900)
-    pz_stage(page, pause = 0)
+    page <- pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     font <- pz_font_file(
       'OpaquePreviewFont',
@@ -316,7 +316,7 @@ test_that('dragstart transforms and filters deliberately disable the captured pr
   skip_if_no_av()
   check_footprint <- function(property) {
     page <- local_task_page(width = 800, height = 900)
-    pz_stage(page, pause = 0)
+    page <- pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     pz_js(
       page,
@@ -402,7 +402,7 @@ test_that('dragstart transforms and filters deliberately disable the captured pr
 test_that('a real missing local image disables capture without blocking the drag', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900, timeout = 5)
-  pz_stage(page, pause = 0)
+  page <- pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
   expect_true(pz_js(
     page,
@@ -499,7 +499,7 @@ test_that('SVG use and iframe skip capture before copying outside the source sub
   skip_if_no_av()
   check_use <- function(redacted, iframe = FALSE) {
     page <- local_page(width = 800, height = 600)
-    pz_stage(page, pause = 0)
+    page <- pz_stage(page, pause = 0)
     pz_js(
       page,
       "(() => {

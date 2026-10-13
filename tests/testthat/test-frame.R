@@ -11,21 +11,34 @@
 #   #fractional (620.4, 262.6) 200.2x88.8 rgb(60, 60, 60)
 # PNG pixel dimensions are round(css_size * dpr); dpr is read live.
 
-test_that("frame accessors share the page staging binding", {
+test_that("a staged frame is carried by the context", {
   page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
-  frame <- pz_frame(zoom = 2)
   page$session_state$caption <- list(text = "Ready")
 
-  expect_invisible(page_set_frame(page, frame))
-  expect_identical(page$session_state$frame, frame)
+  # The page starts with no staged frame, and session state is untouched
+  # by staging.
+  expect_null(ctx_frame(page))
+  expect_null(page$staging)
+
+  # A new stage replaces the staged frame wholesale and derives a context
+  staged <- pz_stage_frame(page, zoom = 2)
+  expect_identical(ctx_frame(staged), pz_frame(zoom = 2))
+  expect_null(ctx_frame(page))
   expect_identical(page$session_state$caption, list(text = "Ready"))
 
-  page$session_state$frame <- pz_frame(zoom = 3)
-  expect_identical(page_frame(page), page$session_state$frame)
+  staged <- pz_stage_frame(staged, pad = 8)
+  expect_identical(ctx_frame(staged)$pad, rep(8, 4))
+  expect_null(ctx_frame(staged)$zoom)
 
-  page_set_frame(page, NULL)
-  expect_null(page_frame(page))
-  expect_identical(page$session_state$caption, list(text = "Ready"))
+  # NULL clears the staged frame for that pipeline only
+  cleared <- pz_stage_frame(staged, NULL)
+  expect_null(ctx_frame(cleared))
+  expect_identical(ctx_frame(staged)$pad, rep(8, 4))
+
+  # Staging overrides travel alongside a staged frame
+  both <- staged |> pz_stage(cursor_speed = 900)
+  expect_identical(ctx_frame(both)$pad, rep(8, 4))
+  expect_equal(ctx_stage(both)$cursor_speed, 900)
 })
 
 test_that("annotated framing includes only attached painted nodes", {
@@ -65,10 +78,10 @@ test_that("annotated framing includes only attached painted nodes", {
     frame = pz_frame("#outer", target_box = "annotated")
   )
   expect_gt(png_dimensions(painted_png)[1], png_dimensions(plain_png)[1])
-  pz_stage_frame(page, "#outer", target_box = "annotated")
+  page <- pz_stage_frame(page, "#outer", target_box = "annotated")
   pz_screenshot(page, painted_png)
   expect_gt(png_dimensions(painted_png)[1], png_dimensions(plain_png)[1])
-  expect_identical(page_frame(page)$target_box, "annotated")
+  expect_identical(ctx_frame(page)$target_box, "annotated")
   pz_js(page, "document.querySelector('#outer').style.left='250px'")
   moved <- frame_content_box(page, pz_frame("#outer", target_box = "annotated"))
   expect_gt(moved[3], decorated[3])
@@ -671,7 +684,7 @@ test_that("a frame on a scoped context uses the scope's box", {
   expect_identical(png_dimensions(path), as.integer(round(c(140, 110) * dpr)))
 })
 
-test_that("pz_stage_frame sets the page's default framing", {
+test_that("pz_stage_frame sets the pipeline's default framing", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(page)
@@ -696,12 +709,12 @@ test_that("an explicit frame's fields win and leave the default untouched", {
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(page)
 
-  pz_stage_frame(page, pad = 32)
+  staged <- pz_stage_frame(page, pad = 32)
   # An explicit field wins: pad = 8 over pad = 32, giving 136x106.
-  pz_screenshot(page, path, frame = pz_frame("#card", pad = 8))
+  pz_screenshot(staged, path, frame = pz_frame("#card", pad = 8))
   expect_identical(png_dimensions(path), as.integer(round(c(136, 106) * dpr)))
   # The staged default itself is untouched by the explicit frame.
-  pz_screenshot(page, path, frame = "#card")
+  pz_screenshot(staged, path, frame = "#card")
   expect_identical(png_dimensions(path), as.integer(round(c(184, 154) * dpr)))
 })
 
@@ -710,8 +723,8 @@ test_that("frame = FALSE opts out of the default for one call", {
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(page)
 
-  pz_stage_frame(page, pad = 32)
-  pz_find(page, "#card") |> pz_screenshot(path, frame = FALSE)
+  staged <- pz_stage_frame(page, pad = 32)
+  pz_find(staged, "#card") |> pz_screenshot(path, frame = FALSE)
   expect_identical(png_dimensions(path), as.integer(round(c(120, 90) * dpr)))
 })
 
@@ -722,9 +735,9 @@ test_that("an explicit frame without a target frames the viewport under a target
 
   dpr <- page_dpr(page)
 
-  pz_stage_frame(page, pad = 32)
-  pz_screenshot(page, viewport, frame = FALSE)
-  pz_screenshot(page, path, frame = pz_frame(pad = 8))
+  staged <- pz_stage_frame(page, pad = 32)
+  pz_screenshot(staged, viewport, frame = FALSE)
+  pz_screenshot(staged, path, frame = pz_frame(pad = 8))
   # The padded viewport clamps to the document: the left, top and right
   # pads fall off the page, and the bottom pad reaches below the fold.
   expect_identical(
@@ -733,15 +746,19 @@ test_that("an explicit frame without a target frames the viewport under a target
   )
 })
 
-test_that("pz_stage_frame(NULL) clears the default", {
+test_that("pz_stage_frame(NULL) clears an inherited default for that pipeline", {
   page <- local_frame_page()
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(page)
 
-  pz_stage_frame(page, pad = 32)
-  pz_stage_frame(page, NULL)
-  pz_screenshot(page, path, frame = "#card")
+  staged <- pz_stage_frame(page, pad = 32)
+  cleared <- pz_stage_frame(staged, NULL)
+  pz_screenshot(cleared, path, frame = "#card")
   expect_identical(png_dimensions(path), as.integer(round(c(120, 90) * dpr)))
+  # The inherited default still frames pipelines from the staged context
+  plain <- withr::local_tempfile(fileext = ".png")
+  pz_screenshot(staged, plain, frame = "#card")
+  expect_identical(png_dimensions(plain), as.integer(round(c(184, 154) * dpr)))
 })
 
 test_that("a staged frame does not leak to other pages", {
@@ -750,8 +767,11 @@ test_that("a staged frame does not leak to other pages", {
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(other)
 
-  pz_stage_frame(page, pad = 32)
+  staged <- pz_stage_frame(page, pad = 32)
   pz_screenshot(other, path, frame = "#card")
+  expect_identical(png_dimensions(path), as.integer(round(c(120, 90) * dpr)))
+  # The original page itself still captures unframed by the staged default
+  pz_screenshot(page, path, frame = "#card")
   expect_identical(png_dimensions(path), as.integer(round(c(120, 90) * dpr)))
 })
 
@@ -885,7 +905,7 @@ test_that("frame_effective promotes bare locators and fills per-field", {
   listed <- frame_effective(page, list("#card", pz_loc("#small")))
   expect_length(listed$target, 2)
 
-  pz_stage_frame(page, "#small", pad = 24, ratio = 2)
+  page <- pz_stage_frame(page, "#small", pad = 24, ratio = 2)
   # Explicit beats staged; staged beats the built-in default. At the
   # root, the staged target applies too.
   filled <- frame_effective(page, pz_frame(pad = 8))
@@ -908,7 +928,7 @@ test_that("the scope beats the staged target, which beats the viewport", {
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(page)
 
-  pz_stage_frame(page, "#small", pad = 24)
+  page <- pz_stage_frame(page, "#small", pad = 24)
   # Root: the staged target frames #small (400, 60) 60x45 + 24
   pz_screenshot(page, path)
   expect_identical(png_dimensions(path), as.integer(round(c(108, 93) * dpr)))
@@ -933,7 +953,7 @@ test_that("resolved frame specs keep every field, so `$target` stays exact", {
     ignore.order = TRUE
   )
 
-  pz_stage_frame(page, "#small", pad = 24)
+  page <- pz_stage_frame(page, "#small", pad = 24)
   scoped <- pz_find(page, "#card")
   for (spec in list(
     frame_effective(page, NULL),
@@ -949,15 +969,17 @@ test_that("resolved frame specs keep every field, so `$target` stays exact", {
 test_that("a staged frame keeps its unset fields NULL", {
   page <- local_frame_page()
 
-  pz_stage_frame(page, pad = 24)
-  spec <- page_frame(page)
+  page <- pz_stage_frame(page, pad = 24)
+  spec <- ctx_frame(page)
   expect_identical(spec$pad, rep(24, 4))
   expect_null(spec$ratio)
   expect_null(spec$target)
 
-  pz_stage_frame(page, "#card", zoom = 2)
-  expect_identical(page_frame(page)$zoom, 2)
-  expect_identical(page_frame(page)$target[[1]]$css, "#card")
+  # A new stage replaces the staged frame wholesale
+  page <- pz_stage_frame(page, "#card", zoom = 2)
+  expect_identical(ctx_frame(page)$zoom, 2)
+  expect_identical(ctx_frame(page)$target[[1]]$css, "#card")
+  expect_null(ctx_frame(page)$pad)
 })
 
 test_that("an explicit frame inherits unset fields from the staged frame", {
@@ -965,7 +987,7 @@ test_that("an explicit frame inherits unset fields from the staged frame", {
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(page)
 
-  pz_stage_frame(page, "#card", pad = 32)
+  page <- pz_stage_frame(page, "#card", pad = 32)
   # Only ratio is explicit; pad and target inherit: (68, 48) 184x154
   # grown to 2:1 is 308x154.
   pz_screenshot(page, path, frame = pz_frame(ratio = 2))
@@ -1015,7 +1037,7 @@ test_that("zoom places the padded target by anchor and honors ratio", {
 
 test_that("effective frames choose explicit targets before scope and staging", {
   page <- local_frame_page()
-  pz_stage_frame(page, "#small")
+  page <- pz_stage_frame(page, "#small")
   scoped <- pz_find(page, "#card")
 
   expect_identical(
@@ -1049,7 +1071,7 @@ test_that("recordings freeze staged targets and fields but measure at the chosen
   page <- local_frame_page()
   for (when in c("start", "stop")) {
     pz_js(page, "document.getElementById('small').style.width = '60px'")
-    pz_stage_frame(page, "#small", pad = 8)
+    page <- pz_stage_frame(page, "#small", pad = 8)
     out <- withr::local_tempfile(fileext = ".mp4")
     pz_record_start(page, out, hold = c(0, 0), frame = pz_frame(when = when))
     defer_record_stop(page)
@@ -1063,6 +1085,7 @@ test_that("recordings freeze staged targets and fields but measure at the chosen
       expect_equal(rec$crop$width, 76)
     }
 
+    # Re-staging mid-recording cannot touch the frozen home frame.
     pz_stage_frame(page, "#card", pad = 30)
     pz_js(page, "document.getElementById('small').style.width = '80px'")
     pz_wait(page, 0.2)
@@ -1076,7 +1099,9 @@ test_that("recordings freeze staged targets and fields but measure at the chosen
 test_that("scoped framing stays lazy and detached scopes do not become viewport frames", {
   page <- local_frame_page()
   scoped <- pz_find(page, "#card")
-  pz_stage_frame(page, "#small", pad = 0)
+  # Staging after scoping must not reach the already-derived scope: the
+  # staged target loses to the scope.
+  page <- pz_stage_frame(page, "#small", pad = 0)
   spec <- frame_effective(scoped, pz_frame())
   expect_null(spec$target)
   pz_js(page, "document.getElementById('card').style.width = '200px'")

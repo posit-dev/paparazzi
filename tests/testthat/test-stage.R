@@ -41,22 +41,69 @@ test_that("staged settings are pipeline-scoped, not page state", {
   expect_equal(ctx_stage(page)$cursor_speed, 500)
 })
 
+test_that("assignment carries a staged cursor into stills", {
+  page <- local_cursor_page()
+  staged <- page |> pz_stage(cursor = TRUE)
+
+  # The staged context's pipelines show the statically drawn cursor.
+  # (The drawn overlay is page-global DOM state; what the assignment
+  # controls is which pipelines resolve cursor = TRUE.)
+  shot <- withr::local_tempfile(fileext = ".png")
+  staged |> pz_screenshot(shot)
+  ink <- cursor_png_ink(page, shot, band = c(200, 400))
+  expect_gt(ink$count, 50)
+})
+
+test_that("staged settings reach only pipelines from the staged context", {
+  page <- local_cursor_page()
+
+  # An unassigned stage reaches nothing: pipelines from the page
+  # variable resolve the built-in defaults (the overlay scale stays
+  # 1.75 because cursor = TRUE never reached this show).
+  page |> pz_stage(cursor_scale = 2)
+  page |> pz_cursor_show("#btn")
+  expect_equal(cursor_overlay_scale(page), 1.75)
+
+  # Assignment carries the setting into every pipeline from `staged`.
+  staged <- page |> pz_stage(cursor_scale = 2)
+  staged |> pz_cursor_show("#none")
+  expect_equal(cursor_overlay_scale(page), 2)
+})
+
+test_that("pz_find contexts inherit staged settings", {
+  page <- local_cursor_page()
+  staged <- page |> pz_stage(cursor_scale = 3)
+
+  scoped <- pz_find(staged, "#btn")
+  expect_equal(ctx_stage(scoped)$cursor_scale, 3)
+  # The inherited setting resolves in the scoped pipeline's calls
+  # (cursor_show() with no target uses the scope)
+  scoped |> pz_cursor_show()
+  expect_equal(cursor_overlay_scale(page), 3)
+  # Unwinding the scope keeps the staging
+  root <- pz_find_reset(scoped)
+  expect_equal(ctx_stage(root)$cursor_scale, 3)
+  # A scope derived from the unassigned page sees the defaults
+  plain <- pz_find(page, "#btn")
+  expect_equal(ctx_stage(plain)$cursor_scale, 1.75)
+})
+
 test_that("pz_stage merges settings onto the defaults and validates", {
   page <- local_cursor_page()
 
-  expect_identical(page_stage(page), STAGE_DEFAULTS)
-  expect_equal(page_stage(page)$cursor_speed, 500)
-  expect_equal(page_stage(page)$cursor_scale, 1.75)
-  expect_true(page_stage(page)$camera_follow)
+  expect_identical(ctx_stage(page), STAGE_DEFAULTS)
+  expect_equal(ctx_stage(page)$cursor_speed, 500)
+  expect_equal(ctx_stage(page)$cursor_scale, 1.75)
+  expect_true(ctx_stage(page)$camera_follow)
 
-  page |>
+  staged <- page |>
     pz_stage(
       cursor_speed = 800,
       cursor_scale = 2,
       typing_speed = 30,
       pause = 0.5
     )
-  stage <- page_stage(page)
+  stage <- ctx_stage(staged)
   expect_equal(stage$cursor_speed, 800)
   expect_equal(stage$cursor_scale, 2)
   expect_equal(stage$typing_speed, 30)
@@ -66,8 +113,9 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_null(stage$enter)
   expect_identical(stage$typing, "natural")
 
-  page |> pz_stage(enter = "left", typing = "instant", cursor = TRUE)
-  stage <- page_stage(page)
+  staged <- staged |>
+    pz_stage(enter = "left", typing = "instant", cursor = TRUE)
+  stage <- ctx_stage(staged)
   expect_identical(stage$enter, "left")
   expect_identical(stage$typing, "instant")
   expect_true(stage$cursor)
@@ -76,7 +124,7 @@ test_that("pz_stage merges settings onto the defaults and validates", {
 
   # An explicit NULL removes the override (back to the default);
   # only omitted arguments leave a setting alone.
-  page |>
+  staged <- staged |>
     pz_stage(
       cursor = NULL,
       cursor_speed = NULL,
@@ -86,12 +134,12 @@ test_that("pz_stage merges settings onto the defaults and validates", {
       typing_speed = NULL,
       pause = NULL
     )
-  expect_identical(page_stage(page), STAGE_DEFAULTS)
+  expect_identical(ctx_stage(staged), STAGE_DEFAULTS)
 
-  page |> pz_stage(camera_follow = FALSE)
-  expect_false(page_stage(page)$camera_follow)
-  page |> pz_stage(camera_follow = NULL)
-  expect_true(page_stage(page)$camera_follow)
+  staged <- staged |> pz_stage(camera_follow = FALSE)
+  expect_false(ctx_stage(staged)$camera_follow)
+  staged <- staged |> pz_stage(camera_follow = NULL)
+  expect_true(ctx_stage(staged)$camera_follow)
   expect_error(pz_stage(page, camera_follow = "yes"), class = "rlang_error")
   expect_error(pz_stage(page, cursor = "yes"), class = "rlang_error")
   expect_error(pz_stage(page, cursor_speed = 0), class = "rlang_error")
@@ -99,18 +147,19 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_error(pz_stage(page, cursor_scale = 5.1), class = "rlang_error")
   expect_error(pz_stage(page, cursor_scale = Inf), class = "rlang_error")
   expect_error(pz_stage(page, cursor_scale = "large"), class = "rlang_error")
-  page |> pz_stage(cursor_scale = 5)
-  expect_equal(page_stage(page)$cursor_scale, 5)
+  staged <- staged |> pz_stage(cursor_scale = 5)
+  expect_equal(ctx_stage(staged)$cursor_scale, 5)
   expect_error(pz_stage(page, enter = "up"), class = "paparazzi_error_input")
   expect_error(pz_stage(page, typing = "slow"), class = "rlang_error")
   expect_error(pz_stage(page, typing_speed = -1), class = "rlang_error")
   expect_error(pz_stage(page, pause = -1), class = "rlang_error")
   expect_error(pz_stage(page, bogus = 1), class = "rlang_error")
+  expect_identical(ctx_stage(page), STAGE_DEFAULTS)
 })
 
 test_that("omitted staging settings leave all overrides alone", {
   page <- local_cursor_page()
-  page |>
+  staged <- page |>
     pz_stage(
       cursor = FALSE,
       cursor_speed = 800,
@@ -123,11 +172,11 @@ test_that("omitted staging settings leave all overrides alone", {
       show_keys = "words"
     ) |>
     pz_stage_annotate(color = "green")
-  before <- page_stage(page)
+  before <- ctx_stage(staged)
 
-  page |> pz_stage()
+  staged <- staged |> pz_stage()
 
-  expect_identical(page_stage(page), before)
+  expect_identical(ctx_stage(staged), before)
 })
 
 test_that("tri-state staging settings default to NULL in their signatures", {
@@ -153,80 +202,84 @@ test_that("pz_stage_annotate rejects invalid styles at assignment", {
     class = "rlang_error"
   )
   expect_error(pz_stage_annotate(page, bogus = 1), class = "rlang_error")
-  expect_identical(page_stage(page), STAGE_DEFAULTS)
+  expect_identical(ctx_stage(page), STAGE_DEFAULTS)
 })
 
 test_that("pz_stage_annotate sets defaults without changing other staging", {
   page <- local_cursor_page()
-  page |> pz_stage(cursor_speed = 800)
+  staged <- page |> pz_stage(cursor_speed = 800)
 
   result <- withVisible(pz_stage_annotate(
-    page,
+    staged,
     color = "green",
     font_family = "monospace",
     font_size = 20
   ))
 
-  expect_identical(result$value, page)
+  # pz_stage_annotate() derives a new context; it returns invisibly
+  # outside a recording.
   expect_false(result$visible)
+  expect_s3_class(result$value, "PaparazziContext")
+  expect_identical(result$value$page, page)
   expect_identical(
-    annotate_style(page, NULL, NULL, NULL),
+    annotate_style(result$value, NULL, NULL, NULL),
     list(color = "green", font_family = "monospace", font_size = 20)
   )
-  expect_equal(page_stage(page)$cursor_speed, 800)
+  expect_equal(ctx_stage(result$value)$cursor_speed, 800)
 })
 
 test_that("omitted annotation defaults stay set", {
   page <- local_cursor_page()
-  page |>
+  staged <- page |>
     pz_stage_annotate(
       color = "green",
       font_family = "monospace",
       font_size = 20
     )
 
-  page |> pz_stage_annotate()
+  staged <- staged |> pz_stage_annotate()
 
   expect_identical(
-    annotate_style(page, NULL, NULL, NULL),
+    annotate_style(staged, NULL, NULL, NULL),
     list(color = "green", font_family = "monospace", font_size = 20)
   )
 })
 
 test_that("NULL resets only supplied annotation defaults", {
   page <- local_cursor_page()
-  page |>
+  staged <- page |>
     pz_stage_annotate(
       color = "green",
       font_family = "monospace",
       font_size = 20
     )
 
-  page |> pz_stage_annotate(color = NULL)
+  staged <- staged |> pz_stage_annotate(color = NULL)
 
   expect_identical(
-    annotate_style(page, NULL, NULL, NULL),
+    annotate_style(staged, NULL, NULL, NULL),
     list(color = "#e11d48", font_family = "monospace", font_size = 20)
   )
 })
 
 test_that("NULL restores all annotation defaults without resetting other staging", {
   page <- local_cursor_page()
-  page |> pz_stage(cursor_speed = 800)
-  page |>
+  staged <- page |>
+    pz_stage(cursor_speed = 800) |>
     pz_stage_annotate(
       color = "green",
       font_family = "monospace",
       font_size = 20
     )
 
-  page |> pz_stage_annotate(color = NULL, font_family = NULL, font_size = NULL)
+  staged <- staged |>
+    pz_stage_annotate(color = NULL, font_family = NULL, font_size = NULL)
 
   expect_identical(
-    annotate_style(page, NULL, NULL, NULL),
+    annotate_style(staged, NULL, NULL, NULL),
     list(color = "#e11d48", font_family = "sans-serif", font_size = 14)
   )
-  expect_equal(page_stage(page)$cursor_speed, 800)
+  expect_equal(ctx_stage(staged)$cursor_speed, 800)
 })
 
 test_that("pz_stage no longer accepts annotation style settings", {
@@ -244,7 +297,7 @@ test_that("pz_stage no longer accepts annotation style settings", {
     pz_stage(page, annotate_font_size = 20),
     class = "rlib_error_dots_nonempty"
   )
-  expect_identical(page_stage(page), STAGE_DEFAULTS)
+  expect_identical(ctx_stage(page), STAGE_DEFAULTS)
 })
 
 test_that("the glide formula uses the new default and 0.5-2s limits", {
@@ -279,7 +332,7 @@ test_that("natural typing is per-character while recording, instant otherwise", 
 
   # typing = "instant" is one insertion even while recording.
   page2 <- local_cursor_page()
-  page2 |> pz_stage(typing = "instant")
+  page2 <- page2 |> pz_stage(typing = "instant")
   page2 |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -445,7 +498,7 @@ test_that("a nested scroller obstructs a scoped wheel and stays untouched", {
 test_that("pz_act_scroll forwards duration to staged wheels for by, to, and target", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_stage(cursor_speed = 500)
+  page <- page |> pz_stage(cursor_speed = 500)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -591,7 +644,7 @@ test_that("a target visible in a below-the-fold container is wheeled into view",
 test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_stage(cursor = FALSE)
+  page <- page |> pz_stage(cursor = FALSE)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -602,7 +655,7 @@ test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
   # cursor = FALSE never draws, even while recording.
   expect_null(cursor_overlay_state(page))
 
-  page |> pz_stage(cursor = NULL)
+  page <- page |> pz_stage(cursor = NULL)
   page |> pz_act_click("#btn")
   # The NULL restored the default: auto draws while recording.
   st <- cursor_overlay_state(page)
@@ -740,7 +793,7 @@ test_that("an off-screen scope is brought into view with staged wheels too", {
 test_that("the stage pause holds after each action only while recording", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_stage(pause = 0.5)
+  page <- page |> pz_stage(pause = 0.5)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -754,7 +807,7 @@ test_that("the stage pause holds after each action only while recording", {
   expect_true(recorded >= 0.45)
 
   page2 <- local_cursor_page()
-  page2 |> pz_stage(pause = 0.5)
+  page2 <- page2 |> pz_stage(pause = 0.5)
   page2 |> pz_act_click("#btn")
   expect_equal(pz_js(page2, "window.__log.clicks"), 1)
 })
@@ -763,7 +816,7 @@ test_that("the stage pause holds after focus and root or scoped blur", {
   skip_if_no_av()
   page <- local_cursor_page()
   # Distinctive pause value: identifiable among the actions' other pumps.
-  page |> pz_stage(pause = 0.37)
+  page <- page |> pz_stage(pause = 0.37)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -812,7 +865,8 @@ test_that("the stage pause holds after focus and root or scoped blur", {
 test_that("the stage pause holds after root typing without a target", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_stage(pause = 0.5, typing = "instant", camera_follow = FALSE)
+  page <- page |>
+    pz_stage(pause = 0.5, typing = "instant", camera_follow = FALSE)
   page |> pz_act_focus("#name")
   page |>
     pz_record_start(
@@ -848,7 +902,7 @@ test_that("the stage pause holds after press, select_text, and drag too", {
   skip_if_no_av()
   page <- local_cursor_page()
   pause <- 0.37
-  page |> pz_stage(pause = pause)
+  page <- page |> pz_stage(pause = pause)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -988,44 +1042,46 @@ test_that("without a recording the same chain runs straight to the final state",
 
 test_that("click_effect and click_effect_color stage, validate, and reset", {
   page <- local_cursor_page()
-  expect_identical(page_stage(page)$click_effect, "press")
-  expect_identical(page_stage(page)$click_effect_color, "#e11d48")
+  staged <- page
+  expect_identical(ctx_stage(staged)$click_effect, "press")
+  expect_identical(ctx_stage(staged)$click_effect_color, "#e11d48")
 
   for (effect in c("ring", "none", "press")) {
-    pz_stage(page, click_effect = effect)
-    expect_identical(page_stage(page)$click_effect, effect)
+    staged <- pz_stage(staged, click_effect = effect)
+    expect_identical(ctx_stage(staged)$click_effect, effect)
   }
   expect_error(pz_stage(page, click_effect = "slide"), class = "rlang_error")
 
-  pz_stage(page, click_effect_color = "#2563eb")
-  expect_identical(page_stage(page)$click_effect_color, "#2563eb")
+  staged <- pz_stage(staged, click_effect_color = "#2563eb")
+  expect_identical(ctx_stage(staged)$click_effect_color, "#2563eb")
   expect_error(
     pz_stage(page, click_effect_color = ""),
     "click_effect_color.*empty string"
   )
   expect_error(pz_stage(page, click_effect_color = 7), class = "rlang_error")
 
-  pz_stage(page, click_effect = NULL, click_effect_color = NULL)
-  expect_identical(page_stage(page)$click_effect, "press")
-  expect_identical(page_stage(page)$click_effect_color, "#e11d48")
+  staged <- pz_stage(staged, click_effect = NULL, click_effect_color = NULL)
+  expect_identical(ctx_stage(staged)$click_effect, "press")
+  expect_identical(ctx_stage(staged)$click_effect_color, "#e11d48")
 })
 
 test_that("show_keys defaults to none and restores its staged default", {
   page <- local_record_page()
-  expect_identical(page_stage(page)$show_keys, "none")
+  staged <- page
+  expect_identical(ctx_stage(staged)$show_keys, "none")
   for (style in c("words", "mac", "both")) {
-    pz_stage(page, show_keys = style)
-    expect_identical(page_stage(page)$show_keys, style)
+    staged <- pz_stage(staged, show_keys = style)
+    expect_identical(ctx_stage(staged)$show_keys, style)
   }
   expect_error(pz_stage(page, show_keys = "nope"), "nope")
-  pz_stage(page, show_keys = NULL)
-  expect_identical(page_stage(page)$show_keys, "none")
+  staged <- pz_stage(staged, show_keys = NULL)
+  expect_identical(ctx_stage(staged)$show_keys, "none")
 })
 
 test_that("pz_stage_annotate stages fill, text color, stroke width and distance", {
   page <- local_cursor_page()
-  expect_null(page_stage(page)$annotate_fill)
-  expect_null(page_stage(page)$annotate_text_color)
+  expect_null(ctx_stage(page)$annotate_fill)
+  expect_null(ctx_stage(page)$annotate_text_color)
   expect_error(pz_stage_annotate(page, fill = ""), "fill.*empty string")
   expect_error(
     pz_stage_annotate(page, text_color = ""),
@@ -1034,42 +1090,45 @@ test_that("pz_stage_annotate stages fill, text color, stroke width and distance"
   expect_error(pz_stage_annotate(page, stroke_width = 0), "stroke_width")
   expect_error(pz_stage_annotate(page, stroke_width = -1), "stroke_width")
   expect_error(pz_stage_annotate(page, distance = -1), "distance")
-  expect_identical(page_stage(page), STAGE_DEFAULTS)
+  expect_identical(ctx_stage(page), STAGE_DEFAULTS)
 
-  page |>
+  staged <- page |>
     pz_stage_annotate(
       fill = "red",
       text_color = "black",
       stroke_width = 5,
       distance = 30
     )
-  expect_identical(page_stage(page)$annotate_fill, "red")
-  expect_identical(page_stage(page)$annotate_text_color, "black")
-  expect_identical(page_stage(page)$annotate_stroke_width, 5)
-  expect_identical(page_stage(page)$annotate_distance, 30)
+  expect_identical(ctx_stage(staged)$annotate_fill, "red")
+  expect_identical(ctx_stage(staged)$annotate_text_color, "black")
+  expect_identical(ctx_stage(staged)$annotate_stroke_width, 5)
+  expect_identical(ctx_stage(staged)$annotate_distance, 30)
 
-  page |> pz_stage_annotate()
-  expect_identical(page_stage(page)$annotate_fill, "red")
-  expect_identical(page_stage(page)$annotate_distance, 30)
+  staged <- staged |> pz_stage_annotate()
+  expect_identical(ctx_stage(staged)$annotate_fill, "red")
+  expect_identical(ctx_stage(staged)$annotate_distance, 30)
 
-  page |>
+  staged <- staged |>
     pz_stage_annotate(
       fill = NULL,
       text_color = NULL,
       stroke_width = NULL,
       distance = NULL
     )
-  expect_identical(page_stage(page)$annotate_fill, STAGE_DEFAULTS$annotate_fill)
   expect_identical(
-    page_stage(page)$annotate_text_color,
+    ctx_stage(staged)$annotate_fill,
+    STAGE_DEFAULTS$annotate_fill
+  )
+  expect_identical(
+    ctx_stage(staged)$annotate_text_color,
     STAGE_DEFAULTS$annotate_text_color
   )
   expect_identical(
-    page_stage(page)$annotate_stroke_width,
+    ctx_stage(staged)$annotate_stroke_width,
     STAGE_DEFAULTS$annotate_stroke_width
   )
   expect_identical(
-    page_stage(page)$annotate_distance,
+    ctx_stage(staged)$annotate_distance,
     STAGE_DEFAULTS$annotate_distance
   )
 })

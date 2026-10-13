@@ -20,7 +20,7 @@
 #' `NULL` restores the built-in default, and a value sets it (so
 #' `pz_stage(cursor = FALSE)` can be undone with `pz_stage(cursor =
 #' NULL)`). Staged settings apply to the pipeline the staged context
-#' flows through: [pz_find*()] contexts inherit them, and they persist
+#' flows through: `pz_find*()` contexts inherit them, and they persist
 #' across recordings inside the chain. A fresh pipeline from the
 #' original context starts from the defaults, so assign the result
 #' (`page <- page |> pz_stage(...)`) to set page-wide defaults. Without a
@@ -254,7 +254,7 @@ pz_stage <- function(
 #' Sets style defaults for new annotations in screenshots and recordings.
 #' An omitted argument leaves its setting alone, an explicit `NULL`
 #' restores the built-in default, and a value sets it. The defaults
-#' apply to the pipeline the staged context flows through: [pz_find*()]
+#' apply to the pipeline the staged context flows through: `pz_find*()`
 #' contexts inherit them, while a fresh pipeline from the original
 #' context starts from the defaults -- assign the result
 #' (`page <- page |> pz_stage_annotate(...)`) to set page-wide defaults.

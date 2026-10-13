@@ -92,13 +92,15 @@ test_that("staged caption_side is the default and per-call side overrides it", {
   page <- local_record_page()
   pz_annotate_caption(page, "First")
   expect_equal(page_caption(page)$side, "bottom")
-  page |> pz_stage_annotate(caption_side = "top")
-  pz_annotate_caption(page, "Second")
+  staged <- page |> pz_stage_annotate(caption_side = "top")
+  pz_annotate_caption(staged, "Second")
   expect_equal(page_caption(page)$side, "top")
-  pz_annotate_caption(page, "Third", side = "bottom")
+  pz_annotate_caption(staged, "Third", side = "bottom")
   expect_equal(page_caption(page)$side, "bottom")
-  page |> pz_stage_annotate(caption_side = NULL)
-  pz_annotate_caption(page, "Fourth")
+  pz_annotate_caption(
+    staged |> pz_stage_annotate(caption_side = NULL),
+    "Fourth"
+  )
   expect_equal(page_caption(page)$side, "bottom")
 })
 
@@ -751,16 +753,17 @@ test_that("VTT-only output follows pause-aware ticks and does not burn", {
 
 test_that("caption style is independent of badge style and survives navigation", {
   page <- local_record_page()
-  pz_stage_annotate(
+  staged <- pz_stage_annotate(
     page,
     color = "red",
     font_family = "monospace",
     font_size = 7
   )
-  pz_annotate_caption(page, "On every page", side = "top")
+  pz_annotate_caption(staged, "On every page", side = "top")
   expect_equal(page_caption(page)$color, "white")
   expect_equal(page_caption(page)$font_family, "monospace")
   expect_equal(page_caption(page)$font_size, 20)
+  # Re-staging never rewrites an existing caption
   pz_stage_annotate(page, font_family = "serif")
   expect_equal(page_caption(page)$font_family, "monospace")
   pz_nav_reload(page)
@@ -1272,8 +1275,8 @@ test_that("a keycap row narrower than 80% of the output stays on one line", {
 
 test_that("caption literal styles ignore staged accent and size and reject NULL", {
   page <- local_page()
-  pz_stage_annotate(page, color = "red", font_size = 32)
-  pz_annotate_caption(page, "Note")
+  staged <- pz_stage_annotate(page, color = "red", font_size = 32)
+  pz_annotate_caption(staged, "Note")
   omitted <- page_caption(page)
   pz_annotate_caption(page, "Note", color = "white", font_size = 20)
   expect_identical(page_caption(page), omitted)

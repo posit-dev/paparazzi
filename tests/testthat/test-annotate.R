@@ -28,17 +28,17 @@ annotation_state <- function(page) {
 
 test_that("boxes draw for every match, replace by id, and clear without leaking to find", {
   page <- annotation_page()
-  page |> pz_stage_annotate(color = "rgb(255, 0, 0)", font_size = 18)
+  staged <- page |> pz_stage_annotate(color = "rgb(255, 0, 0)", font_size = 18)
   expect_identical(
     pz_annotate(
-      page,
+      staged,
       ".mark",
       id = "group",
       label = TRUE,
       pad = 4,
       reveal = "none"
     ),
-    page
+    staged
   )
   boxes <- annotation_state(page)
   expect_length(boxes, 2)
@@ -227,22 +227,23 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
       color = "green",
       font_family = "monospace",
       font_size = 20
-    )
-  page |> pz_annotate("#box", label = "A", reveal = "none")
+    ) |>
+    pz_annotate("#box", label = "A", reveal = "none")
   expect_identical(annotation_state(page)[[1]]$color, "green")
   badge_style <- pz_js(
     page,
     "(() => { const s = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').style; return [s.fontSize, s.fontFamily]; })()"
   )
   expect_equal(unlist(badge_style), c("20px", "monospace"))
+  # A NULL stage resets the overrides for its pipeline only
   page |>
-    pz_annotate_clear() |>
     pz_stage_annotate(
       color = NULL,
       font_family = NULL,
       font_size = NULL
-    )
-  page |> pz_annotate("#box", reveal = "none")
+    ) |>
+    pz_annotate_clear() |>
+    pz_annotate("#box", reveal = "none")
   expect_identical(annotation_state(page)[[1]]$color, "rgb(225, 29, 72)")
   expect_error(pz_annotate(page, "#box", pad = c(1, 2)))
 })
@@ -589,10 +590,10 @@ test_that("redaction fills every match immediately and hides after disconnection
     page,
     "document.querySelectorAll('.mark').forEach(el => el.textContent = 'SECRET')"
   )
-  page |> pz_stage_annotate(color = "#ff0000")
+  staged <- page |> pz_stage_annotate(color = "#ff0000")
   expect_identical(
-    pz_annotate_redact(page, ".mark", id = "secret", pad = 2),
-    page
+    pz_annotate_redact(staged, ".mark", id = "secret", pad = 2),
+    staged
   )
   nodes <- pz_js(
     page,
@@ -2328,18 +2329,16 @@ test_that("mark badges follow their mark unless overridden per call", {
     c("rgb(225, 29, 72)", "rgb(255, 255, 255)")
   )
 
-  page |>
-    pz_stage_annotate(color = "#16a34a") |>
-    pz_annotate("#box", label = "A", reveal = "none", id = "mark")
+  page <- page |> pz_stage_annotate(color = "#16a34a")
+  page |> pz_annotate("#box", label = "A", reveal = "none", id = "mark")
   expect_equal(
     unlist(badge_style()),
     c("rgb(22, 163, 74)", "rgb(255, 255, 255)")
   )
 
   # Staged fill/text_color style callout chrome only, never mark badges.
-  page |>
-    pz_stage_annotate(fill = "#fef3c7", text_color = "#1c1917") |>
-    pz_annotate("#box", label = "A", reveal = "none", id = "mark")
+  page <- page |> pz_stage_annotate(fill = "#fef3c7", text_color = "#1c1917")
+  page |> pz_annotate("#box", label = "A", reveal = "none", id = "mark")
   expect_equal(
     unlist(badge_style()),
     c("rgb(22, 163, 74)", "rgb(255, 255, 255)")
@@ -2358,9 +2357,7 @@ test_that("mark badges follow their mark unless overridden per call", {
     unlist(badge_style()),
     c("rgb(219, 234, 254)", "rgb(23, 37, 84)")
   )
-  page |>
-    pz_annotate_clear() |>
-    pz_stage_annotate(color = NULL, fill = NULL, text_color = NULL)
+  page |> pz_annotate_clear()
 })
 
 test_that("mark badges size to their label, not their mark", {
@@ -2476,7 +2473,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
     default_border,
     paste0(STAGE_DEFAULTS$annotate_stroke_width, "px")
   )
-  page |> pz_annotate_clear() |> pz_stage_annotate(stroke_width = NULL)
+  page |> pz_annotate_clear()
 })
 
 annotation_badge_rects <- function(page) {

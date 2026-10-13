@@ -108,7 +108,7 @@ test_that("pz_act_click validates effect and effect_color", {
   )
 
   # A valid staged value does not excuse a bad per-call one.
-  pz_stage(page, click_effect = "ring")
+  page <- pz_stage(page, click_effect = "ring")
   expect_error(
     pz_act_click(page, "#btn", effect = "slide"),
     class = "rlang_error"
@@ -125,7 +125,7 @@ test_that("click effects draw nothing without a recording", {
 
 test_that("the click effect resolves per call and styles only pz_act_click", {
   page <- local_cursor_page()
-  page |>
+  page <- page |>
     pz_stage(click_effect = "none", click_effect_color = "#2563eb") |>
     pz_cursor_move("#btn")
 
@@ -176,7 +176,7 @@ test_that("the click effect resolves per call and styles only pz_act_click", {
 
   # So do drags, which press through cursor_press() directly.
   adv <- local_advanced_page()
-  pz_stage(adv, click_effect = "none")
+  adv <- pz_stage(adv, click_effect = "none")
   calls <- list()
   pz_act_drag(adv, "#dragbox", "#dropzone")
   expect_true("press" %in% kinds())
@@ -1052,7 +1052,7 @@ test_that("recorded selection visually drags across a wrapped inline range", {
   to <- unlist(ends[[2]])
   expect_gt(to[[2]], from[[2]])
   pz_act_select_text(page, "playful", target = "#editor")
-  page |> pz_stage(cursor_scale = 1)
+  page <- page |> pz_stage(cursor_scale = 1)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   page |> pz_cursor_move("#editor", duration = 0)
@@ -1175,7 +1175,7 @@ test_that("recorded selection respects disabled and explicitly hidden cursors", 
     pz_js(page, "window.getSelection().toString()"),
     "galapagos penguins"
   )
-  page |> pz_stage(cursor = FALSE)
+  page <- pz_stage(page, cursor = FALSE)
   pz_act_select_text(page, "otters", target = "#editor")
   expect_equal(cursor_overlay_state(page), before)
   expect_equal(pz_js(page, "window.getSelection().toString()"), "otters")
@@ -1230,7 +1230,7 @@ test_that("a failed selection carry releases the overlay press", {
 
   expect_identical(during, "")
   expect_false(page_cursor(page)$pressed)
-  expect_equal(cursor_overlay_scale(page), page_stage(page)$cursor_scale)
+  expect_equal(cursor_overlay_scale(page), ctx_stage(page)$cursor_scale)
   expect_equal(
     pz_js(page, "window.getSelection().toString()"),
     "galapagos penguins"
@@ -1241,7 +1241,7 @@ test_that("a failed selection carry releases the overlay press", {
 test_that("recorded selection re-derives its range after inline nodes change", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(cursor_scale = 1, typing = "instant")
+  page <- page |> pz_stage(cursor_scale = 1, typing = "instant")
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   page |> pz_cursor_move("#rich", duration = 0)
@@ -1288,7 +1288,7 @@ test_that("recorded selection re-derives its range after inline nodes change", {
 test_that("recorded selection fails loudly when its text disappears during the carry", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(cursor_scale = 1)
+  page <- page |> pz_stage(cursor_scale = 1)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   page |> pz_cursor_move("#rich", duration = 0)
@@ -1321,7 +1321,7 @@ test_that("recorded selection fails loudly when its text disappears during the c
 test_that("recorded selection refuses a target detached during the carry", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(cursor_scale = 1)
+  page <- page |> pz_stage(cursor_scale = 1)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   page |> pz_cursor_move("#rich", duration = 0)
@@ -1644,7 +1644,7 @@ test_that("pz_act_drag routes an HTML5 source through the drag pipeline", {
 test_that("a recorded HTML5 drag drops and rests the overlay on the target", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(pause = 0)
+  page <- page |> pz_stage(pause = 0)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -1679,7 +1679,7 @@ test_that("a recorded HTML5 drag drops and rests the overlay on the target", {
 test_that("a recorded mouse drag drops and rests the overlay on the target", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(pause = 0)
+  page <- page |> pz_stage(pause = 0)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -1708,7 +1708,7 @@ test_that("a recorded mouse drag drops and rests the overlay on the target", {
 test_that("a recorded mouse drag streams held moves that follow the cursor", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(pause = 0)
+  page <- page |> pz_stage(pause = 0)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -1790,7 +1790,7 @@ test_that("a recorded mouse drag streams held moves that follow the cursor", {
 test_that("a recorded HTML5 drag streams drag events along the carry", {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
-  page |> pz_stage(pause = 0)
+  page <- page |> pz_stage(pause = 0)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -1940,7 +1940,7 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
 test_that("a failed staged HTML5 carry restores the resting cursor icon", {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
-  page |> pz_stage(pause = 0)
+  page <- page |> pz_stage(pause = 0)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
 
@@ -1969,7 +1969,7 @@ test_that("a failed staged HTML5 carry restores the resting cursor icon", {
 test_that("HTML5 carry checkpoints dispatch dragenter in path order", {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
-  page |> pz_stage(pause = 0)
+  page <- page |> pz_stage(pause = 0)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   pz_js(
@@ -2013,7 +2013,7 @@ test_that("HTML5 carry checkpoints dispatch dragenter in path order", {
 test_that("a failed staged mouse press does not dispatch a stray mouseup", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(pause = 0)
+  page <- page |> pz_stage(pause = 0)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -2038,14 +2038,14 @@ test_that("a failed staged mouse press does not dispatch a stray mouseup", {
   )
   expect_false("mouseup" %in% adv_log_types(adv_log(page)))
   expect_false(page_cursor(page)$pressed)
-  expect_equal(cursor_overlay_scale(page), page_stage(page)$cursor_scale)
+  expect_equal(cursor_overlay_scale(page), ctx_stage(page)$cursor_scale)
   pz_record_stop(page)
 })
 
 test_that("a mid-carry dispatch failure propagates and the drag still releases", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(pause = 0)
+  page <- page |> pz_stage(pause = 0)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -2092,7 +2092,7 @@ test_that("a mid-carry dispatch failure propagates and the drag still releases",
     pz_act_drag(page, "#dragbox", "#dropzone"),
     "simulated mid-carry dispatch failure"
   )
-  expect_equal(cursor_overlay_scale(page), page_stage(page)$cursor_scale)
+  expect_equal(cursor_overlay_scale(page), ctx_stage(page)$cursor_scale)
 
   # The exit defer released the held button: the page saw a mouseup
   # after the press, so a following drag works.
@@ -2226,7 +2226,7 @@ test_that("pz_act_drag errors when the destination hides after the source's scro
 test_that("press records original and resolved keys only while unpaused", {
   skip_if_no_av()
   page <- local_record_page()
-  pz_stage(page, show_keys = "both")
+  page <- pz_stage(page, show_keys = "both")
   pz_act_press(page, "Mod+k")
   expect_null(page_recorder(page))
   pz_record_start(page, tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0.1))
@@ -2274,11 +2274,11 @@ test_that("key callouts keep the font_family staged at press time", {
   pz_record_start(page, tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0.1))
   defer_record_stop(page)
 
-  pz_stage_annotate(page, font_family = '"Silkscreen", sans-serif')
+  page <- pz_stage_annotate(page, font_family = '"Silkscreen", sans-serif')
   pz_act_press(page, "a", show_keys = "words")
   # Changing the staged default after the press must not retroactively
   # restyle the recorded callout
-  pz_stage_annotate(page, font_family = "monospace")
+  page <- pz_stage_annotate(page, font_family = "monospace")
 
   events <- page_recorder(page)$keypresses
   expect_length(events, 1)

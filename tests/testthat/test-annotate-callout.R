@@ -164,8 +164,7 @@ test_that("multiple matches repeat text and number badges; ids share the registr
       color = "rgb(255, 0, 0)",
       font_family = "monospace",
       font_size = 19
-    )
-  page |>
+    ) |>
     pz_annotate_callout("Repeat", target = ".mark", label = TRUE, id = "shared")
   state <- callout_details(page)$nodes
   expect_length(state, 2)
@@ -931,7 +930,6 @@ test_that("fill and text_color style the bubble and badge, staged or per-call", 
   expect_identical(node$textColor, "rgb(23, 37, 84)")
   expect_identical(node$badgeFill, "rgb(219, 234, 254)")
   expect_identical(node$badgeColor, "rgb(23, 37, 84)")
-  page |> pz_stage_annotate(fill = NULL, text_color = NULL)
 })
 
 test_that("callouts validate fill, text_color, stroke_width and distance", {
@@ -987,7 +985,6 @@ test_that("distance sets the bubble-to-target gap and is stageable", {
     pz_annotate_callout("Gap", target = "#target", side = "right", id = "tip")
   expect_equal(gap(), 12, tolerance = 1)
   expect_gt(default_gap, 12)
-  page |> pz_stage_annotate(distance = NULL)
 })
 
 test_that("an unset distance is 24 with a leader and 8 without one", {
@@ -1001,11 +998,12 @@ test_that("an unset distance is 24 with a leader and 8 without one", {
   pz_annotate_callout(page, "x", target = "#target", leader = FALSE)
   expect_identical(captured$distance, 8)
 
-  page |> pz_stage_annotate(distance = 30)
-  pz_annotate_callout(page, "x", target = "#target", leader = FALSE)
+  staged <- page |> pz_stage_annotate(distance = 30)
+  pz_annotate_callout(staged, "x", target = "#target", leader = FALSE)
   expect_identical(captured$distance, 30)
-  page |> pz_stage_annotate(distance = NULL)
-  pz_annotate_callout(page, "x", target = "#target", leader = FALSE)
+  # NULL drops the override, restoring the built-in default
+  staged <- staged |> pz_stage_annotate(distance = NULL)
+  pz_annotate_callout(staged, "x", target = "#target", leader = FALSE)
   expect_identical(captured$distance, 8)
 })
 
@@ -1047,7 +1045,6 @@ test_that("stroke_width scales the leader and decorations and is stageable", {
   m <- leader_metrics()
   expect_equal(m$stroke, 1)
   expect_equal(m$head, 5, tolerance = 1e-4)
-  page |> pz_stage_annotate(stroke_width = NULL)
 })
 
 test_that("callout style options resolve per-call, staged, then built-in", {
@@ -1064,14 +1061,14 @@ test_that("callout style options resolve per-call, staged, then built-in", {
   expect_true(is.numeric(defaults$strokeWidth) && defaults$strokeWidth > 0)
   expect_true(is.numeric(defaults$distance) && defaults$distance > 0)
 
-  page |>
+  staged <- page |>
     pz_stage_annotate(
       fill = "red",
       text_color = "black",
       stroke_width = 5,
       distance = 30
     )
-  pz_annotate_callout(page, "x", target = "#target")
+  pz_annotate_callout(staged, "x", target = "#target")
   expect_identical(captured$fill, "red")
   expect_identical(captured$textColor, "black")
   expect_identical(captured$strokeWidth, 5)
@@ -1104,31 +1101,51 @@ test_that("callout style options resolve per-call, staged, then built-in", {
 
 test_that("callout fill follows the resolved accent unless overridden", {
   page <- callout_page()
-  draw <- function(...) {
-    pz_annotate_callout(page, "Tip", target = "#target", id = "tip", ...)
+  draw <- function(ctx = page, ...) {
+    pz_annotate_callout(ctx, "Tip", target = "#target", id = "tip", ...)
     callout_details(page)$nodes[[1]]
   }
   node <- draw()
   expect_identical(node$fill, "rgb(225, 29, 72)")
-  pz_stage_annotate(page, color = "#2563eb")
-  node <- draw()
+  blue <- pz_stage_annotate(page, color = "#2563eb")
+  node <- draw(blue)
   expect_identical(node$fill, "rgb(37, 99, 235)")
-  node <- draw(color = "#56B4E9")
+  node <- draw(blue, color = "#56B4E9")
   expect_identical(node$fill, "rgb(86, 180, 233)")
 
-  pz_stage_annotate(page, fill = "yellow")
-  expect_identical(draw(color = "blue")$fill, "rgb(255, 255, 0)")
-  expect_identical(draw(fill = "lime")$fill, "rgb(0, 255, 0)")
-  pz_stage_annotate(page, fill = NULL)
-  expect_identical(draw()$fill, "rgb(37, 99, 235)")
-  expect_identical(draw(color = "purple")$fill, "rgb(128, 0, 128)")
+  yellow <- pz_stage_annotate(blue, fill = "yellow")
+  expect_identical(draw(yellow, color = "blue")$fill, "rgb(255, 255, 0)")
+  expect_identical(draw(yellow, fill = "lime")$fill, "rgb(0, 255, 0)")
+  # An explicit NULL restores the follow-color default for that pipeline
+  plain <- pz_stage_annotate(yellow, fill = NULL)
+  expect_identical(draw(plain)$fill, "rgb(37, 99, 235)")
+  expect_identical(draw(plain, color = "purple")$fill, "rgb(128, 0, 128)")
+})
+
+test_that("NULL undo restores a default for one pipeline only", {
+  page <- callout_page()
+  draw <- function(ctx, ...) {
+    pz_annotate_callout(ctx, "Tip", target = "#target", id = "tip", ...)
+    callout_details(page)$nodes[[1]]
+  }
+  staged <- pz_stage_annotate(page, fill = "blue")
+
+  # The page-wide default fills the bubble blue
+  expect_identical(draw(staged)$fill, "rgb(0, 0, 255)")
+  # ...while a one-off NULL pipeline falls back to the follow-color default
+  expect_identical(
+    draw(staged |> pz_stage_annotate(fill = NULL))$fill,
+    "rgb(225, 29, 72)"
+  )
+  # ...and the page-wide default persists for other pipelines
+  expect_identical(draw(staged)$fill, "rgb(0, 0, 255)")
 })
 
 test_that("callout text chooses the higher WCAG contrast against its fill", {
   page <- callout_page()
-  draw <- function(...) {
+  draw <- function(ctx = page, ...) {
     pz_annotate_callout(
-      page,
+      ctx,
       "Tip",
       target = "#target",
       label = 1,
@@ -1154,13 +1171,13 @@ test_that("callout text chooses the higher WCAG contrast against its fill", {
     draw(color = "navy", fill = "white")$textColor,
     "rgb(0, 0, 0)"
   )
-  pz_stage_annotate(page, fill = "white")
-  expect_identical(draw(color = "navy")$textColor, "rgb(0, 0, 0)")
-  pz_stage_annotate(page, text_color = "red")
-  expect_identical(draw()$textColor, "rgb(255, 0, 0)")
-  expect_identical(draw(text_color = "blue")$textColor, "rgb(0, 0, 255)")
-  pz_stage_annotate(page, text_color = NULL)
-  expect_identical(draw()$textColor, "rgb(0, 0, 0)")
+  white <- pz_stage_annotate(page, fill = "white")
+  expect_identical(draw(white, color = "navy")$textColor, "rgb(0, 0, 0)")
+  red <- pz_stage_annotate(white, text_color = "red")
+  expect_identical(draw(red)$textColor, "rgb(255, 0, 0)")
+  expect_identical(draw(red, text_color = "blue")$textColor, "rgb(0, 0, 255)")
+  plain <- pz_stage_annotate(red, text_color = NULL)
+  expect_identical(draw(plain)$textColor, "rgb(0, 0, 0)")
   # Translucent fills are blended over white before measuring contrast.
   expect_identical(draw(fill = "transparent")$textColor, "rgb(0, 0, 0)")
   expect_identical(

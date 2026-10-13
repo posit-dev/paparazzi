@@ -40,17 +40,17 @@ test_that("recording rejects explicit annotated home but uses staged element hom
     )
     expect_null(page_recorder(page))
   }
-  pz_stage_frame(page, "#home", target_box = "annotated")
+  staged <- pz_stage_frame(page, "#home", target_box = "annotated")
   expect_error(
-    pz_record_start(page, out, frame = page_frame(page)),
+    pz_record_start(staged, out, frame = ctx_frame(staged)),
     "home|recording"
   )
   expect_null(page_recorder(page))
-  pz_record_start(page, out, hold = c(0, 0))
+  pz_record_start(staged, out, hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
   expect_identical(rec$frame$target_box, "element")
-  expect_identical(page_frame(page)$target_box, "annotated")
+  expect_identical(ctx_frame(staged)$target_box, "annotated")
   expect_equal(
     unlist(record_crop_box(page, rec$frame)[c("x", "y")]),
     c(x = 200, y = 120)
@@ -2253,7 +2253,7 @@ test_that("staged frames reject resizes and keep requested frames", {
     height = 480,
     scale = 2
   )
-  pz_stage_frame(page, "#box")
+  page <- pz_stage_frame(page, "#box")
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, out, fps = 10, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
@@ -2982,7 +2982,7 @@ test_that("pz_record_start promotes a bare locator frame", {
 test_that("an inherited annotated target box downgrades for the home frame", {
   skip_if_no_av()
   page <- local_record_page()
-  pz_stage_frame(page, "#box", target_box = "annotated")
+  page <- pz_stage_frame(page, "#box", target_box = "annotated")
   out <- withr::local_tempfile(fileext = ".mp4")
 
   # An explicit spec without target_box inherits the staged annotated
@@ -2996,4 +2996,27 @@ test_that("an inherited annotated target box downgrades for the home frame", {
   expect_identical(frame$pad, rep(8, 4))
   expect_identical(frame$target[[1]]$css, "#box")
   pz_record_stop(page)
+})
+
+test_that("staged settings govern a recording and carry into its context", {
+  skip_if_no_av()
+  page <- local_cursor_page()
+  staged <- pz_stage(page, typing = "instant")
+
+  # The staged page variable governs the actions inside the block:
+  # instant typing is a single insertion.
+  out <- withr::local_tempfile(fileext = ".mp4")
+  pz_record(staged, out, {
+    staged |> pz_act_type("otters", target = "#name")
+  })
+  expect_equal(pz_js(page, "window.__log.inputs.name"), 1)
+  expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
+
+  # The context pz_record_start() returns inherits the staged settings.
+  out2 <- withr::local_tempfile(fileext = ".mp4")
+  rec_ctx <- pz_record_start(staged, out2, hold = c(0, 0))
+  defer_record_stop(rec_ctx)
+  expect_identical(rec_ctx$page, page)
+  expect_identical(ctx_stage(rec_ctx)$typing, "instant")
+  pz_record_stop(rec_ctx)
 })

@@ -609,6 +609,11 @@ url_encode_path <- function(path) {
 }
 
 page_recorder <- function(page) {
+  # Tolerates a context: a page's `page` is itself, a derived
+  # context's is the root page.
+  if (inherits(page, "PaparazziContext") && !is_pz_page(page)) {
+    page <- page$page
+  }
   page$recorder
 }
 

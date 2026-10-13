@@ -22,7 +22,7 @@ test_that('ineligible drags do not boot the preview or call the library', {
     } else {
       local_task_page()
     }
-    pz_stage(page, pause = 0)
+    page <- pz_stage(page, pause = 0)
     if (gate != 'mouse') {
       drag_preview_task_marker(page)
     }
@@ -79,7 +79,7 @@ test_that('file pages explain unreadable stylesheets and link to drag preview he
     width = 800,
     height = 900
   )
-  pz_stage(page, pause = 0)
+  page <- pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
   pz_record_start(
     page,
@@ -127,7 +127,7 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
   skip_if_no_av()
   check_unwind <- function(interrupted) {
     page <- local_task_page(width = 800, height = 900)
-    pz_stage(page, pause = 0)
+    page <- pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     pz_record_start(
       page,
@@ -193,7 +193,7 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
 test_that('failed interception disposes the prepared image without displaying it', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
-  pz_stage(page, pause = 0)
+  page <- pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
   pz_record_start(
     page,
@@ -248,7 +248,7 @@ test_that('failed interception disposes the prepared image without displaying it
 test_that('a timed-out capture cannot display or retain the source after late completion', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
-  pz_stage(page, pause = 0)
+  page <- pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
   pz_record_start(
     page,
@@ -325,7 +325,7 @@ test_that('settling never guesses a replacement row or an unrendered source box'
   skip_if_no_av()
   check_skip <- function(mutation) {
     page <- local_task_page(width = 800, height = 900)
-    pz_stage(page, pause = 0)
+    page <- pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
     pz_js(
       page,
@@ -375,7 +375,7 @@ test_that('settling never guesses a replacement row or an unrendered source box'
 test_that('a source that gains an iframe after the drop loses its preview silently', {
   skip_if_no_av()
   page <- local_task_page(width = 800, height = 900)
-  pz_stage(page, pause = 0)
+  page <- pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
   pz_record_start(
     page,

@@ -162,7 +162,7 @@ print.paparazzi_frame <- function(x, ...) {
 #' own `frame =` field by field, and an unset field takes the staged
 #' value if one is set, else the built-in default. `frame = FALSE`
 #' disables framing for a single call. The staged frame applies to the
-#' pipeline the staged context flows through -- [pz_find*()] contexts
+#' pipeline the staged context flows through -- `pz_find*()` contexts
 #' inherit it -- while a fresh pipeline from the original context starts
 #' from the defaults; assign the result
 #' (`page <- page |> pz_stage_frame(...)`) to set page-wide defaults.

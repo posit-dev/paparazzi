@@ -5,8 +5,8 @@ test_that("camera shot includes a callout only with explicit annotated target bo
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=shot style=\"position:absolute;left:220px;top:180px;width:80px;height:40px\"></div>')"
   )
-  pz_stage(page, camera_follow = FALSE)
-  pz_stage_frame(page, "#shot", target_box = "annotated")
+  page <- pz_stage(page, camera_follow = FALSE)
+  page <- pz_stage_frame(page, "#shot", target_box = "annotated")
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, out, hold = c(0, 0))
   defer_record_stop(page)
@@ -555,13 +555,12 @@ test_that("follow keyframes share the pointer glide and skip in-shot actions", {
   pz_act_hover(page, "#b")
   expect_length(rec$camera, 4)
   expect_length(resolved(), 2)
-  pz_stage(page, camera_follow = FALSE)
-  pz_act_click(page, "#a")
+  pz_act_click(page |> pz_stage(camera_follow = FALSE), "#a")
   expect_length(rec$camera, 4)
-  pz_stage(page, camera_follow = NULL, cursor = FALSE)
-  pz_camera(page, pz_frame("#a", zoom = 2), duration = 0)
+  staged <- pz_stage(page, camera_follow = NULL, cursor = FALSE)
+  pz_camera(staged, pz_frame("#a", zoom = 2), duration = 0)
   before <- rec_vt(rec)
-  pz_act_type(page, "hi", target = "#field")
+  pz_act_type(staged, "hi", target = "#field")
   expect_length(rec$camera, 6)
   expect_length(resolved(), 4)
   expect_true(rec$camera[[6]]$follow)
@@ -689,7 +688,7 @@ test_that("paused follow, manual camera, and reset moves are instant without pum
     fileext = ".html"
   )
   page <- local_page(html, width = 640, height = 480, scale = 2)
-  pz_stage(page, cursor = FALSE)
+  page <- pz_stage(page, cursor = FALSE)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
@@ -830,7 +829,7 @@ test_that("camera moves wait only when asked; holds and stops let them land", {
     fileext = ".html"
   )
   page <- local_page(html, width = 640, height = 480, scale = 2)
-  pz_stage(page, cursor = FALSE)
+  page <- pz_stage(page, cursor = FALSE)
   expect_error(pz_camera(page, "#near", wait = "yes"), "wait")
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
@@ -871,7 +870,7 @@ test_that("camera calls settle earlier moves and keyframe non-moves", {
     fileext = ".html"
   )
   page <- local_page(html, width = 640, height = 480, scale = 2)
-  pz_stage(page, cursor = FALSE)
+  page <- pz_stage(page, cursor = FALSE)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
@@ -911,7 +910,7 @@ test_that("follow tests the shot when the action lands", {
     fileext = ".html"
   )
   page <- local_page(html, width = 640, height = 480, scale = 2)
-  pz_stage(page, cursor = FALSE, camera_follow = TRUE)
+  page <- pz_stage(page, cursor = FALSE, camera_follow = TRUE)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
@@ -945,7 +944,7 @@ test_that("a clamped same-viewport keyframe changes the later scroll anchor", {
     fileext = ".html"
   )
   page <- local_page(html, width = 800, height = 600, scale = 2)
-  pz_stage(page, cursor = FALSE, camera_follow = FALSE)
+  page <- pz_stage(page, cursor = FALSE, camera_follow = FALSE)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
@@ -989,7 +988,7 @@ test_that("a clamped same-viewport keyframe changes the later scroll anchor", {
 test_that("repeated target and reset add no camera time or settle pump", {
   skip_if_no_av()
   page <- local_record_page()
-  pz_stage(page, camera_follow = FALSE, cursor = FALSE)
+  page <- pz_stage(page, camera_follow = FALSE, cursor = FALSE)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
@@ -1028,7 +1027,7 @@ test_that("a repeated reset after a page scroll records its new anchor", {
     fileext = ".html"
   )
   page <- local_page(html, width = 640, height = 480, scale = 2)
-  pz_stage(page, cursor = FALSE, camera_follow = FALSE)
+  page <- pz_stage(page, cursor = FALSE, camera_follow = FALSE)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
@@ -1073,7 +1072,7 @@ test_that("camera metadata records shots, warnings, and frame fallbacks", {
   page <- local_record_page()
   out <- withr::local_tempfile(fileext = ".mp4")
   # Staged before the recording starts.
-  pz_stage_frame(page, "#box", pad = 96, target_box = "annotated")
+  page <- pz_stage_frame(page, "#box", pad = 96, target_box = "annotated")
   pz_record_start(page, out, hold = c(0, 0))
   defer_record_stop(page)
   # The recording picked the recipe up (it drives the stop-time crop);
@@ -1120,7 +1119,7 @@ test_that("camera argument errors are immediate", {
 
 test_that("camera home estimates use only the measured crop or live viewport", {
   page <- local_frame_page()
-  pz_stage_frame(page, "#small", pad = 32)
+  page <- pz_stage_frame(page, "#small", pad = 32)
   rec <- list(crop = NULL)
   geometry <- page_geometry(page)
   expect_equal(
@@ -1242,7 +1241,7 @@ test_that("skipped typing follow adds no settle time before an unframed hold", {
     fileext = ".html"
   )
   page <- local_page(html, width = 800, height = 600, scale = 2)
-  pz_stage(page, cursor = FALSE)
+  page <- pz_stage(page, cursor = FALSE)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)

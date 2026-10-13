@@ -187,13 +187,13 @@ test_that("a staged font object resolves to its quoted family with fallback", {
   font <- pz_font_file("Silkscreen", silkscreen_fixture())
   pz_stage_fonts(page, font)
 
-  pz_stage_annotate(page, font_family = font)
+  staged <- pz_stage_annotate(page, font_family = font)
   expect_equal(
-    page_stage(page)$annotate_font_family,
+    ctx_stage(staged)$annotate_font_family,
     '"Silkscreen", sans-serif'
   )
 
-  pz_annotate(page, "h1", label = "Hi")
+  pz_annotate(staged, "h1", label = "Hi")
   style <- pz_js(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').style.fontFamily"

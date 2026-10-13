@@ -60,8 +60,10 @@ test_that("corner directions enter and leave past both frame edges", {
   page |> pz_cursor_show("#btn", from = "bottom right")
   expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
 
-  page |> pz_stage(enter = "Left-top")
-  expect_identical(page_stage(page)$enter, c("left", "top"))
+  expect_identical(
+    ctx_stage(page |> pz_stage(enter = "Left-top"))$enter,
+    c("left", "top")
+  )
 })
 
 test_that("pz_cursor_move rejects infinite durations", {
@@ -91,10 +93,10 @@ test_that("cursor function and stage validation is classed", {
   )
   expect_error(pz_cursor_hide(page, 1), class = "rlang_error")
 
-  page |> pz_stage(cursor = FALSE)
-  expect_error(pz_cursor_show(page), class = "paparazzi_error_cursor")
-  expect_error(pz_cursor_move(page, "#btn"), class = "paparazzi_error_cursor")
-  expect_error(pz_cursor_leave(page), class = "paparazzi_error_cursor")
+  staged <- page |> pz_stage(cursor = FALSE)
+  expect_error(pz_cursor_show(staged), class = "paparazzi_error_cursor")
+  expect_error(pz_cursor_move(staged, "#btn"), class = "paparazzi_error_cursor")
+  expect_error(pz_cursor_leave(staged), class = "paparazzi_error_cursor")
   # pz_cursor_hide() stays legal (it's how you retract an explicit show).
   expect_no_error(page |> pz_cursor_hide())
 })
@@ -203,21 +205,21 @@ test_that("recorded click frames keep pointing cursor ink at the target", {
 
 test_that("cursor = TRUE draws a static cursor in screenshots; FALSE never draws", {
   page <- local_cursor_page()
-  page |> pz_stage(cursor = TRUE)
-  expect_equal(cursor_overlay_state(page)[[1]], 1)
+  staged <- page |> pz_stage(cursor = TRUE)
+  expect_equal(cursor_overlay_state(staged)[[1]], 1)
 
-  page |> pz_cursor_move("#btn")
+  staged |> pz_cursor_move("#btn")
   shot <- withr::local_tempfile(fileext = ".png")
-  page |> pz_screenshot(shot)
+  staged |> pz_screenshot(shot)
   ink <- cursor_png_ink(page, shot, band = c(280, 370))
   expect_true(ink$count > 50)
   expect_true(abs(ink$x - 660) < 15)
   expect_true(abs(ink$y - 322) < 30)
 
   page2 <- local_cursor_page()
-  page2 |> pz_stage(cursor = FALSE)
+  staged2 <- page2 |> pz_stage(cursor = FALSE)
   shot2 <- withr::local_tempfile(fileext = ".png")
-  page2 |> pz_screenshot(shot2)
+  staged2 |> pz_screenshot(shot2)
   expect_equal(cursor_png_ink(page2, shot2, band = c(280, 370))$count, 0)
 })
 
@@ -225,18 +227,16 @@ test_that("cursor_scale changes ink size and NULL restores the default", {
   page <- local_cursor_page()
   page |> pz_stage(cursor_scale = 1) |> pz_cursor_move("#btn")
   shot <- withr::local_tempfile(fileext = ".png")
-  page |> pz_screenshot(shot)
+  page |> pz_stage(cursor_scale = 1) |> pz_screenshot(shot)
   original <- cursor_png_ink(page, shot, band = c(280, 370))
 
-  page |> pz_stage(cursor_scale = 2)
   shot2 <- withr::local_tempfile(fileext = ".png")
-  page |> pz_screenshot(shot2)
+  page |> pz_stage(cursor_scale = 2) |> pz_screenshot(shot2)
   larger <- cursor_png_ink(page, shot2, band = c(280, 370))
   expect_gt(larger$height, original$height * 1.7)
 
-  page |> pz_stage(cursor_scale = NULL)
   shot3 <- withr::local_tempfile(fileext = ".png")
-  page |> pz_screenshot(shot3)
+  page |> pz_stage(cursor_scale = NULL) |> pz_screenshot(shot3)
   restored <- cursor_png_ink(page, shot3, band = c(280, 370))
   expect_gt(restored$height, original$height * 1.4)
   expect_lt(restored$height, larger$height)
@@ -252,9 +252,9 @@ test_that("changing cursor_scale redraws a visible recording cursor", {
       hold = c(0, 0)
     )
   page |> pz_cursor_move("#btn")
-  page |> pz_stage(cursor_scale = 1)
+  page <- page |> pz_stage(cursor_scale = 1)
   expect_equal(cursor_overlay_scale(page), 1)
-  page |> pz_stage(cursor_scale = NULL)
+  page <- page |> pz_stage(cursor_scale = NULL)
   expect_equal(cursor_overlay_scale(page), 1.75)
   page |> pz_record_stop()
 })
@@ -404,7 +404,7 @@ test_that("the ring effect draws a ring instead of scaling the cursor", {
   skip_if_no_av()
   local_paused_cursor_ring()
   page <- local_cursor_page()
-  page |>
+  page <- page |>
     pz_stage(click_effect = "ring") |>
     pz_cursor_move("#btn", duration = 0)
   # The ring only draws while recording.
@@ -429,7 +429,7 @@ test_that("the ring effect draws a ring instead of scaling the cursor", {
   # A mid-expansion ring in the staged default color.
   expect_gt(ring_pixels(page, shot, "#e11d48"), 20)
   # The ring replaces the press scale: the cursor ink never shrank.
-  expect_equal(cursor_overlay_scale(page), page_stage(page)$cursor_scale)
+  expect_equal(cursor_overlay_scale(page), ctx_stage(page)$cursor_scale)
   ink <- cursor_png_ink(page, shot, band = c(300, 344), x_range = c(635, 700))
   expect_gte(ink$height, unpressed$height * 0.95)
 })
@@ -460,7 +460,7 @@ test_that("effect none draws nothing, and per-call effects override the stage", 
   expect_lte(ring_pixels(page, ring_shot, "#e11d48"), 20)
 
   # Neither click scaled the cursor.
-  expect_equal(cursor_overlay_scale(page), page_stage(page)$cursor_scale)
+  expect_equal(cursor_overlay_scale(page), ctx_stage(page)$cursor_scale)
 })
 
 test_that("all CSS cursor presets validate and select their own layer", {
@@ -617,12 +617,12 @@ test_that("explicit icons hold for one call; later automatic calls infer again",
 test_that("off-frame entries start with default and explicit icons can replace it", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_stage(enter = "left")
+  staged <- page |> pz_stage(enter = "left")
   out <- withr::local_tempfile(fileext = ".mp4")
-  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+  pz_record_start(staged, out, fps = 10, hold = c(0, 0))
   # At the beginning of the glide the default icon remains visible;
   # after the landing the inferred pointer is the visible icon.
-  page |> pz_cursor_move("#btn")
+  staged |> pz_cursor_move("#btn")
   expect_match(
     pz_js(
       page,
@@ -706,6 +706,7 @@ test_that("cursor state tracks presses, carries, and resets", {
 
   page |> pz_cursor_move("#btn")
   cursor_press(page, TRUE)
+  # cursor = FALSE hides the drawn cursor, which also unpreses it
   page |> pz_stage(cursor = FALSE)
   expect_false(page_cursor(page)$pressed)
 })
@@ -971,10 +972,10 @@ test_that("recorded moves schedule one entry flip for the intended target", {
 test_that("off-frame entrances and staged actions use destination entry", {
   skip_if_no_av()
   page <- local_cursor_page()
-  page |> pz_stage(enter = "left")
+  staged <- page |> pz_stage(enter = "left")
   out <- withr::local_tempfile(fileext = ".mp4")
-  page |> pz_record_start(out, fps = 10, hold = c(0, 0))
-  page |> pz_cursor_show("#btn", from = "left")
+  pz_record_start(staged, out, fps = 10, hold = c(0, 0))
+  staged |> pz_cursor_show("#btn", from = "left")
   animations <- unlist(pz_js(
     page,
     "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.classList[1])"
@@ -1240,7 +1241,7 @@ test_that("entry and landing can schedule three distinct icon layers", {
 test_that("an explicitly hidden cursor stays hidden during recorded typing", {
   skip_if_no_av()
   page <- local_page(pz_example("tasks"))
-  page |> pz_stage(pause = 0)
+  page <- page |> pz_stage(pause = 0)
   page |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -1299,7 +1300,7 @@ test_that("an explicitly hidden cursor stays hidden during recorded typing", {
 test_that("recorded typing rests the cursor until the next move", {
   skip_if_no_av()
   page <- local_cursor_page()
-  pz_stage(page, typing = "instant", pause = 0)
+  page <- pz_stage(page, typing = "instant", pause = 0)
   line <- function(page) {
     out <- capture.output(print(page))
     grep("Recording", out, value = TRUE)
@@ -1356,7 +1357,7 @@ test_that("recorded typing rests the cursor until the next move", {
 test_that("root typing after a recording hold rests the cursor without clicking", {
   skip_if_no_av()
   page <- local_page(advanced_fixture_file(), scale = 2)
-  page |> pz_stage(typing = "instant")
+  page <- page |> pz_stage(typing = "instant")
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   pz_camera(page, pz_frame("#rich", zoom = 2), duration = 0)
@@ -1393,7 +1394,7 @@ test_that("root typing after a recording hold rests the cursor without clicking"
 test_that("typing into a scoped held selection rests the cursor without clicking", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(typing = "instant")
+  page <- page |> pz_stage(typing = "instant")
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
   ctx <- pz_find(page, "#editor")
@@ -1448,7 +1449,7 @@ test_that("no-click typing leaves a nonrecorded shown cursor alone", {
 test_that("no-click recorded typing never revives an explicitly hidden cursor", {
   skip_if_no_av()
   page <- local_advanced_page()
-  page |> pz_stage(typing = "instant")
+  page <- page |> pz_stage(typing = "instant")
   page |> pz_cursor_show("#rich") |> pz_cursor_hide()
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
