@@ -444,8 +444,58 @@ nav_settle <- function(
     timeout = timeout,
     loop = ctx$page$child_loop,
     what = "the navigation to complete",
+    detail = function() {
+      nav_settle_detail(last, stable_since, settle, snapshot, action_loader)
+    },
     call = call
   )
+}
+
+# Reported on nav_settle() timeout so a flake shows which settle condition
+# never held (a single poll gives no visibility otherwise).
+nav_settle_detail <- function(
+  last,
+  stable_since,
+  settle,
+  snapshot,
+  action_loader
+) {
+  if (is.null(last)) {
+    return(
+      "Every read failed; the renderer was mid-navigation for the whole timeout."
+    )
+  }
+  state <- jsonlite::fromJSON(last$js, simplifyVector = FALSE)
+  ready <- isTRUE(state[[1]])
+  happened <- nav_happened(state[[2]], last$loader, snapshot, action_loader)
+  stable_for <- as.numeric(difftime(Sys.time(), stable_since, units = "secs"))
+  snapshot_origin <- snapshot$origin %||% "none (in flight)"
+  action_loader <- action_loader %||% "none"
+  lines <- c(
+    cli::format_inline(
+      "Last read: readyState {.val {if (ready) 'complete' else 'incomplete'}}, timeOrigin {.val {state[[2]]}}, loaderId {.val {last$loader}}."
+    ),
+    cli::format_inline(
+      "Pre-action snapshot: complete={snapshot$complete}, timeOrigin {.val {snapshot_origin}}, action loaderId {.val {action_loader}}."
+    ),
+    cli::format_inline(
+      "State stable for {round(stable_for, 2)}s of the required {settle}s."
+    )
+  )
+  unmet <- c(
+    if (!ready) "readyState never complete",
+    if (!happened) "navigation never detected",
+    if (ready && happened && stable_for < settle) {
+      "state changed within the settle window"
+    }
+  )
+  if (length(unmet) > 0) {
+    lines <- c(
+      lines,
+      paste0("Unmet at timeout: ", paste(unmet, collapse = "; "), ".")
+    )
+  }
+  lines
 }
 
 nav_happened <- function(origin, loader, snapshot, action_loader) {
@@ -469,7 +519,9 @@ pump_loop <- function(loop, seconds, interval = 0.1) {
 #' Poll `fn()` until it returns `TRUE` or `timeout` seconds elapse
 #'
 #' Between checks, pumps `loop` (the page's child loop) instead of sleeping,
-#' so timers scheduled on the loop keep firing during the poll.
+#' so timers scheduled on the loop keep firing during the poll. `detail`, if
+#' given, is called on timeout and its return value appended to the error as
+#' info bullets.
 #' @noRd
 pz_poll <- function(
   fn,
@@ -477,6 +529,7 @@ pz_poll <- function(
   interval = 0.1,
   loop,
   what = "condition",
+  detail = NULL,
   call = caller_env()
 ) {
   result <- expect_retry(
@@ -486,10 +539,14 @@ pz_poll <- function(
     interval = interval
   )
   if (!result$pass) {
+    info <- if (is.function(detail)) cli_escape(detail())
     cli::cli_abort(
-      # Plain interpolation: descriptions may carry their own quotes
-      # (has_text: "..."), and {.val} would escape them.
-      "Timed out after {timeout}s waiting for {what}.",
+      c(
+        # Plain interpolation: descriptions may carry their own quotes
+        # (has_text: "..."), and {.val} would escape them.
+        "Timed out after {timeout}s waiting for {what}.",
+        if (length(info) > 0) rlang::set_names(info, "i")
+      ),
       class = "paparazzi_error_timeout",
       call = call
     )

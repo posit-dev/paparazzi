@@ -288,6 +288,25 @@ test_that("pz_poll times out with a classed error", {
   )
 })
 
+test_that("pz_poll appends detail lines to its timeout error", {
+  loop <- later::create_loop()
+  withr::defer(later::destroy_loop(loop))
+  err <- expect_error(
+    pz_poll(
+      function() FALSE,
+      timeout = 0.2,
+      loop = loop,
+      what = "never",
+      detail = function() c("first detail", "second detail with {braces}")
+    ),
+    class = "paparazzi_error_timeout"
+  )
+  msg <- conditionMessage(err)
+  expect_match(msg, "first detail", fixed = TRUE)
+  # Literal braces in detail text are escaped before cli interpolation.
+  expect_match(msg, "second detail with {braces}", fixed = TRUE)
+})
+
 test_that("pz_poll returns as soon as the condition holds", {
   page <- local_page()
   n <- 0
@@ -597,6 +616,59 @@ test_that("nav settle restarts its hold when the main-frame loader changes", {
     action_loader = "old"
   )
   expect_identical(frame_timeouts, rep(list(1), 5))
+})
+
+test_that("nav_settle timeout reports the last read against the snapshot", {
+  loop <- later::create_loop()
+  withr::defer(later::destroy_loop(loop))
+  ctx <- list(
+    page = list(
+      child_loop = loop,
+      session = list(
+        Page = list(
+          getFrameTree = function(timeout_ = NULL) {
+            list(frameTree = list(frame = list(loaderId = "old")))
+          }
+        )
+      )
+    )
+  )
+  local_mocked_bindings(pz_js = function(...) "[true,3.5]")
+
+  err <- expect_error(
+    nav_settle(
+      ctx,
+      settle = 0.005,
+      timeout = 0.2,
+      # Whole numbers parse as integer and fail identical() against a
+      # double snapshot; fractional timeOrigins match real page reads.
+      snapshot = list(complete = TRUE, origin = 3.5)
+    ),
+    class = "paparazzi_error_timeout"
+  )
+  msg <- conditionMessage(err)
+  expect_match(msg, "Last read: readyState", fixed = TRUE)
+  expect_match(msg, "loaderId", fixed = TRUE)
+  expect_match(msg, "Pre-action snapshot: complete=TRUE", fixed = TRUE)
+  expect_match(
+    msg,
+    "Unmet at timeout: navigation never detected",
+    fixed = TRUE
+  )
+})
+
+test_that("nav_settle_detail covers reads that never succeed", {
+  expect_match(
+    nav_settle_detail(
+      NULL,
+      NULL,
+      settle = 0.5,
+      snapshot = list(complete = FALSE, origin = NULL),
+      action_loader = NULL
+    ),
+    "mid-navigation for the whole timeout",
+    fixed = TRUE
+  )
 })
 
 test_that("nav_snapshot propagates closed-page and JavaScript errors", {
