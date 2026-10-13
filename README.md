@@ -198,10 +198,12 @@ annotating, and captioning. paparazzi can also:
   annotations in and keeps them on their elements as the page scrolls or
   changes.
 - **Set defaults once.** The staging functions set defaults for the
-  whole page, so you don’t repeat the same arguments in every step.
-  `pz_stage()` sets the cursor’s speed and size, the typing speed, and
-  the pause after each step, `pz_stage_annotate()` sets how annotations
-  look, and `pz_stage_frame()` sets the default framing.
+  steps that follow them, so you don’t repeat the same arguments in
+  every step. `pz_stage()` sets the cursor’s speed and size, the typing
+  speed, and the pause after each step, `pz_stage_annotate()` sets how
+  annotations look, and `pz_stage_frame()` sets the default framing.
+  Assign the staged page (`page <- page |> pz_stage(...)`) and every
+  chain that starts from it uses the same defaults.
 - **Control what’s in the shot.** With `pz_frame()`, you choose exactly
   what a video or screenshot shows: crop to one or more elements, add
   padding, and set an aspect ratio, like 16:9 for slides or 9:16 for a
