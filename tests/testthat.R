@@ -9,4 +9,11 @@
 library(testthat)
 library(paparazzi)
 
-test_check("paparazzi")
+# Platform smoke mode (PAPARAZZI_SMOKE_ONLY=true; CI sets it on
+# macOS/Windows jobs outside rc-v* branches): run only the
+# platform-sensitive subset. The full suite runs everywhere else.
+if (identical(Sys.getenv("PAPARAZZI_SMOKE_ONLY"), "true")) {
+  test_check("paparazzi", filter = "platform-smoke")
+} else {
+  test_check("paparazzi")
+}

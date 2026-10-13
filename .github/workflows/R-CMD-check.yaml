@@ -2,8 +2,14 @@
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'rc-v*']
   pull_request:
+  workflow_dispatch:
+    inputs:
+      full_platform_suite:
+        description: 'Run the full suite on macOS/Windows instead of the platform smoke subset'
+        type: boolean
+        default: false
 
 name: R-CMD-check.yaml
 
@@ -19,8 +25,13 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-latest,   r: 'release', cpus: 2}
-          - {os: windows-latest, r: 'release', cpus: 2}
+          # macOS/Windows run only the platform smoke subset
+          # (PAPARAZZI_SMOKE_ONLY below) outside rc-v* branches; the weak
+          # runners saturate under the full parallel suite and their
+          # failures stop implicating the product. Smoke is one file, so
+          # a single worker suffices.
+          - {os: macos-latest,   r: 'release', cpus: 1, smoke: true}
+          - {os: windows-latest, r: 'release', cpus: 1, smoke: true}
           - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release', cpus: 2}
           - {os: ubuntu-latest,   r: 'release', cpus: 2}
           - {os: ubuntu-latest,   r: 'oldrel-1', cpus: 2}
@@ -33,9 +44,12 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       # Each test worker starts Chrome; shared runners can starve concurrent
-      # browsers. 2 workers held flake-free on ubuntu (4 vCPUs); macOS has 3
-      # vCPUs, so watch its flake rate and revert that entry alone if it slips.
+      # browsers. 2 workers held flake-free on ubuntu (4 vCPUs).
       TESTTHAT_CPUS: ${{ matrix.config.cpus || 1 }}
+      # tests/testthat.R filters to tests/testthat/test-platform-smoke.R
+      # when set. rc-v* branches (pushes and PRs) and manual dispatches
+      # with full_platform_suite run the full suite on every platform.
+      PAPARAZZI_SMOKE_ONLY: ${{ matrix.config.smoke && !(startsWith(github.ref, 'refs/heads/rc-v') || startsWith(github.head_ref, 'rc-v') || inputs.full_platform_suite) && 'true' || '' }}
       # setup-r exports NOT_CRAN=true only when it is not already set, so the
       # as-cran jobs can override it here.
       NOT_CRAN: ${{ matrix.config.cran && 'false' || 'true' }}

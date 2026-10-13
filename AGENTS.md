@@ -36,6 +36,14 @@
    when test runs across worktrees might overlap and overload Chrome. Don't
    lock browser-free or isolated runs. Judge test results by reported
    FAIL/WARN, not exit code or variable PASS counts.
+1. **Everyday macOS/Windows CI runs only the platform smoke subset.**
+   `PAPARAZZI_SMOKE_ONLY=true` makes `tests/testthat.R` run just
+   `test-platform-smoke.R`; the full suite runs on ubuntu jobs and on
+   `rc-v*` branches (or a manual workflow dispatch with
+   `full_platform_suite`). The weak runners saturate under the full
+   parallel suite, and their failures stop implicating the product.
+   Platform-sensitive behavior (scrollbars, DPR, fonts, process/port
+   management, encoders) earns a spot in the smoke file.
 
 ## Browser Test Reliability
 
