@@ -828,7 +828,7 @@ Arguments: the `pz_get_` prefix is confirmed. `target` sits after the main input
 
 | Function | Signature | Name |
 |---|---|---|
-| `pz_stage()` | `(ctx, ..., cursor = NULL, cursor_speed = NULL, cursor_scale = NULL, enter = NULL, typing = NULL, typing_speed = NULL, pause = NULL, camera_follow = NULL, show_keys = NULL)` | confirmed |
+| `pz_stage()` | `(ctx, ..., cursor = NULL, cursor_speed = NULL, cursor_scale = NULL, enter = NULL, typing = NULL, typing_speed = NULL, pause = NULL, camera_follow = NULL, show_keys = NULL, click_effect = NULL, click_effect_color = NULL)` | confirmed |
 | `pz_stage_annotate()` | `(ctx, ..., color = NULL, fill = NULL, text_color = NULL, stroke_width = NULL, distance = NULL, font_family = NULL, font_size = NULL, caption_side = NULL)` | confirmed |
 | `pz_cursor_show()` | `(ctx, target = NULL, ..., from = NULL, icon = NULL)` | confirmed |
 | `pz_cursor_hide()` | `(ctx, ...)` | confirmed |

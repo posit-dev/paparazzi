@@ -187,7 +187,8 @@ at full speed. An omitted argument leaves its setting alone, and an explicit
 `NULL` restores its default for the rest of the chain.
 
 ```r
-page |>
+page <-
+  page |>
   pz_stage(
     cursor_speed = 460,
     cursor_scale = 1.5,
@@ -225,7 +226,13 @@ call with `pz_act_click(effect =, effect_color =)` and
 ```r
 page <-
   page |>
-  pz_stage(pause = NULL, typing = NULL, show_keys = NULL, click_effect = NULL)
+  pz_stage(
+    cursor_speed = NULL,
+    pause = NULL,
+    typing = NULL,
+    show_keys = NULL,
+    click_effect = NULL
+  )
 
 per_call_video <- tempfile(fileext = ".mp4")
 pz_record(
@@ -251,8 +258,8 @@ pz_record(
 )
 ```
 
-Assigning with `NULL` values puts typing, pause, key display and click
-feedback back to their defaults. The click then asks for a green ring just for that action, and
+Assigning with `NULL` values puts the cursor speed, pause, typing, key
+display and click feedback back to their defaults. The click then asks for a green ring just for that action, and
 the Enter press shows a Mac keycap while it submits the second task. Each
 `pz_act_press()` replaces the previous key callout.
 
