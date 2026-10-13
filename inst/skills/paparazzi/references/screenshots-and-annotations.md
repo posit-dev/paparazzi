@@ -80,7 +80,9 @@ and staging; screenshots always measure at capture time.
 
 ## Stage repeated framing
 
-`pz_stage_frame()` sets a default frame for later screenshots and recordings.
+`pz_stage_frame()` sets a default frame for the screenshots and recordings
+that follow it in the chain; assign the staged page
+(`page <- page |> pz_stage_frame(...)`) to keep the default for every chain.
 Pass its targets unnamed. Each capture's unset frame fields inherit the
 staged values, then the built-in defaults. A scope takes precedence over a
 staged target when the capture has no target of its own.
@@ -93,12 +95,12 @@ page |>
     tempfile(fileext = ".png"),
     frame = pz_frame(".filters", ratio = 16 / 9)
   ) |>
-  pz_screenshot(tempfile(fileext = ".png"), frame = FALSE) |>
-  pz_stage_frame(NULL)
+  pz_screenshot(tempfile(fileext = ".png"), frame = FALSE)
 ```
 
 `frame = FALSE` captures the scope or viewport unframed for that call.
-`pz_stage_frame(NULL)` clears the default. Framing applies to stills as well
+`pz_stage_frame(NULL)` clears an inherited default for the rest of the chain.
+Framing applies to stills as well
 as video; it is separate from the recording-only animations in `pz_stage()`.
 
 ## Mark elements and number matches
@@ -136,8 +138,10 @@ shows only what it's meant to explain.
 
 ## Style new annotations
 
-`pz_stage_annotate()` sets page defaults for later annotations. Omitted
-arguments leave a setting alone; explicit `NULL` restores its default.
+`pz_stage_annotate()` sets style defaults for the annotations that follow it
+in the chain; assign the staged page to use them across chains. Omitted
+arguments leave a setting alone; explicit `NULL` restores its default for the
+rest of the chain.
 Per-call styles override the staged settings. Mark badges use the mark's
 `color` with white text; `label_fill` and `label_text_color` override those.
 Staged `fill` and `text_color` style callout bubbles and their badges.

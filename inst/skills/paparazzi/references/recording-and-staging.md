@@ -18,7 +18,7 @@ page <- pz_open(
   height = 720,
   color_scheme = "light"
 )
-pz_stage(page, enter = "bottom", pause = 0.5, cursor_speed = 480)
+page <- page |> pz_stage(enter = "bottom", pause = 0.5, cursor_speed = 480)
 video <- tempfile(fileext = ".mp4")
 basil <- pz_loc(".task", has_text = "Water the basil")
 
@@ -178,10 +178,13 @@ pz_record(
 
 ## Stage pointer and typing actions
 
-`pz_stage()` stores presentation settings on the page. They animate actions
+`pz_stage()` carries presentation settings on the chain: each step hands
+them to the next, and a new chain from the same page starts from the
+defaults. Assign the staged page (`page <- page |> pz_stage(...)`) to keep
+the settings for every later chain, recordings included. They animate actions
 only during an active, unpaused recording; outside one, the same actions run
-at full speed. Settings last across recordings. An omitted argument leaves
-its setting alone, and an explicit `NULL` restores its default.
+at full speed. An omitted argument leaves its setting alone, and an explicit
+`NULL` restores its default for the rest of the chain.
 
 ```r
 page |>
@@ -220,7 +223,8 @@ call with `pz_act_click(effect =, effect_color =)` and
 `pz_act_press(show_keys =)`:
 
 ```r
-page |>
+page <-
+  page |>
   pz_stage(pause = NULL, typing = NULL, show_keys = NULL, click_effect = NULL)
 
 per_call_video <- tempfile(fileext = ".mp4")
@@ -247,8 +251,8 @@ pz_record(
 )
 ```
 
-The `NULL` values put typing, pause, key display and click feedback back to
-their defaults. The click then asks for a green ring just for that action, and
+Assigning with `NULL` values puts typing, pause, key display and click
+feedback back to their defaults. The click then asks for a green ring just for that action, and
 the Enter press shows a Mac keycap while it submits the second task. Each
 `pz_act_press()` replaces the previous key callout.
 
@@ -276,7 +280,7 @@ add_task <- function(ctx, title) {
 add_task(app, "Check the seedlings")
 app |> pz_expect_count(3, target = ".task")
 
-pz_stage(app, typing = "natural", typing_speed = 20, pause = 0.5)
+app <- app |> pz_stage(typing = "natural", typing_speed = 20, pause = 0.5)
 shiny_demo <- tempfile(fileext = ".mp4")
 pz_record(
   app,
