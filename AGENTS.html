@@ -70,9 +70,12 @@
 <strong>Test scope:</strong> On feature branches, run tests mirroring changed sources and cross-module seams named in the kata task; a full run is optional at the implementer’s discretion. Run <code>btw pkg test</code> on main as the merge gate; filtered tests may miss integration breaks.</li>
 <li>
 <strong>Serialize competing Chrome-heavy runs:</strong> use <code>.agents/chrome-lock.sh</code> when test runs across worktrees might overlap and overload Chrome. Don’t lock browser-free or isolated runs. Judge test results by reported FAIL/WARN, not exit code or variable PASS counts.</li>
+<li>
+<strong>Everyday macOS/Windows CI runs only the platform smoke subset.</strong> <code>PAPARAZZI_SMOKE_ONLY=true</code> makes <code>tests/testthat.R</code> run just <code>test-platform-smoke.R</code>; the full suite runs on ubuntu jobs and on <code>rc-v*</code> branches (or a manual workflow dispatch with <code>full_platform_suite</code>). The weak runners saturate under the full parallel suite, and their failures stop implicating the product. Platform-sensitive behavior (scrollbars, DPR, fonts, process/port management, encoders) earns a spot in the smoke file.</li>
 </ol></div>
 <div class="section level2">
 <h2 id="browser-test-reliability">Browser Test Reliability<a class="anchor" aria-label="anchor" href="#browser-test-reliability"></a></h2>
+<p>These rules serve the failure-interpretability principle in <code>.agents/TESTING.md</code>: a test is worth keeping only if its failure names the problem. Use that file when writing tests and when auditing the suite for flakes.</p>
 <ol style="list-style-type: decimal"><li>
 <strong>Poll for the asserted condition; never pump a fixed duration and then assert arrival.</strong> Reserve fixed <code>pump_loop()</code> windows for idle time; when later assertions require something to have arrived, poll with <code>expect_retry()</code>/<code>pz_poll()</code> until the condition itself holds.</li>
 <li>

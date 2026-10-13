@@ -49,8 +49,21 @@ no post-commit hook. Use `roborev review <sha>`, then
     overlap and overload Chrome. Don’t lock browser-free or isolated
     runs. Judge test results by reported FAIL/WARN, not exit code or
     variable PASS counts.
+10. **Everyday macOS/Windows CI runs only the platform smoke subset.**
+    `PAPARAZZI_SMOKE_ONLY=true` makes `tests/testthat.R` run just
+    `test-platform-smoke.R`; the full suite runs on ubuntu jobs and on
+    `rc-v*` branches (or a manual workflow dispatch with
+    `full_platform_suite`). The weak runners saturate under the full
+    parallel suite, and their failures stop implicating the product.
+    Platform-sensitive behavior (scrollbars, DPR, fonts, process/port
+    management, encoders) earns a spot in the smoke file.
 
 ## Browser Test Reliability
+
+These rules serve the failure-interpretability principle in
+`.agents/TESTING.md`: a test is worth keeping only if its failure names
+the problem. Use that file when writing tests and when auditing the
+suite for flakes.
 
 1.  **Poll for the asserted condition; never pump a fixed duration and
     then assert arrival.** Reserve fixed `pump_loop()` windows for idle
