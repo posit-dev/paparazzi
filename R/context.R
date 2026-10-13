@@ -25,8 +25,13 @@ pillar_shaft.PaparazziContext <- function(x, ...) {
 #' holding an immutable stack of pinned element sets. The stack is never
 #' mutated in place -- `pz_find*()` derive a new context sharing the
 #' parent's pinned sets -- and [pz_find_pop()]/[pz_find_reset()] unwind it
-#' the same way. Session-level state -- the Chromote session, default
-#' timeout, staging settings, recorder state -- lives on the page.
+#' the same way. Staged settings ([pz_stage()], [pz_stage_annotate()],
+#' [pz_stage_frame()]) are carried by the context and flow through
+#' derivation the same way; assigning the staged context
+#' (`page <- page |> pz_stage(...)`) is what makes them page-wide.
+#' Session-level state -- the Chromote session, the default timeout, the
+#' recorder, and the page's session-bound state (staged fonts, the cursor
+#' overlay, captions) -- lives on the page.
 #'
 #' @keywords internal
 PaparazziContext <- R6::R6Class(
@@ -42,6 +47,11 @@ PaparazziContext <- R6::R6Class(
     #'   `NULL` (internal).
     recording = NULL,
 
+    #' @field staging Staged settings carried by this context: a list of
+    #'   `overrides` (a named list) and `frame` (a frame spec or `NULL`);
+    #'   `NULL` until a `pz_stage*()` call derives a context (internal).
+    staging = NULL,
+
     #' @field inspect_image Pending annotated screenshot path for knitr, or
     #'   `NULL` (internal).
     inspect_image = NULL,
@@ -51,10 +61,17 @@ PaparazziContext <- R6::R6Class(
     #' @param scope Stack of pinned element sets; defaults to empty (the
     #'   root context).
     #' @param recording The recorder of the recording chain, if any.
-    initialize = function(page, scope = list(), recording = NULL) {
+    #' @param staging Staged settings for this context; defaults to none.
+    initialize = function(
+      page,
+      scope = list(),
+      recording = NULL,
+      staging = NULL
+    ) {
       self$page <- page
       self$scope <- scope
       self$recording <- recording
+      self$staging <- staging
     },
 
     #' @description Print the page summary (URL, device, scope stack,
@@ -253,9 +270,14 @@ knit_print.PaparazziContext <- function(x, ...) {
   }
 }
 
-ctx_derive <- function(ctx, scope) {
+ctx_derive <- function(ctx, scope, staging = ctx$staging) {
   ctx$inspect_image <- NULL
-  PaparazziContext$new(ctx$page, scope = scope, recording = ctx$recording)
+  PaparazziContext$new(
+    ctx$page,
+    scope = scope,
+    recording = ctx$recording,
+    staging = staging
+  )
 }
 
 ctx_return <- function(ctx) {

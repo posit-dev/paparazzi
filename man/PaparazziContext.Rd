@@ -15,8 +15,13 @@ context is either the root (a
 holding an immutable stack of pinned element sets. The stack is never
 mutated in place -- \verb{pz_find*()} derive a new context sharing the
 parent's pinned sets -- and \code{\link[=pz_find_pop]{pz_find_pop()}}/\code{\link[=pz_find_reset]{pz_find_reset()}} unwind it
-the same way. Session-level state -- the Chromote session, default
-timeout, staging settings, recorder state -- lives on the page.
+the same way. Staged settings (\code{\link[=pz_stage]{pz_stage()}}, \code{\link[=pz_stage_annotate]{pz_stage_annotate()}},
+\code{\link[=pz_stage_frame]{pz_stage_frame()}}) are carried by the context and flow through
+derivation the same way; assigning the staged context
+(\code{page <- page |> pz_stage(...)}) is what makes them page-wide.
+Session-level state -- the Chromote session, the default timeout, the
+recorder, and the page's session-bound state (staged fonts, the cursor
+overlay, captions) -- lives on the page.
 }
 \keyword{internal}
 \section{Public fields}{
@@ -28,6 +33,10 @@ timeout, staging settings, recorder state -- lives on the page.
 
     \item{\code{recording}}{The recorder a recording chain belongs to, or
 \code{NULL} (internal).}
+
+    \item{\code{staging}}{Staged settings carried by this context: a list of
+\code{overrides} (a named list) and \code{frame} (a frame spec or \code{NULL});
+\code{NULL} until a \verb{pz_stage*()} call derives a context (internal).}
 
     \item{\code{inspect_image}}{Pending annotated screenshot path for knitr, or
 \code{NULL} (internal).}
@@ -49,7 +58,7 @@ timeout, staging settings, recorder state -- lives on the page.
   Create a context attached to a page.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{PaparazziContext$new(page, scope = list(), recording = NULL)}
+    \preformatted{PaparazziContext$new(page, scope = list(), recording = NULL, staging = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -59,6 +68,7 @@ timeout, staging settings, recorder state -- lives on the page.
       \item{\code{scope}}{Stack of pinned element sets; defaults to empty (the
 root context).}
       \item{\code{recording}}{The recorder of the recording chain, if any.}
+      \item{\code{staging}}{Staged settings for this context; defaults to none.}
     }
     \if{html}{\out{</div>}}
   }
@@ -122,7 +132,7 @@ Waits must pump this loop so scheduled timers keep firing.}
     \item{\code{object_group}}{The CDP object group holding every remote
 object a scope pinned (read-only; internal).}
 
-    \item{\code{staging}}{Staged page settings (internal).}
+    \item{\code{session_state}}{Session-bound page state: the fonts registry, the cursor env, captions, and the annotation init id (internal).}
 
     \item{\code{recorder}}{Current recorder state, or \code{NULL} (internal).}
 

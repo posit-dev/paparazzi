@@ -251,7 +251,12 @@ pz_record_start <- function(
       loop = page$child_loop
     )
   }
-  invisible(PaparazziContext$new(page, scope = ctx$scope, recording = rec))
+  invisible(PaparazziContext$new(
+    page,
+    scope = ctx$scope,
+    recording = rec,
+    staging = ctx$staging
+  ))
 }
 
 #' Stop a recording and write the video
