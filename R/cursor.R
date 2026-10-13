@@ -298,11 +298,7 @@ STAGE_DIRECTIONS <- list(
 )
 
 page_cursor <- function(page) {
-  # Tolerates a context: a page's `page` is itself, a derived
-  # context's is the root page.
-  if (inherits(page, "PaparazziContext") && !is_pz_page(page)) {
-    page <- page$page
-  }
+  page <- as_page(page)
   cur <- page$session_state$cursor
   if (is.null(cur)) {
     cur <- new.env(parent = emptyenv())
@@ -321,11 +317,7 @@ page_cursor <- function(page) {
 }
 
 page_cursor_peek <- function(page) {
-  # Tolerates a context: a page's `page` is itself, a derived
-  # context's is the root page.
-  if (inherits(page, "PaparazziContext") && !is_pz_page(page)) {
-    page <- page$page
-  }
+  page <- as_page(page)
   page$session_state$cursor
 }
 

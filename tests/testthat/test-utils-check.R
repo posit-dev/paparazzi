@@ -99,3 +99,19 @@ test_that("is_pz_page identifies pages", {
   expect_false(is_pz_page("page"))
   expect_false(is_pz_page(NULL))
 })
+
+test_that("as_page unwraps contexts and passes everything else through", {
+  root <- structure(list(), class = "PaparazziPage")
+  ctx <- structure(list(page = root), class = "PaparazziContext")
+
+  # A context unwraps to its root page; a page's `page` is itself.
+  expect_identical(as_page(ctx), root)
+  page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
+  expect_identical(as_page(page), page)
+
+  # Fake list-pages and non-pages pass through unchanged.
+  fake <- structure(list(session_state = list()), class = "PaparazziPage")
+  expect_identical(as_page(fake), fake)
+  expect_identical(as_page("page"), "page")
+  expect_identical(as_page(NULL), NULL)
+})

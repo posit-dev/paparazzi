@@ -104,6 +104,14 @@ is_pz_page <- function(x) {
   inherits(x, "PaparazziPage")
 }
 
+# Unwrap a context to its root page: a PaparazziPage's `page` is
+# itself, a derived context's is the root page. Real R6 objects carry
+# the context class; the fake list-pages unit tests build pass through
+# unchanged.
+as_page <- function(x) {
+  if (inherits(x, "PaparazziContext")) x$page else x
+}
+
 check_positive_number <- function(
   x,
   arg = caller_arg(x),
