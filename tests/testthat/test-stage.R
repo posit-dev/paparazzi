@@ -288,28 +288,28 @@ test_that("smooth scrolling uses real wheel events while recording", {
       hold = c(0, 0)
     )
 
+  # pz_act_scroll() returns once the scroll position has settled, and
+  # per-event wheel rounding is corrected to the target, so the page ends
+  # on target within the correction threshold.
   page |> pz_act_scroll(by = c(0, 600), duration = 0.1)
-  expect_equal(pz_js(page, "window.scrollY"), 600)
+  expect_true(abs(pz_js(page, "window.scrollY") - 600) <= 2)
   expect_true(pz_js(page, "window.__log.wheels") > 0)
   expect_true(pz_js(page, "window.__log.wheelsTrusted"))
 
   page |> pz_act_scroll(to = "bottom", duration = 0.1)
-  expect_equal(
-    pz_js(page, "window.scrollY"),
-    pz_js(
-      page,
-      "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
-    )
+  bottom <- pz_js(
+    page,
+    "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
   )
+  expect_true(abs(pz_js(page, "window.scrollY") - bottom) <= 2)
 
   # A scoped scroll wheels the scope's container, not the page.
   wheels <- pz_js(page, "window.__log.wheels")
   page |>
     pz_find("#scroller") |>
     pz_act_scroll(to = "bottom", duration = 0.1)
-  expect_equal(
-    pz_js(page, "document.getElementById('scroller').scrollTop"),
-    650
+  expect_true(
+    abs(pz_js(page, "document.getElementById('scroller').scrollTop") - 650) <= 2
   )
   expect_true(pz_js(page, "window.__log.wheels") > wheels)
 

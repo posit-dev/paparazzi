@@ -681,11 +681,38 @@ scroll_staged <- function(
   wheel_duration <- duration %||%
     min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.5), 2)
   stage_wheel(ctx, point, delta[[1]], delta[[2]], wheel_duration, call = call)
-  actual <- wheel_container()
+  actual <- wheel_position_settled(ctx, wheel_container)
   if (abs(actual$top - target$top) > 2 || abs(actual$left - target$left) > 2) {
     apply_instant(actual)
   }
   ctx_return(ctx)
+}
+
+wheel_settle_secs <- 0.1
+
+# The last wheel events can still be in flight when stage_wheel() returns;
+# correcting against a mid-flight position snaps to the target and the late
+# events then push past it. Decide on a position that has held still.
+wheel_position_settled <- function(ctx, read, call = caller_env()) {
+  last <- NULL
+  stable_since <- NULL
+  pz_poll(
+    fn = function() {
+      pos <- unlist(read()[c("left", "top")])
+      now <- Sys.time()
+      if (!identical(pos, last)) {
+        last <<- pos
+        stable_since <<- now
+      }
+      as.numeric(difftime(now, stable_since, units = "secs")) >=
+        wheel_settle_secs
+    },
+    timeout = ctx$page$default_timeout,
+    loop = ctx$page$child_loop,
+    what = "the scroll position to settle",
+    call = call
+  )
+  read()
 }
 
 scroll_wheel_target <- function(probe, by, to) {
