@@ -86,6 +86,30 @@ PaparazziContext <- R6::R6Class(
       inspect_summary_print(self)
       invisible(self)
     }
+  ),
+  # Staged contexts are used exactly like pages (page <- page |>
+  # pz_stage(...)), so page-level members delegate to the root page.
+  # PaparazziPage overrides these with its own bindings.
+  active = list(
+    #' @field session The root page's underlying `ChromoteSession`
+    #'   (read-only).
+    session = function() {
+      self$page$session
+    },
+
+    #' @field child_loop The root page's chromote child loop (read-only).
+    child_loop = function() {
+      self$page$child_loop
+    },
+
+    #' @field default_timeout The root page's default timeout in seconds.
+    default_timeout = function(value) {
+      if (missing(value)) {
+        self$page$default_timeout
+      } else {
+        self$page$default_timeout <- value
+      }
+    }
   )
 )
 

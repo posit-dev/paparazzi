@@ -43,6 +43,18 @@ overlay, captions) -- lives on the page.
   }
   \if{html}{\out{</div>}}
 }
+\section{Active bindings}{
+  \if{html}{\out{<div class="r6-active-bindings">}}
+  \describe{
+    \item{\code{session}}{The root page's underlying \code{ChromoteSession}
+(read-only).}
+
+    \item{\code{child_loop}}{The root page's chromote child loop (read-only).}
+
+    \item{\code{default_timeout}}{The root page's default timeout in seconds.}
+  }
+  \if{html}{\out{</div>}}
+}
 \section{Methods}{
 \subsection{Public methods}{
   \itemize{
