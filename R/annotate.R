@@ -41,7 +41,7 @@ NULL
 #'   `NULL` generates a unique id, so calls accumulate annotations.
 #'   `"spotlight"` and `"caption"` are reserved for other types.
 #' @param color CSS accent color for the mark outline, or `NULL` for the
-#'   page default from [pz_stage_annotate()].
+#'   staged default from [pz_stage_annotate()].
 #' @param label_fill,label_text_color CSS colors for the badge background
 #'   and text. `NULL` (the default) fills the badge with the mark's `color`
 #'   and uses white text. The `fill` and `text_color` set by
@@ -49,7 +49,7 @@ NULL
 #' @param stroke_width Mark stroke width in CSS pixels, or `NULL` for the
 #'   staged `stroke_width` from [pz_stage_annotate()].
 #' @param font_family CSS font family for the badge, or `NULL` for the
-#'   page default. A font object staged with [pz_stage_fonts()] is also
+#'   staged default. A font object staged with [pz_stage_fonts()] is also
 #'   accepted and resolves to its family with a sans-serif fallback.
 #' @param font_size Badge font size in CSS pixels, or `NULL` for the page
 #'   default.
@@ -222,7 +222,7 @@ annotate_style <- function(
   font_size,
   call = caller_env()
 ) {
-  stage <- page_stage(ctx$page)
+  stage <- ctx_stage(ctx)
   color <- color %||% stage$annotate_color
   font_family <- font_family %||% stage$annotate_font_family
   font_size <- font_size %||% stage$annotate_font_size
@@ -233,7 +233,7 @@ annotate_style <- function(
 }
 
 annotate_stroke_width <- function(ctx, stroke_width, call = caller_env()) {
-  stroke_width <- stroke_width %||% page_stage(ctx$page)$annotate_stroke_width
+  stroke_width <- stroke_width %||% ctx_stage(ctx)$annotate_stroke_width
   check_positive_css_px(stroke_width, arg = "stroke_width", call = call)
   stroke_width
 }
@@ -244,7 +244,7 @@ CALLOUT_TOOLTIP_DISTANCE <- 8
 
 annotate_distance <- function(ctx, distance, leader, call = caller_env()) {
   distance <- distance %||%
-    page_stage(ctx$page)$annotate_distance %||%
+    ctx_stage(ctx)$annotate_distance %||%
     if (isFALSE(leader)) CALLOUT_TOOLTIP_DISTANCE else CALLOUT_LEADER_DISTANCE
   check_number_decimal(
     distance,

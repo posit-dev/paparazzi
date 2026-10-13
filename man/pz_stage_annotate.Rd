@@ -2,7 +2,7 @@
 % Please edit documentation in R/stage.R
 \name{pz_stage_annotate}
 \alias{pz_stage_annotate}
-\title{Set the page's annotation style defaults}
+\title{Stage annotation style defaults}
 \usage{
 pz_stage_annotate(
   ctx,
@@ -61,12 +61,17 @@ default.}
 \code{ctx}, invisibly.
 }
 \description{
-Sets persistent page defaults for new annotations in screenshots and
-recordings. An omitted argument leaves its setting alone, an explicit
-\code{NULL} restores its default, and a value sets it. Per-call annotation
-style arguments override these defaults; note the per-call names on
-\code{\link[=pz_annotate]{pz_annotate()}} differ (\code{label_fill}/\code{label_text_color}) from the staged
-names (\code{fill}/\code{text_color}), and the staged fill and text color style
+Sets style defaults for new annotations in screenshots and recordings.
+An omitted argument leaves its setting alone, an explicit \code{NULL}
+restores the built-in default, and a value sets it. The defaults
+apply to the pipeline the staged context flows through: \code{\link[=pz_find*]{pz_find*()}}
+contexts inherit them, while a fresh pipeline from the original
+context starts from the defaults -- assign the result
+(\code{page <- page |> pz_stage_annotate(...)}) to set page-wide defaults.
+Per-call annotation style arguments override these defaults; note
+the per-call names on \code{\link[=pz_annotate]{pz_annotate()}} differ
+(\code{label_fill}/\code{label_text_color}) from the staged names
+(\code{fill}/\code{text_color}), and the staged fill and text color style
 callout chrome only, not mark badges.
 }
 \examples{
@@ -74,14 +79,14 @@ callout chrome only, not mark badges.
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 
+# Assignment makes these styles page-wide defaults for new annotations
+page <- page |> pz_stage_annotate(color = "#2563eb", font_size = 16)
+page |> pz_annotate("#add-task", label = TRUE) |> pz_screenshot(path)
+
+# A one-off pipeline can undo a default with NULL
 page |>
-  # New annotations on this page use these styles
-  pz_stage_annotate(color = "#2563eb", font_size = 16) |>
-  pz_annotate("#add-task", label = TRUE) |>
-  pz_screenshot(path) |>
-  # NULL restores a default
-  pz_stage_annotate(color = NULL)
-pz_screenshot(page, frame = pz_frame("#new-task", pad = 16, target_box = "annotated"))
+  pz_stage_annotate(color = NULL) |>
+  pz_screenshot(path, frame = pz_frame("#new-task", pad = 16, target_box = "annotated"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

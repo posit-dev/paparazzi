@@ -154,14 +154,23 @@ print.paparazzi_frame <- function(x, ...) {
   invisible(x)
 }
 
-#' Set or clear the page's default framing
+#' Stage the default framing
 #'
 #' @description
-#' [pz_stage_frame()] stores a default [pz_frame()] on the page. Every
-#' screenshot and recording resolves its own `frame =` field by field:
-#' an unset field takes the staged value if one is set, else the
-#' built-in default. `frame = FALSE` disables framing for a single
-#' call. Camera shots ignore the staged frame; see [pz_camera()].
+#' [pz_stage_frame()] stores a default [pz_frame()] on the context: every
+#' screenshot and recording started from the staged context resolves its
+#' own `frame =` field by field, and an unset field takes the staged
+#' value if one is set, else the built-in default. `frame = FALSE`
+#' disables framing for a single call. The staged frame applies to the
+#' pipeline the staged context flows through -- [pz_find*()] contexts
+#' inherit it -- while a fresh pipeline from the original context starts
+#' from the defaults; assign the result
+#' (`page <- page |> pz_stage_frame(...)`) to set page-wide defaults.
+#' `pz_stage_frame(NULL)` clears an inherited staged frame for that
+#' pipeline only, and a new `pz_stage_frame()` call replaces the staged
+#' frame wholesale (unset fields fall back to built-in defaults, they do
+#' not merge with a previously staged frame). Camera shots ignore the
+#' staged frame; see [pz_camera()].
 #'
 #' Unlike [pz_stage()]'s animation settings, framing (like
 #' [pz_stage_annotate()]'s styles) applies to screenshots as well as
@@ -173,8 +182,8 @@ print.paparazzi_frame <- function(x, ...) {
 #' @param ... The default frame's target: a CSS selector string, a
 #'   [pz_loc()] spec, or a list of either. Several unnamed arguments are
 #'   unioned. With no target, framed captures use the current scope's
-#'   box (the viewport at the root). A single `NULL` clears the
-#'   default.
+#'   box (the viewport at the root). A single `NULL` clears the staged
+#'   frame for this pipeline.
 #' @param ratio,pad,offset,anchor,bounds,target_box,zoom Framing
 #'   settings, as in [pz_frame()]; `NULL` leaves the field unset, so
 #'   captures fall back to the built-in default for it.
@@ -187,17 +196,15 @@ print.paparazzi_frame <- function(x, ...) {
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tasks.png")
 #'
-#' page |>
-#'   pz_stage_frame(pad = 24) |>
-#'   # Framed by the default: the form plus 24px of padding
-#'   pz_screenshot(path, frame = "#new-task") |>
-#'   # Fields not set here still come from the staged default
-#'   pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9)) |>
-#'   # FALSE turns framing off for one call
-#'   pz_screenshot(path, frame = FALSE) |>
-#'   # NULL clears the default
-#'   pz_stage_frame(NULL)
-#' pz_screenshot(page, frame = pz_frame("#new-task", pad = 24, ratio = 16/9))
+#' page <- page |> pz_stage_frame(pad = 24)
+#' # Framed by the default: the form plus 24px of padding
+#' page |> pz_screenshot(path, frame = "#new-task")
+#' # Fields not set here still come from the staged default
+#' page |> pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9))
+#' # FALSE turns framing off for one call
+#' page |> pz_screenshot(path, frame = FALSE)
+#' # NULL clears the staged default for this pipeline only
+#' page |> pz_stage_frame(NULL) |> pz_screenshot(path, frame = "#new-task")
 #' pz_close(page)
 #'
 #' @export
@@ -236,7 +243,7 @@ pz_stage_frame <- function(
         class = "paparazzi_error_input"
       )
     }
-    page_set_frame(ctx$page, NULL)
+    ctx <- frame_derive(ctx, NULL)
     return(ctx_return(ctx))
   }
   target <- if (length(dots) == 0L) {
@@ -256,7 +263,7 @@ pz_stage_frame <- function(
     target_box = target_box,
     zoom = zoom
   )
-  page_set_frame(ctx$page, spec)
+  ctx <- frame_derive(ctx, spec)
   ctx_return(ctx)
 }
 
@@ -497,13 +504,19 @@ check_offset <- function(
   )
 }
 
-page_frame <- function(page) {
-  page$session_state$frame
+ctx_frame <- function(ctx) {
+  ctx$staging$frame
 }
 
-page_set_frame <- function(page, frame) {
-  page$session_state$frame <- frame
-  invisible(page)
+# Derive a context carrying a staged frame; the frame replaces any
+# inherited staged frame wholesale, while staging overrides pass
+# through untouched.
+frame_derive <- function(ctx, frame) {
+  ctx_derive(
+    ctx,
+    ctx$scope,
+    staging = list(overrides = ctx$staging$overrides %||% list(), frame = frame)
+  )
 }
 
 frame_effective <- function(ctx, frame, call = caller_env()) {
@@ -511,7 +524,7 @@ frame_effective <- function(ctx, frame, call = caller_env()) {
   if (identical(frame, FALSE)) {
     return(FALSE)
   }
-  staged <- page_frame(ctx$page)
+  staged <- ctx_frame(ctx)
   if (is.null(frame) && is.null(staged)) {
     return(NULL)
   }

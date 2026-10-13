@@ -90,7 +90,7 @@ pz_act_click <- function(
 ) {
   check_context(ctx)
   check_dots_empty()
-  stage <- page_stage(ctx$page)
+  stage <- ctx_stage(ctx)
   effect <- effect %||% stage$click_effect
   effect <- arg_match(effect, c("press", "ring", "none"))
   effect_color <- effect_color %||% stage$click_effect_color
@@ -214,9 +214,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
   check_string(text)
 
   if (is.null(target) && is.null(scope_top(ctx))) {
-    if (
-      recorder_active(ctx$page) && isTRUE(page_stage(ctx$page)$camera_follow)
-    ) {
+    if (recorder_active(ctx$page) && isTRUE(ctx_stage(ctx)$camera_follow)) {
       rect <- pz_js(
         ctx,
         "(() => { const e = document.activeElement; if (!e || e === document.body) return null; const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })()"
@@ -308,7 +306,7 @@ pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
   check_dots_empty()
   record_pre_action_loader(ctx)
   check_character(key)
-  show_keys <- show_keys %||% page_stage(ctx$page)$show_keys
+  show_keys <- show_keys %||% ctx_stage(ctx)$show_keys
   show_keys <- arg_match(show_keys, c("none", "words", "mac", "both"))
 
   session <- ctx$page$session
@@ -358,7 +356,7 @@ pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
         vt = started,
         last = rec_vt(rec),
         style = show_keys,
-        font_family = page_stage(ctx$page)$annotate_font_family,
+        font_family = ctx_stage(ctx)$annotate_font_family,
         keys = pressed
       ))
     )
@@ -653,7 +651,7 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
 
   els <- action_elements(ctx, target)
   el_scroll_into_view(els)
-  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx)
 
   res <- els_values(
     els,
@@ -1284,7 +1282,7 @@ dispatch_click <- function(
     clickCount = 0,
     call = call
   )
-  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx)
   if (staged) {
     pump_loop(ctx$page$child_loop, 0.15)
     if (identical(effect, "press")) {
@@ -1329,7 +1327,7 @@ dispatch_click <- function(
 
 insert_text <- function(ctx, target, text, call = caller_env()) {
   page <- ctx$page
-  stage <- page_stage(page)
+  stage <- ctx_stage(ctx)
   if (
     recorder_active(page) &&
       identical(stage$typing, "natural") &&
@@ -1672,7 +1670,7 @@ dispatch_mouse_drag <- function(
   to,
   call = caller_env()
 ) {
-  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx)
   pressed <- FALSE
   withr::defer({
     if (pressed) {
@@ -1779,7 +1777,7 @@ drag_html5 <- function(
 ) {
   session <- ctx$page$session
   timeout <- ctx$page$default_timeout
-  staged <- recorder_active(ctx$page) && cursor_visible(ctx$page)
+  staged <- recorder_active(ctx$page) && cursor_visible(ctx)
   drag_preview <- drag_preview_create(ctx, preview)
   data <- NULL
   dereg <- session$Input$dragIntercepted(
@@ -1824,9 +1822,7 @@ drag_html5 <- function(
     }
     if (isTRUE(page_cursor(ctx$page)$pressed)) {
       cur <- page_cursor(ctx$page)
-      if (
-        staged && cursor_drawn(ctx$page) && !is.null(cur$x) && !is.null(cur$y)
-      ) {
+      if (staged && cursor_drawn(ctx) && !is.null(cur$x) && !is.null(cur$y)) {
         try(
           cursor_apply(ctx, c(x = cur$x, y = cur$y), pressed = FALSE),
           silent = TRUE

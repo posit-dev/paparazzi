@@ -2,7 +2,7 @@
 % Please edit documentation in R/frame.R
 \name{pz_stage_frame}
 \alias{pz_stage_frame}
-\title{Set or clear the page's default framing}
+\title{Stage the default framing}
 \usage{
 pz_stage_frame(
   ctx,
@@ -22,8 +22,8 @@ pz_stage_frame(
 \item{...}{The default frame's target: a CSS selector string, a
 \code{\link[=pz_loc]{pz_loc()}} spec, or a list of either. Several unnamed arguments are
 unioned. With no target, framed captures use the current scope's
-box (the viewport at the root). A single \code{NULL} clears the
-default.}
+box (the viewport at the root). A single \code{NULL} clears the staged
+frame for this pipeline.}
 
 \item{ratio, pad, offset, anchor, bounds, target_box, zoom}{Framing
 settings, as in \code{\link[=pz_frame]{pz_frame()}}; \code{NULL} leaves the field unset, so
@@ -33,11 +33,20 @@ captures fall back to the built-in default for it.}
 \code{ctx}, invisibly.
 }
 \description{
-\code{\link[=pz_stage_frame]{pz_stage_frame()}} stores a default \code{\link[=pz_frame]{pz_frame()}} on the page. Every
-screenshot and recording resolves its own \verb{frame =} field by field:
-an unset field takes the staged value if one is set, else the
-built-in default. \code{frame = FALSE} disables framing for a single
-call. Camera shots ignore the staged frame; see \code{\link[=pz_camera]{pz_camera()}}.
+\code{\link[=pz_stage_frame]{pz_stage_frame()}} stores a default \code{\link[=pz_frame]{pz_frame()}} on the context: every
+screenshot and recording started from the staged context resolves its
+own \verb{frame =} field by field, and an unset field takes the staged
+value if one is set, else the built-in default. \code{frame = FALSE}
+disables framing for a single call. The staged frame applies to the
+pipeline the staged context flows through -- \code{\link[=pz_find*]{pz_find*()}} contexts
+inherit it -- while a fresh pipeline from the original context starts
+from the defaults; assign the result
+(\code{page <- page |> pz_stage_frame(...)}) to set page-wide defaults.
+\code{pz_stage_frame(NULL)} clears an inherited staged frame for that
+pipeline only, and a new \code{pz_stage_frame()} call replaces the staged
+frame wholesale (unset fields fall back to built-in defaults, they do
+not merge with a previously staged frame). Camera shots ignore the
+staged frame; see \code{\link[=pz_camera]{pz_camera()}}.
 
 Unlike \code{\link[=pz_stage]{pz_stage()}}'s animation settings, framing (like
 \code{\link[=pz_stage_annotate]{pz_stage_annotate()}}'s styles) applies to screenshots as well as
@@ -50,17 +59,15 @@ only its element boxes for the home frame.
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 
-page |>
-  pz_stage_frame(pad = 24) |>
-  # Framed by the default: the form plus 24px of padding
-  pz_screenshot(path, frame = "#new-task") |>
-  # Fields not set here still come from the staged default
-  pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9)) |>
-  # FALSE turns framing off for one call
-  pz_screenshot(path, frame = FALSE) |>
-  # NULL clears the default
-  pz_stage_frame(NULL)
-pz_screenshot(page, frame = pz_frame("#new-task", pad = 24, ratio = 16/9))
+page <- page |> pz_stage_frame(pad = 24)
+# Framed by the default: the form plus 24px of padding
+page |> pz_screenshot(path, frame = "#new-task")
+# Fields not set here still come from the staged default
+page |> pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9))
+# FALSE turns framing off for one call
+page |> pz_screenshot(path, frame = FALSE)
+# NULL clears the staged default for this pipeline only
+page |> pz_stage_frame(NULL) |> pz_screenshot(path, frame = "#new-task")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

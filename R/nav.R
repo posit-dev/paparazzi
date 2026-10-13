@@ -8,8 +8,8 @@
 #' an empty scope stack, and the pinned scope objects are released, so a
 #' context scoped **before** the navigation raises a detach error if used
 #' afterwards -- re-scope with [pz_find()] on the returned root context.
-#' Session-level state (timeout, staging, and recording) is
-#' untouched.
+#' Session-level state (timeout and recording) is untouched, and staged
+#' settings carry over to the returned context.
 #'
 #' @inheritParams pz_act_click
 #' @param url The URL to navigate to (any scheme, including `file://`).

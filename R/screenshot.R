@@ -10,7 +10,7 @@ NULL
 #' printable preview in an interactive session.
 #'
 #' The captured region comes from `frame`:
-#' * `NULL` (the default): the page's staged framing set with
+#' * `NULL` (the default): the staged framing set with
 #'   [pz_stage_frame()], or, with none staged, the current scope's box
 #'   (the viewport at the root), unframed.
 #' * A [pz_frame()] spec, or a bare locator promoted to one: a CSS

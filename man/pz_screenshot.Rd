@@ -40,7 +40,7 @@ printable preview in an interactive session.
 
 The captured region comes from \code{frame}:
 \itemize{
-\item \code{NULL} (the default): the page's staged framing set with
+\item \code{NULL} (the default): the staged framing set with
 \code{\link[=pz_stage_frame]{pz_stage_frame()}}, or, with none staged, the current scope's box
 (the viewport at the root), unframed.
 \item A \code{\link[=pz_frame]{pz_frame()}} spec, or a bare locator promoted to one: a CSS

@@ -4,7 +4,7 @@ drag_preview_create <- function(ctx, preview = TRUE) {
     !preview ||
       !recorder_active(page) ||
       isTRUE(page_recorder(page)$paused) ||
-      !cursor_visible(page)
+      !cursor_visible(ctx)
   ) {
     return(NULL)
   }

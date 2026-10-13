@@ -273,7 +273,7 @@ pz_cursor_leave <- function(ctx, side = "right", icon = NULL) {
     stage_glide_duration(
       c(x = cur$x, y = cur$y),
       point,
-      page_stage(page)$cursor_speed
+      ctx_stage(ctx)$cursor_speed
     )
   }
   cursor_apply(
@@ -319,23 +319,23 @@ page_cursor_peek <- function(page) {
   page$session_state$cursor
 }
 
-cursor_visible <- function(page) {
-  stage <- page_stage(page)
+cursor_visible <- function(ctx) {
+  stage <- ctx_stage(ctx)
   if (identical(stage$cursor, FALSE)) {
     return(FALSE)
   }
-  cur <- page_cursor_peek(page)
+  cur <- page_cursor_peek(ctx$page)
   visibility <- if (is.null(cur)) "auto" else cur$visibility
   switch(
     visibility,
     shown = TRUE,
     hidden = FALSE,
-    auto = recorder_active(page) || isTRUE(stage$cursor)
+    auto = recorder_active(ctx$page) || isTRUE(stage$cursor)
   )
 }
 
 check_cursor_enabled <- function(ctx, call = caller_env()) {
-  if (identical(page_stage(ctx$page)$cursor, FALSE)) {
+  if (identical(ctx_stage(ctx)$cursor, FALSE)) {
     cli::cli_abort(
       "The cursor is disabled by {.code pz_stage(cursor = FALSE)}.",
       class = "paparazzi_error_cursor",
@@ -456,7 +456,7 @@ cursor_show_at <- function(
 ) {
   page <- ctx$page
   cur <- page_cursor(page)
-  stage <- page_stage(page)
+  stage <- ctx_stage(ctx)
   rect <- attr(point, "rect")
   has_pos <- !is.null(cur$x)
   entry <- from %||%
@@ -643,7 +643,7 @@ cursor_rest <- function(ctx) {
   cur <- page_cursor_peek(page)
   if (
     !recorder_active(page) ||
-      !cursor_visible(page) ||
+      !cursor_visible(ctx) ||
       is.null(cur$x) ||
       !is.null(cur$off_frame)
   ) {
@@ -655,12 +655,12 @@ cursor_rest <- function(ctx) {
   ctx_return(ctx)
 }
 
-cursor_drawn <- function(page) {
-  cursor_visible(page) && !isTRUE(page_cursor_peek(page)$resting)
+cursor_drawn <- function(ctx) {
+  cursor_visible(ctx) && !isTRUE(page_cursor_peek(ctx$page)$resting)
 }
 
 cursor_press <- function(ctx, pressed) {
-  if (!cursor_drawn(ctx$page)) {
+  if (!cursor_drawn(ctx)) {
     return(ctx_return(ctx))
   }
   cursor_draw(ctx, visible = TRUE, pressed = pressed)
@@ -668,7 +668,7 @@ cursor_press <- function(ctx, pressed) {
 }
 
 cursor_ring <- function(ctx, point, color) {
-  if (!cursor_drawn(ctx$page)) {
+  if (!cursor_drawn(ctx)) {
     return(ctx_return(ctx))
   }
   cur <- page_cursor(ctx$page)
@@ -690,7 +690,7 @@ cursor_ring <- function(ctx, point, color) {
 }
 
 cursor_command <- function(ctx, state) {
-  state$scale <- page_stage(ctx$page)$cursor_scale
+  state$scale <- ctx_stage(ctx)$cursor_scale
   state$icons <- CURSOR_ART
   json <- js_literal(state, auto_unbox = TRUE, null = "null")
   pz_js(ctx, paste0("(", cursor_command_js, ")(", json, ")"), await = FALSE)
@@ -876,12 +876,12 @@ cursor_register_init <- function(ctx) {
   state <- list(
     x = cur$x %||% 0,
     y = cur$y %||% 0,
-    visible = cursor_drawn(page) && !is.null(cur$x),
+    visible = cursor_drawn(ctx) && !is.null(cur$x),
     icon = cur$icon,
     pressed = FALSE,
     duration = 0,
     anim = FALSE,
-    scale = page_stage(page)$cursor_scale,
+    scale = ctx_stage(ctx)$cursor_scale,
     icons = CURSOR_ART
   )
   json <- js_literal(state, auto_unbox = TRUE, null = "null")

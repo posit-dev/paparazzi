@@ -216,7 +216,7 @@ camera_follow_move <- function(ctx, rect, duration) {
     is.null(rec) ||
       !rec$active ||
       !length(rec$camera) ||
-      !isTRUE(page_stage(page)$camera_follow)
+      !isTRUE(ctx_stage(ctx)$camera_follow)
   ) {
     return(FALSE)
   }

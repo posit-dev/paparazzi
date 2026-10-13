@@ -2,7 +2,7 @@
 % Please edit documentation in R/stage.R
 \name{pz_stage}
 \alias{pz_stage}
-\title{Stage the page for recording}
+\title{Stage animation settings}
 \usage{
 pz_stage(
   ctx,
@@ -85,21 +85,26 @@ The default is \code{"#e11d48"}. Supply \code{NULL} to restore the default.}
 Sets the staging options that animate pointer actions, typing, and
 scrolling while the page is recording. Only supplied arguments
 change -- an omitted argument leaves its setting alone, an explicit
-\code{NULL} restores the default, and a value sets it (so
-\code{pz_stage(cursor = FALSE)} can be undone with \code{pz_stage(cursor = NULL)}). Settings live on the page and persist across recordings, so
-\code{\link[=pz_record_start]{pz_record_start()}} never repeats them. Without a recording, staging
-is skipped and the chain runs straight to its final state -- except
+\code{NULL} restores the built-in default, and a value sets it (so
+\code{pz_stage(cursor = FALSE)} can be undone with \code{pz_stage(cursor = NULL)}). Staged settings apply to the pipeline the staged context
+flows through: \code{\link[=pz_find*]{pz_find*()}} contexts inherit them, and they persist
+across recordings inside the chain. A fresh pipeline from the
+original context starts from the defaults, so assign the result
+(\code{page <- page |> pz_stage(...)}) to set page-wide defaults. Without a
+recording, staging is skipped and the chain runs straight to its
+final state -- except
 \code{cursor = TRUE}, which shows a static cursor in screenshots too.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run("av")) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 
-# Staging settings stay on the page until you change them
-page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
+# Staged settings reach the pipelines the staged context flows
+# through; assignment makes them page-wide defaults
+page <- page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
 
 # Recorded clicks show a custom-colored ring
-page |> pz_stage(click_effect = "ring", click_effect_color = "#2563eb")
+page <- page |> pz_stage(click_effect = "ring", click_effect_color = "#2563eb")
 
 path <- file.path(tempdir(), "add-task.mp4")
 page |>
@@ -109,8 +114,8 @@ page |>
       pz_act_click("#add-task")
   })
 
-# NULL restores a setting's default
-page |> pz_stage(pause = NULL)
+# NULL restores a setting's built-in default
+page <- page |> pz_stage(pause = NULL)
 
 # cursor = TRUE shows the cursor in screenshots too
 page |>

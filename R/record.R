@@ -34,7 +34,7 @@
 #' `pz_record_stop()`, so a change made just before the stop still
 #' appears; the last-frame hold repeats that final frame.
 #'
-#' Use [pz_frame()] (or the page default set with
+#' Use [pz_frame()] (or the staged default set with
 #' [pz_stage_frame()]) to crop the finished recording. By default the
 #' frame follows the layout at stop; `pz_frame(when = "start")` fixes it
 #' to the layout at start. If the page navigates, a frame tied to the
@@ -73,8 +73,9 @@
 #'   by visual changes. See *Choosing a capture method* for tradeoffs.
 #' @param frame Area to show in the finished recording: a [pz_frame()]
 #'   spec, or a bare locator (a CSS selector string, a [pz_loc()] spec,
-#'   or a list of either) promoted to one; `NULL` uses the page default
-#'   set with [pz_stage_frame()], if any, or shows the full viewport;
+#'   or a list of either) promoted to one; `NULL` uses the staged
+#'   default set with [pz_stage_frame()], if any, or shows the full
+#'   viewport;
 #'   `FALSE` ignores the default. Unset fields inherit the staged
 #'   value, then the built-in default. A frame with
 #'   `target_box = "annotated"` set explicitly is invalid for the home

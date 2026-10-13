@@ -37,8 +37,9 @@ by visual changes. See \emph{Choosing a capture method} for tradeoffs.}
 
 \item{frame}{Area to show in the finished recording: a \code{\link[=pz_frame]{pz_frame()}}
 spec, or a bare locator (a CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec,
-or a list of either) promoted to one; \code{NULL} uses the page default
-set with \code{\link[=pz_stage_frame]{pz_stage_frame()}}, if any, or shows the full viewport;
+or a list of either) promoted to one; \code{NULL} uses the staged
+default set with \code{\link[=pz_stage_frame]{pz_stage_frame()}}, if any, or shows the full
+viewport;
 \code{FALSE} ignores the default. Unset fields inherit the staged
 value, then the built-in default. A frame with
 \code{target_box = "annotated"} set explicitly is invalid for the home
@@ -109,7 +110,7 @@ Stopping always captures one final frame of the page state at
 \code{pz_record_stop()}, so a change made just before the stop still
 appears; the last-frame hold repeats that final frame.
 
-Use \code{\link[=pz_frame]{pz_frame()}} (or the page default set with
+Use \code{\link[=pz_frame]{pz_frame()}} (or the staged default set with
 \code{\link[=pz_stage_frame]{pz_stage_frame()}}) to crop the finished recording. By default the
 frame follows the layout at stop; \code{pz_frame(when = "start")} fixes it
 to the layout at start. If the page navigates, a frame tied to the

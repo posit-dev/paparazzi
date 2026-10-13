@@ -205,7 +205,8 @@ inspect_positive_rects <- function(rects) {
   rects[rects$width > 0 & rects$height > 0, ]
 }
 
-inspect_recording_state <- function(page) {
+inspect_recording_state <- function(ctx) {
+  page <- ctx$page
   rec <- page_recorder(page)
   recording <- if (is.null(rec) || !isTRUE(rec$active)) {
     "off"
@@ -215,7 +216,7 @@ inspect_recording_state <- function(page) {
     "on"
   }
   cur <- page_cursor_peek(page)
-  cursor <- if (is.null(cur) || !cursor_visible(page)) {
+  cursor <- if (is.null(cur) || !cursor_visible(ctx)) {
     "hidden"
   } else if (!is.null(cur$off_frame)) {
     "off-frame"
@@ -259,7 +260,7 @@ inspect_summary_print <- function(ctx, matches = NULL) {
   } else {
     paste0(view$dpr, "x")
   }
-  rec <- inspect_recording_state(ctx$page)
+  rec <- inspect_recording_state(ctx)
 
   cli::cat_line(inspect_header(if (scoped) "scope" else "page"))
   if (scoped) {

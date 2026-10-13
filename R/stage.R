@@ -1,23 +1,31 @@
-# Staging: the per-page settings that make recorded runs watchable --
+# Staging: the per-pipeline settings that make recorded runs watchable --
 # cursor visibility and glide speed, entrance side, natural typing, and
-# a hold after each action. Settings live on the page and persist across
-# recordings. Staging only animates WHILE RECORDING (recorder_active());
+# a hold after each action. Staged settings are carried by the context:
+# pz_stage() derives a new context with merged overrides, and they flow
+# through derivation like scope. Assigning the staged context
+# (page <- page |> pz_stage(...)) is what makes them page-wide defaults;
+# an explicit NULL drops an override so that pipeline falls back to the
+# built-in default. Staging only animates WHILE RECORDING (recorder_active());
 # without a recording the same chain runs straight to its final state,
 # except that a visible cursor (cursor = TRUE, or an explicit
 # pz_cursor_show()) is drawn statically for stills. Animation is
 # page-side CSS transitions driven by an R-side pump of the child loop
 # (pump_loop(), the pz_wait() mechanism) -- no timers of our own, so the
 # recorder's capture ticks are the only clock the animation answers to.
-#' Stage the page for recording
+#' Stage animation settings
 #'
 #' Sets the staging options that animate pointer actions, typing, and
 #' scrolling while the page is recording. Only supplied arguments
 #' change -- an omitted argument leaves its setting alone, an explicit
-#' `NULL` restores the default, and a value sets it (so
+#' `NULL` restores the built-in default, and a value sets it (so
 #' `pz_stage(cursor = FALSE)` can be undone with `pz_stage(cursor =
-#' NULL)`). Settings live on the page and persist across recordings, so
-#' [pz_record_start()] never repeats them. Without a recording, staging
-#' is skipped and the chain runs straight to its final state -- except
+#' NULL)`). Staged settings apply to the pipeline the staged context
+#' flows through: [pz_find*()] contexts inherit them, and they persist
+#' across recordings inside the chain. A fresh pipeline from the
+#' original context starts from the defaults, so assign the result
+#' (`page <- page |> pz_stage(...)`) to set page-wide defaults. Without a
+#' recording, staging is skipped and the chain runs straight to its
+#' final state -- except
 #' `cursor = TRUE`, which shows a static cursor in screenshots too.
 #'
 #' @inheritParams pz_act_click
@@ -73,11 +81,12 @@
 #' @examplesIf paparazzi:::examples_run("av")
 #' page <- pz_open(pz_example("tasks"))
 #'
-#' # Staging settings stay on the page until you change them
-#' page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
+#' # Staged settings reach the pipelines the staged context flows
+#' # through; assignment makes them page-wide defaults
+#' page <- page |> pz_stage(enter = "left", cursor_speed = 500, typing_speed = 20, pause = 0.3)
 #'
 #' # Recorded clicks show a custom-colored ring
-#' page |> pz_stage(click_effect = "ring", click_effect_color = "#2563eb")
+#' page <- page |> pz_stage(click_effect = "ring", click_effect_color = "#2563eb")
 #'
 #' path <- file.path(tempdir(), "add-task.mp4")
 #' page |>
@@ -87,8 +96,8 @@
 #'       pz_act_click("#add-task")
 #'   })
 #'
-#' # NULL restores a setting's default
-#' page |> pz_stage(pause = NULL)
+#' # NULL restores a setting's built-in default
+#' page <- page |> pz_stage(pause = NULL)
 #'
 #' # cursor = TRUE shows the cursor in screenshots too
 #' page |>
@@ -116,7 +125,7 @@ pz_stage <- function(
   check_context(ctx)
   check_dots_empty()
   page <- ctx$page
-  overrides <- page$session_state$stage %||% list()
+  overrides <- ctx$staging$overrides %||% list()
 
   if (!missing(cursor)) {
     if (is.null(cursor)) {
@@ -214,15 +223,15 @@ pz_stage <- function(
       overrides$click_effect_color <- click_effect_color
     }
   }
-  page_set_stage(page, overrides)
+  ctx <- stage_derive(ctx, overrides)
 
-  stage <- page_stage(page)
+  stage <- ctx_stage(ctx)
   cur <- page_cursor_peek(page)
   if (identical(stage$cursor, FALSE)) {
     if (!is.null(cur) && !is.null(cur$x)) {
       cursor_draw(ctx, visible = FALSE)
     }
-  } else if (isTRUE(stage$cursor) && cursor_drawn(page)) {
+  } else if (isTRUE(stage$cursor) && cursor_drawn(ctx)) {
     point <- cursor_current_point(ctx)
     if (is.null(cur) || is.null(cur$x)) {
       cursor_apply(ctx, point)
@@ -233,21 +242,26 @@ pz_stage <- function(
     !missing(cursor_scale) &&
       !is.null(cur) &&
       !is.null(cur$x) &&
-      cursor_drawn(page)
+      cursor_drawn(ctx)
   ) {
     cursor_draw(ctx, visible = TRUE)
   }
   ctx_return(ctx)
 }
 
-#' Set the page's annotation style defaults
+#' Stage annotation style defaults
 #'
-#' Sets persistent page defaults for new annotations in screenshots and
-#' recordings. An omitted argument leaves its setting alone, an explicit
-#' `NULL` restores its default, and a value sets it. Per-call annotation
-#' style arguments override these defaults; note the per-call names on
-#' [pz_annotate()] differ (`label_fill`/`label_text_color`) from the staged
-#' names (`fill`/`text_color`), and the staged fill and text color style
+#' Sets style defaults for new annotations in screenshots and recordings.
+#' An omitted argument leaves its setting alone, an explicit `NULL`
+#' restores the built-in default, and a value sets it. The defaults
+#' apply to the pipeline the staged context flows through: [pz_find*()]
+#' contexts inherit them, while a fresh pipeline from the original
+#' context starts from the defaults -- assign the result
+#' (`page <- page |> pz_stage_annotate(...)`) to set page-wide defaults.
+#' Per-call annotation style arguments override these defaults; note
+#' the per-call names on [pz_annotate()] differ
+#' (`label_fill`/`label_text_color`) from the staged names
+#' (`fill`/`text_color`), and the staged fill and text color style
 #' callout chrome only, not mark badges.
 #'
 #' @inheritParams pz_act_click
@@ -287,14 +301,14 @@ pz_stage <- function(
 #' page <- pz_open(pz_example("tasks"))
 #' path <- file.path(tempdir(), "tasks.png")
 #'
+#' # Assignment makes these styles page-wide defaults for new annotations
+#' page <- page |> pz_stage_annotate(color = "#2563eb", font_size = 16)
+#' page |> pz_annotate("#add-task", label = TRUE) |> pz_screenshot(path)
+#'
+#' # A one-off pipeline can undo a default with NULL
 #' page |>
-#'   # New annotations on this page use these styles
-#'   pz_stage_annotate(color = "#2563eb", font_size = 16) |>
-#'   pz_annotate("#add-task", label = TRUE) |>
-#'   pz_screenshot(path) |>
-#'   # NULL restores a default
-#'   pz_stage_annotate(color = NULL)
-#' pz_screenshot(page, frame = pz_frame("#new-task", pad = 16, target_box = "annotated"))
+#'   pz_stage_annotate(color = NULL) |>
+#'   pz_screenshot(path, frame = pz_frame("#new-task", pad = 16, target_box = "annotated"))
 #' pz_close(page)
 #'
 #' @export
@@ -313,7 +327,7 @@ pz_stage_annotate <- function(
   check_context(ctx)
   check_dots_empty()
   page <- ctx$page
-  overrides <- page$session_state$stage %||% list()
+  overrides <- ctx$staging$overrides %||% list()
   if (!missing(color)) {
     if (is.null(color)) {
       overrides[["annotate_color"]] <- NULL
@@ -376,7 +390,7 @@ pz_stage_annotate <- function(
       overrides$caption_side <- arg_match(caption_side, c("bottom", "top"))
     }
   }
-  page_set_stage(page, overrides)
+  ctx <- stage_derive(ctx, overrides)
   ctx_return(ctx)
 }
 
@@ -402,14 +416,18 @@ STAGE_DEFAULTS <- list(
   caption_side = "bottom"
 )
 
-page_stage <- function(page) {
-  overrides <- page$session_state$stage
-  utils::modifyList(STAGE_DEFAULTS, overrides %||% list())
+ctx_stage <- function(ctx) {
+  utils::modifyList(STAGE_DEFAULTS, ctx$staging$overrides %||% list())
 }
 
-page_set_stage <- function(page, overrides) {
-  page$session_state$stage <- overrides
-  invisible(page)
+# Derive a context carrying merged staging overrides; the staged frame
+# passes through untouched.
+stage_derive <- function(ctx, overrides) {
+  ctx_derive(
+    ctx,
+    ctx$scope,
+    staging = list(overrides = overrides, frame = ctx$staging$frame)
+  )
 }
 
 recorder_active <- function(page) {
@@ -425,7 +443,7 @@ stage_glide_duration <- function(from, to, speed) {
 stage_move_cursor <- function(ctx, point) {
   page <- ctx$page
   follow <- isTRUE(attr(point, "camera_follow"))
-  if (!cursor_visible(page)) {
+  if (!cursor_visible(ctx)) {
     if (follow) {
       stage_follow_without_glide(ctx, attr(point, "rect"))
     }
@@ -515,7 +533,7 @@ stage_wheel_into_view <- function(
     prev <- pos
     point <- c(x = probe$x, y = probe$y)
     stage_move_cursor(ctx, point)
-    stage <- page_stage(ctx$page)
+    stage <- ctx_stage(ctx)
     wheel_duration <- duration %||%
       min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.5), 2)
     stage_wheel(ctx, point, delta[[1]], delta[[2]], wheel_duration, call = call)
@@ -555,7 +573,7 @@ stage_wheel <- function(ctx, point, dx, dy, duration, call = caller_env()) {
 
 stage_drag_carry <- function(ctx, from, to, step) {
   page <- ctx$page
-  duration <- stage_glide_duration(from, to, page_stage(page)$cursor_speed)
+  duration <- stage_glide_duration(from, to, ctx_stage(ctx)$cursor_speed)
   cursor_apply(ctx, to, duration = duration, pressed = TRUE, pump = FALSE)
   start <- Sys.time()
   interval <- 1 / 30
@@ -677,7 +695,7 @@ scroll_staged <- function(
   }
   point <- c(x = probe$x, y = probe$y)
   stage_move_cursor(ctx, point)
-  stage <- page_stage(ctx$page)
+  stage <- ctx_stage(ctx)
   wheel_duration <- duration %||%
     min(max(0.25 + max(abs(delta)) / stage$cursor_speed, 0.5), 2)
   stage_wheel(ctx, point, delta[[1]], delta[[2]], wheel_duration, call = call)
@@ -858,7 +876,7 @@ stage_action_pause <- function(ctx) {
   if (!recorder_active(page)) {
     return(ctx_return(ctx))
   }
-  pause <- page_stage(page)$pause
+  pause <- ctx_stage(ctx)$pause
   if (pause > 0) {
     pump_loop(page$child_loop, pause)
   }
@@ -874,13 +892,13 @@ stage_record_stopped <- function(ctx) {
   if (
     !is.null(cur) &&
       identical(cur$visibility, "auto") &&
-      is.null(page_stage(page)$cursor) &&
+      is.null(ctx_stage(ctx)$cursor) &&
       !is.null(cur$x)
   ) {
     cursor_draw(ctx, visible = FALSE)
   } else if (isTRUE(cur$resting)) {
     cur$resting <- FALSE
-    cursor_draw(ctx, visible = cursor_visible(page))
+    cursor_draw(ctx, visible = cursor_visible(ctx))
   }
   if (!is.null(cur)) {
     cur$resting <- FALSE

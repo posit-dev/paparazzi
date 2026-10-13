@@ -85,7 +85,7 @@ pz_annotate_callout <- function(
   reveal <- rlang::arg_match(reveal)
   check_annotation_id(id)
   style <- annotate_style(ctx, color, font_family, font_size)
-  stage <- page_stage(ctx$page)
+  stage <- ctx_stage(ctx)
   fill <- fill %||% stage$annotate_fill %||% style$color
   text_color <- text_color %||% stage$annotate_text_color
   check_string(fill, allow_empty = FALSE)
