@@ -41,7 +41,7 @@ the pause after each step.
 - [`pz_screenshot()`](https://posit-dev.github.io/paparazzi/reference/pz_screenshot.md)
   : Take a screenshot
 - [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
-  : Stage the page for recording
+  : Stage animation settings
 - [`pz_record_start()`](https://posit-dev.github.io/paparazzi/reference/pz_record_start.md)
   : Record a page interaction
 - [`pz_record_stop()`](https://posit-dev.github.io/paparazzi/reference/pz_record_stop.md)
@@ -105,7 +105,7 @@ sets their default styles.
 - [`pz_annotate_clear()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_clear.md)
   : Clear page annotations
 - [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md)
-  : Set the page's annotation style defaults
+  : Stage annotation style defaults
 
 ## Fonts
 
@@ -125,7 +125,7 @@ annotations, callouts, captions and key callouts render in them.
 
 Choose the part of the page that a screenshot or recording shows with
 [`pz_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_frame.md),
-and set a default for the page with
+and set a default for the chain with
 [`pz_stage_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_frame.md).
 During a recording, the camera zooms in on part of the frame and back
 out without changing the live page.
@@ -133,7 +133,7 @@ out without changing the live page.
 - [`pz_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_frame.md)
   : Frame a capture region
 - [`pz_stage_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_frame.md)
-  : Set or clear the page's default framing
+  : Stage the default framing
 - [`pz_camera()`](https://posit-dev.github.io/paparazzi/reference/pz_camera.md)
   : Move the recording camera
 - [`pz_camera_reset()`](https://posit-dev.github.io/paparazzi/reference/pz_camera_reset.md)

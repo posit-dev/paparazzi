@@ -5,15 +5,15 @@ Every navigation resets the scope to the root: the returned context has
 an empty scope stack, and the pinned scope objects are released, so a
 context scoped before the navigation raises a detach error if used
 afterwards – re-scope with pz_find() on the returned root context.
-Session-level state (timeout, staging, and recording) is
-untouched."><meta property="og:description" content="pz_nav_goto() navigates to url; pz_nav_reload() reloads the page;
+Session-level state (timeout and recording) is untouched, and staged
+settings carry over to the returned context."><meta property="og:description" content="pz_nav_goto() navigates to url; pz_nav_reload() reloads the page;
 pz_nav_back()/pz_nav_forward() step through the history.
 Every navigation resets the scope to the root: the returned context has
 an empty scope stack, and the pinned scope objects are released, so a
 context scoped before the navigation raises a detach error if used
 afterwards – re-scope with pz_find() on the returned root context.
-Session-level state (timeout, staging, and recording) is
-untouched."><meta property="og:image" content="https://posit-dev.github.io/paparazzi/logo.png"><script defer src="https://cdn.jsdelivr.net/gh/posit-dev/supported-by-posit/js/badge.min.js" data-max-height="43" data-light-bg="#666f76" data-light-fg="#f9f9f9"></script></head><body>
+Session-level state (timeout and recording) is untouched, and staged
+settings carry over to the returned context."><meta property="og:image" content="https://posit-dev.github.io/paparazzi/logo.png"><script defer src="https://cdn.jsdelivr.net/gh/posit-dev/supported-by-posit/js/badge.min.js" data-max-height="43" data-light-bg="#666f76" data-light-fg="#f9f9f9"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -68,8 +68,8 @@ untouched."><meta property="og:image" content="https://posit-dev.github.io/papar
 an empty scope stack, and the pinned scope objects are released, so a
 context scoped <strong>before</strong> the navigation raises a detach error if used
 afterwards – re-scope with <code><a href="pz_find.html">pz_find()</a></code> on the returned root context.
-Session-level state (timeout, staging, and recording) is
-untouched.</p>
+Session-level state (timeout and recording) is untouched, and staged
+settings carry over to the returned context.</p>
     </div>
 
     <div class="section level2">

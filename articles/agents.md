@@ -55,14 +55,15 @@ pz_with_page(pz_example("tasks"), function(page) {
 To record the same interaction, stage the page first and run the chain
 inside
 [`pz_record()`](https://posit-dev.github.io/paparazzi/reference/pz_record.md).
-Staging animates the cursor and typing only while a recording runs. This
-GIF needs the gifski package.
+Assigning the staged page carries the settings into every later chain,
+the recording included. Staging animates the cursor and typing only
+while a recording runs. This GIF needs the gifski package.
 
 ``` r
 
 video <- tempfile(fileext = ".gif")
 pz_with_page(pz_example("tasks"), function(page) {
-  page |> pz_stage(enter = "bottom", pause = 0.5)
+  page <- page |> pz_stage(enter = "bottom", pause = 0.5)
   page |> pz_record(video, code = {
     page |>
       pz_act_type("Repot the fern", target = "#task-title") |>

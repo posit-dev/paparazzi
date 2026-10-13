@@ -205,7 +205,7 @@ text.</p>
 <p>paparazzi fills each badge with the mark’s color and writes its text
 in white; <code>label_fill</code> and <code>label_text_color</code>
 change that for one call. When you leave out the color, stroke width, or
-fonts, paparazzi uses the page’s defaults, which you can change with
+fonts, paparazzi uses the staged defaults, which you can change with
 <code><a href="../reference/pz_stage_annotate.html">pz_stage_annotate()</a></code>, as <a href="#styling-defaults">Styling
 defaults</a> explains.</p>
 <p>Here, an amber highlight covers the title field, and a blue box with
@@ -412,11 +412,13 @@ title field, so only the circle remains.</p>
 <h2 id="styling-defaults">Styling defaults<a class="anchor" aria-label="anchor" href="#styling-defaults"></a>
 </h2>
 <p><code><a href="../reference/pz_stage_annotate.html">pz_stage_annotate()</a></code> sets your annotation styles once for
-every later annotation on the page. It sets the color, stroke width,
-font family, and badge size for every annotation, the bubble colors and
-distance for callouts, and the side for captions. Arguments to
-individual annotation functions override these defaults for that
-call.</p>
+the annotations that follow it in a chain. It sets the color, stroke
+width, font family, and badge size for every annotation, the bubble
+colors and distance for callouts, and the side for captions. Arguments
+to individual annotation functions override these defaults for that
+call. To use the same styles across chains, assign the staged page
+(<code>page &lt;- page |&gt; pz_stage_annotate(...)</code>) and start
+each chain from it.</p>
 <p>Let’s make later annotations blue, with large monospace badges:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
@@ -430,21 +432,15 @@ call.</p>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">8</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/stage-style-1.png" class="r-plt" alt="The Add button boxed in blue with a large monospace A badge." width="532"></p>
-<p>Staged styles stay on the page until you change them. Passing
-<code>NULL</code> restores a default: crimson (<code>#e11d48</code>)
-marks with 3 pixel lines, sans-serif badges with 14 pixel text, callouts
-filled with their accent color, 24 pixels from their element (8 without
-a line), and captions at the bottom. We’ll clear the box and restore the
-defaults:</p>
+<p>Staged styles last to the end of the chain, so the blue monospace
+styling above applied to that chain alone. Within a chain, passing
+<code>NULL</code> restores a default for the rest of it: crimson
+(<code>#e11d48</code>) marks with 3 pixel lines, sans-serif badges with
+14 pixel text, callouts filled with their accent color, 24 pixels from
+their element (8 without a line), and captions at the bottom. We’ll
+clear the box:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_stage_annotate.html">pz_stage_annotate</a></span><span class="op">(</span></span>
-<span>    color <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>    font_family <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>    font_size <span class="op">=</span> <span class="cn">NULL</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>Callout bubbles and their badges follow the callout’s
 <code>color</code> unless you set <code>fill</code> per call or with
 <code><a href="../reference/pz_stage_annotate.html">pz_stage_annotate()</a></code>. paparazzi chooses black or white text
@@ -467,7 +463,7 @@ the font has loaded, so paparazzi never draws an annotation in a
 fallback font while the font downloads.</p>
 <p>A handwritten font makes a callout look like a note written over the
 screenshot. We’ll stage Patrick Hand from Google Fonts and make it the
-default for later annotations:</p>
+default for the annotations that follow:</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hand</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_font_google.html">pz_font_google</a></span><span class="op">(</span><span class="st">"Patrick Hand"</span><span class="op">)</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
@@ -486,15 +482,15 @@ default for later annotations:</p>
 a string, as long as you’ve staged it on the page. It stands for the CSS
 font family <code>'"Patrick Hand", sans-serif'</code>, so the browser
 falls back to sans-serif for characters the font lacks. Captions and
-keystroke callouts use the staged <code>font_family</code> too, and
-staged fonts stay with the page when it navigates to a new document.</p>
+keystroke callouts use the staged <code>font_family</code> too. Note the
+two kinds of staging here: the font itself loads into the page and stays
+when it navigates to a new document, while the <code>font_family</code>
+default rides the chain like any staged style.</p>
 <p>Chrome downloads Google and Bunny fonts, so staging them needs a
 network connection. <code><a href="../reference/pz_font_file.html">pz_font_file()</a></code> reads the font file in
 R, so it works offline.</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_stage_annotate.html">pz_stage_annotate</a></span><span class="op">(</span>font_family <span class="op">=</span> <span class="cn">NULL</span>, font_size <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -571,7 +567,7 @@ choose how the keycaps look: <code>"words"</code> spells out modifier
 names, <code>"mac"</code> uses Mac symbols, and <code>"both"</code>
 shows <code>Mod</code> as <code>Ctrl / ⌘</code>. The default is
 <code>"none"</code>, and <a href="../reference/pz_stage.html"><code>pz_stage(show_keys = ...)</code></a>
-changes it for every later key press on the page.</p>
+changes it for the key presses that follow it in the chain.</p>
 <p>The task tracker adds a task when you press Enter in the title field,
 so we’ll show Enter with Mac symbols:</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">

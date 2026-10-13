@@ -167,11 +167,13 @@ screenshots always measure at capture time.</p>
 <div class="section level2">
 <h2 id="stage-repeated-framing">Stage repeated framing<a class="anchor" aria-label="anchor" href="#stage-repeated-framing"></a>
 </h2>
-<p><code><a href="../reference/pz_stage_frame.html">pz_stage_frame()</a></code> sets a default frame for later
-screenshots and recordings. Pass its targets unnamed. Each capture’s
-unset frame fields inherit the staged values, then the built-in
-defaults. A scope takes precedence over a staged target when the capture
-has no target of its own.</p>
+<p><code><a href="../reference/pz_stage_frame.html">pz_stage_frame()</a></code> sets a default frame for the
+screenshots and recordings that follow it in the chain; assign the
+staged page (<code>page &lt;- page |&gt; pz_stage_frame(...)</code>) to
+keep the default for every chain. Pass its targets unnamed. Each
+capture’s unset frame fields inherit the staged values, then the
+built-in defaults. A scope takes precedence over a staged target when
+the capture has no target of its own.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_stage_frame.html">pz_stage_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -180,12 +182,12 @@ has no target of its own.</p>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>,</span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">".filters"</span>, ratio <span class="op">=</span> <span class="fl">16</span> <span class="op">/</span> <span class="fl">9</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>, frame <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_stage_frame.html">pz_stage_frame</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>, frame <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><code>frame = FALSE</code> captures the scope or viewport unframed
-for that call. <code>pz_stage_frame(NULL)</code> clears the default.
-Framing applies to stills as well as video; it is separate from the
-recording-only animations in <code><a href="../reference/pz_stage.html">pz_stage()</a></code>.</p>
+for that call. <code>pz_stage_frame(NULL)</code> clears an inherited
+default for the rest of the chain. Framing applies to stills as well as
+video; it is separate from the recording-only animations in
+<code><a href="../reference/pz_stage.html">pz_stage()</a></code>.</p>
 </div>
 <div class="section level2">
 <h2 id="mark-elements-and-number-matches">Mark elements and number matches<a class="anchor" aria-label="anchor" href="#mark-elements-and-number-matches"></a>
@@ -223,18 +225,19 @@ shots so each image shows only what it’s meant to explain.</p>
 <div class="section level2">
 <h2 id="style-new-annotations">Style new annotations<a class="anchor" aria-label="anchor" href="#style-new-annotations"></a>
 </h2>
-<p><code><a href="../reference/pz_stage_annotate.html">pz_stage_annotate()</a></code> sets page defaults for later
-annotations. Omitted arguments leave a setting alone; explicit
-<code>NULL</code> restores its default. Per-call styles override the
-staged settings. Mark badges use the mark’s <code>color</code> with
-white text; <code>label_fill</code> and <code>label_text_color</code>
-override those. Staged <code>fill</code> and <code>text_color</code>
-style callout bubbles and their badges. Without a per-call or staged
-fill, each callout follows its resolved <code>color</code>. Without a
-per-call or staged text color, paparazzi chooses black or white for the
-higher WCAG contrast ratio against the fill. Staging
-<code>fill = NULL</code> or <code>text_color = NULL</code> restores
-these defaults. New captions default to the staged
+<p><code><a href="../reference/pz_stage_annotate.html">pz_stage_annotate()</a></code> sets style defaults for the
+annotations that follow it in the chain; assign the staged page to use
+them across chains. Omitted arguments leave a setting alone; explicit
+<code>NULL</code> restores its default for the rest of the chain.
+Per-call styles override the staged settings. Mark badges use the mark’s
+<code>color</code> with white text; <code>label_fill</code> and
+<code>label_text_color</code> override those. Staged <code>fill</code>
+and <code>text_color</code> style callout bubbles and their badges.
+Without a per-call or staged fill, each callout follows its resolved
+<code>color</code>. Without a per-call or staged text color, paparazzi
+chooses black or white for the higher WCAG contrast ratio against the
+fill. Staging <code>fill = NULL</code> or <code>text_color = NULL</code>
+restores these defaults. New captions default to the staged
 <code>caption_side</code> (<code>"bottom"</code> or
 <code>"top"</code>).</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">

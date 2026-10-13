@@ -126,8 +126,9 @@ by visual changes. See <em>Choosing a capture method</em> for tradeoffs.</p></dd
 <dt id="arg-frame">frame<a class="anchor" aria-label="anchor" href="#arg-frame"></a></dt>
 <dd><p>Area to show in the finished recording: a <code><a href="pz_frame.html">pz_frame()</a></code>
 spec, or a bare locator (a CSS selector string, a <code><a href="pz_loc.html">pz_loc()</a></code> spec,
-or a list of either) promoted to one; <code>NULL</code> uses the page default
-set with <code><a href="pz_stage_frame.html">pz_stage_frame()</a></code>, if any, or shows the full viewport;
+or a list of either) promoted to one; <code>NULL</code> uses the staged
+default set with <code><a href="pz_stage_frame.html">pz_stage_frame()</a></code>, if any, or shows the full
+viewport;
 <code>FALSE</code> ignores the default. Unset fields inherit the staged
 value, then the built-in default. A frame with
 <code>target_box = "annotated"</code> set explicitly is invalid for the home
@@ -200,7 +201,7 @@ use <code><a href="pz_wait.html">pz_wait()</a></code> when you want a visible wa
 <p>Stopping always captures one final frame of the page state at
 <code><a href="pz_record_stop.html">pz_record_stop()</a></code>, so a change made just before the stop still
 appears; the last-frame hold repeats that final frame.</p>
-<p>Use <code><a href="pz_frame.html">pz_frame()</a></code> (or the page default set with
+<p>Use <code><a href="pz_frame.html">pz_frame()</a></code> (or the staged default set with
 <code><a href="pz_stage_frame.html">pz_stage_frame()</a></code>) to crop the finished recording. By default the
 frame follows the layout at stop; <code>pz_frame(when = "start")</code> fixes it
 to the layout at start. If the page navigates, a frame tied to the

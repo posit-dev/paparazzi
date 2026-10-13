@@ -90,8 +90,8 @@ pz_annotate(
 
 - color:
 
-  CSS accent color for the mark outline, or `NULL` for the page default
-  from
+  CSS accent color for the mark outline, or `NULL` for the staged
+  default from
   [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md).
 
 - label_fill, label_text_color:
@@ -110,8 +110,8 @@ pz_annotate(
 
 - font_family:
 
-  CSS font family for the badge, or `NULL` for the page default. A font
-  object staged with
+  CSS font family for the badge, or `NULL` for the staged default. A
+  font object staged with
   [`pz_stage_fonts()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_fonts.md)
   is also accepted and resolves to its family with a sans-serif
   fallback.

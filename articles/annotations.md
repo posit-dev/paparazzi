@@ -146,7 +146,7 @@ in CSS pixels. `font_family` and `font_size` style the badge text.
 paparazzi fills each badge with the mark’s color and writes its text in
 white; `label_fill` and `label_text_color` change that for one call.
 When you leave out the color, stroke width, or fonts, paparazzi uses the
-page’s defaults, which you can change with
+staged defaults, which you can change with
 [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md),
 as [Styling defaults](#styling-defaults) explains.
 
@@ -408,11 +408,13 @@ so only the circle remains.
 ## Styling defaults
 
 [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md)
-sets your annotation styles once for every later annotation on the page.
-It sets the color, stroke width, font family, and badge size for every
-annotation, the bubble colors and distance for callouts, and the side
-for captions. Arguments to individual annotation functions override
-these defaults for that call.
+sets your annotation styles once for the annotations that follow it in a
+chain. It sets the color, stroke width, font family, and badge size for
+every annotation, the bubble colors and distance for callouts, and the
+side for captions. Arguments to individual annotation functions override
+these defaults for that call. To use the same styles across chains,
+assign the staged page (`page <- page |> pz_stage_annotate(...)`) and
+start each chain from it.
 
 Let’s make later annotations blue, with large monospace badges:
 
@@ -433,22 +435,16 @@ page |>
 ![The Add button boxed in blue with a large monospace A
 badge.](annotations_files/figure-html/stage-style-1.png)
 
-Staged styles stay on the page until you change them. Passing `NULL`
-restores a default: crimson (`#e11d48`) marks with 3 pixel lines,
-sans-serif badges with 14 pixel text, callouts filled with their accent
-color, 24 pixels from their element (8 without a line), and captions at
-the bottom. We’ll clear the box and restore the defaults:
+Staged styles last to the end of the chain, so the blue monospace
+styling above applied to that chain alone. Within a chain, passing
+`NULL` restores a default for the rest of it: crimson (`#e11d48`) marks
+with 3 pixel lines, sans-serif badges with 14 pixel text, callouts
+filled with their accent color, 24 pixels from their element (8 without
+a line), and captions at the bottom. We’ll clear the box:
 
 ``` r
 
 page |> pz_annotate_clear()
-
-page |>
-  pz_stage_annotate(
-    color = NULL,
-    font_family = NULL,
-    font_size = NULL
-  )
 ```
 
 Callout bubbles and their badges follow the callout’s `color` unless you
@@ -477,7 +473,7 @@ in a fallback font while the font downloads.
 
 A handwritten font makes a callout look like a note written over the
 screenshot. We’ll stage Patrick Hand from Google Fonts and make it the
-default for later annotations:
+default for the annotations that follow:
 
 ``` r
 
@@ -503,8 +499,10 @@ You can pass the font object anywhere `font_family` takes a string, as
 long as you’ve staged it on the page. It stands for the CSS font family
 `'"Patrick Hand", sans-serif'`, so the browser falls back to sans-serif
 for characters the font lacks. Captions and keystroke callouts use the
-staged `font_family` too, and staged fonts stay with the page when it
-navigates to a new document.
+staged `font_family` too. Note the two kinds of staging here: the font
+itself loads into the page and stays when it navigates to a new
+document, while the `font_family` default rides the chain like any
+staged style.
 
 Chrome downloads Google and Bunny fonts, so staging them needs a network
 connection.
@@ -513,9 +511,7 @@ reads the font file in R, so it works offline.
 
 ``` r
 
-page |>
-  pz_annotate_clear() |>
-  pz_stage_annotate(font_family = NULL, font_size = NULL)
+page |> pz_annotate_clear()
 ```
 
 ## Framing stills
@@ -611,7 +607,7 @@ to choose how the keycaps look: `"words"` spells out modifier names,
 `"mac"` uses Mac symbols, and `"both"` shows `Mod` as `Ctrl / ⌘`. The
 default is `"none"`, and
 [`pz_stage(show_keys = ...)`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
-changes it for every later key press on the page.
+changes it for the key presses that follow it in the chain.
 
 The task tracker adds a task when you press Enter in the title field, so
 we’ll show Enter with Mac symbols:

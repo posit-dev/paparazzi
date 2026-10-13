@@ -4,9 +4,13 @@
 exit, including on error. `pz_local_page()` opens a page and closes it
 when the calling frame (e.g. a test) exits, via
 [`withr::defer()`](https://withr.r-lib.org/reference/defer.html). Both
-accept an already-open page or anything
+accept an already-open page or context (e.g. the staged result of
+[`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md))
+or anything
 [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
-accepts, and always close on exit: the block owns the resource.
+accepts, and always close the underlying page on exit: the block owns
+the resource. A context is passed through as itself, so its staged
+settings reach the code it flows into.
 
 ## Usage
 
@@ -20,7 +24,7 @@ pz_local_page(x, ..., .env = caller_env())
 
 - x:
 
-  An open page, or anything
+  An open page or context, or anything
   [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
   accepts.
 
@@ -28,15 +32,15 @@ pz_local_page(x, ..., .env = caller_env())
 
   Code to run while the page is open. An expression (evaluated as-is;
   useful when `x` is an already-open page the code can reference) or a
-  function, called with the page as its only argument. A braced
-  [`{ }`](https://rdrr.io/r/base/Paren.html) block is always treated as
-  an expression, even if it returns a function.
+  function, called with the page (or context) as its only argument. A
+  braced [`{ }`](https://rdrr.io/r/base/Paren.html) block is always
+  treated as an expression, even if it returns a function.
 
 - ...:
 
   Passed to
   [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
-  when `x` is not already a page.
+  when `x` is not already a page or context.
 
 - .env:
 
@@ -44,8 +48,8 @@ pz_local_page(x, ..., .env = caller_env())
 
 ## Value
 
-`pz_with_page()` returns the page invisibly; `pz_local_page()` returns
-it visibly.
+`pz_with_page()` returns the page (or context) invisibly;
+`pz_local_page()` returns it visibly.
 
 ## Examples
 

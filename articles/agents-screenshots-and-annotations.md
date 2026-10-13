@@ -92,10 +92,13 @@ time.
 ## Stage repeated framing
 
 [`pz_stage_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_frame.md)
-sets a default frame for later screenshots and recordings. Pass its
-targets unnamed. Each capture’s unset frame fields inherit the staged
-values, then the built-in defaults. A scope takes precedence over a
-staged target when the capture has no target of its own.
+sets a default frame for the screenshots and recordings that follow it
+in the chain; assign the staged page
+(`page <- page |> pz_stage_frame(...)`) to keep the default for every
+chain. Pass its targets unnamed. Each capture’s unset frame fields
+inherit the staged values, then the built-in defaults. A scope takes
+precedence over a staged target when the capture has no target of its
+own.
 
 ``` r
 
@@ -106,13 +109,13 @@ page |>
     tempfile(fileext = ".png"),
     frame = pz_frame(".filters", ratio = 16 / 9)
   ) |>
-  pz_screenshot(tempfile(fileext = ".png"), frame = FALSE) |>
-  pz_stage_frame(NULL)
+  pz_screenshot(tempfile(fileext = ".png"), frame = FALSE)
 ```
 
 `frame = FALSE` captures the scope or viewport unframed for that call.
-`pz_stage_frame(NULL)` clears the default. Framing applies to stills as
-well as video; it is separate from the recording-only animations in
+`pz_stage_frame(NULL)` clears an inherited default for the rest of the
+chain. Framing applies to stills as well as video; it is separate from
+the recording-only animations in
 [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md).
 
 ## Mark elements and number matches
@@ -153,16 +156,18 @@ each image shows only what it’s meant to explain.
 ## Style new annotations
 
 [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md)
-sets page defaults for later annotations. Omitted arguments leave a
-setting alone; explicit `NULL` restores its default. Per-call styles
-override the staged settings. Mark badges use the mark’s `color` with
-white text; `label_fill` and `label_text_color` override those. Staged
-`fill` and `text_color` style callout bubbles and their badges. Without
-a per-call or staged fill, each callout follows its resolved `color`.
-Without a per-call or staged text color, paparazzi chooses black or
-white for the higher WCAG contrast ratio against the fill. Staging
-`fill = NULL` or `text_color = NULL` restores these defaults. New
-captions default to the staged `caption_side` (`"bottom"` or `"top"`).
+sets style defaults for the annotations that follow it in the chain;
+assign the staged page to use them across chains. Omitted arguments
+leave a setting alone; explicit `NULL` restores its default for the rest
+of the chain. Per-call styles override the staged settings. Mark badges
+use the mark’s `color` with white text; `label_fill` and
+`label_text_color` override those. Staged `fill` and `text_color` style
+callout bubbles and their badges. Without a per-call or staged fill,
+each callout follows its resolved `color`. Without a per-call or staged
+text color, paparazzi chooses black or white for the higher WCAG
+contrast ratio against the fill. Staging `fill = NULL` or
+`text_color = NULL` restores these defaults. New captions default to the
+staged `caption_side` (`"bottom"` or `"top"`).
 
 ``` r
 

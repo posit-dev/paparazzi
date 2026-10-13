@@ -61,9 +61,10 @@ card <- pz_frame("main", pad = 12, when = "start") # [3] Frame the card
     videos match.
 
 2.  [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
-    sets how paparazzi stages every step on this page: the cursor glides
-    in from the top when it first appears, and each step pauses for 0.2
-    seconds, so the viewer can keep up.
+    stages every step: the cursor glides in from the top when it first
+    appears, and each step pauses for 0.2 seconds, so the viewer can
+    keep up. Assigning the staged page back to `page` keeps these
+    settings for every chain that starts from it.
 
 3.  `card` frames the recordings on the task tracker’s card. With
     `when = "start"`, paparazzi measures the card when each recording
@@ -211,8 +212,9 @@ watching. The steps fall into four groups:
     [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
     slows the cursor to 350 pixels per second and typing to 10
     characters per second, and pauses 0.6 seconds after each step
-    instead of 0.2. Staged settings stay on the page until we change
-    them, so we’ll restore the faster pace after this section.
+    instead of 0.2. Staged settings belong to the chain, so the slowdown
+    lasts to the end of this chunk and the next section returns to the
+    pace we staged on `page` at the start.
 2.  **Rename a task.**
     [`pz_find()`](https://posit-dev.github.io/paparazzi/reference/pz_find.md)
     narrows the chain to the dentist task, so `.task-edit` and
@@ -247,14 +249,11 @@ This section never moves the camera. The list fits in the frame, and the
 spotlight already shows the viewer where to look. Use the camera when
 the action is too small to see, not for every step.
 
-Before the next section, we’ll clear the annotations and return to the
-pace we set at the start:
+Before the next section, we’ll clear the annotations:
 
 ``` r
 
-page |>
-  pz_annotate_clear() |>
-  pz_stage(cursor_speed = NULL, typing_speed = NULL, pause = 0.2)
+page |> pz_annotate_clear()
 ```
 
 ## Hide private details

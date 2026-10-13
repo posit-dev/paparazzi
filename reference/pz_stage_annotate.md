@@ -1,9 +1,14 @@
-# Set the page's annotation style defaults
+# Stage annotation style defaults
 
-Sets persistent page defaults for new annotations in screenshots and
-recordings. An omitted argument leaves its setting alone, an explicit
-`NULL` restores its default, and a value sets it. Per-call annotation
-style arguments override these defaults; note the per-call names on
+Sets style defaults for new annotations in screenshots and recordings.
+An omitted argument leaves its setting alone, an explicit `NULL`
+restores the built-in default, and a value sets it. The defaults apply
+to the pipeline the staged context flows through: `pz_find*()` contexts
+inherit them, while a fresh pipeline from the original context starts
+from the defaults – assign the result
+(`page <- page |> pz_stage_annotate(...)`) to set page-wide defaults.
+Per-call annotation style arguments override these defaults; note the
+per-call names on
 [`pz_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate.md)
 differ (`label_fill`/`label_text_color`) from the staged names
 (`fill`/`text_color`), and the staged fill and text color style callout
@@ -107,13 +112,15 @@ pz_stage_annotate(
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 
+# Assignment makes these styles page-wide defaults for new annotations
+page <- page |> pz_stage_annotate(color = "#2563eb", font_size = 16)
+page |> pz_annotate("#add-task", label = TRUE) |> pz_screenshot(path)
+
+# A one-off pipeline can undo a default with NULL: its callout uses
+# the built-in red again
 page |>
-  # New annotations on this page use these styles
-  pz_stage_annotate(color = "#2563eb", font_size = 16) |>
-  pz_annotate("#add-task", label = TRUE) |>
-  pz_screenshot(path) |>
-  # NULL restores a default
-  pz_stage_annotate(color = NULL)
-pz_screenshot(page, frame = pz_frame("#new-task", pad = 16, target_box = "annotated"))
+  pz_stage_annotate(color = NULL) |>
+  pz_annotate("#task-title", label = TRUE) |>
+  pz_screenshot(path, frame = pz_frame("#task-title", pad = 16, target_box = "annotated"))
 pz_close(page)
 ```

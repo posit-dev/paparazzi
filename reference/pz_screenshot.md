@@ -7,7 +7,7 @@ printable preview in an interactive session.
 
 The captured region comes from `frame`:
 
-- `NULL` (the default): the page's staged framing set with
+- `NULL` (the default): the staged framing set with
   [`pz_stage_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_frame.md),
   or, with none staged, the current scope's box (the viewport at the
   root), unframed.

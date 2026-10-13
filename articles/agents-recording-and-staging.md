@@ -21,7 +21,7 @@ page <- pz_open(
   height = 720,
   color_scheme = "light"
 )
-pz_stage(page, enter = "bottom", pause = 0.5, cursor_speed = 480)
+page <- page |> pz_stage(enter = "bottom", pause = 0.5, cursor_speed = 480)
 video <- tempfile(fileext = ".mp4")
 basil <- pz_loc(".task", has_text = "Water the basil")
 
@@ -211,14 +211,18 @@ pz_record(
 ## Stage pointer and typing actions
 
 [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
-stores presentation settings on the page. They animate actions only
-during an active, unpaused recording; outside one, the same actions run
-at full speed. Settings last across recordings. An omitted argument
-leaves its setting alone, and an explicit `NULL` restores its default.
+carries presentation settings on the chain: each step hands them to the
+next, and a new chain from the same page starts from the defaults.
+Assign the staged page (`page <- page |> pz_stage(...)`) to keep the
+settings for every later chain, recordings included. They animate
+actions only during an active, unpaused recording; outside one, the same
+actions run at full speed. An omitted argument leaves its setting alone,
+and an explicit `NULL` restores its default for the rest of the chain.
 
 ``` r
 
-page |>
+page <-
+  page |>
   pz_stage(
     cursor_speed = 460,
     cursor_scale = 1.5,
@@ -258,8 +262,15 @@ is the ring’s CSS color. Override them for a single call with
 
 ``` r
 
-page |>
-  pz_stage(pause = NULL, typing = NULL, show_keys = NULL, click_effect = NULL)
+page <-
+  page |>
+  pz_stage(
+    cursor_speed = NULL,
+    pause = NULL,
+    typing = NULL,
+    show_keys = NULL,
+    click_effect = NULL
+  )
 
 per_call_video <- tempfile(fileext = ".mp4")
 pz_record(
@@ -285,10 +296,10 @@ pz_record(
 )
 ```
 
-The `NULL` values put typing, pause, key display and click feedback back
-to their defaults. The click then asks for a green ring just for that
-action, and the Enter press shows a Mac keycap while it submits the
-second task. Each
+Assigning with `NULL` values puts the cursor speed, pause, typing, key
+display and click feedback back to their defaults. The click then asks
+for a green ring just for that action, and the Enter press shows a Mac
+keycap while it submits the second task. Each
 [`pz_act_press()`](https://posit-dev.github.io/paparazzi/reference/pz_act_press.md)
 replaces the previous key callout.
 
@@ -318,7 +329,7 @@ add_task <- function(ctx, title) {
 add_task(app, "Check the seedlings")
 app |> pz_expect_count(3, target = ".task")
 
-pz_stage(app, typing = "natural", typing_speed = 20, pause = 0.5)
+app <- app |> pz_stage(typing = "natural", typing_speed = 20, pause = 0.5)
 shiny_demo <- tempfile(fileext = ".mp4")
 pz_record(
   app,

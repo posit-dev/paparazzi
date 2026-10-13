@@ -1,11 +1,20 @@
-# Set or clear the page's default framing
+# Stage the default framing
 
 `pz_stage_frame()` stores a default
 [`pz_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_frame.md)
-on the page. Every screenshot and recording resolves its own `frame =`
-field by field: an unset field takes the staged value if one is set,
-else the built-in default. `frame = FALSE` disables framing for a single
-call. Camera shots ignore the staged frame; see
+on the context: every screenshot and recording started from the staged
+context resolves its own `frame =` field by field, and an unset field
+takes the staged value if one is set, else the built-in default.
+`frame = FALSE` disables framing for a single call. The staged frame
+applies to the pipeline the staged context flows through – `pz_find*()`
+contexts inherit it – while a fresh pipeline from the original context
+starts from the defaults; assign the result
+(`page <- page |> pz_stage_frame(...)`) to set page-wide defaults.
+`pz_stage_frame(NULL)` clears an inherited staged frame for that
+pipeline only, and a new `pz_stage_frame()` call replaces the staged
+frame wholesale (unset fields fall back to built-in defaults, they do
+not merge with a previously staged frame). Camera shots ignore the
+staged frame; see
 [`pz_camera()`](https://posit-dev.github.io/paparazzi/reference/pz_camera.md).
 
 Unlike
@@ -44,7 +53,8 @@ pz_stage_frame(
   [`pz_loc()`](https://posit-dev.github.io/paparazzi/reference/pz_loc.md)
   spec, or a list of either. Several unnamed arguments are unioned. With
   no target, framed captures use the current scope's box (the viewport
-  at the root). A single `NULL` clears the default.
+  at the root). A single `NULL` clears the staged frame for this
+  pipeline.
 
 - ratio, pad, offset, anchor, bounds, target_box, zoom:
 
@@ -70,16 +80,14 @@ pz_stage_frame(
 page <- pz_open(pz_example("tasks"))
 path <- file.path(tempdir(), "tasks.png")
 
-page |>
-  pz_stage_frame(pad = 24) |>
-  # Framed by the default: the form plus 24px of padding
-  pz_screenshot(path, frame = "#new-task") |>
-  # Fields not set here still come from the staged default
-  pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9)) |>
-  # FALSE turns framing off for one call
-  pz_screenshot(path, frame = FALSE) |>
-  # NULL clears the default
-  pz_stage_frame(NULL)
-pz_screenshot(page, frame = pz_frame("#new-task", pad = 24, ratio = 16/9))
+page <- page |> pz_stage_frame(pad = 24)
+# Framed by the default: the form plus 24px of padding
+page |> pz_screenshot(path, frame = "#new-task")
+# Fields not set here still come from the staged default
+page |> pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9))
+# FALSE turns framing off for one call
+page |> pz_screenshot(path, frame = FALSE)
+# NULL clears the staged default for this pipeline only
+page |> pz_stage_frame(NULL) |> pz_screenshot(path, frame = "#new-task")
 pz_close(page)
 ```

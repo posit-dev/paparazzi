@@ -166,7 +166,7 @@ call. Printing the handle shows the app’s URL and whether it’s running:
 
 app <- pz_serve_shiny(pz_example("tasks-app"))
 app
-#> <paparazzi app> http://127.0.0.1:5048/ -- running (pid 13703)
+#> <paparazzi app> http://127.0.0.1:5048/ -- running (pid 14033)
 
 desktop <- pz_open(app, width = 1024, height = 640)
 phone <- pz_open(app, width = 390, height = 640, mobile = TRUE)
@@ -253,12 +253,15 @@ that person. Both can live in the same test suite.
 You record a Shiny app the same way as any other page. Here, we’ll stage
 the page so the cursor glides in from the left and each step pauses for
 0.4 seconds, then wrap the steps in
-[`pz_record()`](https://posit-dev.github.io/paparazzi/reference/pz_record.md):
+[`pz_record()`](https://posit-dev.github.io/paparazzi/reference/pz_record.md).
+Assigning the staged page is what carries the settings into the
+recording:
 
 ``` r
 
+page <- page |> pz_stage(enter = "left", pause = 0.4)
+
 page |>
-  pz_stage(enter = "left", pause = 0.4) |>
   pz_record(
     code = {
       page |>

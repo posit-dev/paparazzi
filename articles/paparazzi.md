@@ -283,16 +283,20 @@ or `effect` in
 [`pz_act_click()`](https://posit-dev.github.io/paparazzi/reference/pz_act_click.md),
 for complete control. But
 [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
-is the best way to set them once for every step, and the settings last
-until you change them.
+is the best way to set them once for every step.
 
+Staged settings belong to the chain, not the page.
+[`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)
+hands them to the next step, and each step passes them on; a new chain
+from `page` starts from the defaults again. To keep the same settings
+for every chain, assign the staged page and start each chain from it.
 For the final video, the cursor will glide in from the bottom of the
 frame, and each step will pause for 0.3 seconds so we don’t lose our
 viewers between steps:
 
 ``` r
 
-page |> pz_stage(enter = "bottom", pause = 0.3)
+page <- page |> pz_stage(enter = "bottom", pause = 0.3)
 ```
 
 ## Frame the shot
@@ -456,8 +460,9 @@ unchecks.](paparazzi_files/figure-html/unnamed-chunk-16-1.gif)
 
 The ring is crimson unless you pass a CSS color as `effect_color`, and
 `effect = "none"` turns click feedback off. To change every click on the
-page, set `pz_stage(click_effect = "ring")`, and `click_effect_color`
-for the ring’s color.
+page, assign a staged page:
+`page <- page |> pz_stage(click_effect = "ring")`, with
+`click_effect_color` for the ring’s color.
 
 ## Work in one part of the page
 

@@ -287,13 +287,17 @@ paparazzi types, and how long to pause after each step. Some functions
 also take a setting for a single step, like <code>duration</code> in
 <code><a href="../reference/pz_cursor_move.html">pz_cursor_move()</a></code> or <code>effect</code> in
 <code><a href="../reference/pz_act_click.html">pz_act_click()</a></code>, for complete control. But
-<code><a href="../reference/pz_stage.html">pz_stage()</a></code> is the best way to set them once for every step,
-and the settings last until you change them.</p>
-<p>For the final video, the cursor will glide in from the bottom of the
-frame, and each step will pause for 0.3 seconds so we don’t lose our
-viewers between steps:</p>
+<code><a href="../reference/pz_stage.html">pz_stage()</a></code> is the best way to set them once for every
+step.</p>
+<p>Staged settings belong to the chain, not the page.
+<code><a href="../reference/pz_stage.html">pz_stage()</a></code> hands them to the next step, and each step
+passes them on; a new chain from <code>page</code> starts from the
+defaults again. To keep the same settings for every chain, assign the
+staged page and start each chain from it. For the final video, the
+cursor will glide in from the bottom of the frame, and each step will
+pause for 0.3 seconds so we don’t lose our viewers between steps:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_stage.html">pz_stage</a></span><span class="op">(</span>enter <span class="op">=</span> <span class="st">"bottom"</span>, pause <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">&lt;-</span> <span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_stage.html">pz_stage</a></span><span class="op">(</span>enter <span class="op">=</span> <span class="st">"bottom"</span>, pause <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="frame-the-shot">Frame the shot<a class="anchor" aria-label="anchor" href="#frame-the-shot"></a>
@@ -412,8 +416,8 @@ default press, then unchecks it with <code>effect = "ring"</code>:</p>
 <p><img src="paparazzi_files/figure-html/unnamed-chunk-16-1.gif" class="r-plt" alt="The cursor glides to the Urgent checkbox and checks it with a brief press, then clicks it again, and a crimson ring spreads out from the click as the box unchecks."></p>
 <p>The ring is crimson unless you pass a CSS color as
 <code>effect_color</code>, and <code>effect = "none"</code> turns click
-feedback off. To change every click on the page, set
-<code>pz_stage(click_effect = "ring")</code>, and
+feedback off. To change every click on the page, assign a staged page:
+<code>page &lt;- page |&gt; pz_stage(click_effect = "ring")</code>, with
 <code>click_effect_color</code> for the ring’s color.</p>
 </div>
 <div class="section level2">

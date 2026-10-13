@@ -256,13 +256,13 @@ built on snapshots of Shiny input and output values.</p>
 <div class="section level2">
 <h2 id="turn-a-tested-script-into-a-demo">Turn a tested script into a demo<a class="anchor" aria-label="anchor" href="#turn-a-tested-script-into-a-demo"></a>
 </h2>
-<p>The same actions and expectations make a recording: call
-<code><a href="../reference/pz_stage.html">pz_stage()</a></code>, then run the steps inside
-<code><a href="../reference/pz_record.html">pz_record()</a></code>. Staged cursor motion and typing only animate
-while recording, so the test still runs at full speed. Use direct
-setters for setup the viewer doesn’t need to see, and user actions for
-the steps they should watch. The Recording and staging reference shows
-the pattern.</p>
+<p>The same actions and expectations make a recording: assign a staged
+page (<code>page &lt;- page |&gt; pz_stage(...)</code>), then run the
+steps inside <code><a href="../reference/pz_record.html">pz_record()</a></code>. Staged cursor motion and typing
+only animate while recording, so the test still runs at full speed. Use
+direct setters for setup the viewer doesn’t need to see, and user
+actions for the steps they should watch. The Recording and staging
+reference shows the pattern.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -9,8 +9,13 @@ PaparazziPage) or a scoped context created by pz_find*(): a context
 holding an immutable stack of pinned element sets. The stack is never
 mutated in place – pz_find*() derive a new context sharing the
 parent's pinned sets – and pz_find_pop()/pz_find_reset() unwind it
-the same way. Session-level state – the Chromote session, default
-timeout, staging settings, recorder state – lives on the page."><meta property="og:description" content="A context is the first argument of pz_*() functions, enabling |&amp;gt;
+the same way. Staged settings (pz_stage(), pz_stage_annotate(),
+pz_stage_frame()) are carried by the context and flow through
+derivation the same way; assigning the staged context
+(page &amp;lt;- page |&amp;gt; pz_stage(...)) is what makes them page-wide.
+Session-level state – the Chromote session, the default timeout, the
+recorder, and the page's session-bound state (staged fonts, the cursor
+overlay, captions) – lives on the page."><meta property="og:description" content="A context is the first argument of pz_*() functions, enabling |&amp;gt;
 chains. pz_find*() return contexts visibly; chainable actions return
 them invisibly, except in a recording chain: the context returned by
 pz_record_start() (and contexts derived from it) is returned visibly
@@ -20,8 +25,13 @@ PaparazziPage) or a scoped context created by pz_find*(): a context
 holding an immutable stack of pinned element sets. The stack is never
 mutated in place – pz_find*() derive a new context sharing the
 parent's pinned sets – and pz_find_pop()/pz_find_reset() unwind it
-the same way. Session-level state – the Chromote session, default
-timeout, staging settings, recorder state – lives on the page."><meta property="og:image" content="https://posit-dev.github.io/paparazzi/logo.png"><script defer src="https://cdn.jsdelivr.net/gh/posit-dev/supported-by-posit/js/badge.min.js" data-max-height="43" data-light-bg="#666f76" data-light-fg="#f9f9f9"></script></head><body>
+the same way. Staged settings (pz_stage(), pz_stage_annotate(),
+pz_stage_frame()) are carried by the context and flow through
+derivation the same way; assigning the staged context
+(page &amp;lt;- page |&amp;gt; pz_stage(...)) is what makes them page-wide.
+Session-level state – the Chromote session, the default timeout, the
+recorder, and the page's session-bound state (staged fonts, the cursor
+overlay, captions) – lives on the page."><meta property="og:image" content="https://posit-dev.github.io/paparazzi/logo.png"><script defer src="https://cdn.jsdelivr.net/gh/posit-dev/supported-by-posit/js/badge.min.js" data-max-height="43" data-light-bg="#666f76" data-light-fg="#f9f9f9"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -80,8 +90,13 @@ context is either the root (a
 holding an immutable stack of pinned element sets. The stack is never
 mutated in place – <code>pz_find*()</code> derive a new context sharing the
 parent's pinned sets – and <code><a href="pz_find_pop.html">pz_find_pop()</a></code>/<code><a href="pz_find_reset.html">pz_find_reset()</a></code> unwind it
-the same way. Session-level state – the Chromote session, default
-timeout, staging settings, recorder state – lives on the page.</p>
+the same way. Staged settings (<code><a href="pz_stage.html">pz_stage()</a></code>, <code><a href="pz_stage_annotate.html">pz_stage_annotate()</a></code>,
+<code><a href="pz_stage_frame.html">pz_stage_frame()</a></code>) are carried by the context and flow through
+derivation the same way; assigning the staged context
+(<code>page &lt;- page |&gt; pz_stage(...)</code>) is what makes them page-wide.
+Session-level state – the Chromote session, the default timeout, the
+recorder, and the page's session-bound state (staged fonts, the cursor
+overlay, captions) – lives on the page.</p>
     </div>
 
 
@@ -100,9 +115,32 @@ timeout, staging settings, recorder state – lives on the page.</p>
 <code>NULL</code> (internal).</p></dd>
 
 
+    <dt><code>staging</code></dt>
+<dd><p>Staged settings carried by this context: a list of
+<code>overrides</code> (a named list) and <code>frame</code> (a frame spec or <code>NULL</code>);
+<code>NULL</code> until a <code>pz_stage*()</code> call derives a context (internal).</p></dd>
+
+
     <dt><code>inspect_image</code></dt>
 <dd><p>Pending annotated screenshot path for knitr, or
 <code>NULL</code> (internal).</p></dd>
+
+
+</dl><p></p></div>
+    </div>
+    <div class="section level2">
+    <h2 id="active-bindings">Active bindings<a class="anchor" aria-label="anchor" href="#active-bindings"></a></h2>
+    <p></p><div class="r6-active-bindings"><dl><dt><code>session</code></dt>
+<dd><p>The root page's underlying <code>ChromoteSession</code>
+(read-only).</p></dd>
+
+
+    <dt><code>child_loop</code></dt>
+<dd><p>The root page's chromote child loop (read-only).</p></dd>
+
+
+    <dt><code>default_timeout</code></dt>
+<dd><p>The root page's default timeout in seconds.</p></dd>
 
 
 </dl><p></p></div>
@@ -114,12 +152,15 @@ timeout, staging settings, recorder state – lives on the page.</p>
 <h3 id="public-methods">Public methods<a class="anchor" aria-label="anchor" href="#public-methods"></a></h3>
 <p></p><ul><li><p><a href="#method-PaparazziContext-initialize"><code>PaparazziContext$new()</code></a></p></li>
 <li><p><a href="#method-PaparazziContext-print"><code>PaparazziContext$print()</code></a></p></li>
+<li><p><a href="#method-PaparazziContext-close"><code>PaparazziContext$close()</code></a></p></li>
+<li><p><a href="#method-PaparazziContext-view"><code>PaparazziContext$view()</code></a></p></li>
+<li><p><a href="#method-PaparazziContext-is_closed"><code>PaparazziContext$is_closed()</code></a></p></li>
 <li><p><a href="#method-PaparazziContext-clone"><code>PaparazziContext$clone()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-PaparazziContext-initialize"></a><div class="section">
 <h3 id="paparazzicontext-new-"><code>PaparazziContext$new()</code><a class="anchor" aria-label="anchor" href="#paparazzicontext-new-"></a></h3>
 <p>Create a context attached to a page.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/PaparazziContext.html">PaparazziContext</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">page</span>, scope <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, recording <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/PaparazziContext.html">PaparazziContext</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">page</span>, scope <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, recording <span class="op">=</span> <span class="cn">NULL</span>, staging <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>page</code></dt>
@@ -131,6 +172,9 @@ root context).</p></dd>
 
       <dt><code>recording</code></dt>
 <dd><p>The recorder of the recording chain, if any.</p></dd>
+
+      <dt><code>staging</code></dt>
+<dd><p>Staged settings for this context; defaults to none.</p></dd>
 
 
 </dl><p></p></div>
@@ -157,10 +201,40 @@ running stops it instead and, interactively, shows the video.</p><div class="sec
 
 </div>
 
+<p></p><hr><a id="method-PaparazziContext-close"></a><div class="section">
+<h3 id="paparazzicontext-close-"><code>PaparazziContext$close()</code><a class="anchor" aria-label="anchor" href="#paparazzicontext-close-"></a></h3>
+<p>Close the root page's browser tab (its chromote
+session). Idempotent. Delegates to the root page; a
+<code>PaparazziPage</code>'s own <code><a href="https://rdrr.io/r/base/connections.html" class="external-link">close()</a></code> runs for pages.</p><div class="section">
+<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziContext</span><span class="op">$</span><span class="fu">close</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+</div>
+
+<p></p><hr><a id="method-PaparazziContext-view"></a><div class="section">
+<h3 id="paparazzicontext-view-"><code>PaparazziContext$view()</code><a class="anchor" aria-label="anchor" href="#paparazzicontext-view-"></a></h3>
+<p>Open the live browser view (DevTools) of the root
+page.</p><div class="section">
+<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziContext</span><span class="op">$</span><span class="fu">view</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+</div>
+
+<p></p><hr><a id="method-PaparazziContext-is_closed"></a><div class="section">
+<h3 id="paparazzicontext-is-closed-"><code>PaparazziContext$is_closed()</code><a class="anchor" aria-label="anchor" href="#paparazzicontext-is-closed-"></a></h3>
+<p>Has the root page been closed?</p><div class="section">
+<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziContext</span><span class="op">$</span><span class="fu">is_closed</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+</div>
+
 <p></p><hr><a id="method-PaparazziContext-clone"></a><div class="section">
 <h3 id="paparazzicontext-clone-"><code>PaparazziContext$clone()</code><a class="anchor" aria-label="anchor" href="#paparazzicontext-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
+<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziContext</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
@@ -180,7 +254,7 @@ running stops it instead and, interactively, shows the video.</p><div class="sec
     <p><code>PaparazziContext</code> -&gt; <code>PaparazziPage</code></p>
     </div>
     <div class="section level2">
-    <h2 id="active-bindings">Active bindings<a class="anchor" aria-label="anchor" href="#active-bindings"></a></h2>
+    <h2 id="active-bindings-1">Active bindings<a class="anchor" aria-label="anchor" href="#active-bindings-1"></a></h2>
     <p></p><div class="r6-active-bindings"><dl><dt><code>session</code></dt>
 <dd><p>The underlying <code>ChromoteSession</code> (read-only).</p></dd>
 
@@ -199,8 +273,8 @@ Waits must pump this loop so scheduled timers keep firing.</p></dd>
 object a scope pinned (read-only; internal).</p></dd>
 
 
-    <dt><code>staging</code></dt>
-<dd><p>Staged page settings (internal).</p></dd>
+    <dt><code>session_state</code></dt>
+<dd><p>Session-bound page state: the fonts registry, the cursor env, captions, and the annotation init id (internal).</p></dd>
 
 
     <dt><code>recorder</code></dt>
@@ -233,7 +307,7 @@ action, or <code>NULL</code> (internal).</p></dd>
 </ul></div><p></p><hr><a id="method-PaparazziPage-initialize"></a><div class="section">
 <h3 id="paparazzipage-new-"><code>PaparazziPage$new()</code><a class="anchor" aria-label="anchor" href="#paparazzipage-new-"></a></h3>
 <p>Wrap a <code>ChromoteSession</code> as a paparazzi page.</p><div class="section">
-<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/PaparazziContext.html">PaparazziPage</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">session</span>, timeout <span class="op">=</span> <span class="fl">10</span>, owned_app <span class="op">=</span> <span class="cn">NULL</span>, shared_app <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
@@ -258,7 +332,7 @@ action, or <code>NULL</code> (internal).</p></dd>
 <p></p><hr><a id="method-PaparazziPage-close"></a><div class="section">
 <h3 id="paparazzipage-close-"><code>PaparazziPage$close()</code><a class="anchor" aria-label="anchor" href="#paparazzipage-close-"></a></h3>
 <p>Close the page's browser tab (its chromote session). Idempotent.</p><div class="section">
-<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
+<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziPage</span><span class="op">$</span><span class="fu">close</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -268,7 +342,7 @@ action, or <code>NULL</code> (internal).</p></dd>
 <h3 id="paparazzipage-release-object-group-"><code>PaparazziPage$release_object_group()</code><a class="anchor" aria-label="anchor" href="#paparazzipage-release-object-group-"></a></h3>
 <p>Release every remote object a scope pinned.
 Internal: runs on close and before navigation resets scopes.</p><div class="section">
-<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziPage</span><span class="op">$</span><span class="fu">release_object_group</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -277,7 +351,7 @@ Internal: runs on close and before navigation resets scopes.</p><div class="sect
 <p></p><hr><a id="method-PaparazziPage-view"></a><div class="section">
 <h3 id="paparazzipage-view-"><code>PaparazziPage$view()</code><a class="anchor" aria-label="anchor" href="#paparazzipage-view-"></a></h3>
 <p>Open the live browser view (DevTools).</p><div class="section">
-<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
+<h4 id="usage-9">Usage<a class="anchor" aria-label="anchor" href="#usage-9"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziPage</span><span class="op">$</span><span class="fu">view</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -286,7 +360,7 @@ Internal: runs on close and before navigation resets scopes.</p><div class="sect
 <p></p><hr><a id="method-PaparazziPage-is_closed"></a><div class="section">
 <h3 id="paparazzipage-is-closed-"><code>PaparazziPage$is_closed()</code><a class="anchor" aria-label="anchor" href="#paparazzipage-is-closed-"></a></h3>
 <p>Has the page been closed?</p><div class="section">
-<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
+<h4 id="usage-10">Usage<a class="anchor" aria-label="anchor" href="#usage-10"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziPage</span><span class="op">$</span><span class="fu">is_closed</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -297,7 +371,7 @@ Internal: runs on close and before navigation resets scopes.</p><div class="sect
 <p>Print the page summary (URL, device, scope stack,
 recording state) without the target section or visuals; see
 <code><a href="pz_inspect.html">pz_inspect()</a></code>. A closed page prints one line.</p><div class="section">
-<h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
+<h4 id="usage-11">Usage<a class="anchor" aria-label="anchor" href="#usage-11"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziPage</span><span class="op">$</span><span class="fu">print</span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
@@ -313,7 +387,7 @@ recording state) without the target section or visuals; see
 <p></p><hr><a id="method-PaparazziPage-clone"></a><div class="section">
 <h3 id="paparazzipage-clone-"><code>PaparazziPage$clone()</code><a class="anchor" aria-label="anchor" href="#paparazzipage-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-9">Usage<a class="anchor" aria-label="anchor" href="#usage-9"></a></h4>
+<h4 id="usage-12">Usage<a class="anchor" aria-label="anchor" href="#usage-12"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PaparazziPage</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-5">Arguments<a class="anchor" aria-label="anchor" href="#arguments-5"></a></h4>

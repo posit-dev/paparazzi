@@ -11,8 +11,15 @@ context holding an immutable stack of pinned element sets. The stack is
 never mutated in place – `pz_find*()` derive a new context sharing the
 parent's pinned sets – and
 [`pz_find_pop()`](https://posit-dev.github.io/paparazzi/reference/pz_find_pop.md)/[`pz_find_reset()`](https://posit-dev.github.io/paparazzi/reference/pz_find_reset.md)
-unwind it the same way. Session-level state – the Chromote session,
-default timeout, staging settings, recorder state – lives on the page.
+unwind it the same way. Staged settings
+([`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md),
+[`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md),
+[`pz_stage_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_frame.md))
+are carried by the context and flow through derivation the same way;
+assigning the staged context (`page <- page |> pz_stage(...)`) is what
+makes them page-wide. Session-level state – the Chromote session, the
+default timeout, the recorder, and the page's session-bound state
+(staged fonts, the cursor overlay, captions) – lives on the page.
 
 ## Public fields
 
@@ -28,9 +35,29 @@ default timeout, staging settings, recorder state – lives on the page.
 
   The recorder a recording chain belongs to, or `NULL` (internal).
 
+- `staging`:
+
+  Staged settings carried by this context: a list of `overrides` (a
+  named list) and `frame` (a frame spec or `NULL`); `NULL` until a
+  `pz_stage*()` call derives a context (internal).
+
 - `inspect_image`:
 
   Pending annotated screenshot path for knitr, or `NULL` (internal).
+
+## Active bindings
+
+- `session`:
+
+  The root page's underlying `ChromoteSession` (read-only).
+
+- `child_loop`:
+
+  The root page's chromote child loop (read-only).
+
+- `default_timeout`:
+
+  The root page's default timeout in seconds.
 
 ## Methods
 
@@ -39,6 +66,12 @@ default timeout, staging settings, recorder state – lives on the page.
 - [`PaparazziContext$new()`](#method-PaparazziContext-initialize)
 
 - [`PaparazziContext$print()`](#method-PaparazziContext-print)
+
+- [`PaparazziContext$close()`](#method-PaparazziContext-close)
+
+- [`PaparazziContext$view()`](#method-PaparazziContext-view)
+
+- [`PaparazziContext$is_closed()`](#method-PaparazziContext-is_closed)
 
 - [`PaparazziContext$clone()`](#method-PaparazziContext-clone)
 
@@ -50,7 +83,7 @@ Create a context attached to a page.
 
 #### Usage
 
-    PaparazziContext$new(page, scope = list(), recording = NULL)
+    PaparazziContext$new(page, scope = list(), recording = NULL, staging = NULL)
 
 #### Arguments
 
@@ -65,6 +98,10 @@ Create a context attached to a page.
 - `recording`:
 
   The recorder of the recording chain, if any.
+
+- `staging`:
+
+  Staged settings for this context; defaults to none.
 
 ------------------------------------------------------------------------
 
@@ -86,6 +123,38 @@ interactively, shows the video.
 
   Unused; included for compatibility with the
   [`print()`](https://rdrr.io/r/base/print.html) generic.
+
+------------------------------------------------------------------------
+
+### `PaparazziContext$close()`
+
+Close the root page's browser tab (its chromote session). Idempotent.
+Delegates to the root page; a `PaparazziPage`'s own
+[`close()`](https://rdrr.io/r/base/connections.html) runs for pages.
+
+#### Usage
+
+    PaparazziContext$close()
+
+------------------------------------------------------------------------
+
+### `PaparazziContext$view()`
+
+Open the live browser view (DevTools) of the root page.
+
+#### Usage
+
+    PaparazziContext$view()
+
+------------------------------------------------------------------------
+
+### `PaparazziContext$is_closed()`
+
+Has the root page been closed?
+
+#### Usage
+
+    PaparazziContext$is_closed()
 
 ------------------------------------------------------------------------
 
@@ -127,9 +196,10 @@ The objects of this class are cloneable with this method.
   The CDP object group holding every remote object a scope pinned
   (read-only; internal).
 
-- `staging`:
+- `session_state`:
 
-  Staged page settings (internal).
+  Session-bound page state: the fonts registry, the cursor env,
+  captions, and the annotation init id (internal).
 
 - `recorder`:
 

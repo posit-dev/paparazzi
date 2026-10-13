@@ -65,7 +65,7 @@ pz_record_start(
   [`pz_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_frame.md)
   spec, or a bare locator (a CSS selector string, a
   [`pz_loc()`](https://posit-dev.github.io/paparazzi/reference/pz_loc.md)
-  spec, or a list of either) promoted to one; `NULL` uses the page
+  spec, or a list of either) promoted to one; `NULL` uses the staged
   default set with
   [`pz_stage_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_frame.md),
   if any, or shows the full viewport; `FALSE` ignores the default. Unset
@@ -141,7 +141,7 @@ repeats that final frame.
 
 Use
 [`pz_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_frame.md)
-(or the page default set with
+(or the staged default set with
 [`pz_stage_frame()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_frame.md))
 to crop the finished recording. By default the frame follows the layout
 at stop; `pz_frame(when = "start")` fixes it to the layout at start. If

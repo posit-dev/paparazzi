@@ -207,9 +207,8 @@ snapshots of Shiny input and output values.
 
 ## Turn a tested script into a demo
 
-The same actions and expectations make a recording: call
-[`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md),
-then run the steps inside
+The same actions and expectations make a recording: assign a staged page
+(`page <- page |> pz_stage(...)`), then run the steps inside
 [`pz_record()`](https://posit-dev.github.io/paparazzi/reference/pz_record.md).
 Staged cursor motion and typing only animate while recording, so the
 test still runs at full speed. Use direct setters for setup the viewer
