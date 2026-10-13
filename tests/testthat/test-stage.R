@@ -54,6 +54,35 @@ test_that("assignment carries a staged cursor into stills", {
   expect_gt(ink$count, 50)
 })
 
+test_that("staging never leaks cursor ink into pipelines from the page", {
+  page <- local_cursor_page()
+  shot <- withr::local_tempfile(fileext = ".png")
+
+  # An unassigned stage touches no DOM: pipelines from `page` resolve
+  # the defaults, so a still shows no cursor ink.
+  page |> pz_stage(cursor = TRUE)
+  page |> pz_screenshot(shot)
+  expect_equal(cursor_png_ink(page, shot, band = c(200, 400))$count, 0)
+
+  # Assignment carries cursor = TRUE into the staged pipeline: its
+  # still resolves the overlay at capture time and draws the cursor.
+  staged <- page |> pz_stage(cursor = TRUE)
+  staged |> pz_screenshot(shot)
+  expect_gt(cursor_png_ink(page, shot, band = c(200, 400))$count, 50)
+
+  # A still from the unstaged page hides the overlay the staged capture
+  # left drawn: visibility resolves per capture from the context, so
+  # one chain's staging never reaches another's captures.
+  page |> pz_screenshot(shot)
+  expect_equal(cursor_png_ink(page, shot, band = c(200, 400))$count, 0)
+
+  # cursor = FALSE resolves the same way: hiding at capture, not
+  # leaving a stale overlay for any chain that captures next.
+  hidden <- page |> pz_stage(cursor = FALSE)
+  hidden |> pz_screenshot(shot)
+  expect_equal(cursor_png_ink(page, shot, band = c(200, 400))$count, 0)
+})
+
 test_that("staged settings reach only pipelines from the staged context", {
   page <- local_cursor_page()
 
