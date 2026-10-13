@@ -157,9 +157,7 @@ test_that("the owned fixture app has readable logs and stops at page close", {
 test_that("a taken port is retried while opening the widget fixture", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  taken <- free_port()
-  server <- httpuv::startServer("127.0.0.1", taken, list())
-  withr::defer(httpuv::stopServer(server))
+  taken <- local_blocker_server()$port
   page <- pz_open(shiny_input_fixture(), shiny_options = list(port = taken))
   withr::defer(pz_close(page))
   expect_false(identical(as.integer(pz_js(page, "location.port")), taken))

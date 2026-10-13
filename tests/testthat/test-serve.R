@@ -541,9 +541,7 @@ test_that("new_quarto constructs even when its port already has a listener", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
-  taken <- random_port()
-  listener <- httpuv::startServer("127.0.0.1", taken, list())
-  withr::defer(httpuv::stopServer(listener))
+  taken <- local_blocker_server()$port
 
   preview <- new_quarto(path, FALSE, quarto_cli(), taken)
   withr::defer(if (inherits(preview, "PaparazziServe")) preview$stop())
@@ -557,9 +555,7 @@ test_that("Quarto preflight exhaustion reports no nonexistent child log", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
-  taken <- random_port()
-  listener <- httpuv::startServer("127.0.0.1", taken, list())
-  withr::defer(httpuv::stopServer(listener))
+  taken <- local_blocker_server()$port
   local_mocked_bindings(random_port = function(...) taken)
 
   err <- expect_error(
@@ -576,9 +572,7 @@ test_that("Quarto preflight retries a port takeover", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
-  taken <- random_port()
-  listener <- httpuv::startServer("127.0.0.1", taken, list())
-  withr::defer(httpuv::stopServer(listener))
+  taken <- local_blocker_server()$port
   picker <- random_port
   attempts <- 0L
   local_mocked_bindings(random_port = function(...) {
@@ -737,6 +731,7 @@ test_that("static servers retry when the port is taken", {
   # worker can bind the port random_port() probed free, and the retry
   # loop then does its job a second time.
   expect_gte(calls, 2)
+  expect_lte(calls, 3)
   expect_true(server$is_running())
 
   local_mocked_bindings(
