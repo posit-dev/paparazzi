@@ -67,22 +67,24 @@ test_that("a staged file font loads into document.fonts", {
 })
 
 test_that("a served Shiny app boots and responds", {
-  skip_if_no_shiny()
-  page <- pz_open(pz_serve_shiny(shiny_app_fixture_dir()))
-  withr::defer({
-    pz_close(page)
-    page$app$stop()
-  })
+  app <- local_shiny_app(shiny_app_fixture_dir())
+  page <- local_page(app)
 
-  expect_true(wait_until(function() {
-    grepl("hello paparazzi", pz_js(page, "document.body.innerText"))
-  }))
+  pz_poll(
+    function() grepl("hello paparazzi", pz_js(page, "document.body.innerText")),
+    timeout = 10,
+    loop = page$page$child_loop,
+    what = "the Shiny app's rendered greeting"
+  )
+  expect_true(grepl("hello paparazzi", pz_js(page, "document.body.innerText")))
 })
 
 test_that("a short recording yields frames and a playable video", {
   skip_if_no_av()
   page <- local_frame_page()
   out <- withr::local_tempfile(fileext = ".mp4")
+  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
+  withr::defer(unlink(frames_dir, recursive = TRUE))
   page |> pz_record_start(out, fps = 5, hold = c(0.3, 0.3), keep_frames = TRUE)
 
   rec <- page_recorder(page)
@@ -97,7 +99,5 @@ test_that("a short recording yields frames and a playable video", {
   expect_true(file.exists(out))
   info <- recorded_video_info(out)
   expect_true(info$duration >= 0.6)
-  frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
-  on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
   expect_gte(length(list.files(frames_dir)), 2L)
 })
