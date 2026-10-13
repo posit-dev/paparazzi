@@ -20,6 +20,27 @@ demo_rect_ink <- function(page, path, x0, x1, y0, y1, dpr = page_dpr(page)) {
   png_canvas_eval(page, path, body)
 }
 
+test_that("staged settings are pipeline-scoped, not page state", {
+  page <- local_cursor_page()
+
+  # A stage mid-pipeline reaches only the pipeline it flows through;
+  # a fresh pipeline from `page` observes the built-in defaults.
+  page |> pz_stage(pause = 2)
+  expect_identical(ctx_stage(page), STAGE_DEFAULTS)
+
+  # Assignment is what makes staged settings page-wide: only the
+  # returned context carries them.
+  staged <- page |> pz_stage(pause = 2)
+  expect_equal(ctx_stage(staged)$pause, 2)
+  expect_equal(ctx_stage(page)$pause, 0)
+
+  # Later stages build on the staged context, never on the page.
+  staged <- staged |> pz_stage(cursor_speed = 800)
+  expect_equal(ctx_stage(staged)$pause, 2)
+  expect_equal(ctx_stage(staged)$cursor_speed, 800)
+  expect_equal(ctx_stage(page)$cursor_speed, 500)
+})
+
 test_that("pz_stage merges settings onto the defaults and validates", {
   page <- local_cursor_page()
 
