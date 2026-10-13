@@ -1,7 +1,7 @@
 test_that("page state bindings start empty", {
   page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
 
-  expect_identical(page$staging, list())
+  expect_identical(page$session_state, list())
   expect_null(page$recorder)
   expect_null(page$pre_action_loader)
   expect_null(page$app)
@@ -9,13 +9,13 @@ test_that("page state bindings start empty", {
 
 test_that("nested staging assignments persist and preserve other settings", {
   page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
-  page$staging <- list(stage = list(speed = 2), frame = list(zoom = 1))
+  page$session_state <- list(stage = list(speed = 2), frame = list(zoom = 1))
 
-  page$staging$frame$zoom <- 3
-  page$staging$caption <- list(text = "Ready")
+  page$session_state$frame$zoom <- 3
+  page$session_state$caption <- list(text = "Ready")
 
   expect_identical(
-    page$staging,
+    page$session_state,
     list(
       stage = list(speed = 2),
       frame = list(zoom = 3),
@@ -26,13 +26,13 @@ test_that("nested staging assignments persist and preserve other settings", {
 
 test_that("staging can be replaced and reset", {
   page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
-  page$staging <- list(frame = list(zoom = 1))
-  page$staging <- list(caption = list(text = "Ready"))
+  page$session_state <- list(frame = list(zoom = 1))
+  page$session_state <- list(caption = list(text = "Ready"))
 
-  expect_identical(page$staging, list(caption = list(text = "Ready")))
+  expect_identical(page$session_state, list(caption = list(text = "Ready")))
 
-  page$staging <- list()
-  expect_identical(page$staging, list())
+  page$session_state <- list()
+  expect_identical(page$session_state, list())
 })
 
 test_that("recorder assignments persist and can be cleared", {
@@ -65,11 +65,11 @@ test_that("page state assignments do not leak into other pages", {
   page <- PaparazziPage$new(session)
   other <- PaparazziPage$new(session)
 
-  page$staging$frame <- list(zoom = 2)
+  page$session_state$frame <- list(zoom = 2)
   page$recorder <- list(active = TRUE)
   page$pre_action_loader <- "loader-1"
 
-  expect_identical(other$staging, list())
+  expect_identical(other$session_state, list())
   expect_null(other$recorder)
   expect_null(other$pre_action_loader)
 })

@@ -27,7 +27,7 @@ drag_preview_prepare <- function(state, els, from) {
         objectId = els$object_id,
         arguments = list(
           list(value = as.list(from)),
-          list(value = is.null(ctx$page$staging$annotate_init_id))
+          list(value = is.null(ctx$page$session_state$annotate_init_id))
         ),
         awaitPromise = TRUE,
         returnByValue = TRUE,

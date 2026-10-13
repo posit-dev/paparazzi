@@ -14,18 +14,18 @@
 test_that("frame accessors share the page staging binding", {
   page <- PaparazziPage$new(structure(list(), class = "ChromoteSession"))
   frame <- pz_frame(zoom = 2)
-  page$staging$caption <- list(text = "Ready")
+  page$session_state$caption <- list(text = "Ready")
 
   expect_invisible(page_set_frame(page, frame))
-  expect_identical(page$staging$frame, frame)
-  expect_identical(page$staging$caption, list(text = "Ready"))
+  expect_identical(page$session_state$frame, frame)
+  expect_identical(page$session_state$caption, list(text = "Ready"))
 
-  page$staging$frame <- pz_frame(zoom = 3)
-  expect_identical(page_frame(page), page$staging$frame)
+  page$session_state$frame <- pz_frame(zoom = 3)
+  expect_identical(page_frame(page), page$session_state$frame)
 
   page_set_frame(page, NULL)
   expect_null(page_frame(page))
-  expect_identical(page$staging$caption, list(text = "Ready"))
+  expect_identical(page$session_state$caption, list(text = "Ready"))
 })
 
 test_that("annotated framing includes only attached painted nodes", {

@@ -298,7 +298,7 @@ STAGE_DIRECTIONS <- list(
 )
 
 page_cursor <- function(page) {
-  cur <- page$staging$cursor
+  cur <- page$session_state$cursor
   if (is.null(cur)) {
     cur <- new.env(parent = emptyenv())
     cur$visibility <- "auto"
@@ -310,13 +310,13 @@ page_cursor <- function(page) {
     cur$resting <- FALSE
     cur$init_id <- NULL
     cur$page_enabled <- FALSE
-    page$staging$cursor <- cur
+    page$session_state$cursor <- cur
   }
   cur
 }
 
 page_cursor_peek <- function(page) {
-  page$staging$cursor
+  page$session_state$cursor
 }
 
 cursor_visible <- function(page) {

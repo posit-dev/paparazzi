@@ -174,12 +174,12 @@ PaparazziPage <- R6::R6Class(
       private$object_group_
     },
 
-    #' @field staging Staged page settings (internal).
-    staging = function(value) {
+    #' @field session_state Session-bound page state: the fonts registry, the cursor env, captions, and the annotation init id (internal).
+    session_state = function(value) {
       if (missing(value)) {
-        private$staging_
+        private$session_state_
       } else {
-        private$staging_ <- value
+        private$session_state_ <- value
       }
     },
 
@@ -217,7 +217,7 @@ PaparazziPage <- R6::R6Class(
     # A constant is safe because groups are per session, so it can't
     # collide across pages.
     object_group_ = "paparazzi_scopes",
-    staging_ = list(),
+    session_state_ = list(),
     recorder_ = NULL
   )
 )

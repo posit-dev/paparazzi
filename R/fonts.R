@@ -273,7 +273,7 @@ check_font_family <- function(
 }
 
 page_fonts <- function(page) {
-  page$staging$fonts
+  page$session_state$fonts
 }
 
 page_stage_fonts_add <- function(page, fonts) {
@@ -283,7 +283,7 @@ page_stage_fonts_add <- function(page, fonts) {
     faces[[paste0(font$weight, "/", font$style)]] <- font
     staged[[font$family]] <- faces
   }
-  page$staging$fonts <- staged
+  page$session_state$fonts <- staged
   invisible(page)
 }
 
