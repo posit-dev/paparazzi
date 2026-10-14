@@ -83,6 +83,7 @@ test_that('redaction rejects unsafe capture before the library while preserving 
     expect_true(drag_preview_absent(page))
     pz_record_stop(page)
   }
+
   for (case in c(
     'unrelated-fill',
     'unrelated-blur',
@@ -198,6 +199,7 @@ test_that('optional capture, decode, show, move and settle failures warn once an
     expect_false(page_cursor(page)$pressed)
     pz_record_stop(page)
   }
+
   for (method in c('capture', 'decode', 'show', 'move', 'settle')) {
     check_failure(method)
   }
@@ -310,6 +312,7 @@ test_that('unsafe font stylesheets skip capture without mutations or changing th
     expect_false(page_cursor(page)$pressed)
     pz_record_stop(page)
   }
+
   for (case in c('unreadable', 'import', 'font-url', 'opaque-font', 'group')) {
     check_sheet(case)
   }
@@ -397,6 +400,7 @@ test_that('dragstart transforms and filters deliberately disable the captured pr
     expect_false(page_cursor(page)$pressed)
     pz_record_stop(page)
   }
+
   for (property in c('transform', 'filter')) {
     check_footprint(property)
   }
@@ -407,6 +411,7 @@ test_that('a real missing local image disables capture without blocking the drag
   page <- local_task_page(width = 800, height = 900, timeout = 5)
   page <- pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
+
   expect_true(pz_js(
     page,
     "new Promise(resolve => {
@@ -423,6 +428,7 @@ test_that('a real missing local image disables capture without blocking the drag
       image.src = 'missing-drag-preview.png';
     })"
   ))
+
   expect_true(pz_js(
     page,
     "(() => {
@@ -431,6 +437,7 @@ test_that('a real missing local image disables capture without blocking the drag
         image.width === 12 && image.height === 12;
     })()"
   ))
+
   pz_record_start(
     page,
     withr::local_tempfile(fileext = '.mp4'),
@@ -461,6 +468,7 @@ test_that('a real missing local image disables capture without blocking the drag
       })
     }
   )
+
   warnings <- list()
   withCallingHandlers(
     pz_act_drag(
@@ -473,6 +481,7 @@ test_that('a real missing local image disables capture without blocking the drag
       invokeRestart('muffleWarning')
     }
   )
+
   expect_length(warnings, 1)
   expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
   expect_match(
@@ -480,6 +489,7 @@ test_that('a real missing local image disables capture without blocking the drag
     'Failed to load the img needed for the preview (error)',
     fixed = TRUE
   )
+
   expect_true(carried)
   expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
   expect_true(drag_preview_absent(page))
@@ -607,6 +617,7 @@ test_that('unknown preview failures preserve literal messages and omit multiline
     drag_preview_error_message(message),
     'unfamiliar {value} at the source'
   )
+
   state <- new.env(parent = emptyenv())
   state$owner <- TRUE
   state$warned <- FALSE
@@ -628,6 +639,7 @@ test_that('unknown preview failures preserve literal messages and omit multiline
       invokeRestart('muffleWarning')
     }
   )
+
   expect_length(warnings, 1)
   expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
   expect_match(
@@ -636,6 +648,7 @@ test_that('unknown preview failures preserve literal messages and omit multiline
     fixed = TRUE
   )
   expect_match(conditionMessage(warnings[[1]]), 'Drag preview section')
+
   expect_no_warning(drag_preview_optional(state, function(ctx) {
     stop('a disabled preview must not run again')
   }))

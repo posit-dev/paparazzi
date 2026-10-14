@@ -79,8 +79,10 @@ test_that("pz_find resolves inside the current scope", {
 test_that("from_root resolves the target from the document, still on the stack", {
   page <- local_elements_page()
   ctx <- pz_find(page, "#panel-b")
+
   from_root <- pz_find(ctx, ".btn", from_root = TRUE)
   expect_identical(from_root$scope[[2]]$count, 6L)
+
   # The new scope sits on top of the old one; pop returns to it.
   expect_identical(length(pz_find_pop(from_root)$scope), 1L)
   expect_identical(pz_find_pop(from_root)$scope[[1]], ctx$scope[[1]])
@@ -94,6 +96,7 @@ test_that("pz_find_first/last/nth with a target pin the picked match", {
   expect_identical(first$scope[[1]]$count, 1L)
   expect_identical(elements_text(first$scope[[1]]), "Save")
   expect_identical(elements_text(nth$scope[[1]]), "Save   now")
+
   # An out-of-range which on a target keeps auto-waiting: no match.
   # The timeout path matters, not its duration; don't wait out the 10s
   # default (set here so the finds above keep the full budget).
@@ -164,12 +167,14 @@ test_that("narrowing slices the current scope eagerly", {
 test_that("narrowing a union scope keeps the match in the description", {
   page <- local_elements_page()
   ctx <- pz_find(page, list(".panel", "#messages"))
+
   narrowed <- pz_find_nth(ctx, 2)
   expect_identical(narrowed$scope[[2]]$count, 1L)
   expect_identical(
     narrowed$scope[[2]]$description,
     "`.panel` | `#messages` (match: 2)"
   )
+
   # A union can't take a which, so its locs pass through unchanged.
   expect_identical(narrowed$scope[[2]]$locs, ctx$scope[[1]]$locs)
 })
@@ -325,6 +330,7 @@ test_that("scoped contexts print their stack", {
     capture.output(print(ctx))[[2]],
     "^Scope      root › `\\.panel` \\(3\\)$"
   )
+
   root_out <- capture.output(print(pz_find_reset(ctx2)))
   expect_match(root_out[[1]], "── paparazzi page")
   expect_length(root_out, 4L)
@@ -346,6 +352,7 @@ test_that("pillar renders contexts compactly", {
     trimws(out)
   }
   expect_identical(shaft(ctx), "`#scope-a`")
+
   # Root contexts -- and pages, defensively -- never appear in the
   # element column; they show "root".
   expect_identical(shaft(page), "root")

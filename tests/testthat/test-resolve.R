@@ -2,6 +2,7 @@ test_that("loc_resolve promotes a bare string", {
   page <- local_elements_page()
   els <- loc_resolve(page, ".btn", multiple = "all")
   withr::defer(release_elements(els))
+
   expect_s3_class(els, "paparazzi_elements")
   expect_identical(els$count, 6L)
   expect_identical(els$description, "`.btn`")
@@ -76,10 +77,12 @@ test_that("which applies after has_text filtering", {
 test_that("an out-of-range which means no match, checked once", {
   page <- local_elements_page()
   start <- Sys.time()
+
   expect_error(
     loc_resolve(page, pz_loc(".btn", which = 100), timeout = 0),
     class = "paparazzi_error_timeout"
   )
+
   # timeout = 0 is "check once": pz_poll evaluates fn() before the deadline
   # check, so this returns as fast as a single JS round-trip.
   expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
@@ -133,6 +136,7 @@ test_that("loc_resolve accepts a union of specs and strings", {
     multiple = "all"
   )
   withr::defer(release_elements(els))
+
   expect_identical(els$count, 5L)
   expect_identical(
     elements_text(els),
@@ -178,6 +182,7 @@ test_that("resolution ignores elements inside #paparazzi-overlay-root", {
 test_that("multiple = 'error' aborts with count, description, and a hint", {
   page <- local_elements_page()
   target <- pz_loc(".btn", has_text = "Save")
+
   err <- expect_error(
     loc_resolve(page, target),
     class = "paparazzi_error_multiple"
@@ -200,6 +205,7 @@ test_that("multiple = 'all' returns the whole set", {
 test_that("loc_resolve times out with a classed error showing the description", {
   page <- local_elements_page()
   target <- pz_loc(".never", has_text = "get_weather")
+
   err <- expect_error(
     loc_resolve(page, target, timeout = 0.1),
     class = "paparazzi_error_timeout"
@@ -222,6 +228,7 @@ test_that("loc_resolve auto-waits for a late insert", {
     "setTimeout(() => document.body.insertAdjacentHTML('beforeend', '<p class=\"late\">x</p>'), 300)",
     await = FALSE
   )
+
   els <- loc_resolve(page, ".late", timeout = 5)
   withr::defer(release_elements(els))
   expect_identical(els$count, 1L)

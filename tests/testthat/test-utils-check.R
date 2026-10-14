@@ -34,6 +34,7 @@ test_that("annotation label and id checkers retain contracts", {
   for (bad in list(FALSE, NA, NA_character_, c("a", "b"), list("a"))) {
     expect_error(check_annotation_label(bad), "label")
   }
+
   expect_invisible(check_annotation_id(NULL))
   expect_error(check_annotation_id("spotlight"), "reserved|cannot be")
   expect_error(check_annotation_id("caption"), "cannot be")

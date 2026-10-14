@@ -25,6 +25,7 @@ log_ids <- function(log, id, type = NULL) {
 
 test_that("the actions chain through the context invisibly", {
   page <- local_actions_page()
+
   # Each action returns its context invisibly, so the chain carries on:
   # expect_invisible() gives the value back and the next call in the
   # chain proves it's the same context.
@@ -70,7 +71,9 @@ test_that("the actions chain through the context invisibly", {
 
 test_that("pz_act_click produces trusted mouse events in order", {
   page <- local_actions_page()
+
   pz_act_click(page, "#save")
+
   log <- log_entries(page)
   save <- log_ids(log, "save")
   # The pointer events, in dispatch order. (On some platforms mousedown
@@ -90,6 +93,7 @@ test_that("pz_act_click produces trusted mouse events in order", {
 
 test_that("pz_act_click validates effect and effect_color", {
   page <- local_cursor_page()
+
   expect_error(
     pz_act_click(page, "#btn", effect = "slide"),
     class = "rlang_error"
@@ -117,6 +121,7 @@ test_that("pz_act_click validates effect and effect_color", {
 
 test_that("click effects draw nothing without a recording", {
   page <- local_cursor_page()
+
   page |> pz_act_click("#btn", effect = "ring", effect_color = "#2563eb")
   page |> pz_stage(click_effect = "ring") |> pz_act_click("#btn")
   expect_equal(pz_js(page, "window.__log.clicks"), 2)
@@ -184,15 +189,19 @@ test_that("the click effect resolves per call and styles only pz_act_click", {
 
 test_that("pz_act_click scrolls off-screen elements into view first", {
   page <- local_actions_page()
+
   expect_equal(pz_js(page, "window.scrollY"), 0)
+
   pz_act_click(page, "#below-fold")
   expect_gt(pz_js(page, "window.scrollY"), 0)
+
   log <- log_entries(page)
   expect_length(log_ids(log, "below-fold", "click"), 1)
 })
 
 test_that("pz_act_hover moves the pointer without pressing", {
   page <- local_actions_page()
+
   res <- withVisible(pz_act_hover(page, "#save"))
   expect_false(res$visible)
   expect_identical(res$value, page)
@@ -206,6 +215,7 @@ test_that("pz_act_hover moves the pointer without pressing", {
 
 test_that("pz_act_type clicks to focus, then inserts the text", {
   page <- local_actions_page()
+
   pz_act_type(page, "Ada", target = "#name")
   expect_equal(pz_js(page, "document.getElementById('name').value"), "Ada")
 
@@ -220,6 +230,7 @@ test_that("pz_act_type clicks to focus, then inserts the text", {
 
 test_that("pz_act_type with target = NULL types into the focused element", {
   page <- local_actions_page()
+
   pz_act_focus(page, "#bio")
   pz_act_type(page, "hello")
   expect_equal(pz_js(page, "document.getElementById('bio').value"), "hello")
@@ -227,6 +238,7 @@ test_that("pz_act_type with target = NULL types into the focused element", {
 
 test_that("pz_act_type with nothing focused is a no-op", {
   page <- local_actions_page()
+
   pz_act_type(page, "zzz")
   expect_equal(pz_js(page, "document.getElementById('name').value"), "")
   expect_equal(pz_js(page, "document.getElementById('bio').value"), "")
@@ -234,8 +246,10 @@ test_that("pz_act_type with nothing focused is a no-op", {
 
 test_that("pz_act_press sends keydown and keyup to the focused element", {
   page <- local_actions_page()
+
   pz_act_click(page, "#name")
   pz_act_press(page, "Enter")
+
   log <- log_entries(page)
   keys <- Filter(function(e) e$type %in% c("keydown", "keyup"), log)
   enter <- Filter(function(e) identical(e$key, "Enter"), keys)
@@ -309,6 +323,7 @@ Object.defineProperty(navigator, 'platform', {configurable: true, value: '%s'});
   expect_length(keys, 1L)
   expect_identical(keys[[1]]$ctrlKey, TRUE)
   expect_identical(keys[[1]]$metaKey, FALSE)
+
   pz_js(page, "window.__modKeys = []")
   pz_act_press(page, "Meta+k")
   keys <- pz_js(page, "window.__modKeys")
@@ -319,6 +334,7 @@ Object.defineProperty(navigator, 'platform', {configurable: true, value: '%s'});
 
 test_that("Enter implicitly submits a form from a text input", {
   page <- local_actions_page()
+
   pz_js(
     page,
     "document.querySelector('form').addEventListener('submit', function(e) { e.preventDefault(); window.__submitted = true; })"
@@ -331,6 +347,7 @@ test_that("Enter implicitly submits a form from a text input", {
 
 test_that("Enter and Shift+Enter insert a newline in a textarea", {
   page <- local_actions_page()
+
   for (key in c("Enter", "Shift+Enter")) {
     pz_js(page, "document.getElementById('bio').value = ''")
     pz_act_click(page, "#bio")
@@ -348,8 +365,10 @@ test_that("Enter and Shift+Enter insert a newline in a textarea", {
 
 test_that("pz_act_press implies Shift for uppercase keys", {
   page <- local_actions_page()
+
   pz_act_click(page, "#name")
   pz_act_press(page, "Control+A")
+
   log <- log_entries(page)
   keydowns <- Filter(function(e) identical(e$type, "keydown"), log)
   keys <- vapply(keydowns, function(e) e$key, character(1))
@@ -364,8 +383,10 @@ test_that("pz_act_press implies Shift for uppercase keys", {
 
 test_that("pz_act_press presses a vector of keys in order", {
   page <- local_actions_page()
+
   pz_act_click(page, "#name")
   pz_act_press(page, c("ArrowDown", "Enter"))
+
   log <- log_entries(page)
   keydowns <- Filter(function(e) identical(e$type, "keydown"), log)
   keys <- vapply(keydowns, function(e) e$key, character(1))
@@ -374,6 +395,7 @@ test_that("pz_act_press presses a vector of keys in order", {
 
 test_that("pz_act_focus and pz_act_blur move document.activeElement", {
   page <- local_actions_page()
+
   pz_act_focus(page, "#name")
   expect_equal(pz_js(page, "document.activeElement.id"), "name")
   expect_length(log_ids(log_entries(page), "name", "focus"), 1)
@@ -386,6 +408,7 @@ test_that("pz_act_focus and pz_act_blur move document.activeElement", {
 
 test_that("pz_act_blur at the root with nothing focused is a no-op", {
   page <- local_actions_page()
+
   expect_invisible(pz_act_blur(page))
   expect_equal(pz_js(page, "document.activeElement.tagName"), "BODY")
 })
@@ -397,6 +420,7 @@ test_that("action element resolution validates context before reading the scope"
 
 test_that("element actions need a target at the root context", {
   page <- local_actions_page()
+
   expect_error(pz_act_click(page), class = "paparazzi_error_target")
   expect_error(pz_act_hover(page), class = "paparazzi_error_target")
   expect_error(pz_act_focus(page), class = "paparazzi_error_target")
@@ -404,6 +428,7 @@ test_that("element actions need a target at the root context", {
 
 test_that("element actions error on multiple matches", {
   page <- local_actions_page()
+
   expect_error(pz_act_click(page, ".dup"), class = "paparazzi_error_multiple")
   expect_error(pz_act_hover(page, ".dup"), class = "paparazzi_error_multiple")
   expect_error(
@@ -420,12 +445,14 @@ test_that("pz_act_blur on a scoped context", {
   withr::defer(release_elements(els))
   ctx <- PaparazziContext$new(page)
   ctx$scope <- list(els)
+
   expect_error(pz_act_blur(ctx), class = "paparazzi_error_multiple")
 
   els1 <- loc_resolve(page, "#name", multiple = "error")
   withr::defer(release_elements(els1))
   ctx <- PaparazziContext$new(page)
   ctx$scope <- list(els1)
+
   pz_act_focus(page, "#name")
   expect_equal(pz_js(page, "document.activeElement.id"), "name")
   pz_act_blur(ctx)
@@ -434,6 +461,7 @@ test_that("pz_act_blur on a scoped context", {
 
 test_that("actions reject extra arguments", {
   page <- local_actions_page()
+
   expect_error(pz_act_click(page, "#save", "bogus"), "empty")
   expect_error(pz_act_type(page, "a", "bogus"), "empty")
   expect_error(pz_act_press(page, "Enter", "bogus"), "empty")
@@ -442,6 +470,7 @@ test_that("actions reject extra arguments", {
 
 test_that("pz_act_type and pz_act_press validate their inputs", {
   page <- local_actions_page()
+
   expect_error(pz_act_type(page, 42), class = "rlang_error")
   expect_error(pz_act_type(page, c("a", "b")), class = "rlang_error")
   expect_error(pz_act_press(page, ""), class = "paparazzi_error_key")
@@ -498,14 +527,17 @@ hidden_js <- function(id) {
 
 test_that("pz_act_click waits out a hidden element's transition to visible", {
   page <- local_actionability_page()
+
   # #reveals is display:none; arm the 500ms reveal on demand and prove
   # it is hidden when the click starts, so the click genuinely waits.
   expect_false(pz_js(page, hidden_js("reveals")))
   pz_js(page, "window.__pzReveal()")
   expect_invisible(pz_act_click(page, "#reveals"))
+
   log <- log_entries(page)
   expect_length(log_ids(log, "reveals", "click"), 1)
   expect_true(log_ids(log, "reveals", "click")[[1]]$isTrusted)
+
   # Nothing was dispatched at (0, 0) while the element was hidden.
   expect_length(log, 1)
 })
@@ -513,6 +545,7 @@ test_that("pz_act_click waits out a hidden element's transition to visible", {
 test_that("pz_act_click on an element that never becomes visible times out", {
   page <- local_actionability_page()
   page$default_timeout <- 0.3
+
   err <- expect_error(
     pz_act_click(page, "#never"),
     class = "paparazzi_error_timeout"
@@ -525,6 +558,7 @@ test_that("pz_act_click on an element that never becomes visible times out", {
 test_that("pz_act_click refuses a zero-sized element", {
   page <- local_actionability_page()
   page$default_timeout <- 0.3
+
   # #zero passes checkVisibility() but has an empty box, so the center
   # point is not a place on the element; the click must time out
   # without dispatching into whatever sits at that point.
@@ -535,18 +569,21 @@ test_that("pz_act_click refuses a zero-sized element", {
 test_that("pz_act_hover on a hidden element times out", {
   page <- local_actionability_page()
   page$default_timeout <- 0.3
+
   # Hover shares the click pipeline's actionability wait.
   expect_error(pz_act_hover(page, "#never"), class = "paparazzi_error_timeout")
 })
 
 test_that("a scoped pointer action waits out its pinned element's reveal", {
   page <- local_actionability_page()
+
   # A hidden element matches a scope pin (it is in the DOM); the
   # pointer action on the pinned set must wait for it too.
   ctx <- pz_find(page, "#reveals")
   expect_false(pz_js(page, hidden_js("reveals")))
   pz_js(page, "window.__pzReveal()")
   expect_invisible(pz_act_click(ctx))
+
   log <- log_entries(page)
   expect_length(log_ids(log, "reveals", "click"), 1)
   expect_true(log_ids(log, "reveals", "click")[[1]]$isTrusted)
@@ -555,6 +592,7 @@ test_that("a scoped pointer action waits out its pinned element's reveal", {
 test_that("pz_act_type with a hidden target times out before typing", {
   page <- local_actionability_page()
   page$default_timeout <- 0.3
+
   expect_error(
     pz_act_type(page, "Ada", target = "#never"),
     class = "paparazzi_error_timeout"
@@ -569,6 +607,7 @@ hit_pointer_log <- function(page) {
 test_that("obscured click and hover wait without dispatching to the cover", {
   page <- local_actionability_page()
   page$default_timeout <- 0.3
+
   for (action in list(pz_act_click, pz_act_hover)) {
     err <- expect_error(
       action(page, "#hit-target"),
@@ -578,6 +617,7 @@ test_that("obscured click and hover wait without dispatching to the cover", {
     expect_match(conditionMessage(err), "#hit-target", fixed = TRUE)
     expect_match(conditionMessage(err), "div#hit-cover.scrim", fixed = TRUE)
   }
+
   expect_length(log_entries(page), 0)
   expect_length(hit_pointer_log(page), 0)
 })
@@ -586,6 +626,7 @@ test_that("the obstruction description omits a class suffix when none exists", {
   page <- local_actionability_page()
   page$default_timeout <- 0.3
   pz_js(page, "document.getElementById('hit-cover').className = ''")
+
   err <- expect_error(
     pz_act_click(page, "#hit-target"),
     class = "paparazzi_error_obstructed"
@@ -597,23 +638,28 @@ test_that("the obstruction description omits a class suffix when none exists", {
 
 test_that("click retries the blocked center until the cover disappears", {
   page <- local_actionability_page()
+
   pz_js(page, "window.__pzUncover()")
   expect_invisible(pz_act_click(page, "#hit-target"))
+
   clicks <- log_ids(log_entries(page), "hit-target", "click")
   expect_length(clicks, 1)
   expect_true(clicks[[1]]$isTrusted)
+
   expect_length(log_ids(hit_pointer_log(page), "hit-cover"), 0)
 })
 
 test_that("targeted type and drag refuse a covered source", {
   page <- local_actionability_page()
   page$default_timeout <- 0.3
+
   err <- expect_error(
     pz_act_type(page, "Ada", target = "#hit-input"),
     class = "paparazzi_error_obstructed"
   )
   expect_match(conditionMessage(err), "div#input-cover.scrim", fixed = TRUE)
   expect_equal(pz_js(page, "document.getElementById('hit-input').value"), "")
+
   expect_error(
     pz_act_drag(page, "#hit-target", by = c(20, 0)),
     class = "paparazzi_error_obstructed"
@@ -627,8 +673,10 @@ test_that("shadow children, pointer-transparent overlays and labels receive even
     page,
     "document.getElementById('hit-cover').style.pointerEvents = 'none'"
   )
+
   expect_invisible(pz_act_click(page, "#hit-target"))
   expect_length(log_ids(log_entries(page), "hit-target", "click"), 1)
+
   expect_invisible(pz_act_click(page, "#shadow-host"))
   shadow_clicks <- log_ids(log_entries(page), "shadow-child", "click")
   expect_length(shadow_clicks, 1)
@@ -641,6 +689,7 @@ test_that("the hit test runs after scrolling a target under a fixed cover", {
   page <- local_actionability_page()
   page$default_timeout <- 0.3
   pz_js(page, "document.getElementById('fixed-cover').style.display = 'block'")
+
   err <- expect_error(
     pz_act_click(page, "#below-hit"),
     class = "paparazzi_error_obstructed"
@@ -668,6 +717,7 @@ expect_value_events <- function(page, id, times = 1) {
 
 test_that("pz_set_value sets a text input and dispatches input then change", {
   page <- local_form_page()
+
   page <- expect_invisible(pz_set_value(page, "Ada", target = "#text"))
   expect_equal(pz_js(page, "document.getElementById('text').value"), "Ada")
 
@@ -679,11 +729,13 @@ test_that("pz_set_value sets a text input and dispatches input then change", {
 
 test_that("pz_set_value sets and clears a textarea", {
   page <- local_form_page()
+
   pz_set_value(page, "a bio", target = "#textarea")
   expect_equal(
     pz_js(page, "document.getElementById('textarea').value"),
     "a bio"
   )
+
   # Clearing is pz_set_value("") -- there is no pz_clear().
   pz_set_value(page, "", target = "#textarea")
   expect_equal(pz_js(page, "document.getElementById('textarea').value"), "")
@@ -692,6 +744,7 @@ test_that("pz_set_value sets and clears a textarea", {
 
 test_that("pz_set_value selects a native select by option value", {
   page <- local_form_page()
+
   pz_set_value(page, "b", target = "#select")
   el <- "document.getElementById('select')"
   expect_equal(pz_js(page, paste0(el, ".value")), "b")
@@ -713,6 +766,7 @@ test_that("pz_set_value selects a native select by option value", {
 
 test_that("pz_set_value checks and unchecks a checkbox", {
   page <- local_form_page()
+
   pz_set_value(page, TRUE, target = "#check")
   expect_true(pz_js(page, "document.getElementById('check').checked"))
   expect_value_events(page, "check")
@@ -757,6 +811,7 @@ test_that("pz_set_value maintains radio groups", {
 
 test_that("pz_set_value radio groups stop at the form owner", {
   page <- local_form_page()
+
   # Same name in two different forms: separate groups.
   pz_set_value(page, TRUE, target = "#orphan-free")
   expect_true(pz_js(page, "document.getElementById('orphan-free').checked"))
@@ -783,6 +838,7 @@ test_that("pz_set_value radio groups stop at the form owner", {
 
 test_that("pz_set_value covers range and number inputs", {
   page <- local_form_page()
+
   pz_set_value(page, 75, target = "#range")
   expect_equal(pz_js(page, "document.getElementById('range').value"), "75")
   pz_set_value(page, 5, target = "#number")
@@ -801,11 +857,13 @@ test_that("pz_set_value covers range and number inputs", {
 
 test_that("pz_set_value covers date inputs and rejects malformed dates", {
   page <- local_form_page()
+
   pz_set_value(page, "2026-01-01", target = "#date")
   expect_equal(
     pz_js(page, "document.getElementById('date').value"),
     "2026-01-01"
   )
+
   expect_error(
     pz_set_value(page, "not a date", target = "#date"),
     class = "paparazzi_error_value"
@@ -814,6 +872,7 @@ test_that("pz_set_value covers date inputs and rejects malformed dates", {
 
 test_that("pz_set_value leaves a control untouched when the set fails", {
   page <- local_form_page()
+
   # A failed set must not leave the element mutated: the browser
   # clamps or coerces before rejecting, so the JS restores the
   # previous value before returning the error.
@@ -842,6 +901,7 @@ test_that("pz_set_value leaves a control untouched when the set fails", {
 
 test_that("pz_set_value rejects file inputs", {
   page <- local_form_page()
+
   err <- expect_error(
     pz_set_value(page, "x", target = "#file"),
     class = "paparazzi_error_value"
@@ -850,12 +910,14 @@ test_that("pz_set_value rejects file inputs", {
     paste(conditionMessage(err), collapse = " "),
     "use pz_set_files\\(\\)"
   )
+
   # The error fires before the element is focused or mutated.
   expect_equal(pz_js(page, "document.activeElement.id"), "")
 })
 
 test_that("pz_set_value bypasses a framework's controlled input", {
   page <- local_form_page()
+
   # The controlled input overrides the instance-level value setter (a
   # framework's trap), keeping the native getter. The native prototype
   # setter must bypass the trap entirely -- the counter stays at 0 --
@@ -873,11 +935,13 @@ test_that("pz_set_value bypasses a framework's controlled input", {
 
 test_that("pz_set_value replaces contenteditable content in one step", {
   page <- local_form_page()
+
   pz_set_value(page, "new text", target = "#editor")
   expect_equal(
     pz_js(page, "document.getElementById('editor').textContent"),
     "new text"
   )
+
   # The fallback goes through CDP insertText, so the input event is a
   # real, trusted one.
   ed <- log_ids(log_entries(page), "editor", "input")
@@ -891,6 +955,7 @@ test_that("pz_set_value replaces contenteditable content in one step", {
 
 test_that("pz_set_value rejects mismatched values and targets", {
   page <- local_form_page()
+
   expect_error(
     pz_set_value(page, TRUE, target = "#text"),
     class = "paparazzi_error_value"
@@ -911,6 +976,7 @@ test_that("pz_set_value rejects mismatched values and targets", {
 
 test_that("pz_set_value validates its input", {
   page <- local_form_page()
+
   expect_error(pz_set_value(page, c("a", "b"), target = "#text"), "single")
   expect_error(pz_set_value(page, NA, target = "#text"), "NA")
   expect_error(pz_set_value(page, 42, "bogus", target = "#text"), "empty")
@@ -921,8 +987,10 @@ test_that("pz_set_value needs a target at the root and errors on multiple matche
   page <- local_form_page()
   f <- tempfile()
   writeLines("x", f)
+
   expect_error(pz_set_value(page, "x"), class = "paparazzi_error_target")
   expect_error(pz_set_files(page, f), class = "paparazzi_error_target")
+
   expect_error(
     pz_set_value(page, "x", target = "#the-form input[type=radio]"),
     class = "paparazzi_error_multiple"
@@ -936,6 +1004,7 @@ test_that("pz_set_value needs a target at the root and errors on multiple matche
 test_that("pz_set_value acts on the scope element of a scoped context", {
   page <- local_form_page()
   ctx <- pz_find(page, "#text")
+
   pz_set_value(ctx, "scoped")
   expect_equal(pz_js(page, "document.getElementById('text').value"), "scoped")
 })
@@ -973,10 +1042,12 @@ test_that("pz_set_files rejects non-file inputs and validates paths", {
   page <- local_form_page()
   f <- tempfile()
   writeLines("x", f)
+
   expect_error(
     pz_set_files(page, f, target = "#text"),
     class = "paparazzi_error_value"
   )
+
   expect_error(
     pz_set_files(page, tempfile(), target = "#file"),
     class = "paparazzi_error_input"
@@ -1008,6 +1079,7 @@ test_that("pz_set_files rejects non-file inputs and validates paths", {
 
 test_that("pz_act_select_text selects an exact substring across inline tags", {
   page <- local_advanced_page()
+
   page <- expect_invisible(
     pz_act_select_text(page, "galapagos penguins", target = "#rich")
   )
@@ -1030,6 +1102,7 @@ test_that("pz_act_select_text selects an exact substring across inline tags", {
 test_that("recorded selection visually drags across a wrapped inline range", {
   skip_if_no_av()
   page <- local_advanced_page()
+
   pz_js(
     page,
     "document.getElementById('rich').style.cssText = 'width:140px;font:20px monospace'"
@@ -1174,6 +1247,7 @@ test_that("recorded selection respects disabled and explicitly hidden cursors", 
     pz_js(page, "window.getSelection().toString()"),
     "galapagos penguins"
   )
+
   page <- pz_stage(page, cursor = FALSE)
   pz_act_select_text(page, "otters", target = "#editor")
   expect_equal(cursor_overlay_state(page), before)
@@ -1275,6 +1349,7 @@ test_that("recorded selection re-derives its range after inline nodes change", {
     "STRONG"
   )
   expect_equal(pz_js(page, "document.activeElement.id"), "editor")
+
   pz_act_type(page, "penguins")
   replaced <- pz_js(page, "document.getElementById('editor').textContent")
   # Native editing can preserve an inline boundary space as a nonbreaking space.
@@ -1352,6 +1427,7 @@ test_that("recorded selection refuses a target detached during the carry", {
 
 test_that("pz_act_select_text lets typing replace the selection", {
   page <- local_advanced_page()
+
   pz_act_select_text(page, "otters", target = "#editor")
   pz_act_type(page, "penguins")
   expect_equal(
@@ -1372,6 +1448,7 @@ test_that("pz_act_select_text lets typing replace the selection", {
     pz_js(page, "document.getElementById('editor').textContent"),
     "penguins are playful"
   )
+
   # Without a selection, the scoped path still clicks to focus: a
   # trusted mousedown on the editor, the insert at the click's caret.
   pz_js(
@@ -1398,6 +1475,7 @@ test_that("pz_act_select_text lets typing replace the selection", {
 
 test_that("pz_act_select_text errors on absent text, emptiness, and multiple matches", {
   page <- local_advanced_page()
+
   expect_error(
     pz_act_select_text(page, "no such text", target = "#rich"),
     class = "paparazzi_error_text"
@@ -1469,6 +1547,7 @@ test_that("pz_act_scroll by and to act on the scope's scroll container", {
 
 test_that("pz_act_scroll validates its modes", {
   page <- local_advanced_page()
+
   expect_error(pz_act_scroll(page), class = "paparazzi_error_input")
   expect_error(
     pz_act_scroll(page, target = "#rich", by = c(0, 100)),
@@ -1498,6 +1577,7 @@ test_that("pz_act_scroll validates its modes", {
     pz_act_scroll(page, to = "sideways"),
     class = "paparazzi_error_input"
   )
+
   # A multi-match scope has no single container to scroll: both
   # modes error instead of acting on the first match.
   ctx <- pz_find(page, ".dup-select")
@@ -1514,10 +1594,12 @@ test_that("pz_act_scroll validates its modes", {
 
 test_that("pz_act_scroll by takes an integer offset and surfaces page errors", {
   page <- local_advanced_page()
+
   # A scalar integer offset is a JSON number, not the invalid literal
   # "100L" the old serialization produced.
   pz_act_scroll(page, by = 100L)
   expect_equal(pz_js(page, "window.scrollY"), 100)
+
   # A page-side evaluation error surfaces instead of the scroll
   # silently not happening.
   pz_js(
@@ -1532,6 +1614,7 @@ test_that("pz_act_scroll by takes an integer offset and surfaces page errors", {
 
 test_that("pz_act_drag moves a mouse-dragged element onto the destination", {
   page <- local_advanced_page()
+
   page <- expect_invisible(pz_act_drag(page, "#dragbox", "#dropzone"))
 
   # The fixture's box follows the pointer while held, so it ends
@@ -1595,6 +1678,7 @@ test_that("pz_act_drag drops at a by offset from the source", {
       "return [r.x + r.width / 2, r.y + r.height / 2]; })()"
     )
   )
+
   pz_act_drag(page, "#dragbox", by = c(80, 0))
   after <- pz_js(
     page,
@@ -1603,12 +1687,14 @@ test_that("pz_act_drag drops at a by offset from the source", {
       "return [r.x + r.width / 2, r.y + r.height / 2]; })()"
     )
   )
+
   expect_lt(abs(after[[1]] - (before[[1]] + 80)), 2)
   expect_lt(abs(after[[2]] - before[[2]]), 2)
 })
 
 test_that("pz_act_drag routes an HTML5 source through the drag pipeline", {
   page <- local_advanced_page()
+
   pz_act_drag(page, "#draggable", "#dropzone")
 
   # The page's own dragstart ran (trusted) and its payload survived to
@@ -1661,6 +1747,7 @@ test_that("a recorded HTML5 drag drops and rests the overlay on the target", {
     pz_js(page, "document.getElementById('dropzone').textContent"),
     "got:payload-123"
   )
+
   # The overlay cursor ends on the drop point.
   state <- cursor_overlay_state(page)
   drop <- unlist(pz_js(
@@ -1697,6 +1784,7 @@ test_that("a recorded mouse drag drops and rests the overlay on the target", {
   zone <- element_center(page, "#dropzone")
   expect_lt(abs(box[[1]] - zone[[1]]), 2)
   expect_lt(abs(box[[2]] - zone[[2]]), 2)
+
   # The overlay cursor ends on the drop point.
   state <- cursor_overlay_state(page)
   expect_lt(abs(state[[2]] - zone[[1]]), 2)
@@ -1774,6 +1862,7 @@ test_that("a recorded mouse drag streams held moves that follow the cursor", {
   expect_gte(sum(mid), 1)
   drift <- sqrt((box[mid, 1] - pts[mid, 1])^2 + (box[mid, 2] - pts[mid, 2])^2)
   expect_lt(max(drift), 2)
+
   # The overlay cursor itself travels the segment during the carry, on
   # its own easing schedule. It shares the carry's total duration with
   # the dispatched stream, so scheduling jitter can only trail it by so
@@ -1852,6 +1941,7 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
       return true;
     })()"
   )
+
   pz_act_drag(page, drag_source, drop_target)
 
   # Carry samples pin to the dispatched dragover points, so the early
@@ -1876,12 +1966,14 @@ test_that("a recorded HTML5 drag streams drag events along the carry", {
   expect_true(any(early_drag))
   expect_true(all(icons[early_drag] == "grabbing"))
   expect_identical(attr(cursor_overlay_state(page), "icon"), "grab")
+
   mid <- along > 0.15 & along < 0.85
   expect_gte(sum(mid), 1)
   # The overlay cursor itself travels the segment during the carry, on
   # the same easing schedule as the dispatched points.
   overlay_along <- as.vector(sweep(cur, 2, from) %*% seg) / sum(seg^2)
   expect_true(any(cur[, 1] >= 0 & overlay_along > 0.15 & overlay_along < 0.85))
+
   mid_samples <- samples[mid]
   hovers <- function(s) unlist(s$hover)
   expect_false(any(vapply(
@@ -1953,7 +2045,9 @@ test_that("a failed staged HTML5 carry restores the resting cursor icon", {
       cli::cli_abort("simulated carry failure")
     }
   )
+
   expect_error(pz_act_drag(page, source, target), "simulated carry failure")
+
   expect_false(page_cursor(page)$pressed)
   expect_false(
     pz_js(
@@ -1971,6 +2065,7 @@ test_that("HTML5 carry checkpoints dispatch dragenter in path order", {
   page <- page |> pz_stage(pause = 0)
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
+
   pz_js(
     page,
     "window.__enteredRows = [];
@@ -1979,6 +2074,7 @@ test_that("HTML5 carry checkpoints dispatch dragenter in path order", {
        if (row) window.__enteredRows.push(row.querySelector('.task-title').textContent.trim());
      });"
   )
+
   # Fixed checkpoints separate event dispatch from live capture cadence.
   local_mocked_bindings(
     stage_drag_carry = function(ctx, from, to, step) {
@@ -1991,6 +2087,7 @@ test_that("HTML5 carry checkpoints dispatch dragenter in path order", {
       }
     }
   )
+
   pz_act_drag(page, ".task:nth-child(5)", ".task:first-child")
   entered <- unlist(pz_js(page, "window.__enteredRows"))
   intermediate <- c(
@@ -1999,6 +2096,7 @@ test_that("HTML5 carry checkpoints dispatch dragenter in path order", {
     "File tax return"
   )
   expect_equal(unique(entered[entered %in% intermediate]), intermediate)
+
   expect_equal(
     pz_js(
       page,
@@ -2035,6 +2133,7 @@ test_that("a failed staged mouse press does not dispatch a stray mouseup", {
     pz_act_drag(page, "#dragbox", "#dropzone"),
     "simulated mouse press failure"
   )
+
   expect_false("mouseup" %in% adv_log_types(adv_log(page)))
   expect_false(page_cursor(page)$pressed)
   expect_equal(cursor_overlay_scale(page), ctx_stage(page)$cursor_scale)
@@ -2091,6 +2190,7 @@ test_that("a mid-carry dispatch failure propagates and the drag still releases",
     pz_act_drag(page, "#dragbox", "#dropzone"),
     "simulated mid-carry dispatch failure"
   )
+
   expect_equal(cursor_overlay_scale(page), ctx_stage(page)$cursor_scale)
 
   # The exit defer released the held button: the page saw a mouseup
@@ -2115,6 +2215,7 @@ test_that("without a recording both drag paths stay instant", {
       pauses <<- c(pauses, duration)
     }
   )
+
   # HTML5 first: the mouse drag parks #dragbox over #dropzone, which
   # would then block the HTML5 drag's destination probe.
   pz_act_drag(page, "#draggable", "#dropzone")
@@ -2128,6 +2229,7 @@ test_that("without a recording both drag paths stay instant", {
 
 test_that("pz_act_drag validates its input and errors on multiple matches", {
   page <- local_advanced_page()
+
   for (preview in list(NULL, NA, 1, "true", c(TRUE, FALSE))) {
     expect_error(
       pz_act_drag(page, "#draggable", "#dropzone", preview = preview),
@@ -2138,11 +2240,13 @@ test_that("pz_act_drag validates its input and errors on multiple matches", {
     pz_act_drag(page, "#draggable", "#dropzone", FALSE),
     "must be empty"
   )
+
   expect_error(pz_act_drag(page, "#dragbox"), class = "paparazzi_error_input")
   expect_error(
     pz_act_drag(page, "#dragbox", "#dropzone", by = c(10, 10)),
     class = "paparazzi_error_input"
   )
+
   expect_error(
     pz_act_drag(page, ".dup-select", "#dropzone"),
     class = "paparazzi_error_multiple"
@@ -2155,6 +2259,7 @@ test_that("pz_act_drag validates its input and errors on multiple matches", {
 
 test_that("pz_act_drag requires a destination when `to` is NULL", {
   page <- local_advanced_page()
+
   # An explicit to = NULL is absent, not document.body.
   expect_error(
     pz_act_drag(page, "#dragbox", NULL),
@@ -2164,6 +2269,7 @@ test_that("pz_act_drag requires a destination when `to` is NULL", {
 
 test_that("pz_act_drag handles uppercase draggable values case-insensitively", {
   page <- local_advanced_page()
+
   # An uppercase draggable keyword still routes through the HTML5 pipeline.
   pz_act_drag(page, "#draggable-uc", "#dropzone")
   expect_equal(
@@ -2174,6 +2280,7 @@ test_that("pz_act_drag handles uppercase draggable values case-insensitively", {
 
 test_that("pz_act_drag refuses a destination outside the viewport after scrolling the source", {
   page <- local_advanced_page()
+
   # Bringing a far source into view pushes the destination out of the
   # viewport; the drag errors instead of dropping on empty space.
   expect_error(
@@ -2202,6 +2309,7 @@ test_that("pz_act_drag refuses a destination clipped by the source's scroll", {
     expect_match(conditionMessage(error), "#first", fixed = TRUE)
     expect_match(conditionMessage(error), "input#overlap-input", fixed = TRUE)
     expect_gt(pz_js(page, "document.querySelector('#task-list').scrollTop"), 0)
+
     events <- pz_js(page, "window.dragEvents")
     expect_length(events, 0L)
     pz_close(page)
@@ -2210,6 +2318,7 @@ test_that("pz_act_drag refuses a destination clipped by the source's scroll", {
 
 test_that("pz_act_drag errors when the destination hides after the source's scroll", {
   page <- local_advanced_page()
+
   # The fixture hides #vanishing-zone the moment #tall-bottom is
   # scrolled into view, so the final destination probe fails; the
   # drag errors instead of dropping at the zone's earlier point.
@@ -2218,6 +2327,7 @@ test_that("pz_act_drag errors when the destination hides after the source's scro
     regexp = "no longer visible",
     class = "paparazzi_error_target"
   )
+
   # Nothing was dispatched: the error fires before any press.
   expect_false("mousedown" %in% adv_log_types(adv_log(page)))
 })
@@ -2226,11 +2336,14 @@ test_that("press records original and resolved keys only while unpaused", {
   skip_if_no_av()
   page <- local_record_page()
   page <- pz_stage(page, show_keys = "both")
+
   pz_act_press(page, "Mod+k")
   expect_null(page_recorder(page))
+
   pz_record_start(page, tempfile(fileext = ".mp4"), fps = 10, hold = c(0, 0.1))
   defer_record_stop(page)
   rec <- page_recorder(page)
+
   pz_act_press(page, c("Mod+k", "Enter"))
   expect_length(rec$keypresses, 1L)
   event <- rec$keypresses[[1]]
@@ -2248,12 +2361,15 @@ test_that("press records original and resolved keys only while unpaused", {
     if (isTRUE(mac)) "Meta" else "Control"
   )
   expect_gte(event$last, event$vt)
+
   pz_record_pause(page)
   pz_act_press(page, "Shift+Tab")
   expect_length(rec$keypresses, 1L)
+
   pz_record_resume(page)
   pz_act_press(page, "Tab", show_keys = "none")
   expect_length(rec$keypresses, 1L)
+
   pz_act_press(page, "Tab", show_keys = "mac")
   expect_length(rec$keypresses, 2L)
   expect_identical(rec$keypresses[[2]]$style, "mac")

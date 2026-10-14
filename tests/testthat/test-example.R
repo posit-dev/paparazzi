@@ -96,6 +96,7 @@ test_that("walkthrough keeps both high-priority task titles in view", {
     pz_expect_visible(pz_loc(".task", has_text = "File tax return")) |>
     pz_act_scroll("#toggle-help") |>
     pz_annotate_redact("[data-priority='high'] .task-title")
+
   rows <- pz_js(
     page,
     "(() => { const list = document.querySelector('.task-list'); const clip = list.getBoundingClientRect(); return [...list.querySelectorAll('[data-priority=high] .task-title')].map(el => { const r = el.getBoundingClientRect(); return {title:el.textContent, visible:r.top >= clip.top + list.clientTop && r.bottom <= clip.top + list.clientTop + list.clientHeight}; }); })()"
@@ -105,6 +106,7 @@ test_that("walkthrough keeps both high-priority task titles in view", {
     c("Renew passport", "File tax return")
   )
   expect_true(all(vapply(rows, `[[`, logical(1), "visible")))
+
   redactions <- pz_js(
     page,
     r"[
@@ -129,6 +131,7 @@ test_that("walkthrough keeps both high-priority task titles in view", {
 test_that("task titles can be edited, committed, and reverted", {
   page <- local_page(pz_example("tasks"))
   task <- pz_find(page, pz_loc(".task", has_text = "Renew passport"))
+
   task |> pz_act_click(".task-edit")
   expect_identical(
     pz_js(
@@ -144,6 +147,7 @@ test_that("task titles can be edited, committed, and reverted", {
     ),
     "default"
   )
+
   task |>
     pz_find(".task-title") |>
     pz_act_select_text("passport") |>
@@ -158,6 +162,7 @@ test_that("task titles can be edited, committed, and reverted", {
     pz_get_text(page, "#status"),
     "Renamed to \u201cRenew driving licence\u201d."
   )
+
   task |>
     pz_act_click(".task-edit") |>
     pz_find(".task-title") |>
@@ -165,6 +170,7 @@ test_that("task titles can be edited, committed, and reverted", {
     pz_act_type("passport") |>
     pz_act_press("Escape")
   expect_identical(pz_get_text(task, ".task-title"), "Renew driving licence")
+
   task |>
     pz_act_click(".task-edit") |>
     pz_find(".task-title") |>
@@ -178,6 +184,7 @@ test_that("new tasks carry attachments and support inline editing", {
   page <- local_page(pz_example("tasks"))
   file <- withr::local_tempfile(fileext = ".txt")
   writeLines("Task attachment", file)
+
   page |>
     pz_set_files(file, target = "#attachment") |>
     pz_act_type("Send documents", target = "#task-title") |>
@@ -193,6 +200,7 @@ test_that("new tasks carry attachments and support inline editing", {
     pz_js(page, "document.querySelector('#attachment').files.length"),
     0
   )
+
   task |>
     pz_act_click(".task-edit") |>
     pz_find(".task-title") |>
@@ -204,10 +212,12 @@ test_that("new tasks carry attachments and support inline editing", {
 
 test_that("the tasks theme follows live color scheme changes", {
   page <- local_page(pz_example("tasks"), color_scheme = "dark")
+
   expect_identical(
     pz_js(page, "document.documentElement.dataset.bsTheme"),
     "dark"
   )
+
   pz_device(page, color_scheme = "light")
   pz_wait_for_js(page, "document.documentElement.dataset.bsTheme === 'light'")
   expect_identical(

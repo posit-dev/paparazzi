@@ -9,6 +9,7 @@ test_that("examples_run requires Chrome and every named package", {
     find_chrome = function() "/path/to/chrome",
     .package = "chromote"
   )
+
   expect_true(examples_run())
   expect_true(examples_run("rlang"))
   expect_false(examples_run("rlang", "paparazzi_package_that_does_not_exist"))

@@ -47,6 +47,7 @@ test_that("annotated framing includes only attached painted nodes", {
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=outer style=\"position:absolute;left:220px;top:180px;width:80px;height:40px\"><div id=child style=\"width:30px;height:20px\"></div></div><div id=other style=\"position:absolute;left:600px;top:180px;width:40px;height:40px\"></div>')"
   )
+
   pz_annotate_callout(
     page,
     "Attached",
@@ -61,6 +62,7 @@ test_that("annotated framing includes only attached painted nodes", {
     side = "right",
     reveal = "none"
   )
+
   plain <- frame_content_box(page, pz_frame("#outer"))
   decorated <- frame_content_box(
     page,
@@ -69,6 +71,7 @@ test_that("annotated framing includes only attached painted nodes", {
   expect_equal(plain, c(220, 180, 300, 220))
   expect_gt(decorated[3], plain[3])
   expect_lt(decorated[3], 600)
+
   plain_png <- withr::local_tempfile(fileext = ".png")
   painted_png <- withr::local_tempfile(fileext = ".png")
   pz_screenshot(page, plain_png, frame = pz_frame("#outer"))
@@ -78,6 +81,7 @@ test_that("annotated framing includes only attached painted nodes", {
     frame = pz_frame("#outer", target_box = "annotated")
   )
   expect_gt(png_dimensions(painted_png)[1], png_dimensions(plain_png)[1])
+
   page <- pz_stage_frame(page, "#outer", target_box = "annotated")
   pz_screenshot(page, painted_png)
   expect_gt(png_dimensions(painted_png)[1], png_dimensions(plain_png)[1])
@@ -90,6 +94,7 @@ test_that("annotated framing includes only attached painted nodes", {
   pz_annotate_spotlight(page, "#child", pad = 15, reveal = "none")
   hole <- frame_content_box(page, pz_frame("#outer", target_box = "annotated"))
   expect_equal(hole, c(235, 165, 330, 220), tolerance = 1)
+
   pz_annotate_clear(page)
   pz_annotate_redact(page, "#child", pad = 30)
   expect_equal(
@@ -103,21 +108,26 @@ test_that("marks add their badge but only for selected targets", {
   page <- local_frame_page()
   spec <- pz_frame("#card", target_box = "annotated")
   expect_equal(frame_content_box(page, spec), c(100, 80, 220, 170))
+
   pz_annotate(page, "#card", label = "A", reveal = "none")
   pz_annotate(page, "#small", label = "B", reveal = "none")
+
   box <- frame_content_box(page, spec)
   expect_lt(box[2], 80)
   expect_equal(box[3], 220)
+
   both <- frame_content_box(
     page,
     pz_frame(list("#card", "#small"), target_box = "annotated")
   )
   expect_gt(both[3], 400)
+
   scoped <- pz_find(page, "#card")
   expect_equal(
     frame_content_box(scoped, pz_frame(target_box = "annotated")),
     box
   )
+
   pz_annotate_clear(page)
   expect_equal(frame_content_box(page, spec), c(100, 80, 220, 170))
 })
@@ -125,6 +135,7 @@ test_that("marks add their badge but only for selected targets", {
 test_that("an inset circle does not enlarge its target frame", {
   page <- local_frame_page()
   pz_annotate(page, "#card", type = "circle", pad = 0, reveal = "none")
+
   box <- frame_content_box(
     page,
     pz_frame("#card", pad = 0, target_box = "annotated")
@@ -135,6 +146,7 @@ test_that("an inset circle does not enlarge its target frame", {
 test_that("multi-match marks contribute only the framed match", {
   page <- local_frame_page()
   pz_annotate(page, "#card, #small", label = TRUE, reveal = "none")
+
   card <- frame_content_box(
     page,
     pz_frame("#card", pad = 0, target_box = "annotated")
@@ -143,6 +155,7 @@ test_that("multi-match marks contribute only the framed match", {
   expect_gt(card[2], 50)
   expect_lt(card[2], 75)
   expect_lt(card[3], 400)
+
   small <- frame_content_box(
     page,
     pz_frame("#small", pad = 0, target_box = "annotated")
@@ -249,14 +262,17 @@ test_that("frame_apply pads, offsets, grows and clamps", {
     frame_apply(filled_frame(), box),
     box
   )
+
   expect_identical(
     frame_apply(filled_frame(pad = c(10, 20, 30, 40)), box),
     c(60, 70, 240, 200)
   )
+
   expect_identical(
     frame_apply(filled_frame(pad = 10, offset = c(5, -8)), box),
     c(95, 62, 235, 172)
   )
+
   expect_identical(
     frame_apply(filled_frame(), box, list(a = c(150, 150, 300, 300))),
     c(150, 150, 220, 170)
@@ -359,6 +375,7 @@ test_that("frame_round rounds constrained edges inward", {
     ),
     c(201, 101, 300, 400)
   )
+
   # Mixed: pinned left/top round inward, free right/bottom stay
   # nearest.
   expect_identical(
@@ -368,6 +385,7 @@ test_that("frame_round rounds constrained edges inward", {
     ),
     c(201, 101, 311, 412)
   )
+
   # Even mode keeps the same intent: inward for pinned, nearest even
   # otherwise.
   expect_identical(
@@ -388,6 +406,7 @@ test_that("a pad-only frame pads the capture on all sides", {
   # #card (100, 80, 120x90) + 32 on each side: (68, 48) 184x154.
   pz_screenshot(page, path, frame = pz_frame("#card", pad = 32))
   expect_identical(png_dimensions(path), as.integer(round(c(184, 154) * dpr)))
+
   # The card sits 32px inside the capture: red at (40, 40); the point
   # left of it (page 78, 148) is padding background -- clear of
   # #corner, which overlaps the padded region.
@@ -500,6 +519,7 @@ test_that("bounds clamp the frame to their box", {
     frame = pz_frame("#inner-tr", pad = 32, bounds = "#bound")
   )
   expect_identical(png_dimensions(path), as.integer(round(c(104, 92) * dpr)))
+
   # #inner-tr starts at (32, 20) inside the clamped capture.
   expect_png_pixel(page, path, 40, 40, c(200, 200, 30), dpr = dpr)
   # Below the cut pad: #bound's background, not the page background.
@@ -581,6 +601,7 @@ test_that("the frame clamps against geometry read after resolution auto-waits", 
     }, 300)"
   )
   pz_screenshot(page, path, frame = pz_frame("#late", pad = 32))
+
   # #late (100, 2600) 40x40 + 32 = (68, 2568) 104x104, entirely below
   # the pre-expansion document: only fresh geometry keeps it capturable.
   expect_identical(png_dimensions(path), as.integer(round(c(104, 104) * dpr)))
@@ -629,6 +650,7 @@ test_that("an identity frame at the root captures the viewport", {
 
   pz_screenshot(page, plain)
   pz_screenshot(page, framed, frame = pz_frame())
+
   expect_identical(png_dimensions(framed), png_dimensions(plain))
 })
 
@@ -649,6 +671,7 @@ test_that("an identity frame keeps the viewport on negative RTL scroll", {
 
   pz_screenshot(page, plain)
   pz_screenshot(page, framed, frame = pz_frame())
+
   expect_identical(png_dimensions(framed), png_dimensions(plain))
 })
 
@@ -710,9 +733,11 @@ test_that("an explicit frame's fields win and leave the default untouched", {
   dpr <- page_dpr(page)
 
   staged <- pz_stage_frame(page, pad = 32)
+
   # An explicit field wins: pad = 8 over pad = 32, giving 136x106.
   pz_screenshot(staged, path, frame = pz_frame("#card", pad = 8))
   expect_identical(png_dimensions(path), as.integer(round(c(136, 106) * dpr)))
+
   # The staged default itself is untouched by the explicit frame.
   pz_screenshot(staged, path, frame = "#card")
   expect_identical(png_dimensions(path), as.integer(round(c(184, 154) * dpr)))
@@ -724,6 +749,7 @@ test_that("frame = FALSE opts out of the default for one call", {
   dpr <- page_dpr(page)
 
   staged <- pz_stage_frame(page, pad = 32)
+
   pz_find(staged, "#card") |> pz_screenshot(path, frame = FALSE)
   expect_identical(png_dimensions(path), as.integer(round(c(120, 90) * dpr)))
 })
@@ -738,6 +764,7 @@ test_that("an explicit frame without a target frames the viewport under a target
   staged <- pz_stage_frame(page, pad = 32)
   pz_screenshot(staged, viewport, frame = FALSE)
   pz_screenshot(staged, path, frame = pz_frame(pad = 8))
+
   # The padded viewport clamps to the document: the left, top and right
   # pads fall off the page, and the bottom pad reaches below the fold.
   expect_identical(
@@ -753,8 +780,10 @@ test_that("pz_stage_frame(NULL) clears an inherited default for that pipeline", 
 
   staged <- pz_stage_frame(page, pad = 32)
   cleared <- pz_stage_frame(staged, NULL)
+
   pz_screenshot(cleared, path, frame = "#card")
   expect_identical(png_dimensions(path), as.integer(round(c(120, 90) * dpr)))
+
   # The inherited default still frames pipelines from the staged context
   plain <- withr::local_tempfile(fileext = ".png")
   pz_screenshot(staged, plain, frame = "#card")
@@ -768,8 +797,10 @@ test_that("a staged frame does not leak to other pages", {
   dpr <- page_dpr(other)
 
   staged <- pz_stage_frame(page, pad = 32)
+
   pz_screenshot(other, path, frame = "#card")
   expect_identical(png_dimensions(path), as.integer(round(c(120, 90) * dpr)))
+
   # The original page itself still captures unframed by the staged default
   pz_screenshot(page, path, frame = "#card")
   expect_identical(png_dimensions(path), as.integer(round(c(120, 90) * dpr)))
@@ -809,11 +840,13 @@ test_that("pz_screenshot rejects non-frame frame values", {
     pz_screenshot(page, path, frame = 42),
     class = "paparazzi_error_unsupported"
   )
+
   # A bare locator promotes; an empty one matches nothing and errors
   expect_error(
     pz_screenshot(page, path, frame = list()),
     class = "paparazzi_error_target"
   )
+
   # Nothing was written before the errors.
   expect_false(file.exists(path))
 })
@@ -848,6 +881,7 @@ test_that("framing errors when the region collapses", {
     "empty",
     class = "paparazzi_error_frame"
   )
+
   expect_false(file.exists(path))
 })
 
@@ -913,8 +947,10 @@ test_that("frame_effective promotes bare locators and fills per-field", {
   expect_identical(filled$ratio, 2)
   expect_identical(filled$target[[1]]$css, "#small")
   expect_identical(filled$anchor, "center")
+
   # frame = NULL resolves the staged recipe itself
   expect_identical(frame_effective(page, NULL)$pad, rep(24, 4))
+
   # FALSE opts out entirely
   expect_false(frame_effective(page, FALSE))
   expect_error(
@@ -929,15 +965,19 @@ test_that("the scope beats the staged target, which beats the viewport", {
   dpr <- page_dpr(page)
 
   page <- pz_stage_frame(page, "#small", pad = 24)
+
   # Root: the staged target frames #small (400, 60) 60x45 + 24
   pz_screenshot(page, path)
   expect_identical(png_dimensions(path), as.integer(round(c(108, 93) * dpr)))
+
   # Scoped: the scope's box wins over the staged target
   pz_find(page, "#card") |> pz_screenshot(path)
   expect_identical(png_dimensions(path), as.integer(round(c(168, 138) * dpr)))
+
   # An explicit spec target wins over the scope
   pz_find(page, "body") |> pz_screenshot(path, frame = "#small")
   expect_identical(png_dimensions(path), as.integer(round(c(108, 93) * dpr)))
+
   # A scoped spec keeps its target unset: the scope applies at measure time
   spec <- frame_effective(pz_find(page, "#card"), pz_frame(pad = 8))
   expect_null(spec$target)
@@ -963,6 +1003,7 @@ test_that("resolved frame specs keep every field, so `$target` stays exact", {
   )) {
     expect_named(spec, fields, ignore.order = TRUE)
   }
+
   expect_null(frame_effective(scoped, NULL)$target)
 })
 
@@ -988,10 +1029,12 @@ test_that("an explicit frame inherits unset fields from the staged frame", {
   dpr <- page_dpr(page)
 
   page <- pz_stage_frame(page, "#card", pad = 32)
+
   # Only ratio is explicit; pad and target inherit: (68, 48) 184x154
   # grown to 2:1 is 308x154.
   pz_screenshot(page, path, frame = pz_frame(ratio = 2))
   expect_identical(png_dimensions(path), as.integer(round(c(308, 154) * dpr)))
+
   # An explicit field wins over the staged one.
   pz_screenshot(page, path, frame = pz_frame(pad = 8))
   expect_identical(png_dimensions(path), as.integer(round(c(136, 106) * dpr)))
@@ -1025,6 +1068,7 @@ test_that("zoom places the padded target by anchor and honors ratio", {
     frame = pz_frame("#mid", pad = 10, zoom = 2, anchor = "top left")
   )
   expect_identical(png_dimensions(path), as.integer(round(c(400, 300) * dpr)))
+
   # (20, 20) in the capture is (310, 210) on the page: inside #mid
   expect_png_pixel(page, path, 20, 20, c(200, 30, 30), dpr = dpr)
   # (5, 5) is (295, 195): the pad ring, i.e. the page background
@@ -1069,6 +1113,7 @@ test_that("frame target selection leaves lower-priority candidates lazy", {
 test_that("recordings freeze staged targets and fields but measure at the chosen time", {
   skip_if_no_av()
   page <- local_frame_page()
+
   for (when in c("start", "stop")) {
     pz_js(page, "document.getElementById('small').style.width = '60px'")
     page <- pz_stage_frame(page, "#small", pad = 8)
@@ -1099,13 +1144,16 @@ test_that("recordings freeze staged targets and fields but measure at the chosen
 test_that("scoped framing stays lazy and detached scopes do not become viewport frames", {
   page <- local_frame_page()
   scoped <- pz_find(page, "#card")
+
   # Staging after scoping must not reach the already-derived scope: the
   # staged target loses to the scope.
   page <- pz_stage_frame(page, "#small", pad = 0)
   spec <- frame_effective(scoped, pz_frame())
   expect_null(spec$target)
+
   pz_js(page, "document.getElementById('card').style.width = '200px'")
   expect_equal(frame_clip(scoped, spec)$width, 200)
+
   pz_js(page, "document.getElementById('card').remove()")
   expect_error(frame_clip(scoped, spec), class = "paparazzi_error_detached")
 })

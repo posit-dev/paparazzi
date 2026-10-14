@@ -42,6 +42,7 @@ annotation_state <- function(page) {
 
 test_that("boxes draw for every match, replace by id, and clear without leaking to find", {
   page <- annotation_page()
+
   staged <- page |> pz_stage_annotate(color = "rgb(255, 0, 0)", font_size = 18)
   expect_identical(
     pz_annotate(
@@ -54,6 +55,7 @@ test_that("boxes draw for every match, replace by id, and clear without leaking 
     ),
     staged
   )
+
   boxes <- annotation_state(page)
   expect_length(boxes, 2)
   expect_equal(vapply(boxes, `[[`, "", "label"), c("1", "2"))
@@ -64,15 +66,20 @@ test_that("boxes draw for every match, replace by id, and clear without leaking 
   )
   expect_identical(boxes[[1]]$color, "rgb(255, 0, 0)")
   expect_equal(pz_get_count(page, ".pz-annotation"), 0)
+
   page |> pz_annotate("#fixed", id = "group", label = "A", reveal = "none")
   expect_length(annotation_state(page), 1)
   expect_identical(annotation_state(page)[[1]]$label, "A")
+
   page |> pz_annotate("#box", reveal = "none")
   expect_length(annotation_state(page), 2)
+
   page |> pz_annotate_clear("group")
   expect_length(annotation_state(page), 1)
+
   page |> pz_annotate_clear("spotlight") |> pz_annotate_clear("caption")
   expect_length(annotation_state(page), 1)
+
   page |> pz_annotate_clear()
   expect_length(annotation_state(page), 0)
 })
@@ -82,6 +89,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
   page |> pz_annotate("#box", id = "box", reveal = "none")
   page |> pz_annotate("#inner", id = "inner", reveal = "none")
   page |> pz_annotate("#fixed", id = "fixed", reveal = "none")
+
   # #inner starts scrolled out of #outer's box, so its mark is hidden;
   # bring it into the container's view before measuring movement.
   pz_js(page, "document.getElementById('outer').scrollTop = 100")
@@ -92,6 +100,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
     what = "the inner mark to become visible in the container"
   )
   expect_true(annotation_state(page)[[2]]$visible)
+
   before <- annotation_state(page)
   pz_js(
     page,
@@ -134,6 +143,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
     as.numeric(before[[3]]$rect[[2]]),
     tolerance = 2
   )
+
   pz_js(page, "document.getElementById('inner').style.display = 'none'")
   pz_poll(
     function() isFALSE(annotation_state(page)[[2]]$visible),
@@ -142,6 +152,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
     what = "the inner mark to hide with its target"
   )
   expect_false(annotation_state(page)[[2]]$visible)
+
   pz_js(page, "document.getElementById('inner').style.display = ''")
   pz_poll(
     function() isTRUE(annotation_state(page)[[2]]$visible),
@@ -150,6 +161,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
     what = "the inner mark to reappear with its target"
   )
   expect_true(annotation_state(page)[[2]]$visible)
+
   pz_js(page, "document.getElementById('outer').scrollTop = 0")
   pz_poll(
     function() isFALSE(annotation_state(page)[[2]]$visible),
@@ -158,6 +170,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
     what = "the inner mark to hide out of view"
   )
   expect_false(annotation_state(page)[[2]]$visible)
+
   pz_js(page, "document.getElementById('box').remove()")
   pz_poll(
     function() isFALSE(annotation_state(page)[[1]]$visible),
@@ -170,22 +183,29 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
 
 test_that("annotations belong to the current document and layer boots after navigation", {
   page <- local_nav_page()
+
   page |> pz_annotate("body", id = "old", reveal = "none")
   expect_length(annotation_state(page), 1)
+
   page |> pz_nav_goto(nav_fixture_url("b"))
   expect_length(annotation_state(page), 0)
+
   page |> pz_annotate("body", id = "new", reveal = "none")
   expect_length(annotation_state(page), 1)
+
   page |> pz_annotate_clear("new")
   expect_length(annotation_state(page), 0)
 })
 
 test_that("fade outside recording is instant, and invalid types fail", {
   page <- annotation_page()
+
   page |> pz_annotate("#box", id = "x")
   expect_equal(annotation_state(page)[[1]]$animations, 0)
+
   page |> pz_annotate_clear("x")
   expect_length(annotation_state(page), 0)
+
   expect_error(pz_annotate(page, "#box", type = "unknown"))
   expect_error(
     pz_annotate(
@@ -221,10 +241,13 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
   shot <- withr::local_tempfile(fileext = ".png")
   expect_no_error(pz_annotate_clear(page))
   expect_no_error(pz_screenshot(page, shot))
+
   scoped <- pz_find(page, "#outer")
   scoped |> pz_annotate("#inner", id = "inside", label = 7, reveal = "none")
   expect_identical(annotation_state(page)[[1]]$label, "7")
+
   page |> pz_annotate_clear()
+
   pz_annotate(scoped, id = "container", reveal = "none")
   expect_length(annotation_state(page), 1)
   expect_equal(
@@ -235,7 +258,9 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
     ))),
     tolerance = 1
   )
+
   page |> pz_annotate_clear()
+
   page |>
     pz_stage_annotate(
       color = "green",
@@ -249,6 +274,7 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
     "(() => { const s = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').style; return [s.fontSize, s.fontFamily]; })()"
   )
   expect_equal(unlist(badge_style), c("20px", "monospace"))
+
   # A NULL stage resets the overrides for its pipeline only
   page |>
     pz_stage_annotate(
@@ -259,6 +285,7 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
     pz_annotate_clear() |>
     pz_annotate("#box", reveal = "none")
   expect_identical(annotation_state(page)[[1]]$color, "rgb(225, 29, 72)")
+
   expect_error(pz_annotate(page, "#box", pad = c(1, 2)))
 })
 
@@ -268,6 +295,7 @@ test_that("stills sync box after immediate shift and hide inspect outlines", {
   path <- withr::local_tempfile(fileext = ".png")
   framed <- withr::local_tempfile(fileext = ".png")
   page |> pz_annotate("#box", id = "box", reveal = "none", color = "#ff0000")
+
   # Chrome has not had to paint a frame since this synchronous layout update.
   pz_js(page, "document.getElementById('box').style.top = '370px'")
   overlay_draw(
@@ -276,6 +304,7 @@ test_that("stills sync box after immediate shift and hide inspect outlines", {
     data.frame(left = 200, top = 370, width = 100, height = 50)
   )
   page |> pz_screenshot(path)
+
   dpr <- page_dpr(page)
   img <- png::readPNG(path)
   at <- function(image, x, y) {
@@ -283,6 +312,7 @@ test_that("stills sync box after immediate shift and hide inspect outlines", {
   }
   expect_equal(at(img, 225, 371), c(1, 0, 0), tolerance = 0.04)
   expect_equal(at(img, 225, 311), c(1, 1, 1), tolerance = 0.04)
+
   # The inspect box at x=200..300 is rose, not red; it must not enter stills.
   expect_true(inspect_overlay_count(page) > 0)
   page |> pz_screenshot(framed, frame = "#box")
@@ -298,8 +328,10 @@ test_that("a recorded fade settles into captured frames and clears in reverse", 
   path <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(path, fps = 20, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
+
   page |>
     pz_annotate("#box", id = "animated", reveal = "fade", color = "#ff0000")
+
   dpr <- page_dpr(page)
   green_at_border <- function(file) {
     png::readPNG(file)[round(311 * dpr) + 1, round(225 * dpr) + 1, 2]
@@ -322,6 +354,7 @@ test_that("a recorded fade settles into captured frames and clears in reverse", 
     what = "a settled frame of the completed fade"
   )
   expect_equal(annotation_state(page)[[1]]$animations, 0)
+
   page |> pz_annotate_clear("animated")
   pz_poll(
     function() {
@@ -332,6 +365,7 @@ test_that("a recorded fade settles into captured frames and clears in reverse", 
     what = "a settled frame of the reversed fade"
   )
   expect_length(annotation_state(page), 0)
+
   page |> pz_record_stop()
   expect_true(file.exists(path))
 })
@@ -340,6 +374,7 @@ test_that("a final clear retains the unannotated frame before the end hold", {
   skip_if_no_av()
   skip_if_not_installed("png")
   page <- annotation_page()
+
   # Styled scrollbars exercise classic gutters on overlay-scrollbar
   # platforms: the screencast surface is wider than the client viewport, so
   # settle captures that clip to the client area would mix frame sizes.
@@ -351,6 +386,7 @@ test_that("a final clear retains the unannotated frame before the end hold", {
     pz_js(page, "window.visualViewport.width"),
     pz_js(page, "window.innerWidth")
   )
+
   pz_js(page, "document.getElementById('box').style.background = '#0000ff'")
   path <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(
@@ -364,6 +400,7 @@ test_that("a final clear retains the unannotated frame before the end hold", {
   rec <- page_recorder(page)
   withr::defer(unlink(rec$frames_dir, recursive = TRUE))
   defer_record_stop(page)
+
   pz_poll(
     function() {
       if (!length(rec$files)) {
@@ -377,6 +414,7 @@ test_that("a final clear retains the unannotated frame before the end hold", {
     what = "the unannotated reference frame with the blue box"
   )
   reference <- png::readPNG(tail(rec$files, 1))
+
   pz_annotate(page, "#box", type = "box", reveal = "fade")
   pz_annotate(page, "#fixed", type = "circle", reveal = "wipe")
   pz_annotate_callout(page, "Then press Add", target = "#box", reveal = "draw")
@@ -403,9 +441,11 @@ Element.prototype.animate = function (frames, options) {
 };
 ]"
   )
+
   pz_annotate_clear(page)
   # Polling after clear would mask its obligation to retain the completed state.
   cleared <- tail(rec$files, 1)
+
   pz_record_stop(page)
   # Screencast frames and settle captures must be the same size: a
   # recording that mixes frame sizes corrupts the encoded output.
@@ -433,6 +473,7 @@ test_that("a final reveal is complete in the retained poll frame", {
   rec <- page_recorder(page)
   withr::defer(unlink(rec$frames_dir, recursive = TRUE))
   defer_record_stop(page)
+
   pz_js(
     page,
     r"[
@@ -445,11 +486,14 @@ Element.prototype.animate = function (frames, options) {
 };
 ]"
   )
+
   pz_annotate(page, "#box", reveal = "fade", color = "#ff0000")
+
   dpr <- page_dpr(page)
   green_at_border <- function(file) {
     png::readPNG(file)[round(311 * dpr) + 1, round(225 * dpr) + 1, 2]
   }
+
   revealed <- tail(rec$files, 1)
   pz_record_stop(page)
   expect_lt(green_at_border(revealed), 0.1)
@@ -462,6 +506,7 @@ test_that("a failing settle capture is counted and the recording continues", {
   path <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, path, hold = c(0, 0))
   defer_record_stop(page)
+
   # Only the settle-time forced captures pass scale explicitly; poll ticks
   # call record_capture() without it and keep working.
   original_capture <- record_capture
@@ -474,8 +519,10 @@ test_that("a failing settle capture is counted and the recording continues", {
       stop("injected capture failure")
     }
   )
+
   rec <- page_recorder(page)
   expect_gt(rec$n_errors, 0L)
+
   # Later frames are not blocked by the failed settle capture.
   files_after <- length(rec$files)
   pz_poll(
@@ -484,6 +531,7 @@ test_that("a failing settle capture is counted and the recording continues", {
     loop = page$child_loop,
     what = "recording frames after the failed settle"
   )
+
   # A working settle still retains its own completion frame after the
   # failure: the settle capture runs (explicit scale) and its file lands.
   errors_before <- rec$n_errors
@@ -503,6 +551,7 @@ test_that("a failing settle capture is counted and the recording continues", {
   expect_gt(settle_captures, 0L)
   expect_equal(rec$n_errors, errors_before)
   expect_true(settle_file %in% rec$files)
+
   pz_record_hold(page, 0.2)
   pz_record_stop(page)
   expect_true(file.exists(path))
@@ -515,6 +564,7 @@ test_that("a stuck settle capture is retired instead of blocking later frames", 
   path <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, path, hold = c(0, 0))
   defer_record_stop(page)
+
   original_capture <- record_capture
   with_mocked_bindings(
     pz_annotate(page, "#box"),
@@ -525,8 +575,10 @@ test_that("a stuck settle capture is retired instead of blocking later frames", 
       rec$pending <- new.env(parent = emptyenv())
     }
   )
+
   rec <- page_recorder(page)
   expect_gt(rec$n_errors, 0L)
+
   # Later frames are not blocked by the retired settle capture.
   files_after <- length(rec$files)
   pz_poll(
@@ -535,6 +587,7 @@ test_that("a stuck settle capture is retired instead of blocking later frames", 
     loop = page$child_loop,
     what = "recording frames after the retired settle"
   )
+
   pz_record_hold(page, 0.2)
   pz_record_stop(page)
   expect_true(file.exists(path))
@@ -545,11 +598,13 @@ test_that("recorded clear removes all nodes after mixed exit animations", {
   page <- annotation_page()
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
+
   pz_annotate(page, "#box", id = "shared", reveal = "fade")
   pz_annotate(page, "#box", id = "shared", reveal = "wipe")
   pz_annotate_callout(page, "Tip", target = "#box", id = "callout")
   pz_annotate_spotlight(page, "#box")
   pz_annotate_redact(page, "#box", id = "redaction")
+
   pz_annotate_clear(page)
   # Node removal runs in the browser animation's onfinish callback.
   pz_poll(
@@ -571,6 +626,7 @@ test_that("recorded clear removes all nodes after mixed exit animations", {
     ),
     0
   )
+
   pz_record_stop(page)
 })
 
@@ -579,10 +635,12 @@ test_that("recorded clear logs the caption clear before marks fade out", {
   page <- annotation_page()
   pz_record_start(page, withr::local_tempfile(fileext = ".mp4"), hold = c(0, 0))
   defer_record_stop(page)
+
   pz_annotate(page, "#box", id = "fading", reveal = "fade")
   pz_annotate_caption(page, "Caption")
   rec <- page_recorder(page)
   before <- rec_vt(rec)
+
   pz_annotate_clear(page)
   after <- rec_vt(rec)
   cleared <- tail(rec$captions, 1)[[1]]
@@ -598,10 +656,13 @@ test_that("paused recording skips fade on draw and clear", {
   path <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(path, fps = 10, hold = c(0, 0)) |> pz_record_pause()
   defer_record_stop(page)
+
   page |> pz_annotate("#box", id = "animated")
+
   expect_equal(annotation_state(page)[[1]]$animations, 0)
   page |> pz_annotate_clear("animated")
   expect_length(annotation_state(page), 0)
+
   page |> pz_record_resume() |> pz_record_stop()
 })
 
@@ -612,11 +673,13 @@ test_that("redaction fills every match immediately and hides after disconnection
     page,
     "document.querySelectorAll('.mark').forEach(el => el.textContent = 'SECRET')"
   )
+
   staged <- page |> pz_stage_annotate(color = "#ff0000")
   expect_identical(
     pz_annotate_redact(staged, ".mark", id = "secret", pad = 2),
     staged
   )
+
   nodes <- pz_js(
     page,
     "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); return [...layer.querySelectorAll('.pz-redaction')].map(n => ({x:parseFloat(n.style.left),y:parseFloat(n.style.top),visible:n.style.display !== 'none',animations:n.getAnimations().length,color:getComputedStyle(n).backgroundColor})); })()"
@@ -625,6 +688,7 @@ test_that("redaction fills every match immediately and hides after disconnection
   expect_equal(nodes[[2]]$x, 198, tolerance = 1)
   expect_identical(nodes[[2]]$color, "rgb(23, 23, 23)")
   expect_equal(nodes[[2]]$animations, 0)
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
@@ -633,6 +697,7 @@ test_that("redaction fills every match immediately and hides after disconnection
     as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
   }
   expect_equal(at(220, 330), rep(23 / 255, 3), tolerance = 0.03)
+
   pz_js(page, "document.getElementById('box').remove()")
   pz_poll(
     function() {
@@ -653,9 +718,11 @@ test_that("redaction fills every match immediately and hides after disconnection
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')[1].style.display"
   )
   expect_identical(after, "none")
+
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
   expect_equal(at(220, 330), rep(1, 3), tolerance = 0.03)
+
   page |> pz_annotate_clear("secret")
   expect_length(annotation_state(page), 0)
 })
@@ -689,6 +756,7 @@ test_that("drag previews reject redacted sources and ancestors for fill and blur
     page,
     "document.getElementById('box').innerHTML = '<div id=child style=width:20px;height:20px></div>'"
   )
+
   for (method in c("fill", "blur")) {
     page |> pz_annotate_redact("#box", id = "secret", method = method)
     expect_identical(
@@ -708,6 +776,7 @@ test_that("drag previews reject hidden redacted descendants before capture", {
     page,
     "document.getElementById('box').innerHTML = '<div id=secret style=width:20px;height:20px></div>'"
   )
+
   page |> pz_annotate_redact("#secret")
   pz_js(page, "document.getElementById('secret').style.display = 'none'")
   expect_identical(
@@ -718,6 +787,7 @@ test_that("drag previews reject hidden redacted descendants before capture", {
 
 test_that("unrelated fill and blur masks permit drag previews without changing entries", {
   page <- annotation_page()
+
   for (method in c("fill", "blur")) {
     page |> pz_annotate_redact("#fixed", id = "secret", method = method)
     expect_identical(
@@ -732,6 +802,7 @@ test_that("unrelated fill and blur masks permit drag previews without changing e
       1
     )
   }
+
   page |> pz_annotate_clear()
   expect_identical(
     annotation_drag_safety(page),
@@ -746,15 +817,18 @@ test_that("drag safety synchronizes padded mask overlap with the supplied footpr
     "document.getElementById('fixed').style.cssText = 'position:fixed;left:310px;top:310px;width:20px;height:50px'"
   )
   page |> pz_annotate_redact("#fixed", pad = 15)
+
   expect_identical(
     annotation_drag_safety(page),
     list(safe = FALSE, reason = "overlapping-redaction")
   )
+
   pz_js(page, "document.getElementById('fixed').style.left = '400px'")
   expect_identical(
     annotation_drag_safety(page),
     list(safe = TRUE, reason = "safe")
   )
+
   expect_identical(
     annotation_drag_safety(
       page,
@@ -768,10 +842,12 @@ test_that("drag previews fail closed for missing, disconnected and cross-root so
   page <- annotation_page()
   page |> pz_annotate_redact("#fixed")
   box <- "{left:200,top:310,right:300,bottom:360,width:100,height:50}"
+
   expect_identical(
     annotation_drag_safety(page, "null", box),
     list(safe = FALSE, reason = "unknown-source")
   )
+
   pz_js(
     page,
     "window.__source = document.getElementById('box'); window.__source.remove()"
@@ -780,6 +856,7 @@ test_that("drag previews fail closed for missing, disconnected and cross-root so
     annotation_drag_safety(page, "window.__source", box),
     list(safe = FALSE, reason = "unknown-source")
   )
+
   pz_js(
     page,
     "document.getElementById('fixed').attachShadow({mode:'open'}).innerHTML = '<div id=source style=width:20px;height:20px></div>'"
@@ -797,6 +874,7 @@ test_that("drag previews fail closed for missing, disconnected and cross-root so
 test_that("drag previews fail closed for stale masks, targets and unsupported methods", {
   page <- annotation_page()
   page |> pz_annotate_redact("#fixed", id = "secret")
+
   pz_js(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').remove()"
@@ -805,12 +883,14 @@ test_that("drag previews fail closed for stale masks, targets and unsupported me
     annotation_drag_safety(page),
     list(safe = FALSE, reason = "unknown-state")
   )
+
   page |> pz_annotate_redact("#fixed", id = "secret")
   pz_js(page, "document.getElementById('fixed').remove()")
   expect_identical(
     annotation_drag_safety(page),
     list(safe = FALSE, reason = "unknown-state")
   )
+
   page |> pz_annotate_clear()
   pz_js(
     page,
@@ -836,6 +916,7 @@ document
 test_that("drag previews fail closed for cross-root redactions and untracked masks", {
   page <- annotation_page()
   page |> pz_annotate_redact("#fixed")
+
   pz_js(
     page,
     r"[
@@ -859,6 +940,7 @@ test_that("drag previews fail closed for cross-root redactions and untracked mas
     annotation_drag_safety(page),
     list(safe = FALSE, reason = "unknown-state")
   )
+
   page |> pz_annotate_clear("shadow")
   pz_js(
     page,
@@ -889,6 +971,7 @@ document.getElementById('fixed').innerHTML =
 ]"
   )
   page |> pz_annotate_redact("#secret", pad = 20)
+
   expect_identical(
     annotation_drag_safety(page),
     list(safe = TRUE, reason = "safe")
@@ -898,6 +981,7 @@ document.getElementById('fixed').innerHTML =
 test_that("drag safety rejects invalid footprints", {
   page <- annotation_page()
   page |> pz_annotate_redact("#fixed")
+
   for (box in c(
     "null",
     "{left:0,top:0,right:1,bottom:1,width:Infinity,height:1}",
@@ -934,8 +1018,10 @@ document.body.insertAdjacentHTML(
     dpr <- page_dpr(page)
     as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
   }
+
   expect_equal(pixel(380, 190), rep(23 / 255, 3), tolerance = 0.03)
   expect_equal(pixel(380, 202), rep(1, 3), tolerance = 0.03)
+
   pz_js(page, "document.getElementById('clip').scrollTop = 80")
   pz_poll(
     function() {
@@ -950,6 +1036,7 @@ document.body.insertAdjacentHTML(
   )
   expect_equal(pixel(380, 110), rep(23 / 255, 3), tolerance = 0.03)
   expect_equal(pixel(380, 190), rep(1, 3), tolerance = 0.03)
+
   pz_js(page, "document.getElementById('clip').scrollTop = 250")
   pz_poll(
     function() {
@@ -973,6 +1060,7 @@ document.body.insertAdjacentHTML(
     "none"
   )
   expect_equal(pixel(380, 110), rep(1, 3), tolerance = 0.03)
+
   pz_js(page, "document.getElementById('clip').scrollTop = 0")
   pz_poll(
     function() {
@@ -1002,6 +1090,7 @@ document.body.style.background = 'white';
   )
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_annotate_redact("#secret", pad = 4) |> pz_screenshot(path)
+
   expect_png_pixel(page, path, 150, 150, rep(23, 3))
   expect_png_pixel(page, path, 150, 98, rep(255, 3))
   expect_png_pixel(page, path, 202, 150, rep(255, 3))
@@ -1025,6 +1114,7 @@ document.body.insertAdjacentHTML(
 ]"
   )
   page |> pz_annotate_redact("#secret")
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
@@ -1060,6 +1150,7 @@ document.body.insertAdjacentHTML(
   )
   page |>
     pz_annotate_redact("#escaped, #escaped-fixed, #clipped, #fixed-clipped")
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
@@ -1089,6 +1180,7 @@ document.body.insertAdjacentHTML(
 ]"
   )
   page |> pz_annotate_redact("#padded-secret")
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
@@ -1114,6 +1206,7 @@ document.body.insertAdjacentHTML(
 ]"
   )
   page |> pz_annotate_redact("#scaled-secret")
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
@@ -1139,6 +1232,7 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
       reveal = "none",
       color = "rgb(255, 0, 0)"
     )
+
   # Annotation nodes are created in target order, so index i pairs the i-th
   # Done button with the i-th box.
   info <- pz_js(
@@ -1177,6 +1271,7 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
       expect_true(b$annotated)
     }
   }
+
   page |> pz_screenshot(path)
   marked <- png::readPNG(path)
   dpr <- page_dpr(page)
@@ -1185,6 +1280,7 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
   }
   red <- c(1, 0, 0)
   rects <- lapply(info$buttons, function(b) unlist(b$rect))
+
   # Control: a visible button's outline and badge really do paint.
   first <- rects[[Position(
     function(b) b$shown && !b$clipped,
@@ -1196,6 +1292,7 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
     tolerance = 0.05
   )
   expect_equal(at(marked, first[1] + 2, first[2] - 6), red, tolerance = 0.05)
+
   # A scrolled-out button paints neither its box nor its badge over the
   # area below the list.
   checked <- 0
@@ -1216,6 +1313,7 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
     )
   }
   expect_gt(checked, 0)
+
   # The hidden Done button shows no empty outline or badge.
   hb <- rects[[Position(function(b) !b$shown, info$buttons)]]
   expect_equal(
@@ -1241,6 +1339,7 @@ test_that("a fully visible new task keeps every padded outline edge", {
     pz_act_click("#add-task")
   target <- pz_loc(".task", has_text = "Prepare release notes")
   pz_expect_visible(page, target)
+
   path <- withr::local_tempfile(fileext = ".png")
   red <- c(255, 0, 0)
 
@@ -1290,6 +1389,7 @@ test_that("flush fractional scaled targets keep all padded outline edges", {
     "zoom:2"
   )
   red <- c(255, 0, 0)
+
   for (style in styles) {
     pz_js(
       page,
@@ -1337,6 +1437,7 @@ test_that("genuinely subpixel-clipped sides do not regain their padded outline",
   page |>
     pz_annotate("#target", pad = 6, stroke_width = 4, color = "red") |>
     pz_screenshot(path)
+
   expect_png_pixel(
     page,
     path,
@@ -1361,6 +1462,7 @@ test_that("padding cannot reveal a target touching a fractional clip from outsid
   page |>
     pz_annotate("#target", pad = 6, stroke_width = 4, color = "red") |>
     pz_screenshot(path)
+
   expect_false(annotation_state(page)[[1]]$visible)
   expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y - 4, rep(255, 3))
 })
@@ -1376,6 +1478,7 @@ test_that("a subpixel-visible target still shows its mark", {
   page |>
     pz_annotate("#target", pad = 6, stroke_width = 4, color = "red") |>
     pz_screenshot(path)
+
   expect_true(annotation_state(page)[[1]]$visible)
   expect_png_pixel(
     page,
@@ -1391,6 +1494,7 @@ test_that("redactions stay inside fractional scaled overflow clips", {
   rect <- pz_get_rect(page, "#target")
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_annotate_redact("#target", pad = 6) |> pz_screenshot(path)
+
   expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y + 2, rep(23, 3))
   expect_png_pixel(page, path, rect$x + rect$width / 2, rect$y - 2, rep(255, 3))
   expect_png_pixel(
@@ -1436,6 +1540,7 @@ document.body.style.background = 'white';
     bottom = "height:120px",
     left = "left:-20px;width:120px"
   )
+
   for (side in names(cases)) {
     pz_js(
       page,
@@ -1490,6 +1595,7 @@ document.body.style.background = 'white';
       reveal = "none"
     ) |>
     pz_screenshot(path)
+
   expect_false(annotation_state(page)[[1]]$visible)
   expect_png_pixel(page, path, 150, 198, c(255, 255, 255))
   expect_png_pixel(page, path, 100, 190, c(255, 255, 255))
@@ -1511,6 +1617,7 @@ document.body.style.background = 'white';
   page |>
     pz_annotate(".mark", pad = 10, stroke_width = 4, color = "red") |>
     pz_screenshot(path)
+
   expect_false(annotation_state(page)[[1]]$visible)
   expect_true(annotation_state(page)[[2]]$visible)
   expect_png_pixel(page, path, 108, 150, rep(255, 3))
@@ -1539,9 +1646,11 @@ document.body.insertAdjacentHTML(
     dpr <- page_dpr(page)
     as.numeric(img[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
   }
+
   # The mark's left edge spans y 170..250; its container ends at y 200.
   expect_equal(pixel(371, 180), c(1, 0, 0), tolerance = 0.05)
   expect_equal(pixel(371, 205), c(1, 1, 1), tolerance = 0.03)
+
   pz_js(page, "document.getElementById('markclip').scrollTop = 250")
   pz_poll(
     function() isFALSE(annotation_state(page)[[1]]$visible),
@@ -1581,6 +1690,7 @@ document.body.insertAdjacentHTML(
     c(1, 0, 0),
     tolerance = 0.03
   )
+
   page |> pz_annotate_redact("#inline-secret, #body-secret")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
@@ -1608,10 +1718,12 @@ test_that("redaction follows scroll and scoped targets without restyling element
     )
   }
   before <- rects()
+
   expect_identical(
     pz_js(page, "document.getElementById('inner').style.backgroundColor"),
     ""
   )
+
   pz_js(
     page,
     "window.scrollTo(0, 80); document.getElementById('outer').scrollTop = 30"
@@ -1644,12 +1756,14 @@ test_that("redaction follows scroll and scoped targets without restyling element
     as.numeric(before[[2]][[1]]),
     tolerance = 2
   )
+
   page |> pz_annotate_clear()
 })
 
 test_that("redaction uses the current scope and anonymous ids", {
   page <- annotation_page()
   scoped <- pz_find(page, "#outer")
+
   scoped |> pz_annotate_redact()
   expect_equal(
     pz_js(
@@ -1669,6 +1783,7 @@ test_that("redaction uses the current scope and anonymous ids", {
     ))),
     tolerance = 1
   )
+
   page |> pz_annotate_redact()
   expect_equal(
     pz_js(
@@ -1677,6 +1792,7 @@ test_that("redaction uses the current scope and anonymous ids", {
     ),
     2
   )
+
   page |> pz_annotate_clear()
   expect_equal(
     pz_js(
@@ -1685,6 +1801,7 @@ test_that("redaction uses the current scope and anonymous ids", {
     ),
     0
   )
+
   pz_find(page, "#fixed, #box") |> pz_annotate_redact()
   expect_equal(
     pz_js(
@@ -1697,6 +1814,7 @@ test_that("redaction uses the current scope and anonymous ids", {
     ),
     tolerance = 1
   )
+
   page |> pz_annotate_clear()
 })
 
@@ -1714,6 +1832,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
     ),
     1
   )
+
   page |> pz_annotate("#box", id = "mark", reveal = "none", color = "#00ff00")
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
@@ -1732,10 +1851,12 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
     c(139 / 255, 11.5 / 255, 11.5 / 255),
     tolerance = 0.06
   )
+
   page |> pz_annotate_redact("#fixed", id = "other", color = "not-a-color")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
   expect_equal(rgb(45, 35), rep(23 / 255, 3), tolerance = 0.03)
+
   pz_js(page, "document.getElementById('fixed').style.display = 'none'")
   pz_poll(
     function() {
@@ -1750,6 +1871,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
   expect_equal(rgb(45, 35), rep(1, 3), tolerance = 0.03)
+
   expect_error(
     pz_annotate_redact(page, "#fixed", id = "shared"),
     "rendered box"
@@ -1761,12 +1883,14 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
     ),
     2
   )
+
   expect_error(
     pz_annotate_redact(page, "#box", method = "blur", color = "red"),
     "color"
   )
   expect_error(pz_annotate_redact(page, "#box", method = "pixelate"))
   expect_error(pz_annotate_redact(page, "#box", id = "caption"))
+
   page |> pz_annotate_clear("shared")
   expect_equal(
     pz_js(
@@ -1775,6 +1899,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
     ),
     1
   )
+
   page |> pz_annotate_clear()
   expect_equal(
     pz_js(
@@ -1788,6 +1913,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
 test_that("modal content cannot replace an existing redaction", {
   page <- annotation_page()
   page |> pz_annotate_redact("#box", id = "secret")
+
   pz_js(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<dialog id=modal><div id=modal-secret>SECRET</div></dialog>'); document.getElementById('modal').showModal()"
@@ -1806,6 +1932,7 @@ test_that("modal content cannot replace an existing redaction", {
 test_that("zero-height overflowing content cannot replace an existing redaction", {
   page <- annotation_page()
   page |> pz_annotate_redact("#box", id = "secret")
+
   pz_js(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=zero style=\"position:absolute;left:120px;top:160px;width:100px;height:0;overflow:visible\">SECRET</div>')"
@@ -1829,8 +1956,10 @@ test_that("below-fold redaction covers a target-framed still without scrolling",
     "document.body.insertAdjacentHTML('beforeend', '<div id=far style=\"position:absolute;left:120px;top:1500px;width:180px;height:90px;background:white;color:black\">SECRET</div>')"
   )
   expect_equal(pz_js(page, "window.scrollY"), 0)
+
   page |> pz_annotate_redact("#far")
   expect_equal(pz_js(page, "window.scrollY"), 0)
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path, frame = "#far")
   expect_equal(pz_js(page, "window.scrollY"), 0)
@@ -1848,6 +1977,7 @@ test_that("blur changes text pixels and hides when target stops rendering", {
   before <- withr::local_tempfile(fileext = ".png")
   after <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(before)
+
   page |> pz_annotate_redact("#secret", method = "blur", id = "blur")
   expect_identical(
     pz_js(
@@ -1856,6 +1986,7 @@ test_that("blur changes text pixels and hides when target stops rendering", {
     ),
     "blur(32px)"
   )
+
   page |> pz_screenshot(after)
   dpr <- page_dpr(page)
   rows <- (440:460) * dpr + 1
@@ -1863,6 +1994,7 @@ test_that("blur changes text pixels and hides when target stops rendering", {
   sharp <- png::readPNG(before)[rows, cols, 1]
   soft <- png::readPNG(after)[rows, cols, 1]
   expect_gt(mean(abs(sharp - soft)), 0.05)
+
   pz_js(page, "document.getElementById('secret').style.display = 'none'")
   pz_poll(
     function() {
@@ -1885,6 +2017,7 @@ test_that("blur changes text pixels and hides when target stops rendering", {
     ),
     "none"
   )
+
   pz_js(
     page,
     "document.getElementById('secret').style.display = ''; document.getElementById('secret').style.visibility = 'hidden'"
@@ -1900,6 +2033,7 @@ test_that("blur changes text pixels and hides when target stops rendering", {
     ),
     "none"
   )
+
   pz_js(page, "document.getElementById('secret').style.visibility = 'visible'")
   pz_poll(
     function() {
@@ -1922,6 +2056,7 @@ test_that("blur changes text pixels and hides when target stops rendering", {
     ),
     ""
   )
+
   pz_js(
     page,
     "document.getElementById('secret').innerHTML = '<span style=\"visibility:visible\">SECRET</span>'; document.getElementById('secret').style.visibility = 'hidden'"
@@ -1943,6 +2078,7 @@ test_that("poll captures started after redaction returns are covered", {
   path <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(path, fps = 12, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
+
   page |> pz_annotate_redact("#box", id = "secret")
   pending <- page_recorder(page)$pending
   deadline <- Sys.time() + 2
@@ -1953,9 +2089,11 @@ test_that("poll captures started after redaction returns are covered", {
   ) {
     pump_loop(page$child_loop, 0.02)
   }
+
   expect_false(
     identical(page_recorder(page)$pending, pending) && !is.null(pending)
   )
+
   before <- length(page_recorder(page)$files)
   pz_poll(
     function() length(page_recorder(page)$files) > before,
@@ -1973,6 +2111,7 @@ test_that("poll captures started after redaction returns are covered", {
     0.0
   )
   expect_true(all(abs(redacted - 23 / 255) < 0.04))
+
   page |> pz_annotate_clear("secret")
   expect_equal(
     pz_js(
@@ -1981,21 +2120,25 @@ test_that("poll captures started after redaction returns are covered", {
     ),
     0
   )
+
   page |> pz_record_stop()
 })
 
 test_that("mark types and reveal styles are accepted and have type defaults", {
   page <- annotation_page()
+
   for (type in c("box", "circle", "underline", "highlight")) {
     page |> pz_annotate("#box", type = type, id = "mark", label = "A")
     expect_equal(annotation_state(page)[[1]]$label, "A")
     page |> pz_annotate_clear("mark")
   }
+
   for (reveal in c("draw", "pop", "slide", "wipe")) {
     page |> pz_annotate("#box", reveal = reveal, id = "mark")
     expect_length(annotation_state(page), 1)
     page |> pz_annotate_clear("mark")
   }
+
   expect_error(pz_annotate(page, "#box", type = "unknown"), "type")
   expect_error(pz_annotate(page, "#box", reveal = "unknown"), "reveal")
 })
@@ -2009,17 +2152,20 @@ test_that("circle, underline, and highlight paint only their intended regions", 
     image <- png::readPNG(path)
     as.numeric(image[round(y * dpr) + 1, round(x * dpr) + 1, 1:3])
   }
+
   page |> pz_annotate("#box", type = "circle", color = "#ff0000")
   page |> pz_screenshot(path)
   expect_lt(pixel(250, 311)[2], 0.15)
   expect_gt(pixel(250, 335)[2], 0.9)
   expect_gt(pixel(201, 311)[2], 0.9)
+
   page |> pz_annotate_clear()
   page |> pz_annotate("#box", type = "underline", color = "#ff0000", pad = 3)
   page |> pz_screenshot(path)
   expect_lt(pixel(250, 359)[2], 0.15)
   expect_gt(pixel(250, 308)[2], 0.9)
   expect_gt(pixel(250, 325)[2], 0.9)
+
   page |> pz_annotate_clear()
   pz_js(
     page,
@@ -2030,6 +2176,7 @@ test_that("circle, underline, and highlight paint only their intended regions", 
   rows <- round((313:350) * dpr) + 1
   cols <- round((205:280) * dpr) + 1
   expect_lt(min(unmarked[rows, cols, 1]), 0.15)
+
   page |> pz_annotate("#box", type = "highlight", color = "#ff0000")
   page |> pz_screenshot(path)
   marked <- png::readPNG(path)
@@ -2054,6 +2201,7 @@ test_that("all reveals show sampled entry and reverse exit frames", {
     image <- png::readPNG(path)
     image[round((308:363) * dpr) + 1, round((198:303) * dpr) + 1, 1:3]
   }
+
   for (reveal in c("fade", "draw", "pop", "slide", "wipe")) {
     pz_js(
       page,
@@ -2103,6 +2251,7 @@ test_that("all reveals show sampled entry and reverse exit frames", {
       expect_gt(mean(abs(entering[[i]] - entering[[1]])), 0.001)
       expect_gt(mean(abs(entering[[i]] - entering[[5]])), 0.001)
     }
+
     pz_js(
       page,
       "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); window.__exitNode=l.querySelector('.pz-annotation'); l.pz.clear({id:'test',animate:true}); window.__exitNode.getAnimations({subtree:true})[0].pause(); })()"
@@ -2128,6 +2277,7 @@ test_that("all reveals show sampled entry and reverse exit frames", {
       expect_gt(mean(abs(leaving[[i]] - leaving[[1]])), 0.001)
       expect_gt(mean(abs(leaving[[i]] - leaving[[5]])), 0.001)
     }
+
     pz_js(
       page,
       "window.__exitNode.remove()"
@@ -2143,6 +2293,7 @@ test_that("a recorded wipe becomes visible in captured frames and clears", {
   path <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(path, fps = 20, hold = c(0, 0), keep_frames = TRUE)
   defer_record_stop(page)
+
   page |> pz_annotate("#box", id = "wipe", reveal = "wipe", color = "#ff0000")
   dpr <- page_dpr(page)
   painted <- function(file) {
@@ -2157,6 +2308,7 @@ test_that("a recorded wipe becomes visible in captured frames and clears", {
     }
     painted(tail(files, 1))
   }
+
   # Mid-animation pixels are covered by the controlled reveal tests.
   pz_poll(
     function() isTRUE(last_painted() > 100),
@@ -2164,6 +2316,7 @@ test_that("a recorded wipe becomes visible in captured frames and clears", {
     loop = page$child_loop,
     what = "a frame showing the wipe annotation"
   )
+
   page |> pz_annotate_clear("wipe")
   pz_poll(
     function() {
@@ -2174,6 +2327,7 @@ test_that("a recorded wipe becomes visible in captured frames and clears", {
     what = "a settled frame of the reversed wipe"
   )
   expect_length(annotation_state(page), 0)
+
   page |> pz_record_stop()
   expect_true(file.exists(path))
 })
@@ -2183,11 +2337,13 @@ test_that("draw leaves badge visible and removes it at start of reverse", {
   page |>
     pz_annotate("#box", id = "boot", reveal = "none") |>
     pz_annotate_clear()
+
   pz_js(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.draw([document.querySelector('#box')], {id:'badge',type:'circle',pad:[0,0,0,0],label:'A',color:'red',strokeWidth:3,labelFill:'#171717',labelTextColor:'white',fontFamily:'sans-serif',fontSize:14,reveal:'draw',animate:true}); l.querySelector('.pz-annotation').getAnimations({subtree:true})[0].pause(); })()"
   )
   expect_equal(annotation_state(page)[[1]]$label, "A")
+
   pz_js(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); window.__exitNode=l.querySelector('.pz-annotation'); l.pz.clear({id:'badge',animate:true}); window.__exitNode.getAnimations({subtree:true})[0].pause(); })()"
@@ -2199,6 +2355,7 @@ test_that("draw leaves badge visible and removes it at start of reverse", {
     ),
     TRUE
   )
+
   pz_js(
     page,
     "window.__exitNode.remove()"
@@ -2215,10 +2372,12 @@ test_that("default reveals animate entry and reverse clear during recording", {
   )
   page |> pz_record_start(path, fps = 10, hold = c(0, 0))
   defer_record_stop(page)
+
   for (type in c("box", "circle", "underline", "highlight")) {
     page |> pz_annotate("#box", type = type, id = "default")
     page |> pz_annotate_clear("default")
   }
+
   first <- pz_js(
     page,
     "window.__markAnimations.filter((_, i) => i % 2 === 0).map(animation => Object.keys(animation.frames[0]))"
@@ -2234,6 +2393,7 @@ test_that("default reveals animate entry and reverse clear during recording", {
     pz_annotate_clear("spotlight") |>
     pz_annotate_callout("Tip", target = "#box", id = "tip") |>
     pz_annotate_clear("tip")
+
   animations <- pz_js(page, "window.__markAnimations")
   expect_length(animations, 4)
   expect_equal(
@@ -2246,6 +2406,7 @@ test_that("default reveals animate entry and reverse clear during recording", {
     names(animations[[3]]$frames[[1]]),
     c("opacity", "transform")
   )
+
   page |> pz_record_stop()
 })
 
@@ -2254,6 +2415,7 @@ test_that("clear returns the longest active exit duration", {
   page |>
     pz_annotate("#box", id = "boot", reveal = "none") |>
     pz_annotate_clear()
+
   durations <- pz_js(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); const el=document.querySelector('#box'); const o={type:'box',pad:[0,0,0,0],label:null,color:'red',strokeWidth:3,fontFamily:'sans-serif',fontSize:14,animate:true}; const short=l.pz.draw([el], {...o,id:'short',reveal:'fade'}); const long=l.pz.draw([el], {...o,id:'long',reveal:'wipe'}); const clear=l.pz.clear({id:null,animate:true}); [...l.children].forEach(n=>n.remove()); return [short,long,clear,l.pz.clear({id:null,animate:true})]; })()"
@@ -2267,10 +2429,12 @@ test_that("a labeled wipe reveals the badge before its shape finishes", {
   page |>
     pz_annotate("#box", id = "boot", reveal = "none") |>
     pz_annotate_clear()
+
   pz_js(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.draw([document.querySelector('#box')], {id:'labeled',type:'box',pad:[0,0,0,0],label:'A',color:'#ff0000',strokeWidth:3,labelFill:'#171717',labelTextColor:'white',fontFamily:'sans-serif',fontSize:14,reveal:'wipe',animate:true}); const a=l.querySelector('.pz-annotation').getAnimations({subtree:true})[0]; a.pause(); a.currentTime=200; })()"
   )
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
@@ -2281,6 +2445,7 @@ test_that("a labeled wipe reveals the badge before its shape finishes", {
   expect_lt(pixel(202, 300)[2], 0.2)
   expect_lt(pixel(275, 311)[2], 0.2)
   expect_gt(pixel(225, 311)[2], 0.9)
+
   pz_js(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); window.__exitNode=l.querySelector('.pz-annotation'); return l.pz.clear({id:'labeled',animate:true}); })()"
@@ -2289,6 +2454,7 @@ test_that("a labeled wipe reveals the badge before its shape finishes", {
     page,
     "window.__exitNode.querySelector('span') === null"
   ))
+
   pz_js(
     page,
     "window.__exitNode.remove()"
@@ -2298,6 +2464,7 @@ test_that("a labeled wipe reveals the badge before its shape finishes", {
 test_that("a drawn box has the same rounded outline as a still box", {
   page <- annotation_page()
   page |> pz_annotate("#box", type = "box", reveal = "draw")
+
   radius <- pz_js(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation svg rect')?.getAttribute('rx')"
@@ -2323,10 +2490,12 @@ test_that("anonymous kinds coexist across shared-id replacement and clear", {
 ]"
     )
   }
+
   page |> pz_annotate("#box", reveal = "none")
   page |> pz_annotate_callout("note", target = "#fixed", reveal = "none")
   page |> pz_annotate_redact("#inner")
   expect_equal(unlist(layer_counts()), c(1, 1, 1))
+
   page |> pz_annotate("#fixed", id = "shared", reveal = "none")
   page |>
     pz_annotate_callout(
@@ -2336,15 +2505,19 @@ test_that("anonymous kinds coexist across shared-id replacement and clear", {
       reveal = "none"
     )
   expect_equal(unlist(layer_counts()), c(1, 2, 1))
+
   page |> pz_annotate_clear("shared")
   expect_equal(unlist(layer_counts()), c(1, 1, 1))
+
   page |> pz_annotate("#fixed", id = "__pz_auto_4", reveal = "none")
   page |> pz_annotate("#fixed", reveal = "none")
   page |> pz_annotate_clear("__pz_auto_4")
   expect_equal(unlist(layer_counts()), c(2, 1, 1))
+
   page |> pz_annotate_redact("#fixed", id = "shared")
   page |> pz_annotate("#box", id = "shared", reveal = "none")
   expect_equal(unlist(layer_counts()), c(3, 1, 1))
+
   page |> pz_annotate_clear()
   expect_equal(unlist(layer_counts()), c(0, 0, 0))
   expect_equal(
@@ -2374,6 +2547,7 @@ new Function('return (' + %s + ');'); true
   } else {
     annotate_boot_js
   }
+
   if (is.function(annotate_boot_js)) {
     source <- paste(
       readLines(
@@ -2389,6 +2563,7 @@ new Function('return (' + %s + ');'); true
     )
     expect_true(parse_js(source))
   }
+
   expect_true(parse_js(boot))
   expect_true(parse_js(cursor_command_js))
   expect_true(parse_js(
@@ -2398,6 +2573,7 @@ new Function('return (' + %s + ');'); true
       overlay_draw_js
     }
   ))
+
   expect_error(system.file(
     "js",
     "annotate-missing.js",
@@ -2420,6 +2596,7 @@ test_that("auto reveals preserve the type defaults and zero padding", {
     captured <<- options
   })
   captured <- NULL
+
   for (type in c("box", "circle", "underline", "highlight")) {
     pz_annotate(page, "#box", type = type)
     omitted <- captured
@@ -2428,6 +2605,7 @@ test_that("auto reveals preserve the type defaults and zero padding", {
     expect_equal(captured$pad, rep(0, 4))
     expect_identical(captured$reveal, if (type == "box") "fade" else "draw")
   }
+
   pz_annotate_redact(page, "#box")
   omitted <- captured
   pz_annotate_redact(page, "#box", pad = 0)
@@ -2443,6 +2621,7 @@ test_that("mark badges follow their mark unless overridden per call", {
       "(() => { const s = getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span')); return [s.backgroundColor, s.color]; })()"
     )
   }
+
   page |> pz_annotate("#box", label = "A", reveal = "none", id = "mark")
   expect_equal(
     unlist(badge_style()),
@@ -2488,6 +2667,7 @@ test_that("mark badges size to their label, not their mark", {
       "(() => { const r = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').getBoundingClientRect(); return [r.width, r.height]; })()"
     )
   }
+
   page |> pz_annotate("#fixed", label = "A", reveal = "none", id = "mark")
   one_line <- badge_box()[[2]]
 
@@ -2507,6 +2687,7 @@ test_that("mark badges size to their label, not their mark", {
   box <- badge_box()
   expect_lte(box[[1]], 20 * 14 + 10)
   expect_gt(box[[2]], one_line)
+
   page |> pz_annotate_clear()
 })
 
@@ -2534,6 +2715,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape').style.borderTopWidth"
   )
+
   page |>
     pz_annotate(
       "#box",
@@ -2549,6 +2731,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
     ),
     "6px"
   )
+
   page |>
     pz_annotate(
       "#box",
@@ -2564,6 +2747,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
     ),
     5
   )
+
   page |>
     pz_annotate(
       "#box",
@@ -2579,6 +2763,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
     ),
     "7px"
   )
+
   page |>
     pz_stage_annotate(stroke_width = 2) |>
     pz_annotate("#box", type = "box", reveal = "none", id = "mark")
@@ -2593,6 +2778,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
     default_border,
     paste0(STAGE_DEFAULTS$annotate_stroke_width, "px")
   )
+
   page |> pz_annotate_clear()
 })
 
@@ -2709,6 +2895,7 @@ test_that("the tasks Add badge stays on one line beyond its narrow button", {
     width = 1000,
     height = 720
   )
+
   page |>
     pz_annotate(
       "#add-task",
@@ -2718,6 +2905,7 @@ test_that("the tasks Add badge stays on one line beyond its narrow button", {
       id = "add"
     )
   one_line <- annotation_badge_rects(page)[[1]]$height
+
   page |>
     pz_annotate(
       "#add-task",
@@ -2751,6 +2939,7 @@ test_that("task title badges paint outside overflow wrappers in annotated crops"
     width = 1000,
     height = 720
   )
+
   page |>
     pz_annotate(
       ".task-title",
@@ -2776,6 +2965,7 @@ test_that("task title badges paint outside overflow wrappers in annotated crops"
     expect_true(all(point >= 0 & point < size))
     expect_png_pixel(page, path, point[1], point[2], c(255, 0, 255))
   }
+
   # Hidden owners must not leak their badges back into the document.
   expect_true(all(vapply(badges[!visible], function(b) b$width == 0, TRUE)))
 })
@@ -2783,6 +2973,7 @@ test_that("task title badges paint outside overflow wrappers in annotated crops"
 test_that("nested overflow clips shapes but anchors badges to the visible mark", {
   page <- local_clipped_badge_page()
   path <- withr::local_tempfile(fileext = ".png")
+
   for (type in c("box", "circle", "underline", "highlight")) {
     page |>
       pz_annotate(
@@ -2815,6 +3006,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
       point[2],
       if (type == "highlight") c(255, 166, 166) else c(255, 0, 0)
     )
+
     pz_js(page, "document.getElementById('vertical').scrollTop = 30")
     pz_poll(
       function() abs(annotation_state(page)[[1]]$rect[[2]] - 66) < 0.1,
@@ -2826,6 +3018,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
     expect_equal(c(badge$left, badge$bottom), c(100, 120), tolerance = 0.1)
     page |> pz_screenshot(path)
     expect_png_pixel(page, path, 102, 110, c(255, 0, 255))
+
     pz_js(page, "document.getElementById('vertical').scrollTop = 150")
     pz_poll(
       function() !annotation_badge_rects(page)[[1]]$visible,
@@ -2835,6 +3028,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
     )
     page |> pz_screenshot(path)
     expect_png_pixel(page, path, 102, 110, rep(255, 3))
+
     pz_js(page, "document.getElementById('vertical').scrollTop = 0")
     pz_poll(
       function() {
@@ -2845,6 +3039,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
       loop = page$child_loop,
       what = "the mark to return to its unscrolled position"
     )
+
     pz_js(page, "document.getElementById('marked').style.display = 'none'")
     pz_poll(
       function() !annotation_badge_rects(page)[[1]]$visible,
@@ -2852,6 +3047,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
       loop = page$child_loop,
       what = "the non-rendered mark and badge to hide"
     )
+
     pz_js(page, "document.getElementById('marked').style.display = ''")
     pz_poll(
       function() annotation_badge_rects(page)[[1]]$visible,
@@ -2859,6 +3055,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
       loop = page$child_loop,
       what = "the restored mark and badge to reappear"
     )
+
     page |> pz_annotate_clear("mark")
     expect_length(annotation_state(page), 0)
     expect_equal(
@@ -2898,6 +3095,7 @@ test_that("a clipped recorded badge paints in retained frames and clears", {
       1:3
     ]
   }
+
   page |>
     pz_annotate(
       "#marked",
@@ -2913,6 +3111,7 @@ test_that("a clipped recorded badge paints in retained frames and clears", {
     loop = page$child_loop,
     what = "a retained frame containing the clipped target's badge"
   )
+
   page |> pz_annotate_clear("mark")
   pz_poll(
     function() isTRUE(all(abs(last_badge() - 1) < 0.03)),
@@ -2921,6 +3120,7 @@ test_that("a clipped recorded badge paints in retained frames and clears", {
     what = "a retained frame without the cleared badge"
   )
   expect_length(annotation_state(page), 0)
+
   page |> pz_record_stop()
 })
 
@@ -2930,6 +3130,7 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
     pz_annotate("#marked", reveal = "none", id = "boot") |>
     pz_annotate_clear()
   path <- withr::local_tempfile(fileext = ".png")
+
   for (reveal in c("fade", "draw", "pop", "slide", "wipe")) {
     pz_js(
       page,
@@ -2966,6 +3167,7 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
     )
     page |> pz_screenshot(path)
     expect_png_pixel(page, path, 102, 110, c(255, 0, 255))
+
     pz_js(
       page,
       r"[
@@ -2991,6 +3193,7 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
       110,
       if (has_badge) c(255, 0, 255) else rep(255, 3)
     )
+
     pz_js(
       page,
       "window.__exitNode.getAnimations({subtree:true})[0].finish()"
@@ -3008,10 +3211,12 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
       what = "the completed reverse animation to remove its mark and badge"
     )
   }
+
   page |> pz_annotate("#marked", label = "Old", id = "mark")
   page |> pz_annotate("#marked", label = "New", id = "mark")
   expect_length(annotation_badge_rects(page), 1)
   expect_identical(annotation_state(page)[[1]]$label, "New")
+
   page |> pz_annotate_clear()
   expect_length(annotation_state(page), 0)
 })
@@ -3107,10 +3312,12 @@ return { ink, fill };
 test_that("right-edge badges translate without squeezing medium or 20em labels", {
   page <- local_viewport_badge_page()
   path <- withr::local_tempfile(fileext = ".png")
+
   for (label in c("#add-task", paste(rep("word", 15), collapse = " "))) {
     pz_js(page, "document.getElementById('edge').style.left='400px'")
     reference <- viewport_badge_reference(page, label)
     expect_gt(reference$width, 30)
+
     pz_js(page, "document.getElementById('edge').style.left='970px'")
     page |> pz_screenshot(path)
     expect_viewport_badge(
@@ -3127,6 +3334,7 @@ test_that("right-edge badges translate without squeezing medium or 20em labels",
 test_that("top and top-right badges move down while retaining their label size", {
   page <- local_viewport_badge_page()
   path <- withr::local_tempfile(fileext = ".png")
+
   for (label in c("#add-task", paste(rep("word", 15), collapse = " "))) {
     for (pad in c(0, 4)) {
       pz_js(
@@ -3134,9 +3342,11 @@ test_that("top and top-right badges move down while retaining their label size",
         "document.getElementById('edge').style.left='400px'; document.getElementById('edge').style.top='250px'"
       )
       reference <- viewport_badge_reference(page, label, pad)
+
       pz_js(page, "document.getElementById('edge').style.top='0px'")
       page |> pz_screenshot(path)
       expect_viewport_badge(page, path, 400 - pad, 0, reference)
+
       pz_js(page, "document.getElementById('edge').style.left='970px'")
       page |> pz_screenshot(path)
       expect_viewport_badge(page, path, 1000 - reference$width, 0, reference)
@@ -3147,6 +3357,7 @@ test_that("top and top-right badges move down while retaining their label size",
 test_that("left and bottom viewport edges use the same minimum translation", {
   page <- local_viewport_badge_page()
   path <- withr::local_tempfile(fileext = ".png")
+
   reference <- viewport_badge_reference(page, "#add-task", pad = 4)
   pz_js(page, "document.getElementById('edge').style.left='-6px'")
   page |> pz_screenshot(path)
@@ -3179,6 +3390,7 @@ outer.appendChild(inner);
 inner.appendChild(edge);
 ]"
   )
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   expect_viewport_badge(
@@ -3200,6 +3412,7 @@ inner.appendChild(edge);
 test_that("badge placement follows movement, scroll, and viewport resize", {
   page <- local_viewport_badge_page()
   reference <- viewport_badge_reference(page, "#add-task")
+
   # Badge placement rides animation frames, which headless CI does not
   # reliably produce on device-emulated pages. Screenshots force a sync
   # before capturing, so drive the same sync here instead of waiting on
@@ -3207,6 +3420,7 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
   sync_badges <- function() {
     pz_js(page, paste0(ANNOTATION_LAYER_JS, "?.sync()"))
   }
+
   # Badges clamp to the client area, which is narrower than the emulated
   # viewport whenever classic scrollbars show, so measure the expected
   # edge from the page instead of hard-coding the requested width.
@@ -3229,18 +3443,21 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
       )
     }
   }
+
   pz_js(page, "document.getElementById('edge').style.left='calc(100vw - 30px)'")
   expect_poll_badge(
     page,
     at_right_edge(1000),
     "the badge to reach its right-edge viewport placement"
   )
+
   page |> pz_device(width = 600, height = 400)
   expect_poll_badge(
     page,
     at_right_edge(600),
     "the badge to follow the resized viewport edge"
   )
+
   pz_js(
     page,
     "document.getElementById('edge').style.left='300px'; document.body.style.height='1200px'; window.scrollTo(0,250)"
@@ -3253,9 +3470,11 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
     },
     "the scrolled target's badge to stay at the viewport top"
   )
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   expect_viewport_badge(page, path, 300, 0, reference)
+
   pz_js(page, "window.scrollTo(0,0)")
   expect_poll_badge(
     page,
@@ -3285,6 +3504,7 @@ document.body.innerHTML =
   )
   viewport_badge_reference(page, "#add-task")
   client_width <- unlist(pz_js(page, "document.documentElement.clientWidth"))
+
   pz_js(
     page,
     sprintf(
@@ -3313,6 +3533,7 @@ document.getElementById('edge').style.left = '%spx'
     badge$left + badge$width,
     client_width - 1 / 64 - 0.001
   )
+
   # The default window is taller than the emulated pages, so grow the body
   # past the measured viewport or the scroll has nowhere to go.
   pz_js(
@@ -3338,11 +3559,13 @@ window.scrollTo(0, 250);
 test_that("off-viewport badges stay with their targets in framed captures", {
   page <- local_viewport_badge_page()
   reference <- viewport_badge_reference(page, "#add-task", pad = 4)
+
   pz_js(page, "document.getElementById('edge').style.top='730px'")
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   badge <- annotation_badge_rects(page)[[1]]
   expect_equal(c(badge$left, badge$bottom), c(396, 726), tolerance = 0.001)
+
   pz_js(page, "document.getElementById('edge').style.top='1500px'")
   spec <- pz_frame("#edge", target_box = "annotated", pad = 8)
   clip <- frame_clip(page, frame_effective(page, spec))
@@ -3365,6 +3588,7 @@ test_that("oversized badges pin to zero without viewport-dependent rewrapping", 
     page,
     paste(rep("word", 15), collapse = " ")
   )
+
   page |> pz_device(width = 200, height = 720)
   pz_js(page, "document.getElementById('edge').style.left='170px'")
   path <- withr::local_tempfile(fileext = ".png")
@@ -3377,6 +3601,7 @@ test_that("oversized badges pin to zero without viewport-dependent rewrapping", 
   )
   expect_gt(badge$width, 200)
   expect_png_pixel(page, path, 2, badge$top + badge$height / 2, c(255, 0, 255))
+
   page |> pz_device(width = 1000, height = 40)
   pz_js(
     page,
@@ -3397,6 +3622,7 @@ test_that("fractional zoomed badge sizes do not leak past the viewport edge", {
   page <- local_viewport_badge_page()
   pz_js(page, "document.documentElement.style.zoom='1.25'")
   reference <- viewport_badge_reference(page, "#add-task")
+
   pz_js(page, "document.getElementById('edge').style.left='776px'")
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
@@ -3416,6 +3642,7 @@ test_that("pop and slide do not feed animated sizes back into badge placement", 
     page,
     "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='0px'"
   )
+
   for (reveal in c("pop", "slide")) {
     pz_js(
       page,
@@ -3472,12 +3699,15 @@ test_that("pop and slide do not feed animated sizes back into badge placement", 
         tolerance = 0.001
       )
     }
+
     page |> pz_annotate_clear("edge")
   }
+
   page |> pz_annotate("#edge", label = "Old", id = "edge")
   page |> pz_annotate("#edge", label = "New", id = "edge")
   expect_length(annotation_badge_rects(page), 1)
   expect_identical(annotation_state(page)[[1]]$label, "New")
+
   page |> pz_annotate_clear()
   expect_length(annotation_state(page), 0)
 })
@@ -3515,6 +3745,7 @@ test_that("a recorded top-right badge appears in retained frames and clears", {
       1:3
     ]
   }
+
   page |>
     pz_annotate(
       "#edge",
@@ -3530,6 +3761,7 @@ test_that("a recorded top-right badge appears in retained frames and clears", {
     loop = page$child_loop,
     what = "a retained frame showing the viewport-contained top-right badge"
   )
+
   page |> pz_annotate_clear("edge")
   pz_poll(
     function() isTRUE(all(abs(last_badge() - 1) < 0.03)),
@@ -3538,6 +3770,7 @@ test_that("a recorded top-right badge appears in retained frames and clears", {
     what = "a retained frame without the cleared viewport badge"
   )
   expect_length(annotation_state(page), 0)
+
   page |> pz_record_stop()
 })
 
@@ -3548,10 +3781,12 @@ test_that("interior zero-size marks clamp badges but viewport-edge points do not
     page,
     "document.getElementById('edge').style.cssText='position:absolute;left:990px;top:5px;width:0;height:0'"
   )
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   expect_true(annotation_state(page)[[1]]$visible)
   expect_viewport_badge(page, path, 1000 - reference$width, 0, reference)
+
   pz_js(page, "document.getElementById('edge').style.left='1000px'")
   page |> pz_screenshot(path)
   badge <- annotation_badge_rects(page)[[1]]
@@ -3565,6 +3800,7 @@ test_that("padding alone cannot pull an off-viewport target's badge inward", {
     page,
     "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='730px'"
   )
+
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   badge <- annotation_badge_rects(page)[[1]]
@@ -3592,6 +3828,7 @@ document.body.style.width = '2000px';
 document.body.style.height = '2000px';
 ]"
   )
+
   pz_poll(
     function() {
       gap <- unlist(pz_js(
@@ -3612,6 +3849,7 @@ document.body.style.height = '2000px';
   expect_equal(outer - viewport, c(24, 18))
   metrics <- page$session$Page$getLayoutMetrics()$cssVisualViewport
   expect_equal(c(metrics$clientWidth, metrics$clientHeight), viewport)
+
   path <- withr::local_tempfile(fileext = ".png")
   # Match recorder crops without the viewport expansion of framed stills.
   capture <- function() {

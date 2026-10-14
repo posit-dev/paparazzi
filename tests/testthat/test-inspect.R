@@ -20,6 +20,7 @@ test_that("the console summary matches the spec format", {
   expect_match(got$out[[1]], "^── paparazzi page ─+$")
   expect_identical(nchar(got$out[[1]]), getOption("width"))
   expect_match(got$out[[2]], "^URL        .*/inspect\\.html$")
+
   inner <- unlist(pz_js(
     page,
     "[window.innerWidth, window.innerHeight, window.devicePixelRatio]"
@@ -52,6 +53,7 @@ test_that("the console summary matches the spec format", {
   )
   expect_identical(got$out[[4]], "Recording  off · cursor hidden")
   expect_false(any(grepl("^Scope ", got$out)))
+
   # No target, no warnings, no visuals by default (tests aren't interactive).
   expect_length(got$msgs, 0L)
 })
@@ -67,6 +69,7 @@ test_that("the scope stack renders with live match counts", {
     got$out[[2]],
     "Scope      root › `#insp-list` (1) › `.insp-item` (12)"
   )
+
   # A narrowed scope compacts its which-qualifier for display.
   narrow <- pz_find_nth(ctx, 2)
   got <- inspect_capture(function() pz_inspect(narrow))
@@ -103,6 +106,7 @@ test_that("stale pinned elements warn without aborting", {
 
 test_that("target matches resolve once, without auto-waiting", {
   page <- local_inspect_page()
+
   # .insp-late arrives after 5s; auto-waiting would hold the call for it.
   got <- inspect_capture(function() pz_inspect(page, ".insp-late"))
   expect_identical(got$out[[4]], "Target     `.insp-late` → no matches")
@@ -113,6 +117,7 @@ test_that("target matches resolve once, without auto-waiting", {
 test_that("targets resolve relative to the current scope", {
   page <- local_inspect_page()
   ctx <- pz_find(page, "#insp-list")
+
   got <- inspect_capture(function() pz_inspect(ctx, ".insp-item"))
   expect_identical(got$out[[5]], "Target     `.insp-item` → 12 matches")
 
@@ -147,6 +152,7 @@ test_that("each match shows a short tag and its state", {
 
 test_that("long match lists are truncated", {
   page <- local_inspect_page()
+
   got <- inspect_capture(function() pz_inspect(page, ".insp-item"))
   expect_identical(got$out[[4]], "Target     `.insp-item` → 12 matches")
   rows <- grep("^  [0-9]+  ", got$out)
@@ -199,6 +205,7 @@ test_that("show = screenshot writes a temp file and prints its path", {
   page <- local_inspect_page()
   withr::local_options(cli.width = 1000)
   got <- inspect_capture(function() pz_inspect(page, show = "screenshot"))
+
   m <- regmatches(
     got$msgs[[1]],
     regexpr("Annotated screenshot: '([^']+)'", got$msgs[[1]])
@@ -313,6 +320,7 @@ test_that("print() shows the summary without the target section or visuals", {
 
 test_that("pz_inspect validates its input", {
   page <- local_inspect_page()
+
   expect_error(pz_inspect(page, show = "poster"), class = "rlang_error")
   expect_error(pz_inspect(1), class = "paparazzi_error_context")
   expect_error(
@@ -345,6 +353,7 @@ test_that("target outline numbering keeps hidden matches in the count", {
     },
     .package = "utils"
   )
+
   # #insp-ghost is hidden (zero-area) and matches first; the drawn badge
   # must still carry the number the console summary gives #insp-real.
   got <- inspect_capture(function() {
@@ -357,6 +366,7 @@ test_that("target outline numbering keeps hidden matches in the count", {
   expect_length(viewed, 1L)
   expect_match(viewed[[1]], "devtools", fixed = TRUE)
   expect_identical(got$out[[4]], "Target     `.insp-pair` → 2 matches")
+
   texts <- unlist(pz_js(
     page,
     r"[

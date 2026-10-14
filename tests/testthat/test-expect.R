@@ -7,6 +7,7 @@ test_that("pz_expect_text places target after the expected text", {
 
 test_that("pz_expect_exists passes and returns ctx invisibly", {
   page <- local_elements_page()
+
   res <- withVisible(pz_expect_exists(page, target = ".btn"))
   pz_expect_exists(page, ".btn")
   expect_false(res$visible)
@@ -21,6 +22,7 @@ test_that("pz_expect_exists trivially passes at the root", {
 test_that("pz_expect_exists failure has the classed error format", {
   page <- local_elements_page()
   local_outside_testthat()
+
   err <- expect_error(
     pz_expect_exists(page, target = ".never", timeout = 0),
     class = "paparazzi_expectation_failure"
@@ -34,6 +36,7 @@ test_that("pz_expect_exists failure has the classed error format", {
 
 test_that("pz_expect_count passes exact counts and inclusive bounds", {
   page <- local_elements_page()
+
   pz_expect_count(page, n = 1, target = ".story")
   pz_expect_count(page, 1, ".story")
   pz_expect_count(page, n = 3, target = ".message")
@@ -47,12 +50,14 @@ test_that("pz_expect_count passes exact counts and inclusive bounds", {
 test_that("pz_expect_count(n = 0) passes on a missing target without waiting", {
   page <- local_elements_page()
   start <- Sys.time()
+
   pz_expect_count(page, n = 0, target = ".never", timeout = 0)
   expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
 })
 
 test_that("pz_expect_count validates its inputs", {
   page <- local_elements_page()
+
   expect_error(pz_expect_count(page), "range")
   expect_error(pz_expect_count(page, n = 1, min = 1), "combine")
   expect_error(pz_expect_count(page, n = 1, max = 1), "combine")
@@ -68,6 +73,7 @@ test_that("pz_expect_count validates its inputs", {
 test_that("pz_expect_count failure shows the observed count", {
   page <- local_elements_page()
   local_outside_testthat()
+
   err <- expect_error(
     pz_expect_count(page, n = 3, target = ".btn", timeout = 0),
     class = "paparazzi_expectation_failure"
@@ -79,6 +85,7 @@ test_that("pz_expect_count failure shows the observed count", {
 
 test_that("pz_expect_visible requires every match to be visible", {
   page <- local_elements_page()
+
   pz_expect_visible(page, target = ".message")
   pz_expect_visible(page, target = ".story")
 
@@ -106,6 +113,7 @@ test_that("pz_expect_visible requires every match to be visible", {
 
 test_that("pz_expect_hidden is pz_expect_visible(not = TRUE)", {
   page <- local_elements_page()
+
   # .ghost is display: none; .veiled is visibility: hidden.
   pz_expect_hidden(page, target = ".ghost")
   pz_expect_hidden(page, target = ".veiled")
@@ -128,6 +136,7 @@ test_that("pz_expect_hidden is pz_expect_visible(not = TRUE)", {
 
 test_that("pz_expect_text contains, exact, and regex, whitespace-collapsed", {
   page <- local_elements_page()
+
   pz_expect_text(page, "otters", target = ".story")
   pz_expect_text(page, "otters", ".story")
   pz_expect_text(
@@ -152,6 +161,7 @@ test_that("pz_expect_text contains, exact, and regex, whitespace-collapsed", {
 test_that("pz_expect_text compares vectors pairwise in order", {
   page <- local_elements_page()
   texts <- c("What's the weather?", "The weather is sunny.", "Bring a hat.")
+
   pz_expect_text(page, texts, target = ".message", match = "exact")
   pz_expect_text(
     page,
@@ -188,6 +198,7 @@ test_that("pz_expect_text compares vectors pairwise in order", {
 
 test_that("pz_expect_text with not = TRUE", {
   page <- local_elements_page()
+
   pz_expect_text(page, "penguins", target = ".story", not = TRUE)
   # No match satisfies, including zero matches.
   pz_expect_text(page, "anything", target = ".never", not = TRUE, timeout = 0)
@@ -221,6 +232,7 @@ test_that("pz_expect_text with not = TRUE", {
 test_that("page text is never interpreted as cli markup", {
   page <- local_elements_page()
   local_outside_testthat()
+
   err <- expect_error(
     pz_expect_text(page, "nope", target = ".brace", timeout = 0),
     class = "paparazzi_expectation_failure"
@@ -232,6 +244,7 @@ test_that("page text is never interpreted as cli markup", {
 test_that("pz_expect_text failure shows the last seen text", {
   page <- local_elements_page()
   local_outside_testthat()
+
   err <- expect_error(
     pz_expect_text(page, "penguins", target = ".story", timeout = 0),
     class = "paparazzi_expectation_failure"
@@ -245,6 +258,7 @@ test_that("pz_expect_text failure shows the last seen text", {
 
 test_that("target = NULL at the root resolves to document.body", {
   page <- local_elements_page()
+
   pz_expect_text(page, "otters")
 
   local_outside_testthat()
@@ -257,6 +271,7 @@ test_that("target = NULL at the root resolves to document.body", {
 
 test_that("expectations retry until they pass", {
   page <- local_elements_page()
+
   # The element gains the expected text only after 300 ms.
   pz_js(
     page,
@@ -268,11 +283,13 @@ test_that("expectations retry until they pass", {
 
 test_that("timeout = 0 checks once and fails fast", {
   page <- local_elements_page()
+
   pz_js(
     page,
     "setTimeout(() => { document.querySelector('.late-text').textContent = 'ready now'; }, 300)",
     await = FALSE
   )
+
   local_outside_testthat()
   start <- Sys.time()
   expect_error(
@@ -284,6 +301,7 @@ test_that("timeout = 0 checks once and fails fast", {
 
 test_that("the testthat bridge counts passes and reports failures", {
   page <- local_elements_page()
+
   expect_success(pz_expect_exists(page, target = ".btn"))
   expect_failure(pz_expect_exists(page, target = ".never", timeout = 0))
 })
@@ -299,6 +317,7 @@ test_that("outside of testthat, failures abort with the classed error", {
 
 test_that("expectations validate their inputs", {
   page <- local_elements_page()
+
   expect_error(pz_expect_exists(page, extra = 1), "empty")
   expect_error(
     pz_expect_exists(1, target = ".btn"),
@@ -321,6 +340,7 @@ test_that("expectations validate their inputs", {
 test_that("expect_retry returns the last failure without aborting", {
   page <- local_elements_page()
   n <- 0
+
   result <- expect_retry(
     function() {
       n <<- n + 1
@@ -337,6 +357,7 @@ test_that("expect_retry returns the last failure without aborting", {
 test_that("expect_retry with timeout = 0 checks once", {
   page <- local_elements_page()
   n <- 0
+
   result <- expect_retry(
     function() {
       n <<- n + 1
@@ -353,6 +374,7 @@ test_that("expect_retry pumps the page's event loop between checks", {
   page <- local_elements_page()
   fired <- FALSE
   later::later(function() fired <<- TRUE, delay = 0.1, loop = page$child_loop)
+
   result <- expect_retry(
     function() list(pass = fired),
     timeout = 2,
@@ -387,6 +409,7 @@ test_that("expectations resolve inside the current scope", {
 test_that("each attempt re-queries lazily inside the pinned scope", {
   page <- local_scopes_page()
   ctx <- pz_find(page, "#scope-a")
+
   pz_js(
     page,
     "setTimeout(function() {
@@ -396,6 +419,7 @@ test_that("each attempt re-queries lazily inside the pinned scope", {
       document.getElementById('scope-a').appendChild(el);
     }, 300)"
   )
+
   # Inside the scope the count reaches 2 once the span lands; at the
   # root it would be 3 (scope-b's sc-label included) and never pass.
   expect_invisible(ctx |> pz_expect_count(2, target = ".sc-label", timeout = 3))
@@ -457,6 +481,7 @@ test_that("a mid-expectation detach raises for target = NULL too", {
 
 test_that("pz_expect_enabled requires every match to be enabled", {
   page <- local_state_page()
+
   pz_expect_enabled(page, target = ".on")
   pz_expect_enabled(page, target = "#btn-disabled", not = TRUE)
   # Inputs inside a disabled fieldset count as disabled.
@@ -480,6 +505,7 @@ test_that("pz_expect_enabled requires every match to be enabled", {
 
 test_that("pz_expect_enabled retries until a control is enabled", {
   page <- local_state_page()
+
   pz_js(
     page,
     "setTimeout(function () {
@@ -492,6 +518,7 @@ test_that("pz_expect_enabled retries until a control is enabled", {
 
 test_that("pz_expect_focused checks document.activeElement", {
   page <- local_state_page()
+
   pz_act_focus(page, target = "#focus-target")
   pz_expect_focused(page, target = "#focus-target")
   pz_expect_focused(page, target = "#btn-enabled", not = TRUE)
@@ -506,6 +533,7 @@ test_that("pz_expect_focused checks document.activeElement", {
 
 test_that("pz_expect_checked covers checkboxes and radios", {
   page <- local_state_page()
+
   pz_expect_checked(page, target = ".checked-on")
   pz_expect_checked(page, target = "#cb-off", not = TRUE)
 
@@ -523,6 +551,7 @@ test_that("pz_expect_checked covers checkboxes and radios", {
 
 test_that("pz_expect_in_viewport checks viewport overlap", {
   page <- local_state_page()
+
   pz_expect_in_viewport(page, target = "#in-viewport")
   pz_expect_in_viewport(page, target = "#off-viewport", not = TRUE)
 
@@ -548,6 +577,7 @@ test_that("pz_expect_in_viewport retries when an element moves into view", {
 test_that("state expectations work from a scoped context", {
   page <- local_state_page()
   ctx <- pz_find(page, "#btn-one")
+
   # target = NULL is the pinned set: #btn-one.
   ctx |> pz_expect_enabled()
   ctx |> pz_expect_checked(not = TRUE)
@@ -563,6 +593,7 @@ test_that("state expectations work from a scoped context", {
 
 test_that("pz_expect_value compares the value property", {
   page <- local_state_page()
+
   pz_expect_value(page, "hello", target = "#val-text")
   pz_expect_value(page, "hello world", target = "#val-text", match = "exact")
   pz_expect_value(page, "^h", target = "#val-text", match = "regex")
@@ -574,6 +605,7 @@ test_that("pz_expect_value compares the value property", {
 
 test_that("pz_expect_value collapses whitespace on both sides", {
   page <- local_state_page()
+
   # The textarea holds "line one\nline two"; both sides collapse.
   pz_expect_value(
     page,
@@ -587,6 +619,7 @@ test_that("pz_expect_value collapses whitespace on both sides", {
 test_that("pz_expect_value compares vectors pairwise in order", {
   page <- local_state_page()
   values <- c("alpha", "beta", "gamma")
+
   pz_expect_value(page, values, target = ".val-line", match = "exact")
 
   local_outside_testthat()
@@ -615,6 +648,7 @@ test_that("pz_expect_value compares vectors pairwise in order", {
 
 test_that("pz_expect_value treats a missing value property as unsatisfied", {
   page <- local_state_page()
+
   # #val-none is a <p>: no value property, reads as NA.
   pz_expect_value(
     page,
@@ -643,8 +677,10 @@ test_that("pz_expect_value treats a missing value property as unsatisfied", {
 
 test_that("pz_expect_value follows a typed value", {
   page <- local_state_page()
+
   pz_js(page, "document.getElementById('val-text').value = 'typed otters'")
   pz_expect_value(page, "typed otters", target = "#val-text", match = "exact")
+
   # And it retries: the input only carries the text after a timer.
   pz_js(
     page,
@@ -664,6 +700,7 @@ test_that("pz_expect_value follows a typed value", {
 
 test_that("pz_expect_attr checks named attribute pairs", {
   page <- local_state_page()
+
   pz_expect_attr(
     page,
     "#link-one",
@@ -698,6 +735,7 @@ test_that("pz_expect_attr checks named attribute pairs", {
 
 test_that("pz_expect_attr negates the combined condition", {
   page <- local_state_page()
+
   pz_expect_attr(
     page,
     "#link-one",
@@ -726,6 +764,7 @@ test_that("pz_expect_attr negates the combined condition", {
 test_that("pz_expect_attr compares vectors pairwise in order", {
   page <- local_state_page()
   hrefs <- c("one.html", "two.html", "three.html")
+
   pz_expect_attr(page, ".attr-line", href = hrefs)
   pz_expect_attr(page, ".attr-line", href = hrefs, class = "attr-line")
 
@@ -744,6 +783,7 @@ test_that("pz_expect_attr compares vectors pairwise in order", {
     'Last seen: "one.html", "two.html", "three.html"',
     fixed = TRUE
   )
+
   pz_expect_attr(
     page,
     ".attr-line",
@@ -755,6 +795,7 @@ test_that("pz_expect_attr compares vectors pairwise in order", {
 
 test_that("pz_expect_attr validates attribute pairs", {
   page <- local_state_page()
+
   expect_error(pz_expect_attr(page, "#link-one"), "at least one named")
   expect_error(pz_expect_attr(page, "#link-one", "x"), "named")
   expect_error(pz_expect_attr(page, "#link-one", href = 1), "character")
@@ -772,6 +813,7 @@ test_that("pz_expect_attr validates attribute pairs", {
 
 test_that("pz_expect_attr retries until the attribute lands", {
   page <- local_state_page()
+
   pz_js(
     page,
     "setTimeout(function () {
@@ -784,6 +826,7 @@ test_that("pz_expect_attr retries until the attribute lands", {
 
 test_that("pz_expect_class checks class membership", {
   page <- local_state_page()
+
   pz_expect_class(page, "btn", target = "#btn-one")
   pz_expect_class(page, "btn-primary", target = "#btn-one")
   # no match carries "missing", including the bare span.
@@ -803,6 +846,7 @@ test_that("pz_expect_class checks class membership", {
 
 test_that("pz_expect_class validates its input", {
   page <- local_state_page()
+
   expect_error(
     pz_expect_class(page, "btn btn", target = ".cls"),
     "single class name"
@@ -816,6 +860,7 @@ test_that("pz_expect_class validates its input", {
 
 test_that("pz_expect_js maps the predicate over every match", {
   page <- local_state_page()
+
   pz_expect_js(page, "el => el.scrollTop === 0", target = "#scroll-box")
   pz_expect_js(page, "el => el.tagName === 'BODY'") # target = NULL: the body
   pz_expect_js(page, "el => el.disabled", target = "#btn-disabled")
@@ -834,6 +879,7 @@ test_that("pz_expect_js maps the predicate over every match", {
 test_that("pz_expect_js failure shows the predicate and the count", {
   page <- local_state_page()
   local_outside_testthat()
+
   err <- expect_error(
     pz_expect_js(
       page,
@@ -881,14 +927,17 @@ test_that("pz_expect_js surfaces a throwing predicate as a JS error", {
 
 test_that("pz_expect_js works from a scoped context", {
   page <- local_state_page()
+
   pz_js(page, "document.getElementById('scroll-box').scrollTop = 50")
   ctx <- pz_find(page, "#scroll-box")
+
   # target = NULL is the pinned set: the predicate sees #scroll-box.
   ctx |> pz_expect_js("el => el.scrollTop > 0")
 })
 
 test_that("pz_expect_title matches contains, exact, and regex", {
   page <- local_state_page()
+
   pz_expect_title(page, "state fixture")
   pz_expect_title(page, "paparazzi state fixture", match = "exact")
   pz_expect_title(page, "state|unit", match = "regex")
@@ -898,6 +947,7 @@ test_that("pz_expect_title matches contains, exact, and regex", {
 test_that("pz_expect_title failure uses the classed format", {
   page <- local_state_page()
   local_outside_testthat()
+
   err <- expect_error(
     pz_expect_title(page, "nope", timeout = 0),
     class = "paparazzi_expectation_failure"
@@ -911,6 +961,7 @@ test_that("pz_expect_title failure uses the classed format", {
 
 test_that("pz_expect_title retries until the title changes", {
   page <- local_state_page()
+
   pz_js(
     page,
     "setTimeout(function () { document.title = 'renamed title'; }, 300)",
@@ -921,6 +972,7 @@ test_that("pz_expect_title retries until the title changes", {
 
 test_that("pz_expect_url matches contains, exact, and regex", {
   page <- local_state_page()
+
   pz_expect_url(page, "state.html")
   pz_expect_url(page, pz_get_url(page), match = "exact")
   pz_expect_url(page, "state[.]html$", match = "regex")
@@ -931,6 +983,7 @@ test_that("pz_expect_url matches contains, exact, and regex", {
 test_that("pz_expect_url failure uses the classed format", {
   page <- local_state_page()
   local_outside_testthat()
+
   err <- expect_error(
     pz_expect_url(page, "https://example.com", timeout = 0),
     class = "paparazzi_expectation_failure"
@@ -947,6 +1000,7 @@ test_that("pz_expect_url failure uses the classed format", {
 
 test_that("pz_expect_url retries until the hash lands", {
   page <- local_state_page()
+
   pz_js(
     page,
     "setTimeout(function () { location.hash = 'later'; }, 300)",
@@ -958,6 +1012,7 @@ test_that("pz_expect_url retries until the hash lands", {
 test_that("page-level expectations work from a scoped context", {
   page <- local_state_page()
   ctx <- pz_find(page, "#btn-one")
+
   ctx |> pz_expect_title("state fixture")
   ctx |> pz_expect_url("state.html")
 })

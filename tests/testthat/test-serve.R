@@ -40,6 +40,7 @@ test_that("app stdout and stderr share readable logs mid-run and after stop", {
   logs <- app$logs()
   expect_type(logs, "character")
   expect_true(any(grepl("Listening on", logs, fixed = TRUE)))
+
   app$stop()
   expect_true(has_markers(app$logs()))
 })
@@ -57,6 +58,7 @@ test_that("appDir in shiny_options is rejected before an app process can start",
   skip_if_no_shiny()
   app_dir <- shiny_app_fixture_dir()
   options_app <- shiny_app_fixture_file()
+
   expect_false(identical(app_dir, options_app))
   expect_true(any(grepl(
     'message("PAPARAZZI_FIXTURE_APP")',
@@ -120,6 +122,7 @@ test_that("withr::defer(app$stop()) cleans up on scope exit", {
 test_that("the finalizer stops the app as a last resort", {
   skip_if_no_shiny()
   port <- pz_serve_shiny(shiny_app_fixture_dir())$port
+
   # Two passes: the first marks the handle unreachable, the second
   # guarantees its finalizer has actually run.
   gc()
@@ -129,6 +132,7 @@ test_that("the finalizer stops the app as a last resort", {
 
 test_that("a broken app fails loudly with its log output", {
   skip_if_no_shiny()
+
   err <- expect_error(
     pz_serve_shiny(shiny_app_fixture_broken()),
     class = "paparazzi_error_app_startup"
@@ -178,6 +182,7 @@ test_that("new_app constructs even when its port already has a listener", {
 
 test_that("an invalid max_attempts option fails with the option named", {
   withr::local_options(paparazzi.serve.max_attempts = 0)
+
   expect_snapshot(error = TRUE, {
     pz_serve_shiny(shiny_app_fixture_dir())
   })
@@ -187,6 +192,7 @@ test_that("a child that dies from a taken port exhausts its retries", {
   skip_if_no_shiny()
   # Two attempts prove the retry loop; the production default is five.
   withr::local_options(paparazzi.serve.max_attempts = 2)
+
   err <- expect_error(
     pz_serve_shiny(shiny_app_fixture_port_taken(), timeout = 5),
     class = "paparazzi_error_app_startup",
@@ -241,6 +247,7 @@ test_that("startup error only includes an escaped, bounded log tail", {
 
 test_that("app_dir is validated", {
   skip_if_no_shiny()
+
   expect_error(pz_serve_shiny(42), class = "paparazzi_error_input")
   expect_error(
     pz_serve_shiny("does/not/exist"),
@@ -251,6 +258,7 @@ test_that("app_dir is validated", {
 
 test_that("shiny_options, envvars, timeout, and dots are validated", {
   skip_if_no_shiny()
+
   expect_error(
     pz_serve_shiny(shiny_app_fixture_dir(), shiny_options = "quiet"),
     "must be a list"
@@ -275,6 +283,7 @@ test_that("shiny_options, envvars, timeout, and dots are validated", {
 
 test_that("an app that never listens times out and is cleaned up", {
   skip_if_no_shiny()
+
   err <- expect_error(
     pz_serve_shiny(shiny_app_fixture_slow(), timeout = 0.5),
     class = "paparazzi_error_app_startup",
@@ -286,6 +295,7 @@ test_that("an app that never listens times out and is cleaned up", {
 
 test_that("app timeout has a visible ten-second default and rejects NULL", {
   expect_equal(formals(pz_serve_shiny)$timeout, 10)
+
   expect_error(
     pz_serve_shiny(shiny_app_fixture_dir(), timeout = NULL),
     "timeout"
@@ -303,6 +313,7 @@ test_that("static directories and single HTML files share the handle contract", 
   for (path in c(dir, html)) {
     gc()
     servers <- httpuv::listServers()
+
     server <- pz_serve_static(path)
     withr::defer(server$stop())
     expect_s3_class(server, "PaparazziServe")
@@ -312,26 +323,32 @@ test_that("static directories and single HTML files share the handle contract", 
     if (identical(path, html)) {
       expect_match(server$url, "/hello%20world[.]html$")
     }
+
     page <- local_page(server)
     expect_identical(pz_get_text(page, target = "h1"), "Static capture")
     pz_close(page)
     expect_true(server$is_running())
+
     expect_invisible(server$stop())
     expect_no_error(server$stop())
     expect_false(server$is_running())
+
     # A parallel worker can bind the freed port; observe our httpuv servers.
     expect_identical(httpuv::listServers(), servers)
   }
 
   gc()
   servers <- httpuv::listServers()
+
   owned <- local_page(dir)
   owned_server <- owned$app
   expect_s3_class(owned_server, "PaparazziServe")
   expect_true(owned_server$is_running())
   expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
+
   pz_nav_reload(owned)
   expect_identical(pz_get_text(owned, target = "h1"), "Static capture")
+
   pz_close(owned)
   expect_false(owned_server$is_running())
   expect_identical(httpuv::listServers(), servers)
@@ -342,12 +359,14 @@ test_that("static handles stop on scope exit and finalization", {
   # Collect unrelated finalizers before snapshotting the running servers.
   gc()
   servers <- httpuv::listServers()
+
   local({
     server <- pz_serve_static(dirname(fixture_file()))
     withr::defer(server$stop())
     expect_true(server$is_running())
   })
   expect_identical(httpuv::listServers(), servers)
+
   server <- pz_serve_static(fixture_file())
   expect_length(httpuv::listServers(), length(servers) + 1L)
   rm(server)
@@ -399,6 +418,7 @@ test_that("Quarto document handles own independent processes and shared pages", 
     pz_get_text(second, target = "#document-marker"),
     "Quarto capture"
   )
+
   pz_close(page)
   pz_close(second)
   expect_true(server$is_running())
@@ -406,6 +426,7 @@ test_that("Quarto document handles own independent processes and shared pages", 
   expect_no_error(server$stop())
   expect_false(server$is_running())
   expect_true(wait_until(function() !app_port_reachable(server$port)))
+
   expect_true(other$is_running())
   expect_type(server$logs(), "character")
   expect_gt(length(server$logs()), 0)
@@ -417,17 +438,21 @@ test_that("pz_open owns a one-off Quarto document preview", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+
   page <- local_page(path)
   port <- page$app$port
+
   expect_identical(
     pz_get_text(page, target = "#document-marker"),
     "Quarto capture"
   )
+
   pz_nav_reload(page)
   expect_identical(
     pz_get_text(page, target = "#document-marker"),
     "Quarto capture"
   )
+
   pz_close(page)
   expect_true(wait_until(function() !app_port_reachable(port)))
 })
@@ -451,8 +476,10 @@ test_that("Quarto renders R Markdown with knitr", {
     ),
     path
   )
+
   server <- pz_serve_quarto(path)
   withr::defer(server$stop())
+
   page <- local_page(server, timeout = 30)
   expect_match(
     pz_get_text(page, target = "body"),
@@ -471,10 +498,12 @@ test_that("Quarto projects use their output URL", {
   )
   path <- file.path(dir, "index.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+
   # render = TRUE on a project: the only project-level full render in
   # the suite (standalone documents render on startup either way).
   server <- pz_serve_quarto(dir, render = TRUE)
   withr::defer(server$stop())
+
   page <- local_page(server, timeout = 30)
   expect_identical(
     pz_get_text(page, target = "#document-marker"),
@@ -487,6 +516,7 @@ test_that("Quarto finalizers stop the process tree", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+
   port <- pz_serve_quarto(path)$port
   gc()
   gc()
@@ -497,17 +527,21 @@ test_that("Quarto CLI lookup respects QUARTO_PATH and fails with advice", {
   dir <- withr::local_tempdir()
   executable <- file.path(dir, "quarto")
   file.create(executable)
+
   withr::local_envvar(QUARTO_PATH = executable)
   expect_identical(quarto_cli(), executable)
+
   withr::local_envvar(QUARTO_PATH = "", PATH = "")
   err <- expect_error(quarto_cli(), class = "paparazzi_error_quarto_not_found")
   expect_match(conditionMessage(err), "Install Quarto", fixed = TRUE)
+
   withr::local_envvar(QUARTO_PATH = file.path(dir, "missing"))
   expect_error(quarto_cli(), class = "paparazzi_error_quarto_not_found")
 })
 
 test_that("Quarto paths, rendering, and dots are validated", {
   path <- test_path("fixtures", "quarto", "document.qmd")
+
   expect_error(pz_serve_quarto(42), "must be a single string")
   expect_error(
     pz_serve_quarto("does/not/exist"),
@@ -525,13 +559,16 @@ test_that("Quarto startup failures include logs and release the port", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "broken.qmd")
   writeLines(c("---", "format: nonexistent-format", "---", "Broken"), path)
+
   port <- random_port()
   local_mocked_bindings(random_port = function(...) port)
+
   expect_error(
     pz_serve_quarto(path),
     class = "paparazzi_error_quarto_startup",
     regexp = "exited during startup"
   )
+
   expect_true(wait_until(function() !app_port_reachable(port)))
 })
 
@@ -579,6 +616,7 @@ test_that("Quarto preflight retries a port takeover", {
     attempts <<- attempts + 1L
     if (attempts == 1L) taken else picker()
   })
+
   server <- pz_serve_quarto(path)
   withr::defer(server$stop())
   expect_false(identical(server$port, taken))
@@ -587,6 +625,7 @@ test_that("Quarto preflight retries a port takeover", {
 
 test_that("automatic serving detection prioritizes Shiny, then Quarto, then static", {
   dir <- withr::local_tempdir()
+
   expect_identical(serve_kind(dir), "static")
   file.create(file.path(dir, "_quarto.yml"))
   expect_identical(serve_kind(dir), "quarto")
@@ -600,6 +639,7 @@ test_that("automatic serving detection prioritizes Shiny, then Quarto, then stat
   expect_null(serve_kind(file.path(dir, "ui.R")))
   expect_null(serve_kind(file.path(dir, "server.R")))
   expect_identical(serve_kind(shiny_app_fixture_file()), "shiny")
+
   # Mocked so the assertion is deterministic where httpuv isn't installed.
   local_mocked_bindings(httpuv_available = function() TRUE)
   # pz_open() serves .html files over HTTP when httpuv is available; other
@@ -607,6 +647,7 @@ test_that("automatic serving detection prioritizes Shiny, then Quarto, then stat
   expect_identical(serve_kind(fixture_file()), "static")
   file.create(file.path(dir, "page.htm"))
   expect_null(serve_kind(file.path(dir, "page.htm")))
+
   doc <- file.path(dir, "document.Rmd")
   file.create(doc)
   expect_identical(serve_kind(doc), "quarto")
@@ -614,6 +655,7 @@ test_that("automatic serving detection prioritizes Shiny, then Quarto, then stat
     serve_kind(test_path("fixtures", "quarto", "document.qmd")),
     "quarto"
   )
+
   expect_null(serve_kind(42))
   expect_null(serve_kind("does/not/exist"))
 })
@@ -713,6 +755,7 @@ test_that("static servers retry when the port is taken", {
   skip_if_not_installed("httpuv")
   dir <- withr::local_tempdir()
   writeLines("<p>hi</p>", file.path(dir, "index.html"))
+
   calls <- 0
   real <- httpuv::runStaticServer
   local_mocked_bindings(
@@ -725,6 +768,7 @@ test_that("static servers retry when the port is taken", {
     },
     .package = "httpuv"
   )
+
   server <- pz_serve_static(dir)
   withr::defer(server$stop())
   # calls can exceed 2 without a bug: with parallel test workers another
@@ -747,9 +791,11 @@ test_that("static file URLs encode literal percent signs and reserved characters
   dir <- withr::local_tempdir()
   path <- file.path(dir, "a%20b #1.html")
   writeLines('<html><body><h1>Encoded filename</h1></body></html>', path)
+
   server <- pz_serve_static(path)
   withr::defer(server$stop())
   expect_match(server$url, "a%2520b%20%231.html", fixed = TRUE)
+
   page <- local_page(server)
   expect_identical(pz_get_text(page, target = "h1"), "Encoded filename")
 })
@@ -759,12 +805,15 @@ test_that("Quarto startup timeouts clean up the process tree", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "document.qmd")
   file.copy(test_path("fixtures", "quarto", "document.qmd"), path)
+
   port <- random_port()
   local_mocked_bindings(random_port = function(...) port)
+
   expect_error(
     quarto_start(path, FALSE, quarto_cli(), timeout = 0),
     class = "paparazzi_error_quarto_startup",
     regexp = "did not start within"
   )
+
   expect_true(wait_until(function() !app_port_reachable(port)))
 })

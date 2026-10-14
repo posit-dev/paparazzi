@@ -28,6 +28,7 @@ test_that("pz_device validates its inputs", {
 
 test_that("pz_device returns its context invisibly, from any context", {
   page <- local_device_page()
+
   expect_invisible(pz_device(page, width = 800))
 
   scoped <- pz_find(page, "#px")
@@ -69,6 +70,7 @@ test_that("a failed device change doesn't leak into later partial changes", {
     record_device_change = function(page, code, call) stop("override failed"),
     expect_error(pz_device(page, width = 800), "override failed")
   )
+
   pz_device(page, height = 500)
   expect_equal(js(page, "innerWidth"), 640)
   expect_equal(js(page, "innerHeight"), 500)
@@ -80,6 +82,7 @@ test_that("a failed device change doesn't leak into later partial changes", {
   failing$setEmulatedMedia <- function(...) stop("media failed")
   session$Emulation <- failing
   expect_error(pz_device(page, color_scheme = "dark"), "media failed")
+
   session$Emulation <- emulation
   pz_device(page, reduced_motion = TRUE)
   expect_false(js(page, "matchMedia('(prefers-color-scheme: dark)').matches"))
@@ -178,6 +181,7 @@ test_that("a css zoom that fails after registering its script can be disabled", 
     },
     expect_error(pz_device(page, zoom = 2, zoom_method = "css"), "apply failed")
   )
+
   pz_device(page, zoom = 2, zoom_method = "css")
   pz_device(page, zoom = 1)
   pz_nav_goto(page, nav_fixture_url("b"))

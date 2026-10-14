@@ -28,6 +28,7 @@ test_that("recording rejects explicit annotated home but uses staged element hom
     side = "right",
     reveal = "none"
   )
+
   out <- withr::local_tempfile(fileext = ".mp4")
   for (when in c("start", "stop")) {
     expect_error(
@@ -40,12 +41,14 @@ test_that("recording rejects explicit annotated home but uses staged element hom
     )
     expect_null(page_recorder(page))
   }
+
   staged <- pz_stage_frame(page, "#home", target_box = "annotated")
   expect_error(
     pz_record_start(staged, out, frame = ctx_frame(staged)),
     "home|recording"
   )
   expect_null(page_recorder(page))
+
   pz_record_start(staged, out, hold = c(0, 0))
   defer_record_stop(page)
   rec <- page_recorder(page)
@@ -55,6 +58,7 @@ test_that("recording rejects explicit annotated home but uses staged element hom
     unlist(record_crop_box(page, rec$frame)[c("x", "y")]),
     c(x = 200, y = 120)
   )
+
   pz_record_stop(page)
   expect_equal(
     unlist(rec$crop[c("x", "y", "width", "height")]),
@@ -288,6 +292,7 @@ test_that("absolute figure paths yield output-relative video sources", {
     output.dir = file.path(dir, "published"),
     rmarkdown.pandoc.to = "html"
   )
+
   withr::local_options(knitr.graphics.rel_path = FALSE)
   input <- file.path(dir, "video.Rmd")
   output <- file.path(dir, "published", "index.md")
@@ -303,6 +308,7 @@ test_that("absolute figure paths yield output-relative video sources", {
     ),
     input
   )
+
   knitr::knit(input, output = output, envir = environment(), quiet = TRUE)
   src <- video_sources(paste(readLines(output), collapse = "\n"))
   expect_length(src, 1L)
@@ -323,6 +329,7 @@ test_that("rmarkdown renders recordings with absolute fig.path", {
   dir.create(published)
   figure_path <- file.path(published, "article_files", "figure-html", "")
   input <- file.path(dir, "absolute-fig-video.Rmd")
+
   writeLines(
     c(
       "---",
@@ -337,6 +344,7 @@ test_that("rmarkdown renders recordings with absolute fig.path", {
     ),
     input
   )
+
   output <- rmarkdown::render(
     input,
     output_dir = published,
@@ -358,6 +366,7 @@ test_that("named videos resolve from final rendered HTML", {
   dir.create(file.path(dir, "published"))
   absolute <- file.path(dir, "absolute.mp4")
   input <- file.path(dir, "record-video.Rmd")
+
   writeLines(
     c(
       "---",
@@ -376,6 +385,7 @@ test_that("named videos resolve from final rendered HTML", {
     ),
     input
   )
+
   output <- getExportedValue("rmarkdown", "render")(
     input,
     output_dir = file.path(dir, "published"),
@@ -412,6 +422,7 @@ test_that("named videos resolve from final rendered HTML", {
     ),
     links_input
   )
+
   links_output <- getExportedValue("rmarkdown", "render")(
     links_input,
     output_dir = file.path(dir, "published"),
@@ -447,6 +458,7 @@ test_that("named video resolves from final Quarto HTML", {
   input <- file.path(dir, "record-video.qmd")
   package_root <- normalizePath(test_path("..", ".."))
   fixture <- normalizePath(record_fixture_file())
+
   writeLines(
     c(
       "---",
@@ -466,6 +478,7 @@ test_that("named video resolves from final Quarto HTML", {
     ),
     input
   )
+
   result <- processx::run(
     Sys.which("quarto"),
     c("render", input, "--to", "html"),
@@ -478,6 +491,7 @@ test_that("named video resolves from final Quarto HTML", {
     0L,
     info = paste(result$stdout, result$stderr)
   )
+
   output <- file.path(dir, "record-video.html")
   src <- video_sources(paste(readLines(output, warn = FALSE), collapse = "\n"))
   expect_length(src, 1L)
@@ -495,6 +509,7 @@ test_that("knitted recordings return media only at completion", {
   page <- local_record_page()
   dir <- withr::local_tempdir()
   withr::local_dir(dir)
+
   text <- paste(
     '```{r demo, echo=FALSE, error=FALSE}',
     'start <- withVisible(pz_record_start(page, fps=5, hold=c(0, 0), format="gif"))',
@@ -510,8 +525,10 @@ test_that("knitted recordings return media only at completion", {
     '```',
     sep = "\n"
   )
+
   markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
   expect_false(grepl("Error", markdown, fixed = TRUE))
+
   gifs <- list.files(
     "figure",
     pattern = "[.]gif$",
@@ -522,15 +539,18 @@ test_that("knitted recordings return media only at completion", {
   expect_true(all(file.exists(gifs)))
   expect_match(markdown, "demo-1.gif", fixed = TRUE)
   expect_match(markdown, "demo-2.gif", fixed = TRUE)
+
   expect_true(file.exists("named.gif"))
   expect_match(markdown, "named.gif", fixed = TRUE)
   expect_true(file.exists("named.mp4"))
   expect_match(markdown, "named.mp4", fixed = TRUE)
+
   expect_match(
     markdown,
     "<video controls preload=\"metadata\" src=\"",
     fixed = TRUE
   )
+
   expect_true(file.exists("split.webm"))
   expect_match(markdown, "split.webm", fixed = TRUE)
 })
@@ -545,6 +565,7 @@ test_that("knitted recording chains stop at the end of their expression", {
   dir <- withr::local_tempdir()
   withr::local_dir(dir)
   knitr::opts_knit$set(rmarkdown.pandoc.to = "html")
+
   text <- paste(
     '```{r chain, echo=FALSE, error=FALSE}',
     'page |> pz_record_start(fps=5, hold=c(0, 0)) |> pz_wait(0.2)',
@@ -555,6 +576,7 @@ test_that("knitted recording chains stop at the end of their expression", {
     '```',
     sep = "\n"
   )
+
   markdown <- knitr::knit(text = text, envir = environment(), quiet = TRUE)
   expect_false(grepl("Error", markdown, fixed = TRUE))
   expect_match(markdown, "chain-1.mp4", fixed = TRUE)
@@ -579,11 +601,13 @@ test_that("recording chains return visibly until their recording stops", {
   page <- local_record_page()
   skip_if_no_av()
   out <- withr::local_tempfile(fileext = ".mp4")
+
   start <- withVisible(pz_record_start(page, out, fps = 5, hold = c(0, 0)))
   defer_record_stop(page)
   rec <- start$value
   expect_false(start$visible)
   expect_false(identical(rec, page))
+
   expect_true(withVisible(pz_wait(rec, 0.1))$visible)
   expect_false(withVisible(pz_wait(page, 0.1))$visible)
   scoped <- pz_find(rec, "body")
@@ -638,6 +662,7 @@ test_that("interactive recordings without a path preview in the viewer", {
   expect_equal(tools::file_ext(preview$value), "mp4")
   expect_true(file.exists(preview$value))
   expect_length(viewed, 0)
+
   print(preview$value)
   expect_length(viewed, 1)
   expect_equal(basename(viewed), "index.html")
@@ -725,6 +750,7 @@ test_that("an interrupt stops the recorder and permits another recording", {
     list(message = "record interrupted"),
     class = c("interrupt", "condition")
   )
+
   caught <- tryCatch(
     pz_record(
       page,
@@ -747,6 +773,7 @@ test_that("an interrupt stops the recorder and permits another recording", {
   expect_match(conditionMessage(caught), "record interrupted")
   expect_null(page_recorder(page$page))
   expect_true(file.exists(interrupted))
+
   next_path <- withr::local_tempfile(fileext = ".mp4")
   pz_record(
     page,
@@ -769,6 +796,7 @@ test_that("block error wins over stop failure and the page can record again", {
   page <- local_record_page()
   skip_if_no_av()
   failed <- withr::local_tempfile(fileext = ".mp4")
+
   with_mocked_bindings(
     expect_error(
       pz_record(
@@ -792,6 +820,7 @@ test_that("block error wins over stop failure and the page can record again", {
     record_encode = function(...) stop("stop failed")
   )
   expect_null(page_recorder(page$page))
+
   next_path <- withr::local_tempfile(fileext = ".mp4")
   pz_record(
     page,
@@ -929,6 +958,7 @@ test_that("a hold drains a delayed capture before a following annotation", {
     loop = page$child_loop,
     what = "the initial retained frame and an idle capture slot"
   )
+
   rec$held <- TRUE
   session <- page$session
   domain <- session$Page
@@ -989,12 +1019,14 @@ test_that("a hold drains a delayed capture before a following annotation", {
     loop = page$child_loop,
     what = "a retained post-hold frame containing the lime annotation"
   )
+
   before <- rec$files[rec$times <= anchor]
   expect_gt(length(before), 0)
   expect_false(any(vapply(before, has_mark, logical(1))))
   marked <- which(vapply(rec$files, has_mark, logical(1)))
   expect_gt(length(marked), 0)
   expect_true(all(rec$times[marked] >= anchor + 1.5))
+
   pz_record_stop(page)
 })
 
@@ -1136,6 +1168,7 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
     },
     .package = "gifski"
   )
+
   page |>
     pz_record_start(
       out,
@@ -1153,6 +1186,7 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
     what = "three frames of the framed page"
   )
   page |> pz_record_stop()
+
   expect_gt(length(captured), 0L)
   expect_true(all(file.exists(rec$files)))
   expect_false(any(file.exists(unique(captured))))
@@ -1192,6 +1226,7 @@ test_that("GIF frame crops preserve alpha and crop unique PNGs", {
     },
     .package = "gifski"
   )
+
   record_encode(rec)
   expect_false(file.exists(cropped_path))
   expect_true(file.exists(source))
@@ -1222,6 +1257,7 @@ test_that("unframed GIFs of odd size go to gifski uncropped", {
     },
     .package = "gifski"
   )
+
   record_encode(rec)
 })
 
@@ -1235,15 +1271,19 @@ test_that("GIF dependencies are checked before recording", {
     },
     .package = "rlang"
   )
+
   expect_error(record_check_packages("gif", FALSE), "missing gifski")
+
   present <- "gifski"
   expect_no_error(record_check_packages("gif", FALSE))
   expect_equal(tail(requested, 1), "gifski")
   expect_error(record_check_packages("gif", TRUE), "missing png")
+
   present <- c("gifski", "png", "av")
   requested <- character()
   expect_no_error(record_check_packages("gif", TRUE))
   expect_equal(requested, c("gifski", "png"))
+
   requested <- character()
   expect_no_error(record_check_packages("mp4", FALSE))
   expect_equal(requested, "av")
@@ -1635,6 +1675,7 @@ test_that("a targetless stop frame crops from the start-time scope", {
     loop = page$page$child_loop,
     what = "a frame before stopping from the root context"
   )
+
   # stopping from the root context must not swap the crop to the
   # viewport; it still covers the scope the recording started in
   page |> pz_record_stop()
@@ -1669,6 +1710,7 @@ test_that("a framed recording survives a navigation by framing the viewport", {
     loop = page$page$child_loop,
     what = "a frame of the pre-navigation document"
   )
+
   root <- pz_nav_goto(page, nav_fixture_url("b"))
   # A commit that strands the in-flight capture mutes the recorder until
   # chromote's response timeout; name that mechanism before checking
@@ -1679,6 +1721,7 @@ test_that("a framed recording survives a navigation by framing the viewport", {
     loop = root$page$child_loop,
     what = "the capture in flight at the commit to be abandoned"
   )
+
   # Frames keep being captured on the new document. A frame count cannot
   # tell a stalled capture chain apart from a slow one, so require the
   # capture to see the new document: paint it and poll for a frame that
@@ -1698,6 +1741,7 @@ test_that("a framed recording survives a navigation by framing the viewport", {
     loop = root$page$child_loop,
     what = "a frame capturing the navigated document"
   )
+
   # Arrival of the red frame is proven; idle so the recording spans more
   # than one resample tick and the stop-time frame lands in the video.
   pz_wait(root, 0.2)
@@ -1745,6 +1789,7 @@ test_that("a when = start crop is measured before the navigation and stays", {
     loop = page$page$child_loop,
     what = "a frame before the navigation"
   )
+
   before <- length(rec$files)
   pz_nav_goto(page, nav_fixture_url("b"))
   # The commit may strand an in-flight capture and mute the recorder
@@ -1755,6 +1800,7 @@ test_that("a when = start crop is measured before the navigation and stays", {
     loop = page$page$child_loop,
     what = "a frame of the navigated document"
   )
+
   expect_no_error(pz_record_stop(page))
   # Measured before the navigation: the 100px box as it was, a fixed
   # box in viewport coordinates.
@@ -1902,6 +1948,7 @@ test_that("a device hold skips capture ticks and clears on exit", {
 
   expect_error(record_device_change(page$page, stop("boom")), "boom")
   expect_false(rec$held)
+
   rec$active <- FALSE
   expect_identical(record_device_change(page$page, 42), 42)
   expect_false(rec$held)
@@ -1998,6 +2045,7 @@ test_that("device metrics survive an in-flight recording capture", {
     loop = page$page$child_loop,
     what = "the in-flight frame capture"
   )
+
   pz_wait(page, 0.2)
   expect_equal(pz_js(page, "innerWidth"), 800)
   expect_equal(pz_js(page, "innerHeight"), 600)
@@ -2259,12 +2307,14 @@ test_that("staged frames reject resizes and keep requested frames", {
   defer_record_stop(page)
   rec <- page_recorder(page)
   withr::defer(unlink(rec$frames_dir, recursive = TRUE))
+
   pz_poll(
     function() length(rec$files) >= 3L,
     timeout = 5,
     loop = page$page$child_loop,
     what = "the initial recording frames"
   )
+
   pz_device(page, width = 800, height = 600)
   expect_error(
     pz_record_stop(page),
@@ -2386,6 +2436,7 @@ test_that("screencast holds the last frame on an idle page", {
     fileext = ".html"
   )
   page <- local_page(html)
+
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, out, method = "screencast", hold = c(0, 0))
   defer_record_stop(page)
@@ -2399,6 +2450,7 @@ test_that("screencast holds the last frame on an idle page", {
   before <- length(rec$files)
   first <- png::readPNG(tail(rec$files, 1))
   pz_wait(page, 0.4)
+
   # Chrome may re-send an unchanged frame (a late acknowledgement), so the
   # idle contract is content, not cadence: frames captured while the page
   # sits still repeat the same pixels, and only a handful arrive -- a
@@ -2482,6 +2534,7 @@ test_that("screencast cuts paused paints and resumes event delivery", {
   pz_wait(page, 0.4)
   expect_length(rec$files, before)
   expect_equal(rec_vt(rec), paused_vt, tolerance = 0)
+
   resume_started <- rec_now()
   pz_record_resume(page)
   expect_lte(rec_vt(rec) - paused_vt, rec_now() - resume_started + 0.002)
@@ -2493,6 +2546,7 @@ test_that("screencast cuts paused paints and resumes event delivery", {
   )
   expect_gt(length(rec$files), before)
   expect_equal(rec$n_errors, 0L)
+
   pz_record_hold(page, 0.2)
   pz_record_stop(page)
   expect_true(file.exists(out))
@@ -2562,6 +2616,7 @@ test_that("resume captures a paused change on an idle page", {
     fileext = ".html"
   )
   page <- local_page(html, width = 640, height = 480, scale = 2)
+
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(
     page,
@@ -2585,6 +2640,7 @@ test_that("resume captures a paused change on an idle page", {
   pz_js(page, "document.getElementById('box').style.background = 'red'")
   pz_wait(page, 0.25)
   expect_length(rec$files, before)
+
   pz_record_resume(page)
   pz_poll(
     function() length(rec$files) > before && is.null(rec$pending),
@@ -2608,6 +2664,7 @@ test_that("a device change captures the new state after held paints", {
     fileext = ".html"
   )
   page <- local_page(html, width = 640, height = 480, scale = 2)
+
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(
     page,
@@ -2645,6 +2702,7 @@ test_that("a device change captures the new state after held paints", {
     c(1, 0, 0)
   )
   expect_equal(pz_js(page, "window.innerWidth"), 800)
+
   before_error <- length(rec$files)
   expect_error(
     record_device_change(page$page, stop("failed override")),
@@ -2883,6 +2941,7 @@ test_that("a failed screencast start leaves the page free to record", {
   expect_null(page_recorder(page))
   expect_null(started$deregister_screencast)
   expect_false(dir.exists(started$frames_dir))
+
   session$Page <- domain
   pz_record_start(page, out, hold = c(0, 0))
   defer_record_stop(page)
@@ -2943,6 +3002,7 @@ test_that("NULL and omitted paths both preview start and block recordings", {
   chain <- pz_record_start(page, path = NULL, fps = 5, hold = c(0, 0))
   pz_wait(chain, 0.1)
   explicit <- pz_record_stop(chain)
+
   block_omitted <- pz_record(
     page,
     code = pz_wait(page, 0.1),
@@ -2956,6 +3016,7 @@ test_that("NULL and omitted paths both preview start and block recordings", {
     fps = 5,
     hold = c(0, 0)
   )
+
   previews <- list(omitted, explicit, block_omitted, block_explicit)
   withr::defer(unlink(vapply(previews, unclass, character(1))))
   for (preview in previews) {

@@ -39,6 +39,7 @@ test_that("burned overlays convert to yuv420p only after compositing", {
   sampled <- list(files = file, index = 1L, vts = 0, n_ticks = 1L)
   overlay <- list(file = "caption-1.png", start = 0, end = 0.1)
   key <- list(file = "keys-1.png", start = 0, end = 0.1)
+
   for (format in c("mp4", "webm")) {
     rec <- new_recorder("unused", format, 10, NULL, c(0, 0), FALSE, NULL)
     rec$camera_viewport_width <- 64
@@ -69,6 +70,7 @@ test_that("burned overlays convert to yuv420p only after compositing", {
       expect_match(graph, ",format=yuv420p$", fixed = FALSE)
     }
   }
+
   rec <- new_recorder("unused", "gif", 10, NULL, c(0, 0), FALSE, NULL)
   out <- record_output_spec(rec, size)
   expect_equal(out$vfilter, "null")
@@ -80,23 +82,30 @@ test_that("burned overlays convert to yuv420p only after compositing", {
 
 test_that("captions persist as page state and clearing is selective", {
   page <- local_record_page()
+
   expect_identical(pz_annotate_caption(page, "First"), page)
   expect_equal(page_caption(page)$text, "First")
+
   pz_annotate_clear(page, id = "other")
   expect_equal(page_caption(page)$text, "First")
+
   pz_annotate_clear(page, id = "caption")
   expect_null(page_caption(page))
 })
 
 test_that("staged caption_side is the default and per-call side overrides it", {
   page <- local_record_page()
+
   pz_annotate_caption(page, "First")
   expect_equal(page_caption(page)$side, "bottom")
+
   staged <- page |> pz_stage_annotate(caption_side = "top")
   pz_annotate_caption(staged, "Second")
   expect_equal(page_caption(page)$side, "top")
+
   pz_annotate_caption(staged, "Third", side = "bottom")
   expect_equal(page_caption(page)$side, "bottom")
+
   pz_annotate_caption(
     staged |> pz_stage_annotate(caption_side = NULL),
     "Fourth"
@@ -128,6 +137,7 @@ test_that("caption burn overlays two windows after a camera move, with quoted pa
   pz_record_start(page, out, fps = 10, scale = 0.5, hold = c(0.1, 0.2))
   defer_record_stop(page)
   rec <- page_recorder(page)
+
   # The tick grid starts at the first capture; a late one can start after
   # the caption windows, leaving no captioned frame in the decode.
   pz_poll(
@@ -136,6 +146,7 @@ test_that("caption burn overlays two windows after a camera move, with quoted pa
     loop = page$child_loop,
     what = "a capture before the FIRST caption"
   )
+
   pz_annotate_caption(page, "FIRST")
   pz_wait(page, 0.35)
   pz_camera(page, pz_frame("#box", zoom = 1.5), duration = 0.12)
@@ -145,10 +156,12 @@ test_that("caption burn overlays two windows after a camera move, with quoted pa
   pz_wait(page, 0.3)
   pz_record_stop(page)
   expect_true(file.exists(out))
+
   decoded <- tempfile("caption-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
   frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   expect_gt(length(frames), 5)
+
   # Locate a captioned frame by content, relative to the cleared last frame:
   # the fixture's own dark pixels sit in the band too, and fixed indices
   # mislabel the caption windows when capture ticks lag the wall-clock holds.
@@ -163,6 +176,7 @@ test_that("caption burn overlays two windows after a camera move, with quoted pa
   first <- png::readPNG(frames[[captioned[[1]]]])
   last <- png::readPNG(tail(frames, 1))
   expect_true(any(first[round(dim(first)[1] * 0.8):dim(first)[1], , 1] < 0.4))
+
   last_rows <- round(dim(last)[1] * 0.8):dim(last)[1]
   expect_true(all(last[last_rows, round(dim(last)[2] * 0.85), 1] > 0.8))
 })
@@ -177,10 +191,12 @@ test_that("a caption left active stays visible on the last MP4 frame", {
   defer_record_stop(page)
   pz_wait(page, 0.5)
   pz_record_stop(page)
+
   decoded <- tempfile("caption-persist-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
   frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   expect_gt(length(frames), 5)
+
   dark_pill <- function(frame) {
     image <- png::readPNG(frame)
     x <- round(dim(image)[2] / 2)
@@ -199,6 +215,7 @@ test_that("a caption left active stays visible on the last GIF frame", {
   out <- withr::local_tempfile(fileext = ".gif")
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   withr::defer(unlink(frames_dir, recursive = TRUE))
+
   pz_annotate_caption(page, "PERSIST")
   pz_record_start(page, out, fps = 10, hold = c(0, 0.2), keep_frames = TRUE)
   defer_record_stop(page)
@@ -212,6 +229,7 @@ test_that("a caption left active stays visible on the last GIF frame", {
   pz_record_hold(page, 0.5)
   pz_record_stop(page)
   expect_frame_files_size(rec$files, record_viewport_png_size(page))
+
   decoded <- tempfile("caption-persist-gif-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
   frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
@@ -221,6 +239,7 @@ test_that("a caption left active stays visible on the last GIF frame", {
     record_resample(rec)$n_ticks / rec$fps,
     tolerance = 0.01
   )
+
   first <- png::readPNG(frames[[1]])
   last <- png::readPNG(tail(frames, 1)[[1]])
   y <- round(dim(last)[1] * 0.8):dim(last)[1]
@@ -240,6 +259,7 @@ test_that("a persistent GIF caption survives repeated source frames", {
   png::writePNG(image, first)
   image[10, 10, ] <- c(0, 0, 1)
   png::writePNG(image, last)
+
   out <- file.path(dir, "persist.gif")
   rec <- new_recorder(out, "gif", 10, NULL, c(0, 0.2), FALSE, NULL)
   rec$files <- c(first, last)
@@ -257,6 +277,7 @@ test_that("a persistent GIF caption survives repeated source frames", {
       font_size = 20
     )
   ))
+
   expect_equal(record_resample(rec)$n_ticks, 8L)
   record_encode(rec, page$page)
 
@@ -284,13 +305,16 @@ test_that("captioned still is transparent outside the pill and opaque inside", {
   page <- local_record_page()
   plain <- withr::local_tempfile(fileext = ".png")
   captioned <- withr::local_tempfile(fileext = ".png")
+
   pz_screenshot(page, plain)
   pz_annotate_caption(page, "CAPTION")
   pz_screenshot(page, captioned)
+
   a <- png::readPNG(plain)
   b <- png::readPNG(captioned)
   expect_equal(a[2, 2, 1:3], b[2, 2, 1:3])
   expect_true(any(abs(a - b) > 0.2))
+
   framed <- withr::local_tempfile(fileext = ".png")
   pz_screenshot(page, framed, frame = pz_frame("#box", pad = 80))
   framed_image <- png::readPNG(framed)
@@ -306,6 +330,7 @@ test_that("captioned GIF uses the same relative movie source after scaling", {
   page <- local_record_page()
   dir <- withr::local_tempdir(pattern = "gif a'b ")
   out <- file.path(dir, "quoted output.gif")
+
   pz_annotate_caption(page, "FIRST")
   pz_record_start(page, out, fps = 8, scale = 0.5, hold = c(0.2, 0.2))
   defer_record_stop(page)
@@ -325,13 +350,16 @@ test_that("captioned GIF uses the same relative movie source after scaling", {
   pz_wait(page, 0.25)
   pz_record_stop(page)
   expect_true(file.exists(out))
+
   info <- recorded_video_info(out)
   expect_gt(info$duration, 0.7)
   expect_equal(info$width %% 2, 0)
+
   decoded <- tempfile("caption-gif-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
   frames <- av_video_images_quiet(out, destdir = decoded, format = "png")
   expect_true(length(frames) >= 2)
+
   first <- png::readPNG(frames[[1]])
   last <- png::readPNG(tail(frames, 1))
   expect_true(any(first[round(dim(first)[1] * 0.8):dim(first)[1], , 1] < 0.4))
@@ -339,6 +367,7 @@ test_that("captioned GIF uses the same relative movie source after scaling", {
   pill_rows <- which(center < 0.4 & seq_along(center) > dim(first)[1] * 0.8)
   expect_gt(length(pill_rows), 5)
   expect_lt(length(pill_rows), 45)
+
   expect_true(all(last[round(dim(last)[1] * 0.8):dim(last)[1], , 1] > 0.8))
 })
 
@@ -371,16 +400,19 @@ test_that("explicit holds separate caption windows without a real-time wait", {
   expect_equal(sampled$total, 3.5)
   expect_equal(sampled$n_ticks, 35L)
   expect_equal(sampled$index, rep(1:3, c(17, 15, 3)))
+
   expect_equal(
     vapply(windows, function(w) w$caption$text, character(1)),
     c("A", "B")
   )
+
   starts <- vapply(windows, `[[`, numeric(1), "start")
   ends <- vapply(windows, `[[`, numeric(1), "end")
   expect_equal(starts, c(0, 1.7))
   expect_equal(ends, c(1.7, 3.5))
   expect_true(all(ends > starts))
   expect_lte(ends[1], starts[2])
+
   expect_equal(
     readLines(caption_vtt(rec, windows)),
     c(
@@ -428,16 +460,19 @@ test_that("explicit holds before the first frame keep both caption intervals", {
   expect_equal(sampled$vts[[1]], 0)
   expect_equal(sampled$total, 3.7)
   expect_equal(sampled$n_ticks, 37L)
+
   expect_equal(
     vapply(windows, function(w) w$caption$text, character(1)),
     c("A", "B")
   )
+
   starts <- vapply(windows, `[[`, numeric(1), "start")
   ends <- vapply(windows, `[[`, numeric(1), "end")
   expect_equal(starts, c(0, 1.7))
   expect_equal(ends, c(1.7, 3.7))
   expect_true(all(ends > starts))
   expect_lte(ends[1], starts[2])
+
   expect_equal(
     grep(
       " --> ",
@@ -521,6 +556,7 @@ test_that("explicit holds encode both sequential captions with poll and screenca
       color = "lime",
       stroke_width = 6
     )
+
     after_hold <- rec$holds[[2]]$vt + 1.5
     has_mark <- function(path) {
       image <- png::readPNG(path)
@@ -535,9 +571,11 @@ test_that("explicit holds encode both sequential captions with poll and screenca
       loop = page$child_loop,
       what = "a retained post-hold frame containing the lime annotation"
     )
+
     marked <- which(vapply(rec$files, has_mark, logical(1)))
     expect_gt(length(marked), 0)
     expect_gte(rec$times[[tail(marked, 1)]], after_hold)
+
     pz_record_pause(page)
     pz_record_stop(page)
     expect_equal(rec$vt_end, rec$vt_base, tolerance = 0)
@@ -609,6 +647,7 @@ test_that("caption windows use output ticks through holds and same-time replacem
     list(vt = 0.4, caption = NULL)
   )
   sampled <- list(vts = c(0, 0, 0.1, 0.2, 0.2, 0.3, 0.4, 0.4))
+
   windows <- caption_windows(rec, sampled)
   expect_equal(vapply(windows, `[[`, numeric(1), "start"), c(0, 0.3))
   expect_equal(vapply(windows, `[[`, numeric(1), "end"), c(0.3, 0.6))
@@ -616,13 +655,16 @@ test_that("caption windows use output ticks through holds and same-time replacem
     vapply(windows, function(w) w$caption$text, character(1)),
     c("Before", "New & <tag>\nline")
   )
+
   path <- caption_vtt(rec, windows)
   text <- paste(readLines(path, warn = FALSE), collapse = "\n")
   expect_match(text, "00:00:00.000 --> 00:00:00.300", fixed = TRUE)
   expect_match(text, "00:00:00.300 --> 00:00:00.600", fixed = TRUE)
   expect_match(text, "New &amp; &lt;tag&gt;\nline", fixed = TRUE)
+
   caption_vtt(rec, list())
   expect_equal(readLines(path), c("WEBVTT", ""))
+
   rec$captions <- list(
     list(vt = 0, caption = list(text = "Again")),
     list(vt = 0.1, caption = NULL),
@@ -630,6 +672,7 @@ test_that("caption windows use output ticks through holds and same-time replacem
   )
   separated <- caption_windows(rec, list(vts = c(0, 0.1, 0.2, 0.3)))
   expect_equal(vapply(separated, `[[`, numeric(1), "start"), c(0, 0.3))
+
   rec$captions <- list(list(vt = 0, caption = list(text = "One tick")))
   one <- caption_windows(rec, list(vts = 0))
   expect_equal(one[[1]]$end, 0.1)
@@ -694,6 +737,7 @@ test_that("caption overlays fade only when a later caption event closes the wind
   sampled <- list(vts = seq(0, 0.9, by = 0.1), n_ticks = 10)
   rec$captions <- list(list(vt = 0, caption = caption))
   dir <- withr::local_tempdir()
+
   open <- caption_overlays(rec, page, out, caption_windows(rec, sampled), dir)
   expect_null(open[[1]]$fade_start)
   expect_null(open[[1]]$fade_in)
@@ -719,6 +763,7 @@ test_that("VTT-only output follows pause-aware ticks and does not burn", {
   page <- local_record_page()
   dir <- withr::local_tempdir()
   out <- file.path(dir, "captions.webm")
+
   pz_annotate_caption(page, "Initial")
   pz_record_start(page, out, captions = "vtt", fps = 10, hold = c(0.2, 0.3))
   defer_record_stop(page)
@@ -729,6 +774,7 @@ test_that("VTT-only output follows pause-aware ticks and does not burn", {
   pz_record_resume(page)
   pz_wait(page, 0.3)
   pz_record_stop(page)
+
   vtt <- file.path(dir, "captions.vtt")
   expect_true(file.exists(vtt))
   cues <- paste(readLines(vtt), collapse = "\n")
@@ -740,6 +786,7 @@ test_that("VTT-only output follows pause-aware ticks and does not burn", {
     as.numeric(sub(".* --> 00:00:([0-9.]+)", "\\1", timings[[1]])),
     0.5
   )
+
   decoded <- tempfile("caption-vtt-decoded-")
   withr::defer(unlink(decoded, recursive = TRUE))
   frame <- av_video_images_quiet(out, destdir = decoded, format = "png")[[1]]
@@ -753,6 +800,7 @@ test_that("VTT-only output follows pause-aware ticks and does not burn", {
 
 test_that("caption style is independent of badge style and survives navigation", {
   page <- local_record_page()
+
   staged <- pz_stage_annotate(
     page,
     color = "red",
@@ -763,17 +811,21 @@ test_that("caption style is independent of badge style and survives navigation",
   expect_equal(page_caption(page)$color, "white")
   expect_equal(page_caption(page)$font_family, "monospace")
   expect_equal(page_caption(page)$font_size, 20)
+
   # Re-staging never rewrites an existing caption
   pz_stage_annotate(page, font_family = "serif")
   expect_equal(page_caption(page)$font_family, "monospace")
+
   pz_nav_reload(page)
   expect_equal(page_caption(page)$text, "On every page")
+
   top <- withr::local_tempfile(fileext = ".png")
   pz_screenshot(page, top)
   image <- png::readPNG(top)
   expect_true(any(
     image[1:round(dim(image)[1] * 0.15), round(dim(image)[2] / 2), 1] < 0.4
   ))
+
   expect_error(pz_annotate_caption(page, ""), "text.*empty string")
   expect_error(
     pz_annotate_caption(page, "x", color = ""),
@@ -787,6 +839,7 @@ test_that("caption style is independent of badge style and survives navigation",
     pz_annotate_caption(page, "x", font_size = 0),
     "font_size.*greater than 0"
   )
+
   pz_annotate_clear(page)
   expect_null(page_caption(page))
 })
@@ -801,12 +854,14 @@ test_that("GIF caption overlay can follow a camera move", {
     scale = 2
   )
   out <- withr::local_tempfile(fileext = ".gif")
+
   pz_annotate_caption(page, "Moving")
   pz_record_start(page, out, fps = 8, hold = c(0.1, 0.1))
   defer_record_stop(page)
   pz_camera(page, pz_frame("#box", zoom = 1.5), duration = 0.12)
   pz_wait(page, 0.25)
   pz_record_stop(page)
+
   expect_gt(recorded_video_info(out)$duration, 0.2)
 })
 
@@ -816,11 +871,13 @@ test_that("both burns caption and writes matching sidecar", {
   out <- withr::local_tempfile(fileext = ".mp4")
   vtt <- sub("\\.mp4$", ".vtt", out)
   withr::defer(unlink(vtt))
+
   pz_annotate_caption(page, "Both")
   pz_record_start(page, out, captions = "both", fps = 8, hold = c(0.1, 0.1))
   defer_record_stop(page)
   pz_wait(page, 0.2)
   pz_record_stop(page)
+
   expect_true(file.exists(out))
   expect_equal(page_caption(page)$text, "Both")
   expect_match(paste(readLines(vtt), collapse = "\n"), "Both")
@@ -835,6 +892,7 @@ test_that("still alpha blend changes only caption rows and channels", {
   top[2, 3, 1:3] <- c(1, 0, 0)
   top[2, 3, 4] <- 0.5
   png::writePNG(top, overlay)
+
   caption_blend_still(base, overlay)
   result <- png::readPNG(base)
   expect_equal(result[2, 3, 1:3], c(0.9, 0.4, 0.4), tolerance = 1 / 255)
@@ -853,12 +911,14 @@ test_that("recording caption pixels follow CSS size at DPR 2", {
       scale = scale
     )
     expect_equal(page_dpr(page), scale)
+
     out <- withr::local_tempfile(fileext = ".mp4")
     pz_annotate_caption(page, "DPR")
     pz_record_start(page, out, fps = 8, hold = c(0.3, 0.1))
     defer_record_stop(page)
     pz_wait(page, 0.15)
     pz_record_stop(page)
+
     frames <- tempfile("caption-dpr-")
     withr::defer(unlink(frames, recursive = TRUE))
     image <- av_video_images_quiet(out, destdir = frames, format = "png")
@@ -866,6 +926,7 @@ test_that("recording caption pixels follow CSS size at DPR 2", {
     center <- pixels[, round(dim(pixels)[2] / 2), 1]
     sum(center < 0.4 & seq_along(center) > length(center) * 0.65)
   }
+
   height_1 <- pill_height(1)
   height_2 <- pill_height(2)
   expect_gt(height_1, 20)
@@ -900,6 +961,7 @@ test_that("still blend preserves straight alpha on transparent pixels", {
   top[1, 1, ] <- c(1, 0, 0, 0.5)
   png::writePNG(bottom, base)
   png::writePNG(top, overlay)
+
   caption_blend_still(base, overlay)
   result <- png::readPNG(base)
   expect_equal(result[1, 1, 4], 0.625, tolerance = 1 / 255)
@@ -931,6 +993,7 @@ test_that("clearing all logs the caption clear before the clear settles", {
   page |>
     pz_annotate("#box", reveal = "fade") |>
     pz_annotate_caption("Hello")
+
   rec <- page_recorder(page)
   before <- length(rec$captions)
   captions_at_settle <- NULL
@@ -1076,10 +1139,12 @@ test_that("decoded keycaps stack above a burned bottom caption", {
   defer_record_stop(page)
   pz_act_press(page, "Mod+k", show_keys = "both")
   pz_record_stop(page)
+
   decoded <- tempfile("keys-stacked-")
   withr::defer(unlink(decoded, recursive = TRUE))
   files <- av_video_images_quiet(path, destdir = decoded, format = "png")
   expect_gt(length(files), 12)
+
   # Classify frames by content: the press lands within a wall-clock window
   # that encoder jitter can shift, so fixed frame indices mislabel states.
   expired <- png::readPNG(tail(files, 1))
@@ -1095,6 +1160,7 @@ test_that("decoded keycaps stack above a burned bottom caption", {
   )
   keycap_frame <- which.max(ink)
   expect_gt(ink[[keycap_frame]], 5)
+
   active <- png::readPNG(files[[keycap_frame]])
   caption_rows <- which(
     expired[, center, 1] < 0.5 &
@@ -1133,6 +1199,7 @@ test_that("keycap ticks clip fades without resurrecting replaced callouts", {
   expect_equal(windows[[1]]$start, 0.1)
   expect_equal(windows[[1]]$end, 0.5)
   expect_gt(windows[[1]]$fade_start, windows[[1]]$end)
+
   rec$keypresses <- list(list(
     vt = 0.5,
     last = 0.5,
@@ -1183,16 +1250,20 @@ test_that("keys burn into WebM VTT-only and uncaptioned GIF", {
     scale = 2
   )
   video <- withr::local_tempfile(fileext = ".webm")
+
   pz_annotate_caption(page, "SUBTITLE")
   pz_record_start(page, video, captions = "vtt", fps = 8, hold = c(0.1, 1.5))
   defer_record_stop(page)
   pz_act_press(page, "Enter", show_keys = "words")
   pz_record_stop(page)
+
   withr::defer(unlink(sub("\\.webm$", ".vtt", video)))
   expect_true(file.exists(sub("\\.webm$", ".vtt", video)))
+
   dest <- tempfile("key-webm-")
   withr::defer(unlink(dest, recursive = TRUE))
   frames <- av_video_images_quiet(video, destdir = dest, format = "png")
+
   # Classify by content: fixed indices mislabel the press window when the
   # encoder jitters; VTT captions do not burn, so bottom-band ink is keycaps.
   dark <- vapply(
@@ -1205,6 +1276,7 @@ test_that("keys burn into WebM VTT-only and uncaptioned GIF", {
   )
   keycap_frame <- which.max(dark)
   expect_gt(dark[[keycap_frame]], 20)
+
   active <- png::readPNG(frames[[keycap_frame]])
   expect_true(any(
     active[round(dim(active)[1] * 0.78):dim(active)[1], , 1] < 0.4
@@ -1220,7 +1292,9 @@ test_that("keys burn into WebM VTT-only and uncaptioned GIF", {
   defer_record_stop(page)
   pz_act_press(page, "Tab", show_keys = "mac")
   pz_record_stop(page)
+
   expect_gt(recorded_video_info(gif)$duration, 1.2)
+
   dest <- tempfile("key-gif-")
   withr::defer(unlink(dest, recursive = TRUE))
   frames <- av_video_images_quiet(gif, destdir = dest, format = "png")
@@ -1259,6 +1333,7 @@ test_that("a keycap row narrower than 80% of the output stays on one line", {
     c("Ctrl", "Shift", "P"),
     c("Enter")
   )
+
   wide <- key_callout_render(page, groups, 720, 480, 1, 24, "sans-serif", path)
   single <- key_callout_render(
     page,
@@ -1275,6 +1350,7 @@ test_that("a keycap row narrower than 80% of the output stays on one line", {
 
 test_that("caption literal styles ignore staged accent and size and reject NULL", {
   page <- local_page()
+
   staged <- pz_stage_annotate(page, color = "red", font_size = 32)
   pz_annotate_caption(staged, "Note")
   omitted <- page_caption(page)
@@ -1282,6 +1358,7 @@ test_that("caption literal styles ignore staged accent and size and reject NULL"
   expect_identical(page_caption(page), omitted)
   expect_identical(omitted$color, "white")
   expect_equal(omitted$font_size, 20)
+
   expect_error(pz_annotate_caption(page, "Note", color = NULL), "color")
   expect_error(pz_annotate_caption(page, "Note", font_size = NULL), "font_size")
 })
@@ -1348,6 +1425,7 @@ test_that("a shared render session shows each overlay on its own", {
   }
   top <- withr::local_tempfile(fileext = ".png")
   bottom <- withr::local_tempfile(fileext = ".png")
+
   height <- caption_render(
     page,
     caption("top"),
@@ -1359,6 +1437,7 @@ test_that("a shared render session shows each overlay on its own", {
   )
   expect_gt(height, 0)
   expect_true(file.exists(top))
+
   # The second render must not inherit the first overlay: without the body
   # reset the top caption would still be lit in the bottom render's PNG.
   height <- caption_render(
@@ -1372,6 +1451,7 @@ test_that("a shared render session shows each overlay on its own", {
   )
   expect_gt(height, 0)
   expect_true(file.exists(bottom))
+
   lit <- which(png::readPNG(bottom)[,, 4] > 0, arr.ind = TRUE)
   expect_gt(nrow(lit), 0L)
   expect_gt(min(lit[, 1]), nrow(png::readPNG(bottom)) / 2)

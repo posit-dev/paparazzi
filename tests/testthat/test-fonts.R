@@ -54,10 +54,12 @@ test_that("font constructors validate their inputs", {
   expect_error(pz_font_google("Inter", weight = 1001), "weight")
   expect_error(pz_font_google("Inter", weight = 400.5), "whole")
   expect_error(pz_font_google("Inter", style = "oblique"), "normal")
+
   expect_error(pz_font_file("X", tempfile()), "does not exist")
   otb <- withr::local_tempfile(fileext = ".otb")
   file.create(otb)
   expect_error(pz_font_file("X", otb), "woff2")
+
   # Quotes are stripped so the resolved CSS string stays intact
   expect_equal(pz_font_google('Weird "Family"')$family, "Weird Family")
 })
@@ -86,6 +88,7 @@ test_that("font printing preserves literal lines and invisible return", {
 
 test_that("pz_stage_fonts requires font objects", {
   page <- local_page()
+
   expect_error(pz_stage_fonts(page, "Silkscreen"), "pz_font_google")
   expect_error(pz_stage_fonts(page, list()), "pz_font_google")
   expect_error(
@@ -101,6 +104,7 @@ test_that("pz_stage_fonts requires font objects", {
 test_that("pz_stage_fonts stages a file font into document.fonts", {
   page <- local_page()
   font <- pz_font_file("Silkscreen", silkscreen_fixture())
+
   expect_invisible(pz_stage_fonts(page, font))
   expect_identical(pz_stage_fonts(page), page)
 
@@ -114,6 +118,7 @@ test_that("pz_stage_fonts stages a file font into document.fonts", {
 
 test_that("repeated staging adds faces and replaces by family, weight and style", {
   page <- local_page()
+
   pz_stage_fonts(page, pz_font_file("Silkscreen", silkscreen_fixture()))
   pz_stage_fonts(
     page,
@@ -160,6 +165,7 @@ test_that("on_error = \"warn\" stages the faces that loaded", {
   page <- local_page()
   good <- pz_font_file("Silkscreen", silkscreen_fixture())
   bad <- pz_font_file("Corrupt", local_corrupt_font())
+
   expect_warning(pz_stage_fonts(page, good, bad, on_error = "warn"))
   expect_named(page_fonts(page), "Silkscreen")
   expect_in("Silkscreen|400|loaded", page_font_families(page))
@@ -168,6 +174,7 @@ test_that("on_error = \"warn\" stages the faces that loaded", {
 test_that("an unstaged font object in font_family errors with a hint", {
   page <- local_page()
   font <- pz_font_file("Silkscreen", silkscreen_fixture())
+
   expect_error(
     pz_annotate(page, "h1", label = "Hi", font_family = font),
     "pz_stage_fonts"
@@ -248,6 +255,7 @@ test_that("captions render in the staged font face", {
   )
   staged_png <- withr::local_tempfile(fileext = ".png")
   fallback_png <- withr::local_tempfile(fileext = ".png")
+
   caption_render(
     page,
     c(caption, list(font_family = '"Silkscreen", sans-serif')),
@@ -314,6 +322,7 @@ test_that("re-staging a face with a different source replaces it in the document
 test_that("load failures with braces in the family name stay literal", {
   page <- local_page()
   braced <- pz_font_file("Braced {Font}", local_corrupt_font())
+
   expect_error(
     pz_stage_fonts(page, braced, on_error = "stop"),
     "Braced \\{Font\\}",
@@ -329,6 +338,7 @@ test_that("Google Fonts fonts load remotely", {
   skip_on_cran()
   skip_if_offline()
   page <- local_page()
+
   pz_stage_fonts(page, pz_font_google("Silkscreen"))
   expect_in("Silkscreen|400|loaded", page_font_families(page))
 })
@@ -337,6 +347,7 @@ test_that("Bunny Fonts fonts load remotely", {
   skip_on_cran()
   skip_if_offline()
   page <- local_page()
+
   pz_stage_fonts(page, pz_font_bunny("Silkscreen"))
   expect_in("Silkscreen|400|loaded", page_font_families(page))
 })

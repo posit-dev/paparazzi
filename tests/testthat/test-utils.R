@@ -4,6 +4,7 @@ test_that("cdp_call maps only timeout errors and retains the cause", {
     cdp_call(stop(cause), 0.5, "reading elements matching {button}"),
     error = identity
   )
+
   expect_s3_class(err, "paparazzi_error_timeout")
   expect_match(
     conditionMessage(err),
@@ -38,6 +39,7 @@ test_that("cdp_check_exception reports JavaScript errors with and without contex
     "JavaScript error: from text.",
     fixed = TRUE
   )
+
   unknown <- list(exceptionDetails = list())
   expect_error(
     cdp_check_exception(unknown, "reading"),
@@ -59,6 +61,7 @@ test_that("js_literal preserves unboxing, array shape, and JSON options", {
   expect_identical(js_literal("one"), '"one"')
   expect_identical(js_literal("one", auto_unbox = FALSE), '["one"]')
   expect_identical(js_literal(character(), auto_unbox = FALSE), "[]")
+
   expect_identical(
     jsonlite::fromJSON(
       js_literal("one", auto_unbox = FALSE),
@@ -73,6 +76,7 @@ test_that("js_literal preserves unboxing, array shape, and JSON options", {
     ),
     list()
   )
+
   expect_identical(js_literal(NULL, null = "null"), "null")
   expect_identical(js_literal(NA_character_), "null")
   expect_identical(js_literal(1.23456789, digits = NA), "1.23456789")

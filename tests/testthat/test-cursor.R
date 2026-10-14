@@ -103,8 +103,10 @@ test_that("cursor function and stage validation is classed", {
 
 test_that("the cursor switches to a hand over cursor:pointer elements", {
   page <- local_cursor_page()
+
   page |> pz_cursor_move("#btn")
   expect_equal(attr(cursor_overlay_state(page), "icon"), "pointer")
+
   page |> pz_cursor_move("#plain")
   expect_equal(attr(cursor_overlay_state(page), "icon"), "default")
 })
@@ -126,6 +128,7 @@ test_that("pointing cursor ink is visible on light and dark pointer targets", {
   expect_gt(light$count, 50)
   expect_lt(abs(light$x - 660), 25)
   expect_lt(abs(light$y - 322), 20)
+
   # The fingertip sits on the hotspot specified by the bundled SVG
   # metadata rather than the old artwork's hand-path coordinates.
   tip_light <- cursor_png_ink(
@@ -148,6 +151,7 @@ test_that("pointing cursor ink is visible on light and dark pointer targets", {
   expect_gt(dark$count, 10)
   expect_lt(abs(dark$x - 860), 25)
   expect_lt(abs(dark$y - 232), 20)
+
   tip_dark <- cursor_png_ink(
     page,
     shot,
@@ -253,11 +257,13 @@ test_that("changing cursor_scale redraws a visible recording cursor", {
       hold = c(0, 0)
     )
   page |> pz_cursor_move("#btn")
+
   # Staging only derives the context; the new scale resolves at the
   # next point that draws the cursor, here the recorded hover.
   page <- page |> pz_stage(cursor_scale = 1)
   page |> pz_act_hover("#plain")
   expect_equal(cursor_overlay_scale(page), 1)
+
   page <- page |> pz_stage(cursor_scale = NULL)
   page |> pz_act_hover("#crossed")
   expect_equal(cursor_overlay_scale(page), 1.75)
@@ -267,8 +273,10 @@ test_that("changing cursor_scale redraws a visible recording cursor", {
 test_that("the overlay is excluded from resolution and hit-testing", {
   page <- local_cursor_page()
   before <- pz_get_count(page, target = "div")
+
   page |> pz_cursor_move("#btn")
   expect_equal(pz_get_count(page, target = "div"), before)
+
   # The cursor sits exactly over #btn; hit-testing reaches the page.
   expect_equal(pz_js(page, "document.elementFromPoint(660, 322).id"), "btn")
   expect_no_error(page |> pz_expect_count(before, target = "div"))
@@ -297,10 +305,12 @@ test_that("the overlay survives navigation with its size and last position", {
   expect_false(is.null(st))
   expect_equal(st[[1]], 1)
   expect_equal(st[2:3], c(660, 322))
+
   after_path <- withr::local_tempfile(fileext = ".png")
   staged |> pz_screenshot(after_path)
   after <- cursor_png_ink(page, after_path, band = c(280, 370))
   expect_equal(after$height, before$height)
+
   # And the re-injected overlay is still excluded from resolution.
   expect_equal(pz_get_count(page, target = "div"), 5)
 })
@@ -309,6 +319,7 @@ test_that("CSS zoom keeps the cursor aligned with the pointer", {
   page <- local_cursor_page()
   pz_js(page, "document.documentElement.style.zoom = '2'")
   page |> pz_cursor_move("#btn")
+
   # getBoundingClientRect coordinates double under zoom = 2, and the
   # cursor translate matches them exactly (counter-zoomed layer).
   rect <- unlist(pz_js(
@@ -317,6 +328,7 @@ test_that("CSS zoom keeps the cursor aligned with the pointer", {
   ))
   st <- cursor_overlay_state(page)
   expect_equal(st[2:3], rect)
+
   # The real pointer still hits the button through the zoom.
   page |> pz_act_click("#btn")
   expect_equal(pz_js(page, "window.__log.clicks"), 1)
@@ -529,6 +541,7 @@ test_that("all CSS cursor presets validate and select their own layer", {
     expect_equal(c(art$x, art$y) + unlist(entry$hotspot) * 20 / 32, c(4, 2))
     expect_match(art$svg, 'viewBox="0 0 32 32"', fixed = TRUE)
   }
+
   # The per-keyword art check (children.length) runs on a representative
   # subset including "none", the inverse case; the keyword-independent
   # exactly-one-visible check runs every iteration.
@@ -567,6 +580,7 @@ test_that("all CSS cursor presets validate and select their own layer", {
       keyword != "none"
     )
   }
+
   for (fn in list(
     function(icon) pz_cursor_show(page, "#btn", icon = icon),
     function(icon) pz_cursor_move(page, "#btn", icon = icon),
@@ -614,14 +628,19 @@ test_that("automatic icons follow computed CSS at the landing point", {
 
 test_that("explicit icons hold for one call; later automatic calls infer again", {
   page <- local_cursor_page()
+
   page |> pz_cursor_show("#btn", icon = "crosshair")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "crosshair")
+
   page |> pz_cursor_move("#plain", icon = "grabbing")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "grabbing")
+
   page |> pz_cursor_move("#btn")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "pointer")
+
   page |> pz_cursor_leave("left", icon = "not-allowed")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "not-allowed")
+
   page |> pz_cursor_show("#plain")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "default")
 })
@@ -632,6 +651,7 @@ test_that("off-frame entries start with default and explicit icons can replace i
   staged <- page |> pz_stage(enter = "left")
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(staged, out, fps = 10, hold = c(0, 0))
+
   # At the beginning of the glide the default icon remains visible;
   # after the landing the inferred pointer is the visible icon.
   staged |> pz_cursor_move("#btn")
@@ -644,6 +664,7 @@ test_that("off-frame entries start with default and explicit icons can replace i
   )
   expect_identical(page_cursor(page)$icon, "pointer")
   expect_cursor_icon(page, "pointer")
+
   page |> pz_cursor_move("#none", duration = 0.5)
   expect_identical(page_cursor(page)$icon, "none")
   expect_match(
@@ -653,12 +674,16 @@ test_that("off-frame entries start with default and explicit icons can replace i
     ),
     "pz-icon-in"
   )
+
   page |> pz_cursor_move("#zoom-in", duration = 0.5)
   expect_identical(page_cursor(page)$icon, "zoom-in")
+
   page |> pz_cursor_leave("left", icon = "grab")
   expect_identical(page_cursor(page)$icon, "grab")
+
   page |> pz_cursor_move("#plain", duration = 0.5)
   expect_cursor_icon(page, "default")
+
   page |> pz_cursor_move("#btn", icon = "text", duration = 0.5)
   expect_identical(attr(cursor_overlay_state(page), "icon"), "text")
   page |> pz_record_stop()
@@ -668,15 +693,18 @@ test_that("off-frame entries start with default and explicit icons can replace i
 test_that("a static still uses its inferred landing icon without a fade", {
   page <- local_cursor_page()
   shot <- withr::local_tempfile(fileext = ".png")
+
   page |> pz_cursor_move("#name") |> pz_screenshot(shot)
   expect_identical(attr(cursor_overlay_state(page), "icon"), "text")
   expect_equal(cursor_overlay_state(page)[[1]], 1)
+
   ink <- cursor_png_ink(page, shot, band = c(50, 100), x_range = c(100, 310))
   expect_gt(ink$count, 10)
 })
 
 test_that("CSS none has no ink and auto still infers through descendants", {
   page <- local_cursor_page()
+
   page |> pz_cursor_move("#none")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "none")
   drawn <- pz_js(
@@ -684,12 +712,14 @@ test_that("CSS none has no ink and auto still infers through descendants", {
     "(() => { const root = document.getElementById('paparazzi-overlay-root').shadowRoot; return root.querySelector('.pz-icon-none').children.length; })()"
   )
   expect_equal(drawn, 0)
+
   shot <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(shot)
   expect_equal(
     cursor_png_ink(page, shot, band = c(230, 260), x_range = c(580, 640))$count,
     0
   )
+
   page |> pz_cursor_move("#plain", icon = "auto")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "auto")
   page |> pz_cursor_move("#inherit-pointer span")
@@ -729,6 +759,7 @@ test_that("navigation redraws a pressed cursor unpressed", {
   page <- local_cursor_page()
   page |> pz_cursor_move("#btn")
   cursor_press(page, TRUE)
+
   pz_nav_reload(page)
   pz_poll(
     function() !is.null(cursor_overlay_state(page)),
@@ -746,15 +777,20 @@ test_that("explicit icon survives navigation and recorded press", {
   pz_nav_reload(page)
   # Polls for the re-injected overlay and the settled icon together.
   expect_cursor_icon(page, "crosshair")
+
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+
   page |> pz_cursor_move("#plain", icon = "not-allowed", duration = 0.5)
   expect_identical(attr(cursor_overlay_state(page), "icon"), "not-allowed")
+
   cursor_press(page, TRUE)
   expect_equal(cursor_overlay_scale(page), 1.4)
   expect_identical(attr(cursor_overlay_state(page), "icon"), "not-allowed")
+
   cursor_press(page, FALSE)
   expect_false(page_cursor(page)$pressed)
+
   cursor_apply(
     page,
     c(x = 200, y = 200),
@@ -763,6 +799,7 @@ test_that("explicit icon survives navigation and recorded press", {
     pump = FALSE
   )
   expect_true(page_cursor(page)$pressed)
+
   cursor_press(page, FALSE)
   expect_false(page_cursor(page)$pressed)
   page |> pz_record_stop()
@@ -772,12 +809,14 @@ test_that("non-default artwork stays aligned under CSS zoom and DPR", {
   page <- local_page(cursor_fixture_file(), scale = 2)
   pz_js(page, "document.documentElement.style.zoom = '1.5'")
   page |> pz_cursor_move("#btn", icon = "crosshair")
+
   center <- unlist(pz_js(
     page,
     "(() => { const r = document.querySelector('#btn').getBoundingClientRect(); return [r.x + r.width/2, r.y + r.height/2] })()"
   ))
   expect_equal(cursor_overlay_state(page)[2:3], center)
   expect_identical(attr(cursor_overlay_state(page), "icon"), "crosshair")
+
   shot <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(shot)
   ink <- cursor_png_ink(
@@ -794,6 +833,7 @@ test_that("non-default artwork stays aligned under CSS zoom and DPR", {
 test_that("representative icon families put ink near their hotspots", {
   page <- local_cursor_page()
   shot <- withr::local_tempfile(fileext = ".png")
+
   for (icon in c(
     "text",
     "not-allowed",
@@ -846,11 +886,13 @@ test_that("automatic glide switches icon on destination entry, not landing", {
       "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').map(e => e.classList[1])"
     ))
   }
+
   # Sample well short of the switch boundary (the entry fraction of the
   # glide, ~1.15s here): wall time overshoots the pump and the animation
   # clock jitters, so a sample stacked up to the boundary flakes.
   pump_loop(page$child_loop, 0.7)
   expect_identical(visible(), "pz-icon-default")
+
   # The flip applies at the entry boundary; the animation clock can lag the
   # pump past it, so poll for the applied state instead of sampling once.
   expect_retry(
@@ -859,6 +901,7 @@ test_that("automatic glide switches icon on destination entry, not landing", {
     loop = page$child_loop
   )
   expect_identical(visible(), "pz-icon-pointer")
+
   pump_loop(page$child_loop, 0.35)
   cursor_command(
     page,
@@ -882,10 +925,12 @@ test_that("automatic glide switches icon on destination entry, not landing", {
       anim = TRUE
     )
   )
+
   # The return glide enters its rect at ~0.31 of the ease (~0.62s); pump
   # well short of that boundary for the pre-entry sample.
   pump_loop(page$child_loop, 0.3)
   expect_identical(visible(), "pz-icon-pointer")
+
   expect_retry(
     function() list(pass = identical(visible(), "pz-icon-default")),
     timeout = 2,
@@ -910,6 +955,7 @@ test_that("the glide ease inverts in both directions", {
       tolerance = 1e-9
     )
   }
+
   # The midpoint of the glide's ease is the half-time, half-progress
   # point of its symmetric control points.
   expect_equal(glide_ease_invert(0.5, glide_ease_x, glide_ease_y), 0.5)
@@ -919,6 +965,7 @@ test_that("entry inversion follows the CSS easing and clips to the rect", {
   rect <- c(x = 60, y = 10, width = 20, height = 20)
   start <- c(x = 0, y = 20)
   end <- c(x = 100, y = 20)
+
   expect_equal(cursor_entry_time(start, end, rect), 0.5585, tolerance = 0.0002)
   expect_equal(cursor_entry_time(end, start, rect), 0.31, tolerance = 0.002)
   expect_equal(
@@ -933,6 +980,7 @@ test_that("entry inversion follows the CSS easing and clips to the rect", {
     1,
     tolerance = 1e-12
   )
+
   times <- vapply(
     c(20, 40, 60, 80),
     function(x) {
@@ -961,22 +1009,27 @@ test_that("recorded moves schedule one entry flip for the intended target", {
       "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.classList[1])"
     ))
   }
+
   page |> pz_cursor_move("#btn", duration = 0.2)
   expect_setequal(animations(), c("pz-icon-default", "pz-icon-pointer"))
   expect_match(keyframes(), "pz-icon-in")
   expect_match(keyframes(), "7[0-9]\\.")
   expect_identical(page_cursor(page)$icon, "pointer")
+
   page |> pz_cursor_move("#plain", duration = 0.2)
   expect_setequal(animations(), c("pz-icon-default", "pz-icon-pointer"))
   expect_match(keyframes(), "pz-icon-out")
   expect_identical(page_cursor(page)$icon, "default")
+
   # #crossed is cursor:pointer but lies between the two destinations.
   page |> pz_cursor_move("#btn", duration = 0.2)
   expect_length(animations(), 2)
   expect_identical(page_cursor(page)$icon, "pointer")
+
   page |> pz_cursor_move("#plain", icon = "crosshair", duration = 0.2)
   expect_identical(keyframes(), "")
   expect_identical(page_cursor(page)$icon, "crosshair")
+
   page |> pz_cursor_move("#btn", icon = "text", duration = 0.2)
   expect_identical(keyframes(), "")
   expect_identical(page_cursor(page)$icon, "text")
@@ -989,12 +1042,14 @@ test_that("off-frame entrances and staged actions use destination entry", {
   staged <- page |> pz_stage(enter = "left")
   out <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(staged, out, fps = 10, hold = c(0, 0))
+
   staged |> pz_cursor_show("#btn", from = "left")
   animations <- unlist(pz_js(
     page,
     "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.classList[1])"
   ))
   expect_setequal(animations, c("pz-icon-default", "pz-icon-pointer"))
+
   page |> pz_act_hover("#plain")
   expect_identical(page_cursor(page)$icon, "default")
   expect_match(
@@ -1055,6 +1110,7 @@ test_that("pointer actions switch at the resolved target's edge", {
   page <- local_cursor_page()
   els <- loc_resolve(page, "#nested")
   withr::defer(release_elements(els))
+
   point <- el_pointer_point(page, els)
   expect_identical(
     attr(point, "rect"),
@@ -1067,6 +1123,7 @@ test_that("pointer actions switch at the resolved target's edge", {
   rec |> pz_record_start(out, fps = 10, hold = c(0, 0))
   rec |> pz_cursor_move("#plain")
   rec |> pz_act_hover("#nested")
+
   keyframes <- pz_js(
     rec,
     "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
@@ -1102,11 +1159,14 @@ test_that("cursor move offsets validate and land in viewport coordinates", {
       class = "paparazzi_error_input"
     )
   }
+
   page |> pz_cursor_move("#btn", offset = -40)
   expect_equal(cursor_overlay_state(page)[2:3], c(620, 282))
+
   page |> pz_cursor_move("#btn", offset = c(-40, 15))
   expect_equal(cursor_overlay_state(page)[2:3], c(620, 337))
   expect_equal(c(page_cursor(page)$x, page_cursor(page)$y), c(620, 337))
+
   page |> pz_cursor_move("#btn", offset = c(0, 0))
   expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
   page |> pz_cursor_move("#btn")
@@ -1116,6 +1176,7 @@ test_that("cursor move offsets validate and land in viewport coordinates", {
 test_that("offset still puts pointer ink beside the button label", {
   page <- local_cursor_page()
   shot <- withr::local_tempfile(fileext = ".png")
+
   page |> pz_cursor_move("#btn", offset = c(-40, 15)) |> pz_screenshot(shot)
   ink <- cursor_png_ink(page, shot, band = c(325, 344), x_range = c(605, 645))
   label <- cursor_png_ink(page, shot, band = c(325, 344), x_range = c(650, 685))
@@ -1127,6 +1188,7 @@ test_that("offset still puts pointer ink beside the button label", {
 
 test_that("offset does not dispatch real pointer events", {
   page <- local_cursor_page()
+
   page |> pz_cursor_move("#plain", offset = c(500, 0))
   expect_equal(
     unlist(pz_js(
@@ -1135,6 +1197,7 @@ test_that("offset does not dispatch real pointer events", {
     )),
     c(0, 0, 0)
   )
+
   page |> pz_act_hover("#btn")
   events <- unlist(pz_js(
     page,
@@ -1148,10 +1211,12 @@ test_that("offset does not dispatch real pointer events", {
 test_that("off-frame offset stays shown and becomes the next glide start", {
   skip_if_no_av()
   page <- local_cursor_page()
+
   page |> pz_cursor_move("#btn", offset = c(-900, 15))
   expect_equal(cursor_overlay_state(page)[2:3], c(-240, 337))
   expect_equal(cursor_overlay_state(page)[[1]], 1)
   expect_identical(page_cursor(page)$visibility, "shown")
+
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
   page |> pz_cursor_move("#btn", duration = 1)
@@ -1178,6 +1243,7 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   page |> pz_cursor_show("#btn") |> pz_cursor_leave("left")
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 15, hold = c(0, 0), keep_frames = TRUE)
+
   page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.3)
   rules <- pz_js(
     page,
@@ -1189,11 +1255,13 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   expect_match(rules, "pz-icon-out.*100% \\{ visibility:visible;")
   expect_identical(page_cursor(page)$icon, "pointer")
   expect_cursor_icon(page, "pointer")
+
   page |> pz_record_stop()
   frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
   on.exit(unlink(frames_dir, recursive = TRUE), add = TRUE)
   frames <- list.files(frames_dir, pattern = "[.]png$", full.names = TRUE)
   expect_gt(length(frames), 0)
+
   # A transit frame can't be told from a landing by count, and stopping
   # always captures one final frame with the cursor at rest: require the
   # landing in that terminal frame instead of scanning them all.
@@ -1212,6 +1280,7 @@ test_that("inside-target offset has one entry flip and explicit icon has none", 
   page |> pz_cursor_move("#plain")
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+
   page |> pz_cursor_move("#btn", offset = c(-40, 15), duration = 0.2)
   rules <- function() {
     pz_js(
@@ -1222,6 +1291,7 @@ test_that("inside-target offset has one entry flip and explicit icon has none", 
   expect_match(rules(), "pz-icon-in")
   expect_false(grepl("pz-icon-land", rules()))
   expect_identical(page_cursor(page)$icon, "pointer")
+
   page |>
     pz_cursor_move(
       "#plain",
@@ -1242,6 +1312,7 @@ test_that("entry and landing can schedule three distinct icon layers", {
     pz_cursor_leave("left")
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
+
   page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.2)
   animations <- unlist(pz_js(
     page,
@@ -1294,6 +1365,7 @@ document.querySelector('#task-title').addEventListener('input', () => {
     timeout = 2,
     loop = page$child_loop
   )
+
   page |> pz_act_type("abc", target = "#task-title")
 
   opacities <- unlist(pz_js(page, "window.__cursorInputOpacity"))
@@ -1385,6 +1457,7 @@ test_that("root typing after a recording hold rests the cursor without clicking"
   expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
   expect_true(page_cursor(page)$resting)
   expect_equal(cursor_overlay_state(page)[[1]], 0)
+
   pz_poll(
     function() {
       pz_js(
@@ -1396,6 +1469,7 @@ test_that("root typing after a recording hold rests the cursor without clicking"
     loop = page$child_loop,
     what = "the cursor to fade out after root typing"
   )
+
   page |> pz_act_hover("#rich")
   expect_false(page_cursor(page)$resting)
   expect_equal(cursor_overlay_state(page)[[1]], 1)
@@ -1421,6 +1495,7 @@ test_that("typing into a scoped held selection rests the cursor without clicking
   expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
   expect_true(page_cursor(page)$resting)
   expect_equal(cursor_overlay_state(page)[[1]], 0)
+
   pz_poll(
     function() {
       pz_js(
@@ -1432,6 +1507,7 @@ test_that("typing into a scoped held selection rests the cursor without clicking
     loop = page$child_loop,
     what = "the cursor to fade out after held-selection typing"
   )
+
   page |> pz_act_hover("#rich")
   expect_false(page_cursor(page)$resting)
   expect_equal(cursor_overlay_state(page)[[1]], 1)
@@ -1481,7 +1557,9 @@ test_that("no-click recorded typing never revives an explicitly hidden cursor", 
 
 test_that("cursor move offset defaults to zero and rejects NULL", {
   page <- local_cursor_page()
+
   expect_error(pz_cursor_move(page, "#btn", offset = NULL), "offset.*NULL")
+
   pz_cursor_move(page, "#btn")
   omitted <- cursor_overlay_state(page)
   pz_cursor_move(page, "#btn", offset = c(0, 0))

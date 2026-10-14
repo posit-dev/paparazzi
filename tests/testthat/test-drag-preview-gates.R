@@ -1,5 +1,6 @@
 test_that('preview is named-only and validates a single nonmissing boolean', {
   page <- local_task_page()
+
   for (value in list(NULL, NA, 1, 'yes', logical(), c(TRUE, FALSE))) {
     expect_error(pz_act_drag(
       page,
@@ -8,6 +9,7 @@ test_that('preview is named-only and validates a single nonmissing boolean', {
       preview = value
     ))
   }
+
   expect_error(
     pz_act_drag(page, '.task:nth-child(5)', '.task:first-child', FALSE),
     'unused|empty|must be empty'
@@ -39,11 +41,13 @@ test_that('ineligible drags do not boot the preview or call the library', {
       }
       if (gate == 'hidden') pz_cursor_hide(page)
     }
+
     boots <- 0L
     local_mocked_bindings(drag_preview_boot_js = function() {
       boots <<- boots + 1L
       stop('ineligible drag booted the raster library')
     })
+
     if (gate == 'mouse') {
       expect_no_warning(pz_act_drag(page, '#dragbox', '#dropzone'))
       expect_true('mouseup' %in% adv_log_types(adv_log(page)))
@@ -59,11 +63,13 @@ test_that('ineligible drags do not boot the preview or call the library', {
         'document.querySelectorAll(".task")[1] === window.__previewSource'
       ))
     }
+
     expect_identical(boots, 0L)
     expect_true(drag_preview_absent(page))
     rec <- page_recorder(page)
     if (!is.null(rec)) pz_record_stop(page)
   }
+
   # 'disabled' (preview = FALSE) has pixel-level boot-guard coverage in
   # test-drag-preview-pixels.R ("disabled previews retain the original
   # marker"), so it is not re-proven here.
@@ -88,6 +94,7 @@ test_that('file pages explain unreadable stylesheets and link to drag preview he
     hold = c(0, 0)
   )
   defer_record_stop(page)
+
   warnings <- list()
   withCallingHandlers(
     pz_act_drag(page, '#preview-source', '#preview-target'),
@@ -96,6 +103,7 @@ test_that('file pages explain unreadable stylesheets and link to drag preview he
       invokeRestart('muffleWarning')
     }
   )
+
   expect_length(warnings, 1)
   expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
   message <- conditionMessage(warnings[[1]])
@@ -116,6 +124,7 @@ test_that('file pages explain unreadable stylesheets and link to drag preview he
   expect_match(message, 'Drag preview section')
   expect_match(message, 'pz_act_drag')
   expect_false(grepl('<anonymous>|cssRules|SecurityError', message))
+
   expect_true(drag_preview_absent(page))
   expect_true(pz_js(
     page,
@@ -136,6 +145,7 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
       hold = c(0, 0)
     )
     defer_record_stop(page)
+
     original_prepare <- drag_preview_prepare
     failure <- if (interrupted) {
       structure(
@@ -168,6 +178,7 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
       },
       stage_drag_carry = function(ctx, from, to, step) stop(failure)
     )
+
     warnings <- list()
     caught <- withCallingHandlers(
       tryCatch(
@@ -184,6 +195,7 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
         invokeRestart('muffleWarning')
       }
     )
+
     expect_identical(caught, failure)
     expect_length(warnings, 0)
     expect_true(drag_preview_absent(page))
@@ -194,6 +206,7 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
     expect_false(page_cursor(page)$pressed)
     pz_record_stop(page)
   }
+
   check_unwind(FALSE)
   check_unwind(TRUE)
 })
@@ -210,6 +223,7 @@ test_that('failed interception disposes the prepared image without displaying it
     hold = c(0, 0)
   )
   defer_record_stop(page)
+
   original_prepare <- drag_preview_prepare
   original_poll <- pz_poll
   local_mocked_bindings(
@@ -244,6 +258,7 @@ test_that('failed interception disposes the prepared image without displaying it
       original_poll(fn, ..., what = what)
     }
   )
+
   expect_error(
     pz_act_drag(
       page,
@@ -252,6 +267,7 @@ test_that('failed interception disposes the prepared image without displaying it
     ),
     'injected interception failure'
   )
+
   expect_equal(pz_js(page, 'window.__previewShows'), 0)
   expect_true(drag_preview_absent(page))
   expect_true(pz_js(
@@ -274,6 +290,7 @@ test_that('a timed-out capture cannot display or retain the source after late co
     hold = c(0, 0)
   )
   defer_record_stop(page)
+
   original_boot <- drag_preview_boot_js
   original_timeout <- page$default_timeout
   original_prepare <- drag_preview_prepare
@@ -301,6 +318,7 @@ return new Promise((resolve) => {
       )
     }
   )
+
   warnings <- list()
   withCallingHandlers(
     pz_act_drag(
@@ -313,6 +331,7 @@ return new Promise((resolve) => {
       invokeRestart('muffleWarning')
     }
   )
+
   expect_null(prepared$owner)
   expect_length(warnings, 1)
   expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
@@ -326,6 +345,7 @@ return new Promise((resolve) => {
     page,
     'window.__previewController.source === null && window.__previewController.image === null'
   ))
+
   pz_js(page, 'window.__releasePreviewCapture()')
   # The capture counter increments when toPng is called, before the
   # promise, so no poll can prove the late continuation ran; the correct
@@ -373,6 +393,7 @@ document.addEventListener('drop', () => {
       hold = c(0, 0)
     )
     defer_record_stop(page)
+
     original_settle <- drag_preview_settle
     settled <- FALSE
     local_mocked_bindings(drag_preview_settle = function(state) {
@@ -382,6 +403,7 @@ document.addEventListener('drop', () => {
       expect_true(drag_preview_absent(page))
       duration
     })
+
     expect_no_warning(pz_act_drag(
       page,
       '#preview-source .task-drag-handle',
@@ -392,6 +414,7 @@ document.addEventListener('drop', () => {
     expect_false(page_cursor(page)$pressed)
     pz_record_stop(page)
   }
+
   for (mutation in c('removed', 'replaced', 'hidden', 'resized')) {
     check_skip(mutation)
   }
@@ -409,6 +432,7 @@ test_that('a source that gains an iframe after the drop loses its preview silent
     hold = c(0, 0)
   )
   defer_record_stop(page)
+
   # The iframe arrives in the drop handler, after the preview is prepared
   # and before the post-drop settle re-checks the source.
   pz_js(
@@ -422,6 +446,7 @@ document.addEventListener('drop', () => {
 })
 ]"
   )
+
   original_settle <- drag_preview_settle
   settled <- FALSE
   local_mocked_bindings(drag_preview_settle = function(state) {
@@ -437,6 +462,7 @@ document.addEventListener('drop', () => {
     ))
     duration
   })
+
   warnings <- list()
   withCallingHandlers(
     pz_act_drag(
@@ -449,6 +475,7 @@ document.addEventListener('drop', () => {
       invokeRestart('muffleWarning')
     }
   )
+
   expect_true(settled)
   expect_length(warnings, 0)
 })

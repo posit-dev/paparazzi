@@ -16,12 +16,14 @@ callout_state <- function(page) {
 
 test_that("callout draws literal text into the shared layer", {
   page <- callout_page()
+
   expect_identical(
     pz_annotate_callout(page, "<b>Literal</b>", target = "#target", id = "tip"),
     page
   )
   expect_length(callout_state(page), 1)
   expect_identical(callout_state(page)[[1]]$text, "<b>Literal</b>")
+
   page |> pz_annotate_clear("tip")
   expect_length(callout_state(page), 0)
 })
@@ -77,6 +79,7 @@ test_that("cardinal and diagonal callouts sit on their requested sides", {
     page,
     "document.querySelector('#target').style.cssText='position:fixed;left:360px;top:300px;width:80px;height:40px;background:#eee'"
   )
+
   for (side in c(
     "top",
     "bottom",
@@ -113,6 +116,7 @@ test_that("cardinal and diagonal callouts sit on their requested sides", {
     )
     expect_true(nzchar(state$nodes[[1]]$head))
   }
+
   page |>
     pz_annotate_callout(
       "Tooltip",
@@ -130,6 +134,7 @@ test_that("auto chooses roomiest cardinal once and sync follows movement", {
     page,
     "document.querySelector('#target').style.left='20px';document.querySelector('#target').style.top=innerHeight/2+'px'"
   )
+
   page |>
     pz_annotate_callout(
       "Follow",
@@ -139,6 +144,7 @@ test_that("auto chooses roomiest cardinal once and sync follows movement", {
     )
   first <- callout_details(page)
   expect_gt(first$nodes[[1]]$rect[[1]], first$target[[3]])
+
   pz_js(
     page,
     "document.querySelector('#target').style.left='740px';document.querySelector('#target').style.top='400px'"
@@ -150,6 +156,7 @@ test_that("auto chooses roomiest cardinal once and sync follows movement", {
   moved <- callout_details(page)
   expect_gt(moved$nodes[[1]]$rect[[1]], first$nodes[[1]]$rect[[1]])
   expect_gt(abs(moved$nodes[[1]]$rect[[2]] - first$nodes[[1]]$rect[[2]]), 50)
+
   pz_js(
     page,
     "document.querySelector('#target').style.left='80px';document.querySelector('#target').style.top='1200px';window.scrollTo(0,1000)"
@@ -161,6 +168,7 @@ test_that("auto chooses roomiest cardinal once and sync follows movement", {
   scrolled <- callout_details(page)
   expect_gt(scrolled$nodes[[1]]$rect[[1]], scrolled$target[[3]])
   expect_true(scrolled$nodes[[1]]$visible)
+
   pz_js(page, "document.querySelector('#target').remove()")
   pz_js(
     page,
@@ -181,6 +189,7 @@ test_that("multiple matches repeat text and number badges; ids share the registr
     page,
     "document.body.insertAdjacentHTML('beforeend','<div class=mark style=\"position:absolute;left:120px;top:300px;width:70px;height:40px\"></div><div class=mark style=\"position:absolute;left:300px;top:300px;width:70px;height:40px\"></div>')"
   )
+
   page |>
     pz_stage_annotate(
       color = "rgb(255, 0, 0)",
@@ -194,12 +203,15 @@ test_that("multiple matches repeat text and number badges; ids share the registr
   expect_equal(vapply(state, `[[`, "", "text"), c("Repeat", "Repeat"))
   expect_identical(state[[1]]$color, "rgb(255, 0, 0)")
   expect_identical(state[[1]]$fontSize, "19px")
+
   page |>
     pz_annotate_callout("Other", target = "#target", label = "A", id = "shared")
   expect_length(callout_state(page), 1)
   expect_identical(callout_details(page)$nodes[[1]]$label, "A")
+
   page |> pz_annotate("#target", id = "shared", reveal = "none")
   expect_length(callout_state(page), 0)
+
   page |> pz_annotate_callout("New", target = "#target", id = "shared")
   page |> pz_annotate_clear("shared")
   expect_length(callout_state(page), 0)
@@ -207,6 +219,7 @@ test_that("multiple matches repeat text and number badges; ids share the registr
 
 test_that("callouts reject empty style strings", {
   page <- callout_page()
+
   expect_error(
     pz_annotate_callout(page, "x", target = "#target", color = ""),
     "color.*empty string"
@@ -219,6 +232,7 @@ test_that("callouts reject empty style strings", {
 
 test_that("callouts validate inputs and clamp long wrapped text", {
   page <- callout_page()
+
   expect_error(pz_annotate_callout(page, "", target = "#target"), "text")
   expect_error(
     pz_annotate_callout(page, "x", target = "#target", side = "center"),
@@ -249,6 +263,7 @@ test_that("callouts validate inputs and clamp long wrapped text", {
     pz_annotate_callout(page, "x", target = "#target", id = "spotlight"),
     "id"
   )
+
   page |>
     pz_annotate_callout(
       paste(rep("longword", 80), collapse = " "),
@@ -260,6 +275,7 @@ test_that("callouts validate inputs and clamp long wrapped text", {
   expect_gte(state$rect[[1]], 7.9)
   expect_lte(state$rect[[5]], 320)
   expect_gt(state$rect[[6]], 30)
+
   page |> pz_annotate_clear()
   page |>
     pz_annotate_callout(
@@ -277,6 +293,7 @@ test_that("callout bubble paints in still and leaves after clearing", {
   skip_if_not_installed("png")
   page <- callout_page()
   path <- withr::local_tempfile(fileext = ".png")
+
   page |>
     pz_annotate_callout(
       "Pixels",
@@ -294,12 +311,14 @@ test_that("callout bubble paints in still and leaves after clearing", {
     as.numeric(png::readPNG(path)[y * dpr + 1, x * dpr + 1, 1:3])
   }
   expect_equal(sample(), c(225, 29, 72) / 255, tolerance = 0.05)
+
   page |> pz_annotate_clear("tip") |> pz_screenshot(path)
   expect_equal(sample(), c(1, 1, 1), tolerance = 0.05)
 })
 
 test_that("automatic placement chooses each roomiest cardinal side", {
   page <- callout_page()
+
   for (side in c("top", "right", "bottom", "left")) {
     pz_js(
       page,
@@ -360,16 +379,19 @@ document.body.innerHTML =
   '<div style="height:170px"></div><div id=target style="width:80px;height:30px"></div>'
 ]"
   )
+
   page |>
     pz_annotate_callout("Inner", target = "#target", side = "right", id = "tip")
   # The target starts scrolled out of #scroller's box: the callout hides
   # until the target scrolls into view.
   expect_false(callout_details(page)$nodes[[1]]$visible)
+
   pz_js(
     page,
     "document.querySelector('#scroller').scrollTop=100;document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
   )
   first <- callout_details(page)$nodes[[1]]$rect[[2]]
+
   pz_js(
     page,
     "document.querySelector('#scroller').scrollTop=80;document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
@@ -397,6 +419,7 @@ document.body.insertAdjacentHTML(
 )
 ]"
   )
+
   page |>
     pz_annotate_callout(
       "gone",
@@ -418,14 +441,17 @@ document.body.insertAdjacentHTML(
       reveal = "none",
       id = "control"
     )
+
   details <- callout_details(page)$nodes
   expect_length(details, 3)
   # #buried-call's box (y 250..310) sits below its container (y 100..220).
   expect_false(details[[1]]$visible)
+
   # #part-call's bottom (y 480) is cut by its container at y 420; the
   # leader's arrow anchors to the visible bottom edge.
   expect_true(details[[2]]$visible)
   expect_equal(details[[2]]$end[[2]], 420, tolerance = 1)
+
   # The bubble is never clipped.
   expect_equal(
     unlist(details[[2]]$bubble[5:6]),
@@ -438,6 +464,7 @@ test_that("arrow paints between bubble and target in a still", {
   skip_if_not_installed("png")
   page <- callout_page()
   path <- withr::local_tempfile(fileext = ".png")
+
   page |>
     pz_annotate_callout(
       "Arrow",
@@ -449,6 +476,7 @@ test_that("arrow paints between bubble and target in a still", {
   target <- unlist(state$target)
   endpoint <- unlist(state$nodes[[1]]$end)
   expect_equal(endpoint[1], target[3], tolerance = 1)
+
   page |> pz_screenshot(path)
   img <- png::readPNG(path)
   dpr <- page_dpr(page)
@@ -460,6 +488,7 @@ test_that("arrow paints between bubble and target in a still", {
 test_that("idle and paused callouts do not run reveal animations", {
   skip_if_no_av()
   page <- callout_page()
+
   page |> pz_annotate_callout("No animation", target = "#target", id = "tip")
   expect_identical(
     pz_js(
@@ -468,11 +497,13 @@ test_that("idle and paused callouts do not run reveal animations", {
     ),
     0L
   )
+
   page |> pz_annotate_clear("tip")
   path <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(path, fps = 15, hold = c(0, 0))
   defer_record_stop(page)
   page |> pz_record_pause()
+
   page |> pz_annotate_callout("Paused", target = "#target", id = "tip")
   expect_identical(
     pz_js(
@@ -481,31 +512,38 @@ test_that("idle and paused callouts do not run reveal animations", {
     ),
     0L
   )
+
   page |> pz_annotate_clear("tip")
   expect_length(callout_state(page), 0)
+
   page |> pz_record_stop()
 })
 
 test_that("callouts use the current scope or root body without a target", {
   page <- callout_page()
+
   scoped <- pz_find(page, "#target")
   scoped |> pz_annotate_callout("Scope", id = "scope", side = "right")
   expect_length(callout_state(page), 1)
+
   details <- callout_details(page)
   target <- as.numeric(unlist(details$target))
   end <- as.numeric(unlist(details$nodes[[1]]$end))
   expect_equal(end[1], target[3], tolerance = 1)
   expect_gte(end[2], target[2])
   expect_lte(end[2], target[4])
+
   page |> pz_annotate_clear("scope")
   page |> pz_annotate_callout("Body", id = "body", leader = FALSE)
   expect_length(callout_state(page), 1)
+
   page |> pz_annotate_clear()
   expect_length(callout_state(page), 0)
 })
 
 test_that("replacing a redaction with a callout uses the same id", {
   page <- callout_page()
+
   page |> pz_annotate_redact("#target", id = "shared")
   page |> pz_annotate_callout("Replacement", target = "#target", id = "shared")
   expect_length(callout_state(page), 1)
@@ -516,6 +554,7 @@ test_that("replacing a redaction with a callout uses the same id", {
     ),
     0L
   )
+
   page |> pz_annotate_clear("shared")
   expect_length(callout_state(page), 0)
 })
@@ -523,6 +562,7 @@ test_that("replacing a redaction with a callout uses the same id", {
 test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping ones", {
   page <- callout_page()
   pz_js(page, "document.querySelector('#target').style.left='0px'")
+
   page |>
     pz_annotate_callout(
       "Overlapping bubble",
@@ -537,6 +577,7 @@ test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping o
     ),
     "none"
   )
+
   pz_js(
     page,
     "document.querySelector('#target').style.left='calc(100vw - 2px)'"
@@ -559,6 +600,7 @@ test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping o
     ),
     "none"
   ))
+
   endpoints <- pz_js(
     page,
     "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); const l=n.querySelector('.pz-shaft'); return [n.getBoundingClientRect().left+Number(l.getAttribute('x1')), n.getBoundingClientRect().left+Number(l.getAttribute('x2'))]; })()"
@@ -566,6 +608,7 @@ test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping o
   expect_equal(endpoints[[1]], bubble[3], tolerance = 1)
   expect_lt(endpoints[[2]], target[1])
   expect_gte(endpoints[[2]], bubble[3])
+
   head <- pz_js(
     page,
     "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); return n.querySelector('.pz-deco-end').getAttribute('points').split(' ').map(p=>n.getBoundingClientRect().left+Number(p.split(',')[0])); })()"
@@ -580,6 +623,7 @@ test_that("long badges stay within the measured bubble and viewport", {
     page,
     "document.querySelector('#target').style.left='calc(100vw - 80px)'"
   )
+
   page |>
     pz_annotate_callout(
       "Tip",
@@ -599,14 +643,17 @@ test_that("long badges stay within the measured bubble and viewport", {
 
 test_that("callout reveal defaults to pop and rejects NULL", {
   page <- callout_page()
+
   expect_error(
     pz_annotate_callout(page, "Note", target = "#target", reveal = NULL),
     "reveal"
   )
+
   captured <- NULL
   local_mocked_bindings(annotate_call = function(ctx, els, fn, options, what) {
     captured <<- options
   })
+
   pz_annotate_callout(page, "Note", target = "#target")
   omitted <- captured
   pz_annotate_callout(page, "Note", target = "#target", reveal = "pop")
@@ -616,6 +663,7 @@ test_that("callout reveal defaults to pop and rejects NULL", {
 
 test_that("leader heads have stroke-scaled proportions and shafts stop at the base", {
   page <- callout_page()
+
   for (side in c(
     "top",
     "bottom",
@@ -709,6 +757,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   page <- callout_page()
   page |>
     pz_annotate_callout("Arrow", target = "#target", side = "right", id = "tip")
+
   state <- pz_js(
     page,
     r"[
@@ -754,6 +803,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   expect_identical(state$hidden, "hidden")
   expect_gt(state$offset, 0)
   expect_lt(state$offset, 1)
+
   done <- pz_js(
     page,
     r"[
@@ -773,6 +823,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   )
   expect_identical(done$shown, "")
   expect_identical(done$live, 0L)
+
   leaving <- pz_js(
     page,
     r"[
@@ -796,6 +847,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   expect_match(leaving$shaftKey, "strokeDashoffset")
   expect_gt(leaving$offset, 0)
   expect_lt(leaving$offset, 1)
+
   removed <- pz_js(
     page,
     r"[
@@ -815,6 +867,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
 
 test_that("callouts validate leader shapes and decorations", {
   page <- callout_page()
+
   expect_error(
     pz_annotate_callout(page, "x", target = "#target", leader = "arrow"),
     "leader",
@@ -915,6 +968,7 @@ test_that("leader decorations render per end and shafts stop at each base", {
 ]"
     )
   }
+
   page |>
     pz_annotate_callout(
       "Both",
@@ -970,6 +1024,7 @@ test_that("leader decorations render per end and shafts stop at each base", {
 
 test_that("short leaders clamp both decorations", {
   page <- callout_page()
+
   page |>
     pz_annotate_callout(
       "Short",
@@ -1013,6 +1068,7 @@ test_that("short leaders clamp both decorations", {
 
 test_that("fill and text_color style the bubble and badge, staged or per-call", {
   page <- callout_page()
+
   page |>
     pz_annotate_callout("Plain", target = "#target", label = 1, id = "tip")
   node <- callout_details(page)$nodes[[1]]
@@ -1048,6 +1104,7 @@ test_that("fill and text_color style the bubble and badge, staged or per-call", 
 
 test_that("callouts validate fill, text_color, stroke_width and distance", {
   page <- callout_page()
+
   expect_error(
     pz_annotate_callout(page, "x", target = "#target", fill = ""),
     "fill.*empty string"
@@ -1082,9 +1139,11 @@ test_that("distance sets the bubble-to-target gap and is stageable", {
     bubble <- unlist(state$nodes[[1]]$rect)
     bubble[[1]] - target[[3]]
   }
+
   page |>
     pz_annotate_callout("Gap", target = "#target", side = "right", id = "tip")
   default_gap <- gap()
+
   page |>
     pz_annotate_callout(
       "Gap",
@@ -1094,6 +1153,7 @@ test_that("distance sets the bubble-to-target gap and is stageable", {
       id = "tip"
     )
   expect_equal(gap(), 40, tolerance = 1)
+
   page |>
     pz_stage_annotate(distance = 12) |>
     pz_annotate_callout("Gap", target = "#target", side = "right", id = "tip")
@@ -1107,14 +1167,17 @@ test_that("an unset distance is 24 with a leader and 8 without one", {
   local_mocked_bindings(annotate_call = function(ctx, els, fn, options, what) {
     captured <<- options
   })
+
   pz_annotate_callout(page, "x", target = "#target")
   expect_identical(captured$distance, 24)
+
   pz_annotate_callout(page, "x", target = "#target", leader = FALSE)
   expect_identical(captured$distance, 8)
 
   staged <- page |> pz_stage_annotate(distance = 30)
   pz_annotate_callout(staged, "x", target = "#target", leader = FALSE)
   expect_identical(captured$distance, 30)
+
   # NULL drops the override, restoring the built-in default
   staged <- staged |> pz_stage_annotate(distance = NULL)
   pz_annotate_callout(staged, "x", target = "#target", leader = FALSE)
@@ -1140,6 +1203,7 @@ test_that("stroke_width scales the leader and decorations and is stageable", {
 ]"
     )
   }
+
   page |>
     pz_annotate_callout(
       "Wide",
@@ -1152,6 +1216,7 @@ test_that("stroke_width scales the leader and decorations and is stageable", {
   m <- leader_metrics()
   expect_equal(m$stroke, 4)
   expect_equal(m$head, 20, tolerance = 1e-4)
+
   page |>
     pz_stage_annotate(stroke_width = 1) |>
     pz_annotate_callout(
@@ -1172,6 +1237,7 @@ test_that("callout style options resolve per-call, staged, then built-in", {
   local_mocked_bindings(annotate_call = function(ctx, els, fn, options, what) {
     captured <<- options
   })
+
   pz_annotate_callout(page, "x", target = "#target")
   defaults <- captured
   expect_identical(defaults$fill, "#e11d48")
@@ -1224,17 +1290,21 @@ test_that("callout fill follows the resolved accent unless overridden", {
     pz_annotate_callout(ctx, "Tip", target = "#target", id = "tip", ...)
     callout_details(page)$nodes[[1]]
   }
+
   node <- draw()
   expect_identical(node$fill, "rgb(225, 29, 72)")
+
   blue <- pz_stage_annotate(page, color = "#2563eb")
   node <- draw(blue)
   expect_identical(node$fill, "rgb(37, 99, 235)")
+
   node <- draw(blue, color = "#56B4E9")
   expect_identical(node$fill, "rgb(86, 180, 233)")
 
   yellow <- pz_stage_annotate(blue, fill = "yellow")
   expect_identical(draw(yellow, color = "blue")$fill, "rgb(255, 255, 0)")
   expect_identical(draw(yellow, fill = "lime")$fill, "rgb(0, 255, 0)")
+
   # An explicit NULL restores the follow-color default for that pipeline
   plain <- pz_stage_annotate(yellow, fill = NULL)
   expect_identical(draw(plain)$fill, "rgb(37, 99, 235)")
@@ -1247,6 +1317,7 @@ test_that("NULL undo restores a default for one pipeline only", {
     pz_annotate_callout(ctx, "Tip", target = "#target", id = "tip", ...)
     callout_details(page)$nodes[[1]]
   }
+
   staged <- pz_stage_annotate(page, fill = "blue")
 
   # The page-wide default fills the bubble blue
@@ -1273,12 +1344,14 @@ test_that("callout text chooses the higher WCAG contrast against its fill", {
     )
     callout_details(page)$nodes[[1]]
   }
+
   for (color in c("#e11d48", "#2563eb", "navy", "hsl(240, 100%, 25%)")) {
     node <- draw(color = color)
     expect_identical(node$textColor, "rgb(255, 255, 255)")
     expect_identical(node$badgeColor, node$textColor)
     expect_identical(node$badgeFill, node$fill)
   }
+
   for (color in c("#56B4E9", "yellow", "rgb(240, 240, 240)", "#777777")) {
     node <- draw(color = color)
     expect_identical(node$textColor, "rgb(0, 0, 0)")
@@ -1290,6 +1363,7 @@ test_that("callout text chooses the higher WCAG contrast against its fill", {
     draw(color = "navy", fill = "white")$textColor,
     "rgb(0, 0, 0)"
   )
+
   white <- pz_stage_annotate(page, fill = "white")
   expect_identical(draw(white, color = "navy")$textColor, "rgb(0, 0, 0)")
   red <- pz_stage_annotate(white, text_color = "red")
@@ -1297,6 +1371,7 @@ test_that("callout text chooses the higher WCAG contrast against its fill", {
   expect_identical(draw(red, text_color = "blue")$textColor, "rgb(0, 0, 255)")
   plain <- pz_stage_annotate(red, text_color = NULL)
   expect_identical(draw(plain)$textColor, "rgb(0, 0, 0)")
+
   # Translucent fills are blended over white before measuring contrast.
   expect_identical(draw(fill = "transparent")$textColor, "rgb(0, 0, 0)")
   expect_identical(

@@ -17,6 +17,7 @@ test_that("el_rects returns one row per element with CSS-pixel geometry", {
 test_that("el_rects on a zero-count set returns a zero-row tibble", {
   page <- local_geometry_page()
   els <- new_elements(page, NULL, 0L, "empty")
+
   rects <- el_rects(els)
   expect_equal(
     rects,

@@ -145,8 +145,10 @@ test_that("contexts delegate close(), view(), and is_closed() to the root page",
   ctx <- PaparazziContext$new(mock)
 
   expect_false(ctx$is_closed())
+
   ctx$view()
   expect_true(mock$viewed)
+
   ctx$close()
   expect_true(mock$closed)
   expect_true(ctx$is_closed())

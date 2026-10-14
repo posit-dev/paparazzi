@@ -115,13 +115,16 @@ test_that("pz_find contexts inherit staged settings", {
 
   scoped <- pz_find(staged, "#btn")
   expect_equal(ctx_stage(scoped)$cursor_scale, 3)
+
   # The inherited setting resolves in the scoped pipeline's calls
   # (cursor_show() with no target uses the scope)
   scoped |> pz_cursor_show()
   expect_equal(cursor_overlay_scale(page), 3)
+
   # Unwinding the scope keeps the staging
   root <- pz_find_reset(scoped)
   expect_equal(ctx_stage(root)$cursor_scale, 3)
+
   # A scope derived from the unassigned page sees the defaults
   plain <- pz_find(page, "#btn")
   expect_equal(ctx_stage(plain)$cursor_scale, 1.75)
@@ -147,6 +150,7 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_equal(stage$cursor_scale, 2)
   expect_equal(stage$typing_speed, 30)
   expect_equal(stage$pause, 0.5)
+
   # Only supplied arguments change.
   expect_null(stage$cursor)
   expect_null(stage$enter)
@@ -179,6 +183,7 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_false(ctx_stage(staged)$camera_follow)
   staged <- staged |> pz_stage(camera_follow = NULL)
   expect_true(ctx_stage(staged)$camera_follow)
+
   expect_error(pz_stage(page, camera_follow = "yes"), class = "rlang_error")
   expect_error(pz_stage(page, cursor = "yes"), class = "rlang_error")
   expect_error(pz_stage(page, cursor_speed = 0), class = "rlang_error")
@@ -186,8 +191,10 @@ test_that("pz_stage merges settings onto the defaults and validates", {
   expect_error(pz_stage(page, cursor_scale = 5.1), class = "rlang_error")
   expect_error(pz_stage(page, cursor_scale = Inf), class = "rlang_error")
   expect_error(pz_stage(page, cursor_scale = "large"), class = "rlang_error")
+
   staged <- staged |> pz_stage(cursor_scale = 5)
   expect_equal(ctx_stage(staged)$cursor_scale, 5)
+
   expect_error(pz_stage(page, enter = "up"), class = "paparazzi_error_input")
   expect_error(pz_stage(page, typing = "slow"), class = "rlang_error")
   expect_error(pz_stage(page, typing_speed = -1), class = "rlang_error")
@@ -227,6 +234,7 @@ test_that("tri-state staging settings default to NULL in their signatures", {
 
 test_that("pz_stage_annotate rejects invalid styles at assignment", {
   page <- local_cursor_page()
+
   expect_error(
     pz_stage_annotate(page, color = ""),
     "color.*empty string"
@@ -342,6 +350,7 @@ test_that("pz_stage no longer accepts annotation style settings", {
 test_that("the glide formula uses the new default and 0.5-2s limits", {
   point <- c(x = 0, y = 0)
   to <- function(x) c(x = x, y = 0)
+
   expect_equal(stage_glide_duration(point, to(300), 500), 0.85)
   expect_equal(stage_glide_duration(point, to(300), 400), 1)
   expect_equal(stage_glide_duration(point, to(0), 500), 0.5)
@@ -380,6 +389,7 @@ test_that("natural typing is per-character while recording, instant otherwise", 
     )
   page2 |> pz_act_type("otters", target = "#name")
   page2 |> pz_record_stop()
+
   expect_equal(pz_js(page2, "window.__log.inputs.name"), 1)
   expect_equal(pz_js(page2, "document.getElementById('name').value"), "otters")
 
@@ -474,11 +484,13 @@ test_that("staged root offsets and directions correct incomplete wheels", {
     unlist(pz_js(page, "[window.scrollX, window.scrollY]")),
     c(120, 300)
   )
+
   scroll_staged(page, NULL, by = c(-40, -100), to = NULL, duration = 0.01)
   expect_equal(
     unlist(pz_js(page, "[window.scrollX, window.scrollY]")),
     c(80, 200)
   )
+
   scroll_staged(
     page,
     NULL,
@@ -493,6 +505,7 @@ test_that("staged root offsets and directions correct incomplete wheels", {
       "[document.scrollingElement.scrollWidth - document.documentElement.clientWidth, document.scrollingElement.scrollHeight - document.documentElement.clientHeight]"
     ))
   )
+
   scroll_staged(page, NULL, by = NULL, to = c("left", "top"), duration = 0.01)
   expect_equal(unlist(pz_js(page, "[window.scrollX, window.scrollY]")), c(0, 0))
 })
@@ -521,8 +534,10 @@ test_that("staged scoped fallback uses offsets and directions without root seria
 
   scroll_staged(ctx, scoped, by = c(100, 200), to = NULL, duration = 0.01)
   expect_equal(position(), c(100, 200))
+
   scroll_staged(ctx, scoped, by = c(-40, -50), to = NULL, duration = 0.01)
   expect_equal(position(), c(60, 150))
+
   scroll_staged(ctx, scoped, by = NULL, to = "center", duration = 0.01)
   expect_equal(
     position(),
@@ -531,6 +546,7 @@ test_that("staged scoped fallback uses offsets and directions without root seria
       "(() => { const s = document.getElementById('scroller'); return [Math.round((s.scrollWidth - s.clientWidth) / 2), Math.round((s.scrollHeight - s.clientHeight) / 2)]; })()"
     ))
   )
+
   scroll_staged(ctx, scoped, by = NULL, to = c("left", "top"), duration = 0.01)
   expect_equal(position(), c(0, 0))
 })
@@ -546,6 +562,7 @@ test_that("a nested scroller obstructs a scoped wheel and stays untouched", {
   })()"
   )
   ctx <- pz_find(page, "#scroller > div")
+
   scroll_staged(
     ctx,
     scope_connected(ctx),
@@ -614,6 +631,7 @@ test_that("pz_act_scroll forwards duration to staged wheels for by, to, and targ
   before <- pz_js(page, "window.scrollY")
   page |> pz_act_scroll(by = c(0, 0), duration = 0)
   expect_equal(pz_js(page, "window.scrollY"), before)
+
   page |> pz_record_stop()
 })
 
@@ -629,6 +647,7 @@ test_that("zero-duration scrolls land instantly without queued wheel events", {
 
   page |> pz_act_scroll(by = c(0, 300), duration = 0L)
   expect_equal(pz_js(page, "window.scrollY"), 300)
+
   page |> pz_act_scroll(to = "bottom", duration = 0)
   expect_equal(
     pz_js(page, "window.scrollY"),
@@ -637,12 +656,15 @@ test_that("zero-duration scrolls land instantly without queued wheel events", {
       "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
     )
   )
+
   page |> pz_act_scroll(target = "#plain", duration = 0)
   expect_true(pz_js(
     page,
     "document.getElementById('plain').getBoundingClientRect().y >= 0"
   ))
+
   expect_equal(pz_js(page, "window.__log.wheels"), 0)
+
   page |> pz_record_stop()
 })
 
@@ -691,6 +713,7 @@ test_that("a target visible in a below-the-fold container is wheeled into view",
 })()
 ]"
   )
+
   page |> pz_stage()
   page |>
     pz_record_start(
@@ -719,6 +742,7 @@ test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
       fps = 10,
       hold = c(0, 0)
     )
+
   page |> pz_act_click("#btn")
   # cursor = FALSE never draws, even while recording.
   expect_null(cursor_overlay_state(page))
@@ -729,7 +753,9 @@ test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
   st <- cursor_overlay_state(page)
   expect_equal(st[[1]], 1)
   expect_equal(st[2:3], c(660, 322))
+
   page |> pz_record_stop()
+
   expect_equal(pz_js(page, "window.__log.clicks"), 2)
 })
 
@@ -740,6 +766,7 @@ test_that("recording reconciles overlay visibility from the recording context", 
   # the recording chain means it must not appear in the video either.
   page |> pz_cursor_show("#btn")
   staged <- page |> pz_stage(cursor = FALSE)
+
   staged |>
     pz_record_start(
       withr::local_tempfile(fileext = ".mp4"),
@@ -748,6 +775,7 @@ test_that("recording reconciles overlay visibility from the recording context", 
     ) |>
     pz_act_click("#btn")
   expect_equal(cursor_overlay_state(page)[[1]], 0)
+
   page |> pz_record_stop()
 })
 
@@ -784,8 +812,10 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
       fps = 10,
       hold = c(0, 0)
     )
+
   page |> pz_act_scroll(by = c(0, 400))
   expect_equal(pz_js(page, "window.scrollY"), 400)
+
   # Not one wheel fired: the scroll was applied instantly, and the
   # covering scroller is untouched.
   expect_equal(pz_js(page, "window.__log.wheels"), 0)
@@ -793,6 +823,7 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
     pz_js(page, "document.getElementById('center-scroller').scrollTop"),
     0
   )
+
   # The auto-scroll before an action hits the same fallback: the fixed
   # scroller still covers every root wheel point.
   page |> pz_act_click("#below")
@@ -802,6 +833,7 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
     pz_js(page, "document.getElementById('center-scroller').scrollTop"),
     0
   )
+
   page |> pz_record_stop()
   recorded <- c(
     scrollY = pz_js(page, "window.scrollY"),
@@ -847,6 +879,7 @@ test_that("an off-screen scope is brought into view with staged wheels too", {
       fps = 10,
       hold = c(0, 0)
     )
+
   wheel_durations <- numeric()
   original_wheel <- stage_wheel
   testthat::local_mocked_bindings(
@@ -855,6 +888,7 @@ test_that("an off-screen scope is brought into view with staged wheels too", {
       original_wheel(ctx, point, dx, dy, duration, call = call)
     }
   )
+
   # The scope's container is already at its target (top), so every
   # wheel has to come from the into-view: a recorded scoped scroll
   # must animate the scope on screen, not jump it with scrollIntoView.
@@ -882,10 +916,12 @@ test_that("the stage pause holds after each action only while recording", {
       fps = 10,
       hold = c(0, 0)
     )
+
   t0 <- proc.time()[["elapsed"]]
   page |> pz_act_click("#btn")
   recorded <- proc.time()[["elapsed"]] - t0
   page |> pz_record_stop()
+
   expect_true(recorded >= 0.45)
 
   page2 <- local_cursor_page()
@@ -1085,6 +1121,7 @@ test_that("recorded demo glides, types, and scrolls on camera", {
   expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
   expect_equal(pz_js(page, "window.__log.inputs.name"), 6)
   expect_true(pz_js(page, "window.__log.wheels") > 0)
+
   # The auto cursor belonged to the recording and left with it.
   expect_equal(cursor_overlay_state(page)[[1]], 0)
 
@@ -1134,6 +1171,7 @@ test_that("without a recording the same chain runs straight to the final state",
   expect_equal(pz_js(page, "window.__log.clicks"), 1)
   expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
   expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
+
   # No staging happened: one insertion, no wheels, no cursor layer.
   expect_equal(pz_js(page, "window.__log.inputs.name"), 1)
   expect_equal(pz_js(page, "window.__log.wheels"), 0)
@@ -1143,6 +1181,7 @@ test_that("without a recording the same chain runs straight to the final state",
 test_that("click_effect and click_effect_color stage, validate, and reset", {
   page <- local_cursor_page()
   staged <- page
+
   expect_identical(ctx_stage(staged)$click_effect, "press")
   expect_identical(ctx_stage(staged)$click_effect_color, "#e11d48")
 
@@ -1150,6 +1189,7 @@ test_that("click_effect and click_effect_color stage, validate, and reset", {
     staged <- pz_stage(staged, click_effect = effect)
     expect_identical(ctx_stage(staged)$click_effect, effect)
   }
+
   expect_error(pz_stage(page, click_effect = "slide"), class = "rlang_error")
 
   staged <- pz_stage(staged, click_effect_color = "#2563eb")
@@ -1168,11 +1208,14 @@ test_that("click_effect and click_effect_color stage, validate, and reset", {
 test_that("show_keys defaults to none and restores its staged default", {
   page <- local_record_page()
   staged <- page
+
   expect_identical(ctx_stage(staged)$show_keys, "none")
+
   for (style in c("words", "mac", "both")) {
     staged <- pz_stage(staged, show_keys = style)
     expect_identical(ctx_stage(staged)$show_keys, style)
   }
+
   expect_error(pz_stage(page, show_keys = "nope"), "nope")
   staged <- pz_stage(staged, show_keys = NULL)
   expect_identical(ctx_stage(staged)$show_keys, "none")
@@ -1180,6 +1223,7 @@ test_that("show_keys defaults to none and restores its staged default", {
 
 test_that("pz_stage_annotate stages fill, text color, stroke width and distance", {
   page <- local_cursor_page()
+
   expect_null(ctx_stage(page)$annotate_fill)
   expect_null(ctx_stage(page)$annotate_text_color)
   expect_error(pz_stage_annotate(page, fill = ""), "fill.*empty string")
