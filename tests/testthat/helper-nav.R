@@ -13,7 +13,7 @@ device_zoom_fixture_file <- function() {
 nav_fixture_url <- function(name) {
   # file_url() is internal: tests run in the package namespace, like
   # test-open.R already does.
-  file_url(test_path("fixtures", paste0("nav-", name, ".html")))
+  file_url(test_path("fixtures", sprintf("nav-%s.html", name)))
 }
 
 local_nav_page <- function(.env = parent.frame()) {

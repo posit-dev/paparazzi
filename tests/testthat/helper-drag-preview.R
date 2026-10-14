@@ -147,12 +147,16 @@ drag_preview_counted_boot <- function(boot, replacement = NULL) {
   replacement <- replacement %||% 'return original(...args);'
   sub(
     needle,
-    paste0(
-      '\nconst original = exports.toPng; exports.toPng = (...args) => {',
-      'window.__previewCaptures = (window.__previewCaptures || 0) + 1;',
-      'window.__previewFontEmbedCSS = args[1]?.fontEmbedCSS;',
-      replacement,
-      '};\nreturn ('
+    sprintf(
+      r"(
+        const original = exports.toPng; exports.toPng = (...args) => {
+        window.__previewCaptures = (window.__previewCaptures || 0) + 1;
+        window.__previewFontEmbedCSS = args[1]?.fontEmbedCSS;
+        %s
+        };
+        return (
+      )",
+      replacement
     ),
     js,
     fixed = TRUE

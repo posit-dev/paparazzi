@@ -387,14 +387,16 @@ test_that("the press animation scales the cursor down", {
 # Pin transitions in the same browser task that creates the ring.
 local_paused_cursor_ring <- function(.env = parent.frame()) {
   local_mocked_bindings(
-    cursor_command_js = paste0(
-      "function(state) { const icon = (",
-      cursor_command_js,
-      ")(state);",
-      "if (state.anim && state.ring) {",
-      "const r = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-ring');",
-      "r.getAnimations().forEach((a) => { a.pause(); a.currentTime = a.transitionProperty === 'opacity' ? 0 : 200; });",
-      "} return icon; }"
+    cursor_command_js = sprintf(
+      r"(function(state) {
+        const icon = (%s)(state);
+        if (state.anim && state.ring) {
+          const r = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-ring');
+          r.getAnimations().forEach((a) => { a.pause(); a.currentTime = a.transitionProperty === 'opacity' ? 0 : 200; });
+        }
+        return icon;
+      })",
+      cursor_command_js
     ),
     .env = .env
   )
@@ -551,10 +553,9 @@ test_that("all CSS cursor presets validate and select their own layer", {
     expect_equal(
       pz_js(
         page,
-        paste0(
-          "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-",
-          keyword,
-          "').children.length"
+        sprintf(
+          r"(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-%s').children.length)",
+          keyword
         )
       ) >
         0,
@@ -1261,14 +1262,12 @@ test_that("an explicitly hidden cursor stays hidden during recorded typing", {
   page |> pz_act_click("#task-title")
   pz_js(
     page,
-    paste0(
-      "window.__cursorInputOpacity = [];",
-      "document.querySelector('#task-title').addEventListener('input', () => {",
-      "const inner = document.querySelector('#paparazzi-overlay-root')",
-      ".shadowRoot.querySelector('.pz-inner');",
-      "window.__cursorInputOpacity.push(getComputedStyle(inner).opacity);",
-      "});"
-    )
+    r"(window.__cursorInputOpacity = [];
+      document.querySelector('#task-title').addEventListener('input', () => {
+        const inner = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner');
+        window.__cursorInputOpacity.push(getComputedStyle(inner).opacity);
+      });
+    )"
   )
   page |> pz_cursor_hide()
   # The hide fades the overlay over CURSOR_FADE seconds and the hide pump
@@ -1280,10 +1279,7 @@ test_that("an explicitly hidden cursor stays hidden during recorded typing", {
         pass = identical(
           pz_js(
             page,
-            paste0(
-              "getComputedStyle(document.getElementById('paparazzi-overlay-root')",
-              ".shadowRoot.querySelector('.pz-inner')).opacity"
-            )
+            r"(getComputedStyle(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner')).opacity)"
           ),
           "0"
         )

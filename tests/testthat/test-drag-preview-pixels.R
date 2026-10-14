@@ -197,10 +197,9 @@ test_that('retained carry and settle pixels follow the same task row for to and 
       drag_preview_settle = function(state) {
         start_box <- pz_js(
           page,
-          paste0(
-            '(() => {const r = ',
-            DRAG_PREVIEW_CONTROLLER_JS,
-            '.image.getBoundingClientRect();return {x:r.x,y:r.y};})()'
+          sprintf(
+            r"( (() => {const r = %s.image.getBoundingClientRect();return {x:r.x,y:r.y};})() )",
+            DRAG_PREVIEW_CONTROLLER_JS
           )
         )
         settle_start <<- unlist(start_box) + c(x = initial$dx, y = initial$dy)
@@ -208,16 +207,15 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         expect_gt(duration, 0)
         sample <- pz_js(
           page,
-          paste0(
-            "(() => { const p = ",
-            DRAG_PREVIEW_CONTROLLER_JS,
-            ";
-          const a = p.image.getAnimations()[0]; a.pause(); a.currentTime = 90;
-          const r = p.source.getBoundingClientRect();
-          const t = document.querySelector('#preview-target').getBoundingClientRect();
-          return {source:{x:r.x,y:r.y},target:{x:t.x,y:t.y}, same:p.source === window.__previewSource,
-            attached:p.source.isConnected, cssWidth:parseFloat(p.image.style.width), cssHeight:parseFloat(p.image.style.height)};
-        })()"
+          sprintf(
+            r"( (() => { const p = %s;
+            const a = p.image.getAnimations()[0]; a.pause(); a.currentTime = 90;
+            const r = p.source.getBoundingClientRect();
+            const t = document.querySelector('#preview-target').getBoundingClientRect();
+            return {source:{x:r.x,y:r.y},target:{x:t.x,y:t.y}, same:p.source === window.__previewSource,
+              attached:p.source.isConnected, cssWidth:parseFloat(p.image.style.width), cssHeight:parseFloat(p.image.style.height)};
+          })() )",
+            DRAG_PREVIEW_CONTROLLER_JS
           )
         )
         expect_true(sample$same)
@@ -231,10 +229,9 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         pump_loop(page$child_loop, 0.04)
         box <- pz_js(
           page,
-          paste0(
-            "(() => {const r = ",
-            DRAG_PREVIEW_CONTROLLER_JS,
-            ".image.getBoundingClientRect();return {x:r.x,y:r.y};})()"
+          sprintf(
+            r"( (() => {const r = %s.image.getBoundingClientRect();return {x:r.x,y:r.y};})() )",
+            DRAG_PREVIEW_CONTROLLER_JS
           )
         )
         settle_expected <<- unlist(box) + c(x = initial$dx, y = initial$dy)
@@ -244,10 +241,9 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         )
         pz_js(
           page,
-          paste0(
-            '(() => { const p = ',
-            DRAG_PREVIEW_CONTROLLER_JS,
-            '; p.image.getAnimations()[0].currentTime = 180; })()'
+          sprintf(
+            r"( (() => { const p = %s; p.image.getAnimations()[0].currentTime = 180; })() )",
+            DRAG_PREVIEW_CONTROLLER_JS
           )
         )
         endpoint <<- drag_preview_retained_checkpoint(

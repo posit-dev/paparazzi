@@ -247,11 +247,11 @@ test_that("pz_act_press resolves Mod using the browser's reported platform", {
   page <- local_actions_page()
   pz_js(
     page,
-    paste0(
-      "window.__modKeys = []; document.addEventListener('keydown', e => {",
-      "if (e.key.toLowerCase() === 'k') window.__modKeys.push({metaKey: e.metaKey, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey});",
-      "});"
-    )
+    r"(window.__modKeys = [];
+      document.addEventListener('keydown', e => {
+        if (e.key.toLowerCase() === 'k') window.__modKeys.push({metaKey: e.metaKey, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey});
+      });
+    )"
   )
   pz_act_click(page, "#name")
 
@@ -265,12 +265,8 @@ test_that("pz_act_press resolves Mod using the browser's reported platform", {
     pz_js(
       page,
       sprintf(
-        paste0(
-          "Object.defineProperty(navigator, 'userAgentData', ",
-          "{configurable: true, value: {platform: '%s'}}); ",
-          "Object.defineProperty(navigator, 'platform', ",
-          "{configurable: true, value: '%s'});"
-        ),
+        r"(Object.defineProperty(navigator, 'userAgentData', {configurable: true, value: {platform: '%s'}});
+          Object.defineProperty(navigator, 'platform', {configurable: true, value: '%s'});)",
         platform$ua,
         platform$legacy
       )
@@ -489,11 +485,9 @@ test_that("a detached scope surfaces through an action as a classed error", {
 # The same "visible" the actionability wait and pz_expect_visible()
 # use, read directly off the fixture for the hidden-before assertions.
 hidden_js <- function(id) {
-  paste0(
-    "document.getElementById('",
-    id,
-    "')",
-    ".checkVisibility({ checkVisibilityCSS: true })"
+  sprintf(
+    r"(document.getElementById('%s').checkVisibility({ checkVisibilityCSS: true }))",
+    id
   )
 }
 
@@ -731,7 +725,7 @@ test_that("pz_set_value maintains radio groups", {
     vapply(
       radios,
       function(id) {
-        pz_js(page, paste0("document.getElementById('", id, "').checked"))
+        pz_js(page, sprintf("document.getElementById('%s').checked", id))
       },
       logical(1)
     )
@@ -964,7 +958,7 @@ test_that("pz_set_files attaches files to a file input", {
   expect_equal(
     pz_js(
       page,
-      paste0("Array.from(", el, ".files).map((f) => f.name).join('|')")
+      sprintf("Array.from(%s.files).map((f) => f.name).join('|')", el)
     ),
     paste(c(basename(f1), basename(f2)), collapse = "|")
   )

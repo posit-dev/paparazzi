@@ -1,21 +1,17 @@
 # Near-black ink count in a RECTANGLE of a captured frame (the demo's
 # text-growth check needs a rect that excludes the cursor and the scroller's text).
 demo_rect_ink <- function(page, path, x0, x1, y0, y1, dpr = page_dpr(page)) {
-  body <- paste0(
-    "const d = c.getImageData(",
-    sprintf(
-      "%d, %d, %d, %d",
-      round(x0 * dpr),
-      round(y0 * dpr),
-      round((x1 - x0) * dpr),
-      round((y1 - y0) * dpr)
-    ),
-    ").data;",
-    "let n = 0;",
-    "for (let p = 0; p < d.length; p += 4) {",
-    "  if (d[p] < 60 && d[p + 1] < 60 && d[p + 2] < 60 && d[p + 3] > 200) n++;",
-    "}",
-    "return n;"
+  body <- sprintf(
+    r"(const d = c.getImageData(%d, %d, %d, %d).data;
+      let n = 0;
+      for (let p = 0; p < d.length; p += 4) {
+        if (d[p] < 60 && d[p + 1] < 60 && d[p + 2] < 60 && d[p + 3] > 200) n++;
+      }
+      return n;)",
+    round(x0 * dpr),
+    round(y0 * dpr),
+    round((x1 - x0) * dpr),
+    round((y1 - y0) * dpr)
   )
   png_canvas_eval(page, path, body)
 }
@@ -673,25 +669,21 @@ test_that("a target visible in a below-the-fold container is wheeled into view",
   # document.
   pz_js(
     page,
-    paste0(
-      "(() => {",
-      "const d = document.createElement('div');",
-      "d.id = 'deep';",
-      "d.style.cssText = 'position:absolute;left:100px;",
-      "top:calc(100vh + 300px);width:300px;height:250px;",
-      "overflow:auto;border:1px solid #ccc;';",
-      "const b = document.createElement('button');",
-      "b.id = 'deep-btn';",
-      "b.textContent = 'deep';",
-      "b.style.cssText = 'margin-top:20px;width:120px;height:40px;';",
-      "const tall = document.createElement('div');",
-      "tall.style.cssText = 'height:900px;background:#f8f8f8;';",
-      "d.appendChild(b); d.appendChild(tall);",
-      "document.body.appendChild(d);",
-      "b.addEventListener('click',",
-      "  () => window.__log.deepClicks = (window.__log.deepClicks || 0) + 1);",
-      "})()"
-    )
+    r"((() => {
+      const d = document.createElement('div');
+      d.id = 'deep';
+      d.style.cssText = 'position:absolute;left:100px;top:calc(100vh + 300px);width:300px;height:250px;overflow:auto;border:1px solid #ccc;';
+      const b = document.createElement('button');
+      b.id = 'deep-btn';
+      b.textContent = 'deep';
+      b.style.cssText = 'margin-top:20px;width:120px;height:40px;';
+      const tall = document.createElement('div');
+      tall.style.cssText = 'height:900px;background:#f8f8f8;';
+      d.appendChild(b);
+      d.appendChild(tall);
+      document.body.appendChild(d);
+      b.addEventListener('click', () => window.__log.deepClicks = (window.__log.deepClicks || 0) + 1);
+    })())"
   )
   page |> pz_stage()
   page |>
@@ -763,19 +755,15 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
   cover_center <- function(page) {
     pz_js(
       page,
-      paste0(
-        "(() => {",
-        "const d = document.createElement('div');",
-        "d.id = 'center-scroller';",
-        "d.style.cssText = 'position:fixed;",
-        "left:calc(50% - 150px);top:calc(50% - 100px);",
-        "width:300px;height:200px;overflow:auto;';",
-        "const tall = document.createElement('div');",
-        "tall.style.cssText = 'height:2000px;background:#f8f8f8;';",
-        "d.appendChild(tall);",
-        "document.body.appendChild(d);",
-        "})()"
-      )
+      r"((() => {
+        const d = document.createElement('div');
+        d.id = 'center-scroller';
+        d.style.cssText = 'position:fixed;left:calc(50% - 150px);top:calc(50% - 100px);width:300px;height:200px;overflow:auto;';
+        const tall = document.createElement('div');
+        tall.style.cssText = 'height:2000px;background:#f8f8f8;';
+        d.appendChild(tall);
+        document.body.appendChild(d);
+      })())"
     )
   }
 
@@ -832,19 +820,15 @@ test_that("an off-screen scope is brought into view with staged wheels too", {
   page <- local_cursor_page()
   pz_js(
     page,
-    paste0(
-      "(() => {",
-      "const d = document.createElement('div');",
-      "d.id = 'deep-scope';",
-      "d.style.cssText = 'position:absolute;left:100px;",
-      "top:calc(100vh + 300px);width:300px;height:250px;",
-      "overflow:auto;border:1px solid #ccc;';",
-      "const tall = document.createElement('div');",
-      "tall.style.cssText = 'height:900px;background:#f8f8f8;';",
-      "d.appendChild(tall);",
-      "document.body.appendChild(d);",
-      "})()"
-    )
+    r"((() => {
+      const d = document.createElement('div');
+      d.id = 'deep-scope';
+      d.style.cssText = 'position:absolute;left:100px;top:calc(100vh + 300px);width:300px;height:250px;overflow:auto;border:1px solid #ccc;';
+      const tall = document.createElement('div');
+      tall.style.cssText = 'height:900px;background:#f8f8f8;';
+      d.appendChild(tall);
+      document.body.appendChild(d);
+    })())"
   )
   page |> pz_stage()
   page |>

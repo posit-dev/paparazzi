@@ -29,23 +29,21 @@ test_that("callout draws literal text into the shared layer", {
 callout_details <- function(page) {
   pz_js(
     page,
-    paste0(
-      "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
-      "const t=document.querySelector('#target').getBoundingClientRect();",
-      "const rect=r=>[r.left,r.top,r.right,r.bottom,r.width,r.height];",
-      "return {target:rect(t), nodes:[...l.querySelectorAll('.pz-callout')].map(n=>{",
-      "const b=n.querySelector('.pz-bubble'),s=n.querySelector('svg');",
-      "const badge=n.querySelector('span'),deco=s?s.querySelector('.pz-deco-end'):null;",
-      "const bc=getComputedStyle(b),bs=badge?getComputedStyle(badge):null;",
-      "const r=n.getBoundingClientRect(); return {rect:rect(r),bubble:rect(b.getBoundingClientRect()),",
-      "label:badge?.textContent ?? null, text:b.textContent,",
-      "color:b.style.borderColor,fill:bc.backgroundColor,textColor:bc.color,",
-      "badgeFill:bs?.backgroundColor ?? null,badgeColor:bs?.color ?? null,",
-      "font:b.style.fontFamily,fontSize:b.style.fontSize,",
-      "leader:!!s, decos:s?[...s.children].map(c=>c.tagName):null,",
-      "end:deco?.points?.length?[r.left+deco.points[0].x,r.top+deco.points[0].y]:null,",
-      "head:deco?.getAttribute('points') ?? null,visible:n.style.display!=='none'}; })}; })()"
-    )
+    r"( (() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
+      const t=document.querySelector('#target').getBoundingClientRect();
+      const rect=r=>[r.left,r.top,r.right,r.bottom,r.width,r.height];
+      return {target:rect(t), nodes:[...l.querySelectorAll('.pz-callout')].map(n=>{
+        const b=n.querySelector('.pz-bubble'),s=n.querySelector('svg');
+        const badge=n.querySelector('span'),deco=s?s.querySelector('.pz-deco-end'):null;
+        const bc=getComputedStyle(b),bs=badge?getComputedStyle(badge):null;
+        const r=n.getBoundingClientRect(); return {rect:rect(r),bubble:rect(b.getBoundingClientRect()),
+          label:badge?.textContent ?? null, text:b.textContent,
+          color:b.style.borderColor,fill:bc.backgroundColor,textColor:bc.color,
+          badgeFill:bs?.backgroundColor ?? null,badgeColor:bs?.color ?? null,
+          font:b.style.fontFamily,fontSize:b.style.fontSize,
+          leader:!!s, decos:s?[...s.children].map(c=>c.tagName):null,
+          end:deco?.points?.length?[r.left+deco.points[0].x,r.top+deco.points[0].y]:null,
+          head:deco?.getAttribute('points') ?? null,visible:n.style.display!=='none'}; })}; })() )"
   )
 }
 
@@ -281,9 +279,10 @@ test_that("automatic placement chooses each roomiest cardinal side", {
   for (side in c("top", "right", "bottom", "left")) {
     pz_js(
       page,
-      paste0(
-        "(() => { const t=document.querySelector('#target');",
-        "t.style.left=",
+      sprintf(
+        r"( (() => { const t=document.querySelector('#target');
+          t.style.left=%s+'px';
+          t.style.top=%s+'px'; })() )",
         switch(
           side,
           top = "innerWidth/2",
@@ -291,16 +290,13 @@ test_that("automatic placement chooses each roomiest cardinal side", {
           right = "20",
           left = "innerWidth-100"
         ),
-        "+'px';",
-        "t.style.top=",
         switch(
           side,
           top = "innerHeight-60",
           bottom = "20",
           right = "innerHeight/2",
           left = "innerHeight/2"
-        ),
-        "+'px'; })()"
+        )
       )
     )
     page |>
@@ -330,10 +326,8 @@ test_that("callout follows a target inside a scrolling container", {
   page <- callout_page()
   pz_js(
     page,
-    paste0(
-      "document.body.innerHTML='<div id=scroller style=\"position:fixed;left:150px;top:120px;width:200px;height:120px;overflow:auto\">'",
-      "+'<div style=\"height:170px\"></div><div id=target style=\"width:80px;height:30px\"></div>'"
-    )
+    r"( document.body.innerHTML='<div id=scroller style="position:fixed;left:150px;top:120px;width:200px;height:120px;overflow:auto">'
+      +'<div style="height:170px"></div><div id=target style="width:80px;height:30px"></div>' )"
   )
   page |>
     pz_annotate_callout("Inner", target = "#target", side = "right", id = "tip")
@@ -360,15 +354,13 @@ test_that("callout hides for a clipped-away target and anchors to the visible re
   page <- callout_page()
   pz_js(
     page,
-    paste0(
-      "document.body.insertAdjacentHTML('beforeend', ",
-      "'<div style=\"position:absolute;left:420px;top:100px;width:200px;height:120px;overflow:auto\">' +",
-      "'<div style=\"height:150px\"></div><div id=buried-call style=\"margin-left:20px;width:80px;height:60px\"></div>' +",
-      "'<div style=\"height:200px\"></div></div>' +",
-      "'<div style=\"position:absolute;left:420px;top:300px;width:200px;height:120px;overflow:auto\">' +",
-      "'<div style=\"height:60px\"></div><div id=part-call style=\"margin-left:20px;width:80px;height:120px\"></div>' +",
-      "'<div style=\"height:200px\"></div></div>')"
-    )
+    r"( document.body.insertAdjacentHTML('beforeend',
+      '<div style="position:absolute;left:420px;top:100px;width:200px;height:120px;overflow:auto">' +
+      '<div style="height:150px"></div><div id=buried-call style="margin-left:20px;width:80px;height:60px"></div>' +
+      '<div style="height:200px"></div></div>' +
+      '<div style="position:absolute;left:420px;top:300px;width:200px;height:120px;overflow:auto">' +
+      '<div style="height:60px"></div><div id=part-call style="margin-left:20px;width:80px;height:120px"></div>' +
+      '<div style="height:200px"></div></div>') )"
   )
   page |>
     pz_annotate_callout(
@@ -613,30 +605,27 @@ test_that("leader heads have stroke-scaled proportions and shafts stop at the ba
       gap <- if (side == "short") 3 else 0
       pz_js(
         page,
-        paste0(
-          "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
-          "const n=l.querySelector('.pz-callout'),t=document.querySelector('#target');",
-          "t.style.left=(innerWidth-8-n.offsetWidth-t.offsetWidth-",
-          gap,
-          ")+'px'; l.pz.sync(); })()"
+        sprintf(
+          r"( (() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
+            const n=l.querySelector('.pz-callout'),t=document.querySelector('#target');
+            t.style.left=(innerWidth-8-n.offsetWidth-t.offsetWidth-%d)+'px'; l.pz.sync(); })() )",
+          gap
         )
       )
     }
     geometry <- pz_js(
       page,
-      paste0(
-        "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout');",
-        "const l=n.querySelector('.pz-shaft'),p=n.querySelector('.pz-deco-end').points;",
-        "const start=[+l.getAttribute('x1'),+l.getAttribute('y1')],end=[+l.getAttribute('x2'),+l.getAttribute('y2')];",
-        "const base=[(p[1].x+p[2].x)/2,(p[1].y+p[2].y)/2];",
-        "return {stroke:parseFloat(getComputedStyle(l).strokeWidth),cap:getComputedStyle(l).strokeLinecap,",
-        "leader:Math.hypot(p[0].x-start[0],p[0].y-start[1]),",
-        "length:Math.hypot(p[0].x-base[0],p[0].y-base[1]),",
-        "halfWidth:Math.hypot(p[1].x-p[2].x,p[1].y-p[2].y)/2,",
-        "baseError:Math.hypot(end[0]-base[0],end[1]-base[1]),",
-        "shaft:Math.hypot(end[0]-start[0],end[1]-start[1]),",
-        "display:n.querySelector('svg').style.display}; })()"
-      )
+      r"( (() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout');
+        const l=n.querySelector('.pz-shaft'),p=n.querySelector('.pz-deco-end').points;
+        const start=[+l.getAttribute('x1'),+l.getAttribute('y1')],end=[+l.getAttribute('x2'),+l.getAttribute('y2')];
+        const base=[(p[1].x+p[2].x)/2,(p[1].y+p[2].y)/2];
+        return {stroke:parseFloat(getComputedStyle(l).strokeWidth),cap:getComputedStyle(l).strokeLinecap,
+          leader:Math.hypot(p[0].x-start[0],p[0].y-start[1]),
+          length:Math.hypot(p[0].x-base[0],p[0].y-base[1]),
+          halfWidth:Math.hypot(p[1].x-p[2].x,p[1].y-p[2].y)/2,
+          baseError:Math.hypot(end[0]-base[0],end[1]-base[1]),
+          shaft:Math.hypot(end[0]-start[0],end[1]-start[1]),
+          display:n.querySelector('svg').style.display}; })() )"
     )
     expected_length <- switch(
       side,
@@ -672,22 +661,20 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
     pz_annotate_callout("Arrow", target = "#target", side = "right", id = "tip")
   state <- pz_js(
     page,
-    paste0(
-      "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
-      "l.pz.callout([document.querySelector('#target')], {id:'tip',text:'Arrow',side:['right'],leader:{start:'none',end:'arrow'},",
-      "label:null,reveal:'draw',color:'red',fill:'#171717',textColor:'white',strokeWidth:2,distance:8,",
-      "fontFamily:'sans-serif',fontSize:16,animate:true});",
-      "const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});",
-      "const shaft=anims.find(a=>a.effect.target.classList.contains('pz-shaft'));",
-      "const bubble=anims.find(a=>a.effect.target.classList.contains('pz-bubble'));",
-      "shaft.pause(); shaft.currentTime=shaft.effect.getTiming().duration/2;",
-      "bubble.pause(); bubble.currentTime=bubble.effect.getTiming().duration/2;",
-      "return {count:anims.length,",
-      "shaftKey:[...new Set(shaft.effect.getKeyframes().flatMap(k=>Object.keys(k)))].join(','),",
-      "bubbleKey:[...new Set(bubble.effect.getKeyframes().flatMap(k=>Object.keys(k)))].join(','),",
-      "hidden:n.querySelector('.pz-deco-end').style.visibility,",
-      "offset:parseFloat(getComputedStyle(n.querySelector('.pz-shaft')).strokeDashoffset)}; })()"
-    )
+    r"( (() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
+      l.pz.callout([document.querySelector('#target')], {id:'tip',text:'Arrow',side:['right'],leader:{start:'none',end:'arrow'},
+        label:null,reveal:'draw',color:'red',fill:'#171717',textColor:'white',strokeWidth:2,distance:8,
+        fontFamily:'sans-serif',fontSize:16,animate:true});
+      const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});
+      const shaft=anims.find(a=>a.effect.target.classList.contains('pz-shaft'));
+      const bubble=anims.find(a=>a.effect.target.classList.contains('pz-bubble'));
+      shaft.pause(); shaft.currentTime=shaft.effect.getTiming().duration/2;
+      bubble.pause(); bubble.currentTime=bubble.effect.getTiming().duration/2;
+      return {count:anims.length,
+        shaftKey:[...new Set(shaft.effect.getKeyframes().flatMap(k=>Object.keys(k)))].join(','),
+        bubbleKey:[...new Set(bubble.effect.getKeyframes().flatMap(k=>Object.keys(k)))].join(','),
+        hidden:n.querySelector('.pz-deco-end').style.visibility,
+        offset:parseFloat(getComputedStyle(n.querySelector('.pz-shaft')).strokeDashoffset)}; })() )"
   )
   expect_identical(state$count, 2L)
   expect_match(state$shaftKey, "strokeDashoffset")
@@ -697,30 +684,26 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   expect_lt(state$offset, 1)
   done <- pz_js(
     page,
-    paste0(
-      "(async () => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
-      "const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});",
-      "anims.filter(a=>a.playState==='paused').forEach(a=>a.play());",
-      "await Promise.all(anims.map(a=>a.finished.catch(()=>{})));",
-      "await new Promise(r=>setTimeout(r,100));",
-      "return {shown:n.querySelector('.pz-deco-end').style.visibility,",
-      "live:n.getAnimations({subtree:true}).length}; })()"
-    )
+    r"( (async () => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
+      const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});
+      anims.filter(a=>a.playState==='paused').forEach(a=>a.play());
+      await Promise.all(anims.map(a=>a.finished.catch(()=>{})));
+      await new Promise(r=>setTimeout(r,100));
+      return {shown:n.querySelector('.pz-deco-end').style.visibility,
+        live:n.getAnimations({subtree:true}).length}; })() )"
   )
   expect_identical(done$shown, "")
   expect_identical(done$live, 0L)
   leaving <- pz_js(
     page,
-    paste0(
-      "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
-      "l.pz.clear({id:'tip',animate:true});",
-      "const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});",
-      "const shaft=anims.find(a=>a.effect.target.classList.contains('pz-shaft'));",
-      "shaft.pause(); shaft.currentTime=shaft.effect.getTiming().duration/2;",
-      "return {hidden:n.querySelector('.pz-deco-end').style.visibility,",
-      "shaftKey:[...new Set(shaft.effect.getKeyframes().flatMap(k=>Object.keys(k)))].join(','),",
-      "offset:parseFloat(getComputedStyle(n.querySelector('.pz-shaft')).strokeDashoffset)}; })()"
-    )
+    r"( (() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
+      l.pz.clear({id:'tip',animate:true});
+      const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});
+      const shaft=anims.find(a=>a.effect.target.classList.contains('pz-shaft'));
+      shaft.pause(); shaft.currentTime=shaft.effect.getTiming().duration/2;
+      return {hidden:n.querySelector('.pz-deco-end').style.visibility,
+        shaftKey:[...new Set(shaft.effect.getKeyframes().flatMap(k=>Object.keys(k)))].join(','),
+        offset:parseFloat(getComputedStyle(n.querySelector('.pz-shaft')).strokeDashoffset)}; })() )"
   )
   expect_identical(leaving$hidden, "hidden")
   expect_match(leaving$shaftKey, "strokeDashoffset")
@@ -728,14 +711,12 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   expect_lt(leaving$offset, 1)
   removed <- pz_js(
     page,
-    paste0(
-      "(async () => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');",
-      "const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});",
-      "anims.filter(a=>a.playState==='paused').forEach(a=>a.play());",
-      "await Promise.all(anims.map(a=>a.finished.catch(()=>{})));",
-      "await new Promise(r=>setTimeout(r,100));",
-      "return {gone:!l.querySelector('.pz-callout')}; })()"
-    )
+    r"( (async () => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
+      const n=l.querySelector('.pz-callout'),anims=n.getAnimations({subtree:true});
+      anims.filter(a=>a.playState==='paused').forEach(a=>a.play());
+      await Promise.all(anims.map(a=>a.finished.catch(()=>{})));
+      await new Promise(r=>setTimeout(r,100));
+      return {gone:!l.querySelector('.pz-callout')}; })() )"
   )
   expect_true(removed$gone)
 })
@@ -799,18 +780,16 @@ test_that("leader decorations render per end and shafts stop at each base", {
   leader_geometry <- function() {
     pz_js(
       page,
-      paste0(
-        "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout');",
-        "const s=n.querySelector('svg'),l=s.querySelector('.pz-shaft');",
-        "const r=n.getBoundingClientRect(),t=document.querySelector('#target').getBoundingClientRect();",
-        "const pt=el=>({x:+el.getAttribute('cx')+r.left,y:+el.getAttribute('cy')+r.top});",
-        "const bar=s.querySelector('line.pz-deco-end');",
-        "return {decos:[...s.children].map(c=>c.tagName+(c.classList.contains('pz-deco-start')?'-start':c.classList.contains('pz-deco-end')?'-end':'')),",
-        "shaft:[+l.getAttribute('x1')+r.left,+l.getAttribute('y1')+r.top,+l.getAttribute('x2')+r.left,+l.getAttribute('y2')+r.top],",
-        "dot:(c=>c?{x:+c.getAttribute('cx')+r.left,y:+c.getAttribute('cy')+r.top,r:+c.getAttribute('r')}:null)(s.querySelector('circle')),",
-        "bar:bar?[+bar.getAttribute('x1')+r.left,+bar.getAttribute('y1')+r.top,+bar.getAttribute('x2')+r.left,+bar.getAttribute('y2')+r.top]:null,",
-        "bubble:[r.left,r.top,r.right,r.bottom],target:[t.left,t.top,t.right,t.bottom]}; })()"
-      )
+      r"( (() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout');
+        const s=n.querySelector('svg'),l=s.querySelector('.pz-shaft');
+        const r=n.getBoundingClientRect(),t=document.querySelector('#target').getBoundingClientRect();
+        const pt=el=>({x:+el.getAttribute('cx')+r.left,y:+el.getAttribute('cy')+r.top});
+        const bar=s.querySelector('line.pz-deco-end');
+        return {decos:[...s.children].map(c=>c.tagName+(c.classList.contains('pz-deco-start')?'-start':c.classList.contains('pz-deco-end')?'-end':'')),
+          shaft:[+l.getAttribute('x1')+r.left,+l.getAttribute('y1')+r.top,+l.getAttribute('x2')+r.left,+l.getAttribute('y2')+r.top],
+          dot:(c=>c?{x:+c.getAttribute('cx')+r.left,y:+c.getAttribute('cy')+r.top,r:+c.getAttribute('r')}:null)(s.querySelector('circle')),
+          bar:bar?[+bar.getAttribute('x1')+r.left,+bar.getAttribute('y1')+r.top,+bar.getAttribute('x2')+r.left,+bar.getAttribute('y2')+r.top]:null,
+          bubble:[r.left,r.top,r.right,r.bottom],target:[t.left,t.top,t.right,t.bottom]}; })() )"
     )
   }
   page |>
@@ -880,15 +859,13 @@ test_that("short leaders clamp both decorations", {
     )
   g <- pz_js(
     page,
-    paste0(
-      "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout');",
-      "const s=n.querySelector('svg'),l=s.querySelector('.pz-shaft'),c=s.querySelector('circle'),p=s.querySelector('polygon').points;",
-      "const len=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);",
-      "const tip=[p[0].x,p[0].y],base=[(p[1].x+p[2].x)/2,(p[1].y+p[2].y)/2];",
-      "return {dotR:+c.getAttribute('r'),head:len(tip,base),",
-      "shaft:len([+l.getAttribute('x1'),+l.getAttribute('y1')],[+l.getAttribute('x2'),+l.getAttribute('y2')]),",
-      "leader:len(tip,[+c.getAttribute('cx'),+c.getAttribute('cy')])}; })()"
-    )
+    r"( (() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout');
+      const s=n.querySelector('svg'),l=s.querySelector('.pz-shaft'),c=s.querySelector('circle'),p=s.querySelector('polygon').points;
+      const len=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+      const tip=[p[0].x,p[0].y],base=[(p[1].x+p[2].x)/2,(p[1].y+p[2].y)/2];
+      return {dotR:+c.getAttribute('r'),head:len(tip,base),
+        shaft:len([+l.getAttribute('x1'),+l.getAttribute('y1')],[+l.getAttribute('x2'),+l.getAttribute('y2')]),
+        leader:len(tip,[+c.getAttribute('cx'),+c.getAttribute('cy')])}; })() )"
   )
   expect_equal(g$leader, 4, tolerance = 1)
   expect_equal(g$dotR, 4 * 0.45, tolerance = 1e-4)
@@ -1012,13 +989,11 @@ test_that("stroke_width scales the leader and decorations and is stageable", {
   leader_metrics <- function() {
     pz_js(
       page,
-      paste0(
-        "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout');",
-        "const l=n.querySelector('.pz-shaft'),p=n.querySelector('.pz-deco-end').points;",
-        "const base=[(p[1].x+p[2].x)/2,(p[1].y+p[2].y)/2];",
-        "return {stroke:parseFloat(getComputedStyle(l).strokeWidth),",
-        "head:Math.hypot(p[0].x-base[0],p[0].y-base[1])}; })()"
-      )
+      r"( (() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout');
+        const l=n.querySelector('.pz-shaft'),p=n.querySelector('.pz-deco-end').points;
+        const base=[(p[1].x+p[2].x)/2,(p[1].y+p[2].y)/2];
+        return {stroke:parseFloat(getComputedStyle(l).strokeWidth),
+          head:Math.hypot(p[0].x-base[0],p[0].y-base[1])}; })() )"
     )
   }
   page |>

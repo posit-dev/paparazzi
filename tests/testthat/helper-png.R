@@ -11,18 +11,20 @@ png_canvas_eval <- function(page, path, body) {
   # base64_enc wraps its output every 76 chars; the newlines would break
   # the JS string literal.
   b64 <- gsub("[\r\n]", "", jsonlite::base64_enc(raw))
-  js <- paste0(
-    "(async () => {",
-    "const img = new Image();",
-    "img.src = 'data:image/png;base64,",
+  js <- sprintf(
+    r"(
+      (async () => {
+      const img = new Image();
+      img.src = 'data:image/png;base64,%s';
+      await img.decode();
+      const c = document.createElement('canvas').getContext('2d');
+      c.canvas.width = img.width; c.canvas.height = img.height;
+      c.drawImage(img, 0, 0);
+      %s
+      })()
+    )",
     b64,
-    "';",
-    "await img.decode();",
-    "const c = document.createElement('canvas').getContext('2d');",
-    "c.canvas.width = img.width; c.canvas.height = img.height;",
-    "c.drawImage(img, 0, 0);",
-    body,
-    "})()"
+    body
   )
   pz_js(page, js)
 }

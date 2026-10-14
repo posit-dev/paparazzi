@@ -14,10 +14,11 @@ elements_text <- function(els) {
 element_center <- function(page, selector) {
   unlist(pz_js(
     page,
-    paste0(
-      "(() => { const r = document.querySelector('",
-      selector,
-      "').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
+    sprintf(
+      r"(
+        (() => { const r = document.querySelector('%s').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()
+      )",
+      selector
     )
   ))
 }

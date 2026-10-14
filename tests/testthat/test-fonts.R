@@ -284,13 +284,13 @@ test_that("re-staging a face with a different source replaces it in the document
   probe_width <- function() {
     pz_js(
       page,
-      paste0(
-        "(() => { const el = document.createElement('span');",
-        "el.textContent = 'Width probe';",
-        "el.style.cssText = \"position:absolute;visibility:hidden;font:20px 'Silkscreen'\";",
-        "document.body.appendChild(el); const w = el.offsetWidth;",
-        "el.remove(); return w; })()"
-      )
+      r"(
+        (() => { const el = document.createElement('span');
+        el.textContent = 'Width probe';
+        el.style.cssText = "position:absolute;visibility:hidden;font:20px 'Silkscreen'";
+        document.body.appendChild(el); const w = el.offsetWidth;
+        el.remove(); return w; })()
+      )"
     )
   }
 

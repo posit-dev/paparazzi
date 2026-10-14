@@ -380,7 +380,7 @@ test_that("the element column holds one scoped context per match", {
   # The per-match description names the row, so a later detach does.
   expect_identical(
     vapply(entries, function(ctx) ctx$scope[[1]]$description, character(1)),
-    paste0("`#scope-a .sc-item` (which: ", 1:6, ")")
+    sprintf(r"(`#scope-a .sc-item` (which: %d))", 1:6)
   )
   ids <- vapply(entries, function(ctx) ctx$scope[[1]]$object_id, character(1))
   expect_length(unique(ids), 6L)

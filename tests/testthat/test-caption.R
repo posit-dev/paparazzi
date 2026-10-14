@@ -962,7 +962,7 @@ test_that("a two-tick caption burns only into its encoded output window", {
   png::writePNG(array(1, c(240, 320, 3)), image)
 
   for (fps in c(10, 30, 60, 29.97)) {
-    video <- file.path(dir, paste0("caption-", fps, ".mp4"))
+    video <- file.path(dir, sprintf("caption-%s.mp4", fps))
     rec <- new_recorder(video, "mp4", fps, NULL, c(0, 0), FALSE, NULL)
     rec$files <- rep(image, 10)
     rec$times <- (0:9) / fps
@@ -988,7 +988,7 @@ test_that("a two-tick caption burns only into its encoded output window", {
 
     frames <- av_video_images_quiet(
       video,
-      destdir = file.path(dir, paste0("decoded-", fps)),
+      destdir = file.path(dir, sprintf("decoded-%s", fps)),
       format = "png"
     )
     dark <- vapply(

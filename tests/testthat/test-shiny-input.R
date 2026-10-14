@@ -11,10 +11,9 @@ local_shiny_input_page <- function(.env = parent.frame()) {
 shiny_input_text <- function(page, id) {
   pz_js(
     page,
-    paste0(
-      "document.getElementById(",
-      jsonlite::toJSON(id, auto_unbox = TRUE),
-      ").textContent"
+    sprintf(
+      r"(document.getElementById(%s).textContent)",
+      jsonlite::toJSON(id, auto_unbox = TRUE)
     )
   )
 }

@@ -2,12 +2,12 @@ spotlight_page <- function(.env = parent.frame()) {
   page <- local_page(.env = .env)
   pz_js(
     page,
-    paste0(
-      "document.body.style.cssText = 'margin:0;background:white';",
-      "document.body.innerHTML = '<div id=one style=\"position:absolute;left:100px;top:100px;width:100px;height:80px;background:rgb(0, 200, 80)\"></div>' +",
-      "'<div id=two style=\"position:absolute;left:300px;top:100px;width:100px;height:80px;background:rgb(0, 100, 255)\"></div>' +",
-      "'<div style=\"height:1800px\"></div>';"
-    )
+    r"[
+      document.body.style.cssText = 'margin:0;background:white';
+      document.body.innerHTML = '<div id=one style="position:absolute;left:100px;top:100px;width:100px;height:80px;background:rgb(0, 200, 80)"></div>' +
+      '<div id=two style="position:absolute;left:300px;top:100px;width:100px;height:80px;background:rgb(0, 100, 255)"></div>' +
+      '<div style="height:1800px"></div>';
+    ]"
   )
   page
 }
@@ -15,10 +15,9 @@ spotlight_page <- function(.env = parent.frame()) {
 spotlight_layer <- function(page, expr) {
   pz_js(
     page,
-    paste0(
-      "(() => { const layer = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); return ",
-      expr,
-      "; })()"
+    sprintf(
+      r"((() => { const layer = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); return %s; })())",
+      expr
     )
   )
 }
@@ -286,12 +285,11 @@ test_that("spotlight opens no cutout for a target clipped away by an overflow an
   page <- spotlight_page()
   pz_js(
     page,
-    paste0(
-      "document.body.insertAdjacentHTML('beforeend', ",
-      "'<div style=\"position:absolute;left:100px;top:300px;width:200px;height:100px;overflow:auto\">' +",
-      "'<div style=\"height:220px\"></div><div id=buried style=\"margin-left:20px;width:120px;height:60px\"></div>' +",
-      "'<div style=\"height:220px\"></div></div>')"
-    )
+    r"(
+      document.body.insertAdjacentHTML('beforeend', '<div style="position:absolute;left:100px;top:300px;width:200px;height:100px;overflow:auto">' +
+      '<div style="height:220px"></div><div id=buried style="margin-left:20px;width:120px;height:60px"></div>' +
+      '<div style="height:220px"></div></div>')
+    )"
   )
   path <- withr::local_tempfile(fileext = ".png")
   baseline <- spotlight_image(page, path)
@@ -502,11 +500,11 @@ test_that("hidden and zero-size targets cannot leave spotlight holes", {
   # stays visible.
   pz_js(
     page,
-    paste0(
-      "(() => { const two = document.getElementById('two');",
-      "two.style.visibility = 'hidden';",
-      "two.insertAdjacentHTML('beforeend', '<span style=\"visibility:visible\">shown</span>'); })()"
-    )
+    r"(
+      (() => { const two = document.getElementById('two');
+      two.style.visibility = 'hidden';
+      two.insertAdjacentHTML('beforeend', '<span style="visibility:visible">shown</span>'); })()
+    )"
   )
   hole_display <- function() {
     unlist(spotlight_layer(

@@ -1135,7 +1135,7 @@ camera_test_corners <- function(filter) {
   vapply(
     c("x0", "y0", "x3", "y3"),
     function(key) {
-      as.numeric(sub(paste0(".*", key, "=([^:,]+).*"), "\\1", filter))
+      as.numeric(sub(sprintf(r"(.*%s=([^:,]+).*)", key), "\\1", filter))
     },
     numeric(1),
     USE.NAMES = FALSE
