@@ -400,7 +400,8 @@ Element.prototype.animate = function (frames, options) {
     ...options,
     duration: options.duration * 4,
   });
-};]"
+};
+]"
   )
   pz_annotate_clear(page)
   # Polling after clear would mask its obligation to retain the completed state.
@@ -441,7 +442,8 @@ Element.prototype.animate = function (frames, options) {
     ...options,
     duration: options.duration * 4,
   });
-};]"
+};
+]"
   )
   pz_annotate(page, "#box", reveal = "fade", color = "#ff0000")
   dpr <- page_dpr(page)

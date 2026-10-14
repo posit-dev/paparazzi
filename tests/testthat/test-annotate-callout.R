@@ -879,10 +879,6 @@ test_that("leader decorations render per end and shafts stop at each base", {
   const shaft = svg.querySelector('.pz-shaft');
   const nodeRect = node.getBoundingClientRect();
   const targetRect = document.querySelector('#target').getBoundingClientRect();
-  const centerOf = (el) => ({
-    x: +el.getAttribute('cx') + nodeRect.left,
-    y: +el.getAttribute('cy') + nodeRect.top,
-  });
   const bar = svg.querySelector('line.pz-deco-end');
   return {
     decos: [...svg.children].map((child) =>
