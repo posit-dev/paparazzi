@@ -139,9 +139,13 @@ test_that('optional capture, decode, show, move and settle failures warn once an
           pz_js(
             page,
             sprintf(
-              r"(
-                (() => { const p = %s; window.__previewController = p; p.%s = () => {throw new Error("injected %s failure")}; })()
-              )",
+              r"[
+(() => {
+  const preview = %s;
+  window.__previewController = preview;
+  preview.%s = () => { throw new Error("injected %s failure") };
+})()
+]",
               DRAG_PREVIEW_CONTROLLER_JS,
               method,
               method

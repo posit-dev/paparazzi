@@ -32,18 +32,26 @@ inspect_capture <- function(code) {
 inspect_overlay_count <- function(page) {
   pz_js(
     page,
-    r"(
-      (() => { const h = document.getElementById('paparazzi-overlay-root'); if (!h || !h.shadowRoot) return 0; return h.shadowRoot.querySelectorAll('.pz-inspect > div').length; })()
-    )"
+    r"[
+(() => {
+  const host = document.getElementById('paparazzi-overlay-root');
+  if (!host || !host.shadowRoot) return 0;
+  return host.shadowRoot.querySelectorAll('.pz-inspect > div').length;
+})()
+]"
   )
 }
 
 inspect_overlay_display <- function(page) {
   pz_js(
     page,
-    r"(
-      (() => { const h = document.getElementById('paparazzi-overlay-root'); if (!h) return null; return h.style.display; })()
-    )"
+    r"[
+(() => {
+  const host = document.getElementById('paparazzi-overlay-root');
+  if (!host) return null;
+  return host.style.display;
+})()
+]"
   )
 }
 
@@ -53,17 +61,17 @@ inspect_overlay_display <- function(page) {
 inspect_png_colors <- function(page, path, colors) {
   spec <- jsonlite::toJSON(colors, dataframe = "values")
   body <- sprintf(
-    r"(
-      const d = c.getImageData(0, 0, img.width, img.height).data;
-      const wanted = %s;
-      return wanted.map(([r, g, b]) => {
-      let n = 0;
-      for (let i = 0; i < d.length; i += 4) {
-      if (Math.abs(d[i] - r) <= 2 && Math.abs(d[i+1] - g) <= 2 && Math.abs(d[i+2] - b) <= 2) n++;
-      }
-      return n;
-      });
-    )",
+    r"[
+const data = c.getImageData(0, 0, img.width, img.height).data;
+const wanted = %s;
+return wanted.map(([r, g, b]) => {
+  let count = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (Math.abs(data[i] - r) <= 2 && Math.abs(data[i + 1] - g) <= 2 && Math.abs(data[i + 2] - b) <= 2) count++;
+  }
+  return count;
+});
+]",
     spec
   )
   unlist(png_canvas_eval(page, path, body))

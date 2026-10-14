@@ -359,9 +359,14 @@ test_that("target outline numbering keeps hidden matches in the count", {
   expect_identical(got$out[[4]], "Target     `.insp-pair` → 2 matches")
   texts <- unlist(pz_js(
     page,
-    r"(
-      (() => { const h = document.getElementById('paparazzi-overlay-root'); return Array.from(h.shadowRoot.querySelectorAll('.pz-inspect > div')).map((n) => n.textContent).filter((t) => t !== ''); })()
-    )"
+    r"[
+(() => {
+  const host = document.getElementById('paparazzi-overlay-root');
+  return Array.from(host.shadowRoot.querySelectorAll('.pz-inspect > div'))
+    .map((n) => n.textContent)
+    .filter((t) => t !== '');
+})()
+]"
   ))
   overlay_clear(page)
   expect_identical(texts, "2")

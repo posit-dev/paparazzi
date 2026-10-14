@@ -151,8 +151,17 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
         pz_js(
           page,
           sprintf(
-            r"( (() => { const p = %s; window.__previewController = p; const dispose = p.dispose.bind(p);
-              p.dispose = () => {dispose(); throw new Error("cleanup failed")}; })() )",
+            r"[
+(() => {
+  const controller = %s;
+  window.__previewController = controller;
+  const dispose = controller.dispose.bind(controller);
+  controller.dispose = () => {
+    dispose();
+    throw new Error('cleanup failed');
+  };
+})()
+]",
             DRAG_PREVIEW_CONTROLLER_JS
           )
         )
@@ -209,8 +218,18 @@ test_that('failed interception disposes the prepared image without displaying it
       pz_js(
         page,
         sprintf(
-          r"( (() => { const p = %s; window.__previewController = p; window.__previewShows = 0;
-            const show = p.show.bind(p); p.show = point => {window.__previewShows++; return show(point)}; })() )",
+          r"[
+(() => {
+  const controller = %s;
+  window.__previewController = controller;
+  window.__previewShows = 0;
+  const show = controller.show.bind(controller);
+  controller.show = (point) => {
+    window.__previewShows++;
+    return show(point);
+  };
+})()
+]",
           DRAG_PREVIEW_CONTROLLER_JS
         )
       )
@@ -270,8 +289,13 @@ test_that('a timed-out capture cannot display or retain the source after late co
       drag_preview_counted_boot(
         original_boot,
         sprintf(
-          r"( window.__previewController = %s;
-            return new Promise(resolve => {window.__releasePreviewCapture = () => resolve("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1sAAAAASUVORK5CYII=")}); )",
+          r"[
+window.__previewController = %s;
+return new Promise((resolve) => {
+  window.__releasePreviewCapture = () =>
+    resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB1sAAAAASUVORK5CYII=');
+});
+]",
           DRAG_PREVIEW_CONTROLLER_JS
         )
       )
@@ -327,7 +351,12 @@ test_that('settling never guesses a replacement row or an unrendered source box'
     pz_js(
       page,
       sprintf(
-        r"( document.addEventListener('drop', () => { const source = window.__previewSource; %s}); )",
+        r"[
+document.addEventListener('drop', () => {
+  const source = window.__previewSource;
+  %s
+});
+]",
         switch(
           mutation,
           removed = 'source.remove();',
@@ -384,11 +413,14 @@ test_that('a source that gains an iframe after the drop loses its preview silent
   # and before the post-drop settle re-checks the source.
   pz_js(
     page,
-    r"( document.addEventListener('drop', () => {
-      document.querySelector('#preview-source')
-        .insertAdjacentHTML('beforeend',
-          '<iframe srcdoc="<body></body>" style="width:10px;height:10px;border:0"></iframe>');
-    }) )"
+    r"[
+document.addEventListener('drop', () => {
+  document.querySelector('#preview-source').insertAdjacentHTML(
+    'beforeend',
+    '<iframe srcdoc="<body></body>" style="width:10px;height:10px;border:0"></iframe>'
+  );
+})
+]"
   )
   original_settle <- drag_preview_settle
   settled <- FALSE

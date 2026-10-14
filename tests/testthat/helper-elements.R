@@ -15,9 +15,12 @@ element_center <- function(page, selector) {
   unlist(pz_js(
     page,
     sprintf(
-      r"(
-        (() => { const r = document.querySelector('%s').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()
-      )",
+      r"[
+(() => {
+  const rect = document.querySelector('%s').getBoundingClientRect();
+  return [rect.x + rect.width / 2, rect.y + rect.height / 2];
+})()
+]",
       selector
     )
   ))

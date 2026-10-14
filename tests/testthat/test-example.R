@@ -107,15 +107,20 @@ test_that("walkthrough keeps both high-priority task titles in view", {
   expect_true(all(vapply(rows, `[[`, logical(1), "visible")))
   redactions <- pz_js(
     page,
-    r"(
-      (() => { const titles = document.querySelectorAll('[data-priority=high] .task-title');
-      const boxes = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction');
-      return {count: boxes.length, aligned: [...titles].map((el, i) => {
+    r"[
+(() => {
+  const titles = document.querySelectorAll('[data-priority=high] .task-title');
+  const boxes = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction');
+  return {
+    count: boxes.length,
+    aligned: [...titles].map((el, i) => {
       const r = el.getBoundingClientRect(), b = boxes[i]?.getBoundingClientRect();
       return b && boxes[i].style.display !== 'none' &&
-      ['left', 'top', 'width', 'height'].every(key => Math.abs(b[key] - r[key]) < 1);
-      })}; })()
-    )"
+        ['left', 'top', 'width', 'height'].every(key => Math.abs(b[key] - r[key]) < 1);
+    })
+  };
+})()
+]"
   )
   expect_equal(redactions$count, 2)
   expect_true(all(unlist(redactions$aligned)))

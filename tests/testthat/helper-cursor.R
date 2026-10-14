@@ -12,21 +12,22 @@ local_cursor_page <- function(.env = parent.frame()) {
 cursor_overlay_state <- function(page) {
   v <- pz_js(
     page,
-    r"(
-      (() => {
-      const h = document.getElementById('paparazzi-overlay-root');
-      if (!h || !h.shadowRoot) return null;
-      const l = h.shadowRoot.querySelector('.pz-cursor');
-      if (!l) return null;
-      const g = l.firstElementChild, i = g.firstElementChild;
-      const m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(g.style.transform);
-      return [
-      parseFloat(i.style.opacity || '1'),
-      m ? parseFloat(m[1]) : 0,
-      m ? parseFloat(m[2]) : 0,
-      [...l.querySelectorAll('.pz-icon')].find(svg => getComputedStyle(svg).visibility === 'visible')?.classList[1].slice('pz-icon-'.length) || null
-      ];})()
-    )"
+    r"[
+(() => {
+  const host = document.getElementById('paparazzi-overlay-root');
+  if (!host || !host.shadowRoot) return null;
+  const layer = host.shadowRoot.querySelector('.pz-cursor');
+  if (!layer) return null;
+  const group = layer.firstElementChild, icon = group.firstElementChild;
+  const match = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(group.style.transform);
+  return [
+    parseFloat(icon.style.opacity || '1'),
+    match ? parseFloat(match[1]) : 0,
+    match ? parseFloat(match[2]) : 0,
+    [...layer.querySelectorAll('.pz-icon')].find(svg => getComputedStyle(svg).visibility === 'visible')?.classList[1].slice('pz-icon-'.length) || null
+  ];
+})()
+]"
   )
   if (is.null(v)) {
     return(NULL)
@@ -80,14 +81,14 @@ cursor_png_color <- function(
     sep = ", "
   )
   body <- sprintf(
-    r"(
-      const d = c.getImageData(%s).data;
-      let n = 0;
-      for (let p = 0; p < d.length; p += 4) {
-        if (d[p + 3] > 200 && d[p + %d] >= %d && d[p + %d] - Math.max(d[p + %d], d[p + %d]) >= %d) n++;
-      }
-      return n;
-    )",
+    r"[
+const data = c.getImageData(%s).data;
+let count = 0;
+for (let p = 0; p < data.length; p += 4) {
+  if (data[p + 3] > 200 && data[p + %d] >= %d && data[p + %d] - Math.max(data[p + %d], data[p + %d]) >= %d) count++;
+}
+return count;
+]",
     region,
     dominant,
     min_level,
@@ -102,9 +103,7 @@ cursor_png_color <- function(
 cursor_overlay_scale <- function(page) {
   pz_js(
     page,
-    r"(
-      parseFloat(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner').style.transform.slice(6))
-    )"
+    r"[parseFloat(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner').style.transform.slice(6))]"
   )
 }
 
@@ -139,24 +138,26 @@ cursor_png_ink <- function(
   }
   w_expr <- if (is.null(x1)) "w" else x1 - x0
   body <- sprintf(
-    r"(
-      const d = c.getImageData(%s).data;
-      let n = 0, sx = 0, sy = 0, minY = Infinity, maxY = -Infinity;
-      const w = img.width;
-      for (let p = 0; p < d.length; p += 4) {
-        if (
-          %s
-          && d[p + 3] > 200
-        ) {
-          const px = (p / 4) %% %s + %s, py = Math.floor(p / 4 / %s) + %s;
-          n++; sx += px; sy += py;
-          if (py < minY) minY = py;
-          if (py > maxY) maxY = py;
-        }
-      }
-      if (!n) return [0, 0, 0, 0];
-      return [n, sx / n / %s, sy / n / %s, (maxY - minY + 1) / %s];
-    )",
+    r"[
+const d = c.getImageData(%s).data;
+let count = 0, sumX = 0, sumY = 0, minY = Infinity, maxY = -Infinity;
+const w = img.width;
+for (let p = 0; p < d.length; p += 4) {
+  if (
+    %s
+    && d[p + 3] > 200
+  ) {
+    const px = (p / 4) %% %s + %s, py = Math.floor(p / 4 / %s) + %s;
+    count++;
+    sumX += px;
+    sumY += py;
+    if (py < minY) minY = py;
+    if (py > maxY) maxY = py;
+  }
+}
+if (!count) return [0, 0, 0, 0];
+return [count, sumX / count / %s, sumY / count / %s, (maxY - minY + 1) / %s];
+]",
     region,
     threshold,
     w_expr,

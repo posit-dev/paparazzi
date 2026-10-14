@@ -2,11 +2,14 @@ annotation_page <- function(.env = parent.frame()) {
   page <- local_page(.env = .env)
   pz_js(
     page,
-    r"(document.body.innerHTML = '<div id="fixed" style="position:fixed;top:20px;left:30px;width:90px;height:35px"></div>'
-      + '<div id="outer" style="position:absolute;top:110px;left:30px;width:260px;height:90px;overflow:auto">'
-      + '<div style="height:160px"></div><div class="mark" id="inner" style="height:30px;width:80px"></div></div>'
-      + '<div class="mark" id="box" style="position:absolute;left:200px;top:310px;width:100px;height:50px"></div>'
-      + '<div style="height:1800px"></div>';)"
+    r"[
+document.body.innerHTML =
+  '<div id="fixed" style="position:fixed;top:20px;left:30px;width:90px;height:35px"></div>' +
+  '<div id="outer" style="position:absolute;top:110px;left:30px;width:260px;height:90px;overflow:auto">' +
+  '<div style="height:160px"></div><div class="mark" id="inner" style="height:30px;width:80px"></div></div>' +
+  '<div class="mark" id="box" style="position:absolute;left:200px;top:310px;width:100px;height:50px"></div>' +
+  '<div style="height:1800px"></div>';
+]"
   )
   page
 }
@@ -14,11 +17,26 @@ annotation_page <- function(.env = parent.frame()) {
 annotation_state <- function(page) {
   pz_js(
     page,
-    r"(() => { const layer = document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations');
-      if (!layer) return null; return [...layer.querySelectorAll('.pz-annotation')].map(n =>
-      ({rect:[parseFloat(n.style.left),parseFloat(n.style.top),parseFloat(n.style.width),parseFloat(n.style.height)],
-      visible:n.style.display !== 'none', label:n.textContent, color:n.style.borderColor,
-      animations:n.getAnimations().length})); })())"
+    r"[
+(() => {
+  const layer = document
+    .getElementById('paparazzi-overlay-root')
+    ?.shadowRoot?.querySelector('.pz-annotations');
+  if (!layer) return null;
+  return [...layer.querySelectorAll('.pz-annotation')].map((node) => ({
+    rect: [
+      parseFloat(node.style.left),
+      parseFloat(node.style.top),
+      parseFloat(node.style.width),
+      parseFloat(node.style.height),
+    ],
+    visible: node.style.display !== 'none',
+    label: node.textContent,
+    color: node.style.borderColor,
+    animations: node.getAnimations().length,
+  }));
+})()
+]"
   )
 }
 
@@ -375,9 +393,14 @@ test_that("a final clear retains the unannotated frame before the end hold", {
   # Completion must not depend on the nominal animation budget.
   pz_js(
     page,
-    r"(const originalAnimate = Element.prototype.animate;
-      Element.prototype.animate = function(frames, options) {
-      return originalAnimate.call(this, frames, {...options, duration:options.duration * 4}); };)"
+    r"[
+const originalAnimate = Element.prototype.animate;
+Element.prototype.animate = function (frames, options) {
+  return originalAnimate.call(this, frames, {
+    ...options,
+    duration: options.duration * 4,
+  });
+};]"
   )
   pz_annotate_clear(page)
   # Polling after clear would mask its obligation to retain the completed state.
@@ -411,9 +434,14 @@ test_that("a final reveal is complete in the retained poll frame", {
   defer_record_stop(page)
   pz_js(
     page,
-    r"(const originalAnimate = Element.prototype.animate;
-      Element.prototype.animate = function(frames, options) {
-      return originalAnimate.call(this, frames, {...options, duration:options.duration * 4}); };)"
+    r"[
+const originalAnimate = Element.prototype.animate;
+Element.prototype.animate = function (frames, options) {
+  return originalAnimate.call(this, frames, {
+    ...options,
+    duration: options.duration * 4,
+  });
+};]"
   )
   pz_annotate(page, "#box", reveal = "fade", color = "#ff0000")
   dpr <- page_dpr(page)
@@ -638,9 +666,15 @@ annotation_drag_safety <- function(
   pz_js(
     page,
     sprintf(
-      r"(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-      const source = %s;
-      return layer.pz.dragPreviewSafety(source, %s); })())",
+      r"[
+(() => {
+  const annotations = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  const source = %s;
+  return annotations.pz.dragPreviewSafety(source, %s);
+})()
+]",
       source,
       footprint
     )
@@ -778,8 +812,18 @@ test_that("drag previews fail closed for stale masks, targets and unsupported me
   page |> pz_annotate_clear()
   pz_js(
     page,
-    r"(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.redact(
-      [document.getElementById('outer')], {id:'invalid',pad:[0,0,0,0],method:'pixelate',color:null,animate:false}))"
+    r"[
+document
+  .querySelector('#paparazzi-overlay-root')
+  .shadowRoot.querySelector('.pz-annotations')
+  .pz.redact([document.getElementById('outer')], {
+    id: 'invalid',
+    pad: [0, 0, 0, 0],
+    method: 'pixelate',
+    color: null,
+    animate: false,
+  })
+]"
   )
   expect_identical(
     annotation_drag_safety(page),
@@ -792,10 +836,22 @@ test_that("drag previews fail closed for cross-root redactions and untracked mas
   page |> pz_annotate_redact("#fixed")
   pz_js(
     page,
-    r"(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-      const shadow = document.getElementById('fixed').attachShadow({mode:'open'});
-      shadow.innerHTML = '<div style=width:20px;height:20px></div>';
-      layer.pz.redact([shadow.firstChild], {id:'shadow',pad:[0,0,0,0],method:'fill',color:null,animate:false}); })())"
+    r"[
+(() => {
+  const annotations = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  const shadow = document.getElementById('fixed').attachShadow({ mode: 'open' });
+  shadow.innerHTML = '<div style=width:20px;height:20px></div>';
+  annotations.pz.redact([shadow.firstChild], {
+    id: 'shadow',
+    pad: [0, 0, 0, 0],
+    method: 'fill',
+    color: null,
+    animate: false,
+  });
+})()
+]"
   )
   expect_identical(
     annotation_drag_safety(page),
@@ -804,8 +860,14 @@ test_that("drag previews fail closed for cross-root redactions and untracked mas
   page |> pz_annotate_clear("shadow")
   pz_js(
     page,
-    r"(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-      layer.appendChild(layer.querySelector('.pz-redaction').cloneNode(true)); })())"
+    r"[
+(() => {
+  const annotations = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  annotations.appendChild(annotations.querySelector('.pz-redaction').cloneNode(true));
+})()
+]"
   )
   expect_identical(
     annotation_drag_safety(page),
@@ -817,8 +879,12 @@ test_that("drag safety uses the painted clip rather than the whole padded mask",
   page <- annotation_page()
   pz_js(
     page,
-    r"(document.getElementById('fixed').style.cssText = 'position:fixed;left:310px;top:310px;width:20px;height:50px;overflow:hidden';
-      document.getElementById('fixed').innerHTML = '<div id=secret style=width:20px;height:50px></div>')"
+    r"[
+document.getElementById('fixed').style.cssText =
+  'position:fixed;left:310px;top:310px;width:20px;height:50px;overflow:hidden';
+document.getElementById('fixed').innerHTML =
+  '<div id=secret style=width:20px;height:50px></div>'
+]"
   )
   page |> pz_annotate_redact("#secret", pad = 20)
   expect_identical(
@@ -849,10 +915,14 @@ test_that("redaction paints only inside a scrolling ancestor as its target moves
   page <- annotation_page()
   pz_js(
     page,
-    r"(document.body.insertAdjacentHTML('beforeend',
-      '<div id=clip style="position:absolute;left:350px;top:100px;width:160px;height:100px;overflow:auto;background:white">'
-      + '<div style="height:70px"></div><div id=secret style="margin-left:20px;width:90px;height:80px;background:white">SECRET</div>'
-      + '<div style="height:300px"></div></div>)')"
+    r"[
+document.body.insertAdjacentHTML(
+  'beforeend',
+  '<div id=clip style="position:absolute;left:350px;top:100px;width:160px;height:100px;overflow:auto;background:white">' +
+  '<div style="height:70px"></div><div id=secret style="margin-left:20px;width:90px;height:80px;background:white">SECRET</div>' +
+  '<div style="height:300px"></div></div>'
+)
+]"
   )
   page |> pz_annotate_redact("#secret", pad = 4)
   path <- withr::local_tempfile(fileext = ".png")
@@ -921,9 +991,12 @@ test_that("redaction padding stays clipped even when its target is uncut", {
   page <- local_page()
   pz_js(
     page,
-    r"(document.body.innerHTML = '<div style="position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white">'
-      + '<div id=secret style="width:100px;height:100px"></div></div>';
-      document.body.style.background = 'white';)"
+    r"[
+document.body.innerHTML =
+  '<div style="position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white">' +
+  '<div id=secret style="width:100px;height:100px"></div></div>';
+document.body.style.background = 'white';
+]"
   )
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_annotate_redact("#secret", pad = 4) |> pz_screenshot(path)
@@ -939,11 +1012,15 @@ test_that("redaction intersects nested horizontal and vertical overflow clips", 
   page <- annotation_page()
   pz_js(
     page,
-    r"(document.body.insertAdjacentHTML('beforeend',
-      '<div style="position:absolute;left:330px;top:100px;width:100px;height:110px;overflow-x:hidden">'
-      + '<div style="position:relative;left:-25px;top:30px;width:150px;height:55px;overflow-y:hidden">'
-      + '<div id=secret style="position:absolute;left:0;top:-25px;width:140px;height:110px">SECRET</div>'
-      + '</div></div>')')"
+    r"[
+document.body.insertAdjacentHTML(
+  'beforeend',
+  '<div style="position:absolute;left:330px;top:100px;width:100px;height:110px;overflow-x:hidden">' +
+  '<div style="position:relative;left:-25px;top:30px;width:150px;height:55px;overflow-y:hidden">' +
+  '<div id=secret style="position:absolute;left:0;top:-25px;width:140px;height:110px">SECRET</div>' +
+  '</div></div>'
+)
+]"
   )
   page |> pz_annotate_redact("#secret")
   path <- withr::local_tempfile(fileext = ".png")
@@ -964,16 +1041,20 @@ test_that("positioned targets escape only overflow ancestors outside their conta
   page <- annotation_page()
   pz_js(
     page,
-    r"[document.body.insertAdjacentHTML('beforeend',
-      '<div style="position:absolute;left:330px;top:100px">'
-      + '<div style="width:80px;height:50px;overflow:hidden">'
-      + '<div id=escaped style="position:absolute;left:105px;top:15px;width:50px;height:30px">SECRET</div>'
-      + '<div id=escaped-fixed style="position:fixed;left:460px;top:130px;width:50px;height:30px">SECRET</div>'
-      + '</div></div>'
-      + '<div style="position:absolute;left:330px;top:270px;width:100px;height:50px;overflow:hidden">'
-      + '<div id=clipped style="position:absolute;left:80px;top:30px;width:50px;height:40px">SECRET</div></div>'
-      + '<div style="position:absolute;left:330px;top:360px;width:100px;height:50px;overflow:hidden;transform:translateZ(0)">'
-      + '<div id=fixed-clipped style="position:fixed;left:80px;top:30px;width:50px;height:40px">SECRET</div></div>')']
+    r"[
+document.body.insertAdjacentHTML(
+  'beforeend',
+  '<div style="position:absolute;left:330px;top:100px">' +
+  '<div style="width:80px;height:50px;overflow:hidden">' +
+  '<div id=escaped style="position:absolute;left:105px;top:15px;width:50px;height:30px">SECRET</div>' +
+  '<div id=escaped-fixed style="position:fixed;left:460px;top:130px;width:50px;height:30px">SECRET</div>' +
+  '</div></div>' +
+  '<div style="position:absolute;left:330px;top:270px;width:100px;height:50px;overflow:hidden">' +
+  '<div id=clipped style="position:absolute;left:80px;top:30px;width:50px;height:40px">SECRET</div></div>' +
+  '<div style="position:absolute;left:330px;top:360px;width:100px;height:50px;overflow:hidden;transform:translateZ(0)">' +
+  '<div id=fixed-clipped style="position:fixed;left:80px;top:30px;width:50px;height:40px">SECRET</div></div>'
+)
+]"
   )
   page |>
     pz_annotate_redact("#escaped, #escaped-fixed, #clipped, #fixed-clipped")
@@ -997,9 +1078,13 @@ test_that("redaction covers visible content in the scrollport padding", {
   page <- annotation_page()
   pz_js(
     page,
-    r"(document.body.insertAdjacentHTML('beforeend',
-      '<div style="position:absolute;left:350px;top:100px;width:80px;height:60px;padding:20px;overflow:hidden">'
-      + '<div id=padded-secret style="position:relative;left:-12px;top:-10px;width:60px;height:30px">SECRET</div></div>')')"
+    r"[
+document.body.insertAdjacentHTML(
+  'beforeend',
+  '<div style="position:absolute;left:350px;top:100px;width:80px;height:60px;padding:20px;overflow:hidden">' +
+  '<div id=padded-secret style="position:relative;left:-12px;top:-10px;width:60px;height:30px">SECRET</div></div>'
+)
+]"
   )
   page |> pz_annotate_redact("#padded-secret")
   path <- withr::local_tempfile(fileext = ".png")
@@ -1018,9 +1103,13 @@ test_that("redaction clips scaled overflow ancestors in viewport coordinates", {
   page <- annotation_page()
   pz_js(
     page,
-    r"(document.body.insertAdjacentHTML('beforeend',
-      '<div style="position:absolute;left:330px;top:80px;width:80px;height:60px;overflow:hidden;transform:scale(2);transform-origin:top left">'
-      + '<div id=scaled-secret style="position:absolute;left:50px;top:40px;width:50px;height:50px">SECRET</div></div>')')"
+    r"[
+document.body.insertAdjacentHTML(
+  'beforeend',
+  '<div style="position:absolute;left:330px;top:80px;width:80px;height:60px;overflow:hidden;transform:scale(2);transform-origin:top left">' +
+  '<div id=scaled-secret style="position:absolute;left:50px;top:40px;width:50px;height:50px">SECRET</div></div>'
+)
+]"
   )
   page |> pz_annotate_redact("#scaled-secret")
   path <- withr::local_tempfile(fileext = ".png")
@@ -1052,16 +1141,28 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
   # Done button with the i-th box.
   info <- pz_js(
     page,
-    r"(() => { const layer = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-      const nodes = [...layer.querySelectorAll('.pz-annotation')];
-      const list = document.querySelector('.task-list').getBoundingClientRect();
-      return {listBottom: list.bottom, viewport: [innerWidth, innerHeight],
-      buttons: [...document.querySelectorAll('.task-done')].map((b, i) => {
-      const r = b.getBoundingClientRect();
-      return {rect: [r.left, r.top, r.width, r.height],
-      clipped: r.top >= list.bottom || r.bottom <= list.top,
-      shown: getComputedStyle(b).visibility === 'visible',
-      annotated: nodes[i].style.display !== 'none'}; })}; })())"
+    r"[
+(() => {
+  const layer = document
+    .getElementById('paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  const nodes = [...layer.querySelectorAll('.pz-annotation')];
+  const list = document.querySelector('.task-list').getBoundingClientRect();
+  return {
+    listBottom: list.bottom,
+    viewport: [innerWidth, innerHeight],
+    buttons: [...document.querySelectorAll('.task-done')].map((button, index) => {
+      const rect = button.getBoundingClientRect();
+      return {
+        rect: [rect.left, rect.top, rect.width, rect.height],
+        clipped: rect.top >= list.bottom || rect.bottom <= list.top,
+        shown: getComputedStyle(button).visibility === 'visible',
+        annotated: nodes[index].style.display !== 'none',
+      };
+    }),
+  };
+})()
+]"
   )
   expect_length(info$buttons, 7)
   # Rows 6-7 sit at or below the list's bottom edge; the done row's own
@@ -1191,7 +1292,9 @@ test_that("flush fractional scaled targets keep all padded outline edges", {
     pz_js(
       page,
       sprintf(
-        r"(document.getElementById('clip').style.cssText = '%s')",
+        r"[
+document.getElementById('clip').style.cssText = '%s'
+]",
         style
       )
     )
@@ -1315,9 +1418,12 @@ test_that("only the cut side of a partially visible mark loses its padding", {
   page <- local_page()
   pz_js(
     page,
-    r"(document.body.innerHTML = '<div style="position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white">'
-      + '<div id=marked style="position:relative;width:100px;height:100px"></div></div>';
-      document.body.style.background = 'white';)"
+    r"[
+document.body.innerHTML =
+  '<div style="position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white">' +
+  '<div id=marked style="position:relative;width:100px;height:100px"></div></div>';
+document.body.style.background = 'white';
+]"
   )
   path <- withr::local_tempfile(fileext = ".png")
   red <- c(255, 0, 0)
@@ -1332,7 +1438,10 @@ test_that("only the cut side of a partially visible mark loses its padding", {
     pz_js(
       page,
       sprintf(
-        r"(document.getElementById('marked').style.cssText = 'position:relative;width:100px;height:100px;%s')",
+        r"[
+document.getElementById('marked').style.cssText =
+  'position:relative;width:100px;height:100px;%s'
+]",
         cases[[side]]
       )
     )
@@ -1361,9 +1470,12 @@ test_that("a fully clipped target hides its mark even when padding overlaps", {
   page <- local_page()
   pz_js(
     page,
-    r"(document.body.innerHTML = '<div style="position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white">'
-      + '<div id=marked style="position:relative;top:100px;width:100px;height:40px"></div></div>';
-      document.body.style.background = 'white';)"
+    r"[
+document.body.innerHTML =
+  '<div style="position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white">' +
+  '<div id=marked style="position:relative;top:100px;width:100px;height:40px"></div></div>';
+document.body.style.background = 'white';
+]"
   )
   path <- withr::local_tempfile(fileext = ".png")
   page |>
@@ -1385,10 +1497,13 @@ test_that("padding does not reveal zero-size targets on a clipping edge", {
   page <- local_page()
   pz_js(
     page,
-    r"(document.body.innerHTML = '<div style="position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white">'
-      + '<div class=mark style="position:relative;left:0;top:50px;width:0;height:0"></div>'
-      + '<div class=mark style="position:relative;left:50px;top:50px;width:0;height:0"></div></div>';
-      document.body.style.background = 'white';)"
+    r"[
+document.body.innerHTML =
+  '<div style="position:absolute;left:100px;top:100px;width:100px;height:100px;overflow:hidden;background:white">' +
+  '<div class=mark style="position:relative;left:0;top:50px;width:0;height:0"></div>' +
+  '<div class=mark style="position:relative;left:50px;top:50px;width:0;height:0"></div></div>';
+document.body.style.background = 'white';
+]"
   )
   path <- withr::local_tempfile(fileext = ".png")
   page |>
@@ -1405,10 +1520,14 @@ test_that("a mark clips at the edge of a scrolling overflow ancestor", {
   page <- annotation_page()
   pz_js(
     page,
-    r"(document.body.insertAdjacentHTML('beforeend',
-      '<div id=markclip style="position:absolute;left:350px;top:100px;width:160px;height:100px;overflow:auto;background:white">'
-      + '<div style="height:70px"></div><div id=marked style="margin-left:20px;width:90px;height:80px"></div>'
-      + '<div style="height:300px"></div></div>')')"
+    r"[
+document.body.insertAdjacentHTML(
+  'beforeend',
+  '<div id=markclip style="position:absolute;left:350px;top:100px;width:160px;height:100px;overflow:auto;background:white">' +
+  '<div style="height:70px"></div><div id=marked style="margin-left:20px;width:90px;height:80px"></div>' +
+  '<div style="height:300px"></div></div>'
+)
+]"
   )
   page |> pz_annotate("#marked", reveal = "none", color = "rgb(255, 0, 0)")
   path <- withr::local_tempfile(fileext = ".png")
@@ -1437,10 +1556,16 @@ test_that("non-clipping inline and root body overflow do not hide redactions", {
   page <- annotation_page()
   pz_js(
     page,
-    r"(document.body.style.overflow = 'hidden'; document.body.style.height = '60px';
-      document.getElementById('fixed').innerHTML = '<span style="overflow:hidden"><span id=inline-secret style="display:inline-block;width:50px;height:30px">SECRET</span></span>';
-      document.body.insertAdjacentHTML('beforeend',
-      '<div id=body-secret style="position:absolute;left:500px;top:310px;width:50px;height:30px;background:#ff0000">SECRET</div>')')"
+    r"[
+document.body.style.overflow = 'hidden';
+document.body.style.height = '60px';
+document.getElementById('fixed').innerHTML =
+  '<span style="overflow:hidden"><span id=inline-secret style="display:inline-block;width:50px;height:30px">SECRET</span></span>';
+document.body.insertAdjacentHTML(
+  'beforeend',
+  '<div id=body-secret style="position:absolute;left:500px;top:310px;width:50px;height:30px;background:#ff0000">SECRET</div>'
+)
+]"
   )
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
@@ -1931,10 +2056,26 @@ test_that("all reveals show sampled entry and reverse exit frames", {
     pz_js(
       page,
       sprintf(
-        r"(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-        l.pz.draw([document.querySelector('#box')], {id:'test',type:'box',pad:[0,0,0,0],
-        label:null,color:'#ff0000',strokeWidth:3,fontFamily:'sans-serif',fontSize:14,reveal:'%s',
-        animate:true}); l.querySelector('.pz-annotation').getAnimations({subtree:true})[0].pause(); })())",
+        r"[
+(() => {
+  const layer = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  layer.pz.draw([document.querySelector('#box')], {
+    id: 'test',
+    type: 'box',
+    pad: [0, 0, 0, 0],
+    label: null,
+    color: '#ff0000',
+    strokeWidth: 3,
+    fontFamily: 'sans-serif',
+    fontSize: 14,
+    reveal: '%s',
+    animate: true,
+  });
+  layer.querySelector('.pz-annotation').getAnimations({ subtree: true })[0].pause();
+})()
+]",
         reveal
       )
     )
@@ -1942,7 +2083,15 @@ test_that("all reveals show sampled entry and reverse exit frames", {
       pz_js(
         page,
         sprintf(
-          r"(() => { const a=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation').getAnimations({subtree:true})[0]; a.currentTime=%s*a.effect.getTiming().duration; })())",
+          r"[
+(() => {
+  const animation = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotation')
+    .getAnimations({ subtree: true })[0];
+  animation.currentTime = %s * animation.effect.getTiming().duration;
+})()
+]",
           fraction
         )
       )
@@ -1960,7 +2109,12 @@ test_that("all reveals show sampled entry and reverse exit frames", {
       pz_js(
         page,
         sprintf(
-          r"(() => { const a=window.__exitNode.getAnimations({subtree:true})[0]; a.currentTime=%s*a.effect.getTiming().duration; })())",
+          r"[
+(() => {
+  const animation = window.__exitNode.getAnimations({ subtree: true })[0];
+  animation.currentTime = %s * animation.effect.getTiming().duration;
+})()
+]",
           fraction
         )
       )
@@ -2072,8 +2226,7 @@ test_that("default reveals animate entry and reverse clear during recording", {
   expect_true("transform" %in% first[[3]])
   expect_true("transform" %in% first[[4]])
 
-  pz_js(page, "window.__markAnimations = []"
-  )
+  pz_js(page, "window.__markAnimations = []")
   page |>
     pz_annotate_spotlight("#box") |>
     pz_annotate_clear("spotlight") |>
@@ -2156,8 +2309,16 @@ test_that("anonymous kinds coexist across shared-id replacement and clear", {
   layer_counts <- function() {
     pz_js(
       page,
-      r"(() => { const l = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-        return ['pz-annotation','pz-callout','pz-redaction'].map(c => l.getElementsByClassName(c).length); })())"
+      r"[
+(() => {
+  const layer = document
+    .getElementById('paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  return ['pz-annotation', 'pz-callout', 'pz-redaction'].map(
+    (className) => layer.getElementsByClassName(className).length
+  );
+})()
+]"
     )
   }
   page |> pz_annotate("#box", reveal = "none")
@@ -2199,7 +2360,9 @@ test_that("overlay function sources parse in Chrome", {
     pz_js(
       page,
       sprintf(
-        r"(new Function('return (' + %s + ');'); true)",
+        r"[
+new Function('return (' + %s + ');'); true
+]",
         jsonlite::toJSON(source, auto_unbox = TRUE)
       )
     )
@@ -2434,13 +2597,28 @@ test_that("stroke_width reaches mark shapes and is stageable", {
 annotation_badge_rects <- function(page) {
   pz_js(
     page,
-    r"(() => { const nodes = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-annotation');
-      return [...nodes].map(n => { const badge = n.querySelector('span');
-      const r = badge.getBoundingClientRect();
-      const range = document.createRange(); range.selectNodeContents(badge);
-      return {visible:n.style.display !== 'none',
-      left:r.left,top:r.top,width:r.width,height:r.height,bottom:r.bottom,
-      lines:range.getClientRects().length}; }); })())"
+    r"[
+(() => {
+  const nodes = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelectorAll('.pz-annotation');
+  return [...nodes].map((node) => {
+    const badge = node.querySelector('span');
+    const rect = badge.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(badge);
+    return {
+      visible: node.style.display !== 'none',
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      bottom: rect.bottom,
+      lines: range.getClientRects().length,
+    };
+  });
+})()
+]"
   )
 }
 
@@ -2449,28 +2627,45 @@ annotation_badge_rects <- function(page) {
 badge_edge_diagnostics <- function(page) {
   pz_js(
     page,
-    r"(() => { const t = document.getElementById('edge');
-      const tr = t ? t.getBoundingClientRect() : null;
-      const root = document.querySelector('#paparazzi-overlay-root');
-      const badge = root && root.shadowRoot ? root.shadowRoot.querySelector('.pz-annotation span') : null;
-      const box = root && root.shadowRoot ? root.shadowRoot.querySelector('.pz-annotation') : null;
-      const br = badge ? badge.getBoundingClientRect() : null;
-      const boxr = box ? box.getBoundingClientRect() : null;
-      return 'innerWidth=' + innerWidth +
-      ' clientWidth=' + document.documentElement.clientWidth +
-      ' scrollWidth=' + document.documentElement.scrollWidth +
-      ' scrollY=' + window.scrollY +
-      ' dpr=' + devicePixelRatio +
-      ' zoom=' + getComputedStyle(document.documentElement).zoom +
-      ' target=[' + (tr ? [tr.left, tr.right, tr.top].join(',') : 'missing') + ']' +
-      ' box=' + (box ? 'style(left=' + box.style.left + ')' +
-      ' rect(left=' + boxr.left + ')' : 'missing') +
-      ' badge=' + (badge ?
-      'style(left=' + badge.style.left + ' top=' + badge.style.top +
-      ' cssWidth=' + getComputedStyle(badge).width +
-      ' display=' + getComputedStyle(badge).display +')' +
-      ' rect(left=' + br.left + ' width=' + br.width + ' top=' + br.top + ')' :
-      'missing'); })())"
+    r"[
+(() => {
+  const target = document.getElementById('edge');
+  const targetRect = target ? target.getBoundingClientRect() : null;
+  const root = document.querySelector('#paparazzi-overlay-root');
+  const badge = root && root.shadowRoot
+    ? root.shadowRoot.querySelector('.pz-annotation span')
+    : null;
+  const box = root && root.shadowRoot
+    ? root.shadowRoot.querySelector('.pz-annotation')
+    : null;
+  const badgeRect = badge ? badge.getBoundingClientRect() : null;
+  const boxRect = box ? box.getBoundingClientRect() : null;
+  return (
+    'innerWidth=' + innerWidth +
+    ' clientWidth=' + document.documentElement.clientWidth +
+    ' scrollWidth=' + document.documentElement.scrollWidth +
+    ' scrollY=' + window.scrollY +
+    ' dpr=' + devicePixelRatio +
+    ' zoom=' + getComputedStyle(document.documentElement).zoom +
+    ' target=[' +
+      (targetRect ? [targetRect.left, targetRect.right, targetRect.top].join(',') : 'missing') +
+      ']' +
+    ' box=' +
+      (box
+        ? 'style(left=' + box.style.left + ')' +
+          ' rect(left=' + boxRect.left + ')'
+        : 'missing') +
+    ' badge=' +
+      (badge
+        ? 'style(left=' + badge.style.left + ' top=' + badge.style.top +
+          ' cssWidth=' + getComputedStyle(badge).width +
+          ' display=' + getComputedStyle(badge).display + ')' +
+          ' rect(left=' + badgeRect.left + ' width=' + badgeRect.width +
+          ' top=' + badgeRect.top + ')'
+        : 'missing')
+  );
+})()
+]"
   )
 }
 
@@ -2493,11 +2688,14 @@ local_clipped_badge_page <- function(.env = parent.frame()) {
   page <- local_page(.env = .env)
   pz_js(
     page,
-    r"(document.body.style.background = 'white';
-      document.body.innerHTML = '<div id=horizontal style="position:absolute;left:100px;top:100px;width:100px;height:140px;overflow-x:hidden">'
-      + '<div id=vertical style="position:relative;left:-20px;top:20px;width:160px;height:70px;overflow-y:hidden">'
-      + '<div id=marked style="position:relative;top:-20px;width:110px;height:80px"></div>'
-      + '<div style="height:200px"></div></div></div>';)"
+    r"[
+document.body.style.background = 'white';
+document.body.innerHTML =
+  '<div id=horizontal style="position:absolute;left:100px;top:100px;width:100px;height:140px;overflow-x:hidden">' +
+  '<div id=vertical style="position:relative;left:-20px;top:20px;width:160px;height:70px;overflow-y:hidden">' +
+  '<div id=marked style="position:relative;top:-20px;width:110px;height:80px"></div>' +
+  '<div style="height:200px"></div></div></div>';
+]"
   )
   page
 }
@@ -2734,11 +2932,32 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
     pz_js(
       page,
       sprintf(
-        r"(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-        l.pz.draw([document.querySelector('#marked')], {id:'mark',type:'box',pad:[4,4,4,4],
-        label:'A',color:'red',strokeWidth:3,labelFill:'#ff00ff',labelTextColor:'white',fontFamily:'sans-serif',fontSize:14,
-        reveal:'%s',animate:true}); const a=l.querySelector('.pz-annotation').getAnimations({subtree:true})[0];
-        a.pause(); a.currentTime=%s*a.effect.getTiming().duration; })())",
+        r"[
+(() => {
+  const layer = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  layer.pz.draw([document.querySelector('#marked')], {
+    id: 'mark',
+    type: 'box',
+    pad: [4, 4, 4, 4],
+    label: 'A',
+    color: 'red',
+    strokeWidth: 3,
+    labelFill: '#ff00ff',
+    labelTextColor: 'white',
+    fontFamily: 'sans-serif',
+    fontSize: 14,
+    reveal: '%s',
+    animate: true,
+  });
+  const animation = layer
+    .querySelector('.pz-annotation')
+    .getAnimations({ subtree: true })[0];
+  animation.pause();
+  animation.currentTime = %s * animation.effect.getTiming().duration;
+})()
+]",
         reveal,
         if (reveal %in% c("draw", "wipe")) "0.5" else "1"
       )
@@ -2747,9 +2966,18 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
     expect_png_pixel(page, path, 102, 110, c(255, 0, 255))
     pz_js(
       page,
-      r"(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-      window.__exitNode=l.querySelector('.pz-annotation'); l.pz.clear({id:'mark',animate:true});
-      const a=window.__exitNode.getAnimations({subtree:true})[0]; a.pause(); a.currentTime=0; })())"
+      r"[
+(() => {
+  const layer = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  window.__exitNode = layer.querySelector('.pz-annotation');
+  layer.pz.clear({ id: 'mark', animate: true });
+  const animation = window.__exitNode.getAnimations({ subtree: true })[0];
+  animation.pause();
+  animation.currentTime = 0;
+})()
+]"
     )
     has_badge <- pz_js(page, "window.__exitNode.querySelector('span') !== null")
     expect_identical(has_badge, !reveal %in% c("draw", "wipe"))
@@ -2794,8 +3022,11 @@ local_viewport_badge_page <- function(
   page <- local_page(width = width, height = height, .env = .env)
   pz_js(
     page,
-    r"(document.body.style.cssText='margin:0;background:white';
-      document.body.innerHTML='<div id=edge style="position:absolute;left:400px;top:250px;width:30px;height:30px"></div>';)"
+    r"[
+document.body.style.cssText = 'margin:0;background:white';
+document.body.innerHTML =
+  '<div id=edge style="position:absolute;left:400px;top:250px;width:30px;height:30px"></div>';
+]"
   )
   page
 }
@@ -2851,9 +3082,16 @@ expect_viewport_badge <- function(page, path, x, y, reference) {
     page,
     path,
     sprintf(
-      r"(const p=c.getImageData(%d,%d,%d,%d).data; let ink=0,fill=0; for(let i=0;i<p.length;i+=4) {
-        if(p[i]>240 && p[i+1]>240 && p[i+2]>240) ink++;
-        if(p[i]>240 && p[i+1]<10 && p[i+2]>240) fill++; } return {ink,fill};)",
+      r"[
+const pixels = c.getImageData(%d, %d, %d, %d).data;
+let ink = 0;
+let fill = 0;
+for (let i = 0; i < pixels.length; i += 4) {
+  if (pixels[i] > 240 && pixels[i + 1] > 240 && pixels[i + 2] > 240) ink++;
+  if (pixels[i] > 240 && pixels[i + 1] < 10 && pixels[i + 2] > 240) fill++;
+}
+return { ink, fill };
+]",
       round((x + 5) * page_dpr(page)),
       round((y + 2) * page_dpr(page)),
       max(1, floor((reference$width - 10) * page_dpr(page))),
@@ -2927,10 +3165,17 @@ test_that("viewport translation composes with the visible overflow anchor", {
   reference <- viewport_badge_reference(page, "#add-task", pad = 4)
   pz_js(
     page,
-    r"(const edge=document.getElementById('edge'); edge.style.cssText='position:relative;left:-20px;top:-20px;width:80px;height:80px';
-      const outer=document.createElement('div'); outer.style.cssText='position:absolute;left:970px;top:100px;width:30px;height:100px;overflow-x:hidden';
-      const inner=document.createElement('div'); inner.style.cssText='width:100px;height:50px;overflow-y:hidden';
-      edge.replaceWith(outer); outer.appendChild(inner); inner.appendChild(edge);)"
+    r"[
+const edge = document.getElementById('edge');
+edge.style.cssText = 'position:relative;left:-20px;top:-20px;width:80px;height:80px';
+const outer = document.createElement('div');
+outer.style.cssText = 'position:absolute;left:970px;top:100px;width:30px;height:100px;overflow-x:hidden';
+const inner = document.createElement('div');
+inner.style.cssText = 'width:100px;height:50px;overflow-y:hidden';
+edge.replaceWith(outer);
+outer.appendChild(inner);
+inner.appendChild(edge);
+]"
   )
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
@@ -3030,15 +3275,20 @@ test_that("badges reposition themselves when targets move and scroll", {
   page <- local_page()
   pz_js(
     page,
-    r"(document.body.style.cssText='margin:0;background:white';
-      document.body.innerHTML='<div id=edge style="position:absolute;left:400px;top:250px;width:30px;height:30px"></div>';)"
+    r"[
+document.body.style.cssText = 'margin:0;background:white';
+document.body.innerHTML =
+  '<div id=edge style="position:absolute;left:400px;top:250px;width:30px;height:30px"></div>';
+]"
   )
   viewport_badge_reference(page, "#add-task")
   client_width <- unlist(pz_js(page, "document.documentElement.clientWidth"))
   pz_js(
     page,
     sprintf(
-      r"(document.getElementById('edge').style.left='%spx')",
+      r"[
+document.getElementById('edge').style.left = '%spx'
+]",
       client_width - 30
     )
   )
@@ -3065,9 +3315,11 @@ test_that("badges reposition themselves when targets move and scroll", {
   # past the measured viewport or the scroll has nowhere to go.
   pz_js(
     page,
-    r"(document.getElementById('edge').style.left='300px';
-      document.body.style.height=(innerHeight+400)+'px';
-      window.scrollTo(0,250))"
+    r"[
+document.getElementById('edge').style.left = '300px';
+document.body.style.height = innerHeight + 400 + 'px';
+window.scrollTo(0, 250);
+]"
   )
   expect_poll_badge(
     page,
@@ -3166,10 +3418,28 @@ test_that("pop and slide do not feed animated sizes back into badge placement", 
     pz_js(
       page,
       sprintf(
-        r"(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-        l.pz.draw([document.getElementById('edge')],{id:'edge',type:'box',pad:[0,0,0,0],label:'#add-task',
-        color:'red',strokeWidth:3,labelFill:'#ff00ff',labelTextColor:'white',fontFamily:'monospace',fontSize:14,
-        reveal:'%s',animate:true}); l.querySelector('.pz-annotation').getAnimations({subtree:true})[0].pause(); })())",
+        r"[
+(() => {
+  const layer = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  layer.pz.draw([document.getElementById('edge')], {
+    id: 'edge',
+    type: 'box',
+    pad: [0, 0, 0, 0],
+    label: '#add-task',
+    color: 'red',
+    strokeWidth: 3,
+    labelFill: '#ff00ff',
+    labelTextColor: 'white',
+    fontFamily: 'monospace',
+    fontSize: 14,
+    reveal: '%s',
+    animate: true,
+  });
+  layer.querySelector('.pz-annotation').getAnimations({ subtree: true })[0].pause();
+})()
+]",
         reveal
       )
     )
@@ -3177,9 +3447,20 @@ test_that("pop and slide do not feed animated sizes back into badge placement", 
       placement <- pz_js(
         page,
         sprintf(
-          r"(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations');
-          const a=l.querySelector('.pz-annotation').getAnimations({subtree:true})[0]; a.currentTime=%s*a.effect.getTiming().duration; l.pz.sync();
-          const b=l.querySelector('span'); return [parseFloat(b.style.left),parseFloat(b.style.top)]; })())",
+          r"[
+(() => {
+  const layer = document
+    .querySelector('#paparazzi-overlay-root')
+    .shadowRoot.querySelector('.pz-annotations');
+  const animation = layer
+    .querySelector('.pz-annotation')
+    .getAnimations({ subtree: true })[0];
+  animation.currentTime = %s * animation.effect.getTiming().duration;
+  layer.pz.sync();
+  const badge = layer.querySelector('span');
+  return [parseFloat(badge.style.left), parseFloat(badge.style.top)];
+})()
+]",
           fraction
         )
       )
@@ -3299,9 +3580,15 @@ test_that("badge bounds exclude forced classic scrollbars like recorder crops", 
   page <- local_viewport_badge_page()
   pz_js(
     page,
-    r"(document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar{width:24px;height:18px;background:white}</style>');
-      document.documentElement.style.overflow='scroll';
-      document.body.style.width='2000px'; document.body.style.height='2000px';)"
+    r"[
+document.head.insertAdjacentHTML(
+  'beforeend',
+  '<style>::-webkit-scrollbar{width:24px;height:18px;background:white}</style>'
+);
+document.documentElement.style.overflow = 'scroll';
+document.body.style.width = '2000px';
+document.body.style.height = '2000px';
+]"
   )
   pz_poll(
     function() {

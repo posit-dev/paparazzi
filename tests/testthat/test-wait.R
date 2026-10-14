@@ -65,31 +65,40 @@ test_that("Shiny idle counts brief busy and recalculating pulses inside the hold
     # Arm after the wait's first idle check, so the entire pulse falls
     # between that check and the next 100ms sample in the old wait.
     pulse_add <- if (kind == "busy") {
-      r"(document.documentElement.classList.add('shiny-busy');)"
+      r"[document.documentElement.classList.add('shiny-busy');]"
     } else {
-      r"(const el = document.createElement('span'); el.className = 'recalculating'; el.id = 'brief-pulse'; document.body.appendChild(el);)"
+      r"[const pulseEl = document.createElement('span'); pulseEl.className = 'recalculating'; pulseEl.id = 'brief-pulse'; document.body.appendChild(pulseEl);]"
     }
     pulse_remove <- if (kind == "busy") {
-      r"(document.documentElement.classList.remove('shiny-busy');)"
+      r"[document.documentElement.classList.remove('shiny-busy');]"
     } else {
-      r"(document.getElementById('brief-pulse').remove();)"
+      r"[document.getElementById('brief-pulse').remove();]"
     }
     pz_js(
       page,
       sprintf(
-        r"(window.__idlePulseEnd = null; window.__idleArmed = false;
-        window.__idleObserver = MutationObserver; window.__idleObservers = 0;
-        window.MutationObserver = class extends window.__idleObserver {
-          constructor(callback) { super(callback); window.__idleObservers++; } };
-          window.__idleQuery = document.querySelector;
-          document.querySelector = function(selector) {
-            const result = window.__idleQuery.call(this, selector);
-            if (selector === '.recalculating' && !window.__idleArmed) {
-              window.__idleArmed = true;
-              setTimeout(() => { %s }, 150);
-              setTimeout(() => { %s window.__idlePulseEnd = performance.now(); }, 170);
-            }
-            return result; };)",
+        r"[
+window.__idlePulseEnd = null;
+window.__idleArmed = false;
+window.__idleObserver = MutationObserver;
+window.__idleObservers = 0;
+window.MutationObserver = class extends window.__idleObserver {
+  constructor(callback) {
+    super(callback);
+    window.__idleObservers++;
+  }
+};
+window.__idleQuery = document.querySelector;
+document.querySelector = function(selector) {
+  const result = window.__idleQuery.call(this, selector);
+  if (selector === '.recalculating' && !window.__idleArmed) {
+    window.__idleArmed = true;
+    setTimeout(() => { %s }, 150);
+    setTimeout(() => { %s window.__idlePulseEnd = performance.now(); }, 170);
+  }
+  return result;
+};
+]",
         pulse_add,
         pulse_remove
       )
@@ -113,17 +122,23 @@ test_that("Shiny idle resets the hold on Shiny connection events", {
   withr::defer(pz_close(page))
   pz_js(
     page,
-    r"(window.__idleEventEnd = null; window.__idleEventArmed = false;
-      window.__idleQuery = document.querySelector;
-      document.querySelector = function(selector) {
-        const result = window.__idleQuery.call(this, selector);
-        if (selector === '.recalculating' && !window.__idleEventArmed) {
-          window.__idleEventArmed = true;
-          setTimeout(() => window.jQuery(document).trigger('shiny:disconnected'), 35);
-          setTimeout(() => { window.jQuery(document).trigger('shiny:connected');
-            window.__idleEventEnd = performance.now(); }, 65);
-        }
-        return result; };)"
+    r"[
+window.__idleEventEnd = null;
+window.__idleEventArmed = false;
+window.__idleQuery = document.querySelector;
+document.querySelector = function(selector) {
+  const result = window.__idleQuery.call(this, selector);
+  if (selector === '.recalculating' && !window.__idleEventArmed) {
+    window.__idleEventArmed = true;
+    setTimeout(() => window.jQuery(document).trigger('shiny:disconnected'), 35);
+    setTimeout(() => {
+      window.jQuery(document).trigger('shiny:connected');
+      window.__idleEventEnd = performance.now();
+    }, 65);
+  }
+  return result;
+};
+]"
   )
   withr::defer(pz_js(page, "document.querySelector = window.__idleQuery"))
   pz_wait_for_shiny_idle(page, timeout = 3)
@@ -137,18 +152,29 @@ test_that("Shiny idle deadline cleans page listeners and observer", {
   skip_if_no_shiny()
   page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
-  listeners <- r"(['shiny:connected', 'shiny:disconnected', 'shiny:busy', 'shiny:idle']
-    .map((event) => (window.jQuery._data(document, 'events')?.[event] || []).length))"
+  listeners <- r"[
+['shiny:connected', 'shiny:disconnected', 'shiny:busy', 'shiny:idle']
+  .map((event) => (window.jQuery._data(document, 'events')?.[event] || []).length)
+]"
   before <- pz_js(page, listeners)
   pz_js(
     page,
-    r"(window.__idleDisconnects = 0; window.__idleObservers = 0;
-      window.__idleObserver = MutationObserver;
-      window.MutationObserver = class extends window.__idleObserver {
-        constructor(...args) { super(...args); window.__idleObservers++; }
-        disconnect() { window.__idleDisconnects++; super.disconnect(); }
-      };
-      document.documentElement.classList.add('shiny-busy');)"
+    r"[
+window.__idleDisconnects = 0;
+window.__idleObservers = 0;
+window.__idleObserver = MutationObserver;
+window.MutationObserver = class extends window.__idleObserver {
+  constructor(...args) {
+    super(...args);
+    window.__idleObservers++;
+  }
+  disconnect() {
+    window.__idleDisconnects++;
+    super.disconnect();
+  }
+};
+document.documentElement.classList.add('shiny-busy');
+]"
   )
   withr::defer(pz_js(
     page,
@@ -198,10 +224,12 @@ test_that("Shiny idle waits for a late shinyapp after the Shiny global loads", {
   page <- local_page(test_path("fixtures", "shiny-late-init.html"))
   pz_js(
     page,
-    r"(setTimeout(() => {
-      Shiny.shinyapp = {$socket: {readyState: WebSocket.OPEN}};
-      document.dispatchEvent(new Event('shiny:connected'));
-    }, 150))"
+    r"[
+setTimeout(() => {
+  Shiny.shinyapp = { $socket: { readyState: WebSocket.OPEN } };
+  document.dispatchEvent(new Event('shiny:connected'));
+}, 150)
+]"
   )
   expect_no_error(pz_wait_for_shiny_idle(page, timeout = 2))
   expect_true(pz_js(page, "!!Shiny.shinyapp"))
@@ -487,12 +515,14 @@ test_that("pz_wait_for_stable keeps the locator and stability budgets separate",
   # gets its own full budget, so the window completes.
   pz_js(
     page,
-    r"(setTimeout(function () {
-      const el = document.createElement('p');
-      el.id = 'late-stable';
-      el.textContent = 'steady text';
-      document.body.appendChild(el);
-    }, 600))",
+    r"[
+setTimeout(function() {
+  const lateStableEl = document.createElement('p');
+  lateStableEl.id = 'late-stable';
+  lateStableEl.textContent = 'steady text';
+  document.body.appendChild(lateStableEl);
+}, 600)
+]",
     await = FALSE
   )
   start <- Sys.time()
@@ -858,7 +888,9 @@ test_that("explicit post-action navigation waits for Shiny output", {
   pz_js(
     page,
     sprintf(
-      r"(setTimeout(() => location.href = '%s', 100))",
+      r"[
+setTimeout(() => location.href = '%s', 100)
+]",
       app$url
     ),
     await = FALSE

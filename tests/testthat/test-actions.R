@@ -247,11 +247,14 @@ test_that("pz_act_press resolves Mod using the browser's reported platform", {
   page <- local_actions_page()
   pz_js(
     page,
-    r"(window.__modKeys = [];
-      document.addEventListener('keydown', e => {
-        if (e.key.toLowerCase() === 'k') window.__modKeys.push({metaKey: e.metaKey, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey});
-      });
-    )"
+    r"[
+window.__modKeys = [];
+document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'k') {
+    window.__modKeys.push({metaKey: e.metaKey, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey});
+  }
+});
+]"
   )
   pz_act_click(page, "#name")
 
@@ -265,8 +268,10 @@ test_that("pz_act_press resolves Mod using the browser's reported platform", {
     pz_js(
       page,
       sprintf(
-        r"(Object.defineProperty(navigator, 'userAgentData', {configurable: true, value: {platform: '%s'}});
-          Object.defineProperty(navigator, 'platform', {configurable: true, value: '%s'});)",
+        r"[
+Object.defineProperty(navigator, 'userAgentData', {configurable: true, value: {platform: '%s'}});
+Object.defineProperty(navigator, 'platform', {configurable: true, value: '%s'});
+]",
         platform$ua,
         platform$legacy
       )
@@ -486,7 +491,7 @@ test_that("a detached scope surfaces through an action as a classed error", {
 # use, read directly off the fixture for the hidden-before assertions.
 hidden_js <- function(id) {
   sprintf(
-    r"(document.getElementById('%s').checkVisibility({ checkVisibilityCSS: true }))",
+    r"[document.getElementById('%s').checkVisibility({ checkVisibilityCSS: true })]",
     id
   )
 }

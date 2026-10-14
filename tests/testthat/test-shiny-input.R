@@ -12,7 +12,7 @@ shiny_input_text <- function(page, id) {
   pz_js(
     page,
     sprintf(
-      r"(document.getElementById(%s).textContent)",
+      r"[document.getElementById(%s).textContent]",
       jsonlite::toJSON(id, auto_unbox = TRUE)
     )
   )

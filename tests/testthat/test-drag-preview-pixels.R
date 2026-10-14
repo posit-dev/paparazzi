@@ -198,7 +198,12 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         start_box <- pz_js(
           page,
           sprintf(
-            r"( (() => {const r = %s.image.getBoundingClientRect();return {x:r.x,y:r.y};})() )",
+            r"[
+(() => {
+  const rect = %s.image.getBoundingClientRect();
+  return { x: rect.x, y: rect.y };
+})()
+]",
             DRAG_PREVIEW_CONTROLLER_JS
           )
         )
@@ -208,13 +213,24 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         sample <- pz_js(
           page,
           sprintf(
-            r"( (() => { const p = %s;
-            const a = p.image.getAnimations()[0]; a.pause(); a.currentTime = 90;
-            const r = p.source.getBoundingClientRect();
-            const t = document.querySelector('#preview-target').getBoundingClientRect();
-            return {source:{x:r.x,y:r.y},target:{x:t.x,y:t.y}, same:p.source === window.__previewSource,
-              attached:p.source.isConnected, cssWidth:parseFloat(p.image.style.width), cssHeight:parseFloat(p.image.style.height)};
-          })() )",
+            r"[
+(() => {
+  const controller = %s;
+  const animation = controller.image.getAnimations()[0];
+  animation.pause();
+  animation.currentTime = 90;
+  const sourceRect = controller.source.getBoundingClientRect();
+  const targetRect = document.querySelector('#preview-target').getBoundingClientRect();
+  return {
+    source: { x: sourceRect.x, y: sourceRect.y },
+    target: { x: targetRect.x, y: targetRect.y },
+    same: controller.source === window.__previewSource,
+    attached: controller.source.isConnected,
+    cssWidth: parseFloat(controller.image.style.width),
+    cssHeight: parseFloat(controller.image.style.height),
+  };
+})()
+]",
             DRAG_PREVIEW_CONTROLLER_JS
           )
         )
@@ -230,7 +246,12 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         box <- pz_js(
           page,
           sprintf(
-            r"( (() => {const r = %s.image.getBoundingClientRect();return {x:r.x,y:r.y};})() )",
+            r"[
+(() => {
+  const rect = %s.image.getBoundingClientRect();
+  return { x: rect.x, y: rect.y };
+})()
+]",
             DRAG_PREVIEW_CONTROLLER_JS
           )
         )
@@ -242,7 +263,12 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         pz_js(
           page,
           sprintf(
-            r"( (() => { const p = %s; p.image.getAnimations()[0].currentTime = 180; })() )",
+            r"[
+(() => {
+  const controller = %s;
+  controller.image.getAnimations()[0].currentTime = 180;
+})()
+]",
             DRAG_PREVIEW_CONTROLLER_JS
           )
         )
