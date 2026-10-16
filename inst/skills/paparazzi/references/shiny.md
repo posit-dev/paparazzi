@@ -55,6 +55,23 @@ page |>
 pz_get_text(page, target = "#summary")
 ```
 
+An output can also stay busy past the flush: an `ExtendedTask` or
+`req(cancelOutput = "progress")` keeps its output `.recalculating` until the
+result arrives, while the app is otherwise idle. To wait for one output like
+that — a plot with no text to expect is the common case — expect the class
+to clear. Delivery and the class clearing happen together, so a cleared
+class means the output is ready to capture.
+
+```r
+page |>
+  pz_act_click("#recalculate") |>
+  pz_wait_for_shiny_idle() |>
+  pz_expect_class("recalculating", target = "#plot", not = TRUE)
+```
+
+The idle wait comes first so the invalidation has reached the output; a
+class check without it can pass on the old state before work even starts.
+
 When you know the expected output, an expectation is the better check: it
 states what the script relies on, and its failure says what was missing.
 
