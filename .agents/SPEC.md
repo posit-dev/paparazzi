@@ -627,7 +627,7 @@ pz_device(
 - `zoom_method = "viewport"` shrinks the CSS viewport and raises the device scale factor, which keeps `vh` correct but can trigger media queries. `"css"` is the blog's CSS-zoom trick, which keeps the layout but can break `vh`-based layouts.
 - `reduced_motion = TRUE` gives deterministic stills; opt-in because it's usually wrong for videos.
 
-Shiny idle: `pz_wait_for_shiny_idle()` passes when `shiny:connected` has fired, `<html>` has no `shiny-busy` class and no `.recalculating` outputs remain, all held for a short stable window (~200ms).
+Shiny idle: `pz_wait_for_shiny_idle()` passes when `shiny:connected` has fired and `<html>` has no `shiny-busy` class, held for a short stable window (~200ms) — Shiny's own busy signal, the same contract shinytest2 uses. An output suspended on a hidden tab keeps `.recalculating` until the tab shows and does not block idle. Idle does not prove a particular output was delivered; wait on the output's content (`pz_expect_*()`) when a capture depends on it.
 
 Escape hatches:
 

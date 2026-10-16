@@ -18,11 +18,22 @@ default.}
 \code{ctx}, invisibly.
 }
 \description{
-Waits for the Shiny connection, for \verb{<html>} to lose \code{shiny-busy}, and
-for every \code{.recalculating} output to finish. All three conditions must
-hold continuously for at least 200ms, including brief busy/recalculating
-transitions. A page without the Shiny global errors instead of waiting;
-a page whose Shiny app never connects times out.
+Waits for the Shiny connection and for \verb{<html>} to lose \code{shiny-busy},
+both holding continuously for at least 200ms, including brief busy
+transitions. These track Shiny's own busy signal -- the same contract
+shinytest2 uses. An output suspended on a hidden tab keeps its
+\code{.recalculating} class until the tab shows, because the server reports
+it invalidated but never recomputes it; the wait deliberately does not
+inspect per-output recalculating state, so such apps settle.
+}
+\details{
+Idle means the server finished its reactive flush; it does not prove a
+particular output was delivered or is ready to capture. Expect the
+content you rely on (e.g. \code{\link[=pz_expect_text]{pz_expect_text()}}) before reading or
+capturing it.
+
+A page without the Shiny global errors instead of waiting; a page whose
+Shiny app never connects times out.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run("shiny")) withAutoprint(\{ # examplesIf}

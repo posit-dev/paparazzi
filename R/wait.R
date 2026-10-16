@@ -29,11 +29,21 @@ pz_wait <- function(ctx, seconds) {
 
 #' Wait until a Shiny page is idle
 #'
-#' Waits for the Shiny connection, for `<html>` to lose `shiny-busy`, and
-#' for every `.recalculating` output to finish. All three conditions must
-#' hold continuously for at least 200ms, including brief busy/recalculating
-#' transitions. A page without the Shiny global errors instead of waiting;
-#' a page whose Shiny app never connects times out.
+#' Waits for the Shiny connection and for `<html>` to lose `shiny-busy`,
+#' both holding continuously for at least 200ms, including brief busy
+#' transitions. These track Shiny's own busy signal -- the same contract
+#' shinytest2 uses. An output suspended on a hidden tab keeps its
+#' `.recalculating` class until the tab shows, because the server reports
+#' it invalidated but never recomputes it; the wait deliberately does not
+#' inspect per-output recalculating state, so such apps settle.
+#'
+#' Idle means the server finished its reactive flush; it does not prove a
+#' particular output was delivered or is ready to capture. Expect the
+#' content you rely on (e.g. [pz_expect_text()]) before reading or
+#' capturing it.
+#'
+#' A page without the Shiny global errors instead of waiting; a page whose
+#' Shiny app never connects times out.
 #'
 #' @inheritParams pz_wait_for_js
 #' @return `ctx`, invisibly.
@@ -80,25 +90,12 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
     ";",
     "  let hold = null;",
     "  let deadlineTimer;",
-    "  let observer;",
     "  const events = 'shiny:connected shiny:disconnected shiny:busy shiny:idle';",
     "  const idle = () => !!window.Shiny?.shinyapp?.$socket &&",
     "    Shiny.shinyapp.$socket.readyState === WebSocket.OPEN &&",
-    "    !document.documentElement.classList.contains('shiny-busy') &&",
-    "    !document.querySelector('.recalculating');",
-    "  const hasClass = (value, name) => (value || '').split(/\\s+/).includes(name);",
-    "  const relevant = (records) => records.some((record) => {",
-    "    if (record.type === 'attributes') {",
-    "      if (record.target === document.documentElement &&",
-    "          (hasClass(record.oldValue, 'shiny-busy') || record.target.classList.contains('shiny-busy'))) return true;",
-    "      return hasClass(record.oldValue, 'recalculating') || record.target.classList.contains('recalculating');",
-    "    }",
-    "    return [...record.addedNodes, ...record.removedNodes].some((node) =>",
-    "      node.nodeType === 1 && (node.matches('.recalculating') || node.querySelector('.recalculating')));",
-    "  });",
+    "    !document.documentElement.classList.contains('shiny-busy');",
     "  const finish = (value) => {",
     "    clearTimeout(hold); clearTimeout(deadlineTimer);",
-    "    observer.disconnect();",
     "    window.jQuery(document).off(events, changed);",
     "    window.removeEventListener('pagehide', pagehide);",
     "    resolve(value);",
@@ -106,15 +103,11 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
     "  const check = () => {",
     "    clearTimeout(hold); hold = null;",
     "    if (idle()) hold = setTimeout(() => {",
-    "      if (relevant(observer.takeRecords())) { check(); return; }",
     "      if (idle()) finish(true); else check();",
     "    }, 200);",
     "  };",
     "  const changed = () => check();",
     "  const pagehide = () => finish(false);",
-    "  observer = new MutationObserver((records) => { if (relevant(records)) check(); });",
-    "  observer.observe(document, {subtree: true, childList: true, attributes: true,",
-    "    attributeFilter: ['class'], attributeOldValue: true});",
     "  window.jQuery(document).on(events, changed);",
     "  window.addEventListener('pagehide', pagehide);",
     "  deadlineTimer = setTimeout(() => finish(false), budget);",

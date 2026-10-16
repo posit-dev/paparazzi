@@ -24,25 +24,40 @@ test_that("Shiny idle restarts its stability window when busy returns", {
   page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
 
-  # start precedes each pz_evaluate so the 600ms pulse provably starts after
-  # the reference, and the pulse must outlive the wait's observer
-  # attach: a pulse that ends before the attach is never observed, and
-  # the wait would resolve after just the 200ms hold.
+  # start precedes the pz_evaluate so the 600ms pulse provably starts
+  # after the reference. Busy is injected the way Shiny signals it: the
+  # class and the jQuery event together. The class read catches the busy
+  # state even though the shiny:busy event fires before the wait attaches
+  # its listeners; the shiny:idle event re-triggers the hold.
   start <- Sys.time()
   pz_evaluate(
     page,
-    "document.documentElement.classList.add('shiny-busy'); setTimeout(() => document.documentElement.classList.remove('shiny-busy'), 600)"
+    "document.documentElement.classList.add('shiny-busy'); window.jQuery(document).trigger('shiny:busy'); setTimeout(() => { document.documentElement.classList.remove('shiny-busy'); window.jQuery(document).trigger('shiny:idle'); }, 600)"
   )
   pz_wait_for_shiny_idle(page, timeout = 3)
   expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.78)
+})
 
-  start <- Sys.time()
+test_that("Shiny idle does not wait on recalculating outputs", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
+  withr::defer(pz_close(page))
+
+  # A stuck .recalculating class is a per-output state the wait no longer
+  # inspects (suspended outputs on hidden tabs keep it indefinitely), so
+  # it neither blocks nor extends the wait.
   pz_evaluate(
     page,
-    "document.querySelector('#slow').classList.add('recalculating'); setTimeout(() => document.querySelector('#slow').classList.remove('recalculating'), 600)"
+    "document.querySelector('#slow').classList.add('recalculating')"
   )
+  start <- Sys.time()
   pz_wait_for_shiny_idle(page, timeout = 3)
-  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.78)
+  expect_lt(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
+  pz_evaluate(
+    page,
+    "document.querySelector('#slow').classList.remove('recalculating')"
+  )
 })
 
 test_that("Shiny idle restarts the hold when busy returns mid-window", {
@@ -53,7 +68,7 @@ test_that("Shiny idle restarts the hold when busy returns mid-window", {
 
   pz_evaluate(
     page,
-    "setTimeout(() => document.documentElement.classList.add('shiny-busy'), 100); setTimeout(() => document.documentElement.classList.remove('shiny-busy'), 360)"
+    "setTimeout(() => { document.documentElement.classList.add('shiny-busy'); window.jQuery(document).trigger('shiny:busy'); }, 100); setTimeout(() => { document.documentElement.classList.remove('shiny-busy'); window.jQuery(document).trigger('shiny:idle'); }, 360)"
   )
 
   start <- Sys.time()
@@ -61,69 +76,38 @@ test_that("Shiny idle restarts the hold when busy returns mid-window", {
   expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.5)
 })
 
-test_that("Shiny idle counts brief busy and recalculating pulses inside the hold", {
+test_that("Shiny idle counts brief busy pulses inside the hold", {
   skip_if_no_chrome()
   skip_if_no_shiny()
   page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
 
-  for (kind in c("busy", "recalculating")) {
-    # Arm after the wait's first idle check, so the entire pulse falls
-    # between that check and the next 100ms sample in the old wait.
-    pulse_add <- if (kind == "busy") {
-      r"[document.documentElement.classList.add('shiny-busy');]"
-    } else {
-      r"[const pulseEl = document.createElement('span'); pulseEl.className = 'recalculating'; pulseEl.id = 'brief-pulse'; document.body.appendChild(pulseEl);]"
-    }
-    pulse_remove <- if (kind == "busy") {
-      r"[document.documentElement.classList.remove('shiny-busy');]"
-    } else {
-      r"[document.getElementById('brief-pulse').remove();]"
-    }
-
-    pz_evaluate(
-      page,
-      sprintf(
-        r"[
+  # A 50ms busy pulse lands entirely inside the 200ms hold, injected the
+  # way Shiny signals it (class plus event at both ends). The shiny:busy
+  # event must cancel the hold and shiny:idle restart it, so the wait
+  # resolves about 200ms after the pulse ends, not at the original hold.
+  pz_evaluate(
+    page,
+    r"[
 window.__idlePulseEnd = null;
-window.__idleArmed = false;
-window.__idleObserver = MutationObserver;
-window.__idleObservers = 0;
-window.MutationObserver = class extends window.__idleObserver {
-  constructor(callback) {
-    super(callback);
-    window.__idleObservers++;
-  }
-};
-window.__idleQuery = document.querySelector;
-document.querySelector = function(selector) {
-  const result = window.__idleQuery.call(this, selector);
-  if (selector === '.recalculating' && !window.__idleArmed) {
-    window.__idleArmed = true;
-    setTimeout(() => { %s }, 150);
-    setTimeout(() => { %s window.__idlePulseEnd = performance.now(); }, 170);
-  }
-  return result;
-};
-]",
-        pulse_add,
-        pulse_remove
-      )
-    )
-    pz_wait_for_shiny_idle(page, timeout = 3)
-    pz_evaluate(
-      page,
-      "document.querySelector = window.__idleQuery; window.MutationObserver = window.__idleObserver"
-    )
+setTimeout(() => {
+  document.documentElement.classList.add('shiny-busy');
+  window.jQuery(document).trigger('shiny:busy');
+}, 50);
+setTimeout(() => {
+  document.documentElement.classList.remove('shiny-busy');
+  window.jQuery(document).trigger('shiny:idle');
+  window.__idlePulseEnd = performance.now();
+}, 100);
+]"
+  )
+  pz_wait_for_shiny_idle(page, timeout = 3)
 
-    expect_gte(pz_evaluate(page, "window.__idleObservers"), 1)
-    expect_true(
-      pz_evaluate(page, "window.__idlePulseEnd !== null"),
-      info = kind
-    )
-    lag <- pz_evaluate(page, "performance.now() - window.__idlePulseEnd")
-    expect_gte(lag, 200)
-  }
+  expect_true(pz_evaluate(page, "window.__idlePulseEnd !== null"))
+  # Reading the lag after the wait returns only inflates it, so the bound
+  # is safe; the 10ms margin covers timer granularity.
+  lag <- pz_evaluate(page, "performance.now() - window.__idlePulseEnd")
+  expect_gte(lag, 190)
 })
 
 test_that("Shiny idle resets the hold on Shiny connection events", {
@@ -136,34 +120,133 @@ test_that("Shiny idle resets the hold on Shiny connection events", {
     page,
     r"[
 window.__idleEventEnd = null;
-window.__idleEventArmed = false;
-window.__idleQuery = document.querySelector;
-document.querySelector = function(selector) {
-  const result = window.__idleQuery.call(this, selector);
-  if (selector === '.recalculating' && !window.__idleEventArmed) {
-    window.__idleEventArmed = true;
-    setTimeout(() => window.jQuery(document).trigger('shiny:disconnected'), 35);
-    setTimeout(() => {
-      window.jQuery(document).trigger('shiny:connected');
-      window.__idleEventEnd = performance.now();
-    }, 65);
-  }
-  return result;
-};
+setTimeout(() => window.jQuery(document).trigger('shiny:disconnected'), 50);
+setTimeout(() => {
+  window.jQuery(document).trigger('shiny:connected');
+  window.__idleEventEnd = performance.now();
+}, 100);
 ]"
   )
-  withr::defer(pz_evaluate(page, "document.querySelector = window.__idleQuery"))
 
   pz_wait_for_shiny_idle(page, timeout = 3)
-  expect_true(pz_evaluate(page, "window.__idleEventArmed"))
   expect_true(pz_evaluate(page, "window.__idleEventEnd !== null"))
+  # Reading the lag after the wait returns only inflates it, so the bound
+  # is safe; the 10ms margin covers timer granularity.
   expect_gte(
     pz_evaluate(page, "performance.now() - window.__idleEventEnd"),
-    200
+    190
   )
 })
 
-test_that("Shiny idle deadline cleans page listeners and observer", {
+test_that("Shiny idle settles with a suspended output on a hidden tab", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_local_page(
+    shared_shiny_suspended_app(),
+    wait = "shiny",
+    timeout = 10
+  )
+
+  # The Slow tab's output is suspended: Shiny marked it .recalculating
+  # but never recomputes it while hidden. The old predicate never
+  # settled here; idle must settle with that class still present.
+  state <- pz_evaluate(
+    page,
+    "({fast: document.querySelector('#fast').className, slow: document.querySelector('#slow').className, fastText: document.querySelector('#fast').textContent})"
+  )
+  expect_equal(state$fastText, "fast ready")
+  expect_false(grepl("recalculating", state$fast, fixed = TRUE))
+  expect_true(grepl("recalculating", state$slow, fixed = TRUE))
+
+  shot <- tempfile(fileext = ".png")
+  page |>
+    pz_expect_text("fast ready", target = "#fast", match = "exact") |>
+    pz_screenshot(shot)
+  expect_true(file.exists(shot))
+})
+
+test_that("Shiny idle and wait=TRUE setters work after invalidating a suspended output", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_local_page(
+    shared_shiny_suspended_app(),
+    wait = "shiny",
+    timeout = 10
+  )
+
+  # Invalidating while the tab is hidden sticks .recalculating on the
+  # suspended output; idle still settles (the recording idiom).
+  page |>
+    pz_act_click("#go") |>
+    pz_wait_for_shiny_idle(timeout = 5)
+  expect_true(pz_evaluate(
+    page,
+    "document.querySelector('#slow').classList.contains('recalculating')"
+  ))
+
+  # wait = TRUE on the setter is usable again: showing the tab resumes
+  # the output, and the wait covers its slow render.
+  page |> pz_set_shiny_input("tabs", "Slow")
+  state <- pz_evaluate(
+    page,
+    "({slow: document.querySelector('#slow').className, slowText: document.querySelector('#slow').textContent})"
+  )
+  expect_equal(state$slowText, "slow ready")
+  expect_false(grepl("recalculating", state$slow, fixed = TRUE))
+})
+
+test_that("Shiny idle waits out the render when a suspended output resumes", {
+  skip_if_no_chrome()
+  skip_if_no_shiny()
+  page <- pz_local_page(
+    shared_shiny_suspended_app(),
+    wait = "shiny",
+    timeout = 10
+  )
+
+  page |> pz_set_shiny_input("tabs", "Slow", wait = FALSE)
+  start <- Sys.time()
+  pz_wait_for_shiny_idle(page, timeout = 5)
+  # The resumed render sleeps 0.8s; idle must not settle before it ends.
+  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.7)
+  expect_equal(
+    pz_evaluate(page, "document.querySelector('#slow').textContent"),
+    "slow ready"
+  )
+})
+
+test_that("Shiny idle settles for a Shiny for Python app with a suspended tab output", {
+  skip_if_no_chrome()
+  skip_if_no_py_shiny()
+  app <- serve_py_shiny(test_path("fixtures", "shiny-suspended-py", "app.py"))
+  withr::defer(app$process$kill())
+
+  page <- pz_open(app$url, wait = "shiny", timeout = 15)
+  withr::defer(pz_close(page))
+
+  # Same contract as the R app: the hidden tab's output keeps
+  # .recalculating and idle settles anyway.
+  state <- pz_evaluate(
+    page,
+    "({fast: document.querySelector('#fast').className, slow: document.querySelector('#slow').className, fastText: document.querySelector('#fast').textContent})"
+  )
+  expect_equal(state$fastText, "fast ready")
+  expect_false(grepl("recalculating", state$fast, fixed = TRUE))
+  expect_true(grepl("recalculating", state$slow, fixed = TRUE))
+
+  page |>
+    pz_act_click("#go") |>
+    pz_wait_for_shiny_idle(timeout = 5) |>
+    pz_set_shiny_input("tabs", "Slow")
+  state <- pz_evaluate(
+    page,
+    "({slow: document.querySelector('#slow').className, slowText: document.querySelector('#slow').textContent})"
+  )
+  expect_equal(state$slowText, "slow ready")
+  expect_false(grepl("recalculating", state$slow, fixed = TRUE))
+})
+
+test_that("Shiny idle deadline cleans page listeners", {
   skip_if_no_chrome()
   skip_if_no_shiny()
   page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
@@ -175,28 +258,10 @@ test_that("Shiny idle deadline cleans page listeners and observer", {
 ]"
   before <- pz_evaluate(page, listeners)
 
-  pz_evaluate(
-    page,
-    r"[
-window.__idleDisconnects = 0;
-window.__idleObservers = 0;
-window.__idleObserver = MutationObserver;
-window.MutationObserver = class extends window.__idleObserver {
-  constructor(...args) {
-    super(...args);
-    window.__idleObservers++;
-  }
-  disconnect() {
-    window.__idleDisconnects++;
-    super.disconnect();
-  }
-};
-document.documentElement.classList.add('shiny-busy');
-]"
-  )
+  pz_evaluate(page, "document.documentElement.classList.add('shiny-busy')")
   withr::defer(pz_evaluate(
     page,
-    "window.MutationObserver = window.__idleObserver; document.documentElement.classList.remove('shiny-busy')"
+    "document.documentElement.classList.remove('shiny-busy')"
   ))
 
   original_js <- pz_evaluate
@@ -218,23 +283,6 @@ document.documentElement.classList.add('shiny-busy');
     }
   )
 
-  pz_poll(
-    function() {
-      pz_evaluate(
-        page,
-        "window.__idleObservers > 0 && window.__idleDisconnects >= window.__idleObservers"
-      )
-    },
-    timeout = 5,
-    loop = page$child_loop,
-    what = "Shiny idle observer cleanup after the deadline"
-  )
-
-  expect_gte(pz_evaluate(page, "window.__idleObservers"), 1)
-  expect_equal(
-    pz_evaluate(page, "window.__idleDisconnects"),
-    pz_evaluate(page, "window.__idleObservers")
-  )
   expect_identical(pz_evaluate(page, listeners), before)
   pz_evaluate(page, "document.documentElement.classList.remove('shiny-busy')")
   expect_no_error(pz_wait_for_shiny_idle(page, timeout = 2))
