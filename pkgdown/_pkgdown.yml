@@ -180,7 +180,7 @@ reference:
   - title: Escape hatches and debugging
     contents:
       - pz_inspect
-      - pz_js
+      - pz_evaluate
       - pz_chromote
 
 news:
