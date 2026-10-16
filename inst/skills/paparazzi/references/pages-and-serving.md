@@ -188,6 +188,31 @@ Quarto, Shiny and static handles all have `$logs()` and `$is_running()`; a
 static handle's log is always empty. Serve interactive documents through
 Shiny instead of Quarto preview (see Shiny).
 
+## Serve an external command
+
+`pz_serve_command()` runs any local server command — a Shiny for Python
+app, a dev server, anything that binds a port — in a background process
+with the same handle contract as `pz_serve_shiny()`. Write `{port}` where
+the command takes its port; paparazzi picks a free one and substitutes it,
+in arguments and in `envvars`. Pass `wait = "shiny"` so pages opened from
+the handle wait for Shiny idle automatically.
+
+```r
+py_app <- pz_serve_command(
+  "shiny",
+  c("run", "app.py", "--port", "{port}"),
+  wait = "shiny"
+)
+page <- pz_open(py_app)
+page |> pz_expect_text("Ready", target = "h1", match = "exact")
+pz_close(page)
+py_app$stop()
+```
+
+When the command fixes its own port, pass `port` and leave `{port}` out;
+paparazzi keeps the port and still waits for the server to listen. `path`
+points the handle's URL below the root when the app mounts elsewhere.
+
 ## Close the page, then stop the server
 
 Here `page` owns a browser session and `server` owns the HTTP service. Close
