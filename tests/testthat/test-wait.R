@@ -227,9 +227,9 @@ test_that("Shiny idle settles for a Shiny for Python app with a suspended tab ou
   skip_if_no_chrome()
   skip_if_no_py_shiny()
   app <- serve_py_shiny(test_path("fixtures", "shiny-suspended-py", "app.py"))
-  withr::defer(app$process$kill())
+  withr::defer(app$stop())
 
-  page <- pz_open(app$url, wait = "shiny", timeout = 15)
+  page <- pz_open(app, timeout = 15)
   withr::defer(pz_close(page))
 
   # Same contract as the R app: the hidden tab's output keeps

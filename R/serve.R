@@ -221,6 +221,111 @@ pz_serve_quarto <- function(path, ..., render = FALSE) {
   quarto_start(path, render, quarto_cli())
 }
 
+#' Serve an external app process with a command
+#'
+#' Starts any local server command -- a Shiny for Python app (`shiny run
+#' app.py`), a dev server, anything that binds a port -- in a background
+#' process and returns a handle for its lifecycle. Pass the handle to
+#' [pz_open()] to open pages on the server; closing those pages leaves it
+#' running.
+#'
+#' The handle has the same contract as [pz_serve_shiny()]: `$stop()`
+#' interrupts, waits, then kills the process tree, and is idempotent, so
+#' `withr::defer(server$stop())` is a safe cleanup. A finalizer stops the
+#' process as a last resort. Standard output and errors go to a temporary
+#' log file (never an undrained pipe), readable mid-run with `$logs()`.
+#'
+#' @param command The command to run, found on `PATH` or given as a path.
+#' @param args Character vector of arguments. The string `{port}` in any
+#'   argument is replaced with the port the server should listen on.
+#' @param ... Reserved; must be empty.
+#' @param wd Working directory for the command; defaults to the current
+#'   directory.
+#' @param port The port to listen on. `NULL` (the default) picks a random
+#'   free port; if startup fails because the port was taken, a new port is
+#'   tried. Pass a number when the command fixes its own port: paparazzi
+#'   skips picking but still checks the port is free before starting and
+#'   waits for it to listen.
+#' @param envvars Named character vector of environment variables set in
+#'   the process, on top of the inherited environment; `{port}` is
+#'   replaced here too. `NULL` adds no environment overrides.
+#' @param path URL path the app responds at. The handle's `$url` is
+#'   `http://127.0.0.1:<port><path>`.
+#' @param wait What [pz_open()] with `wait = "auto"` waits for on pages
+#'   opened from this handle: `"shiny"` waits for Shiny idle (the case
+#'   for Shiny for Python apps), `"load"` (the default) waits for the
+#'   page to load.
+#' @param timeout Seconds to wait for the command to start listening;
+#'   defaults to 10.
+#'
+#' @return A `PaparazziServe` handle with public fields `url` and `port`
+#'   and methods `stop()`, `logs()`, and `is_running()`.
+#'
+#' @examplesIf paparazzi:::examples_run("httpuv", site = TRUE)
+#' # Any command that binds a port works; {port} is replaced with the
+#' # port paparazzi picks
+#' server <- pz_serve_command(
+#'   file.path(R.home("bin"), "Rscript"),
+#'   c(
+#'     "-e",
+#'     "httpuv::runServer('127.0.0.1', {port}, list(call = function(req) list(status = 200L, body = 'served by a command')))"
+#'   )
+#' )
+#' page <- pz_open(server)
+#' pz_get_text(page, target = "body")
+#' pz_close(page)
+#' server$stop()
+#'
+#' @export
+pz_serve_command <- function(
+  command,
+  args = character(),
+  ...,
+  wd = NULL,
+  port = NULL,
+  envvars = NULL,
+  path = "/",
+  wait = c("load", "shiny"),
+  timeout = 10
+) {
+  check_dots_empty()
+  check_string(command)
+  check_character(args, min = 0)
+  if (!is.null(wd)) {
+    check_string(wd)
+    if (!dir.exists(wd)) {
+      cli::cli_abort(
+        "{.arg wd} must be an existing directory.",
+        class = "paparazzi_error_input"
+      )
+    }
+  }
+  if (!is.null(port)) {
+    check_number_whole(port, min = 1, max = 65535)
+  }
+  envvars <- check_app_envvars(envvars)
+  check_string(path)
+  if (!startsWith(path, "/")) {
+    cli::cli_abort(
+      "{.arg path} must start with {.val /}.",
+      class = "paparazzi_error_input"
+    )
+  }
+  wait <- arg_match(wait)
+  check_number_decimal(timeout, min = 0)
+  command_start(
+    command,
+    args,
+    wd,
+    port,
+    envvars,
+    path,
+    wait,
+    timeout,
+    call = caller_env()
+  )
+}
+
 serve_open <- function(x, kind, shiny_options, envvars, timeout) {
   switch(
     kind,
@@ -422,6 +527,84 @@ new_quarto <- function(path, render, cli, port) {
   PaparazziServe$new(process, log_file, port, backend = "quarto")
 }
 
+command_start <- function(
+  command,
+  args,
+  wd,
+  port,
+  envvars,
+  path,
+  wait,
+  timeout,
+  call = caller_env()
+) {
+  max_attempts <- getOption("paparazzi.serve.max_attempts", 5)
+  check_number_whole(
+    max_attempts,
+    min = 1,
+    arg = "options(paparazzi.serve.max_attempts)",
+    call = call
+  )
+  for (attempt in seq_len(max_attempts)) {
+    attempt_port <- port %||% random_port(call = call)
+    if (app_port_connectable(attempt_port)) {
+      # Some platforms allow a second bind, but requests would reach the
+      # first listener instead. An explicit port is the caller's contract,
+      # so only a picked port falls back to re-picking.
+      if (is.null(port) && attempt < max_attempts) {
+        next
+      }
+      app_startup_error(
+        list(kind = "exited", port_taken = TRUE, log = character()),
+        command,
+        timeout,
+        call,
+        engine = "Command"
+      )
+    }
+    server <- new_command(command, args, wd, attempt_port, envvars, path, wait)
+    failure <- app_wait_failure(server, timeout)
+    if (is.null(failure)) {
+      return(server)
+    }
+    server$stop()
+    if (failure$port_taken && is.null(port) && attempt < max_attempts) {
+      next
+    }
+    app_startup_error(failure, command, timeout, call, engine = "Command")
+  }
+}
+
+new_command <- function(command, args, wd, port, envvars, path, wait) {
+  log_file <- tempfile(pattern = "paparazzi-command-", fileext = ".log")
+  substitute_port <- function(value) {
+    if (is.null(value)) {
+      return(NULL)
+    }
+    gsub("{port}", as.character(port), value, fixed = TRUE)
+  }
+  process <- processx::process$new(
+    command,
+    args = substitute_port(args),
+    wd = wd,
+    # File, never a pipe: an undrained pipe blocks the process's writes.
+    stdout = log_file,
+    stderr = "2>&1",
+    # "current" keeps the inherited environment; envvars override it.
+    env = c("current", substitute_port(envvars)),
+    cleanup = TRUE,
+    cleanup_tree = TRUE
+  )
+  PaparazziServe$new(
+    process,
+    log_file,
+    port,
+    backend = "command",
+    url = sprintf("http://127.0.0.1:%d%s", port, path),
+    wait = wait
+  )
+}
+
 # A file path is an app only if shiny::runApp() would source it.
 is_file_app <- function(path) {
   grepl("[.]r$", tolower(path)) && file.exists(path) && !dir.exists(path)
@@ -546,11 +729,12 @@ app_startup_error <- function(
         c(x = cli_escape(log))
       }
     ),
-    class = if (identical(engine, "Shiny app")) {
-      "paparazzi_error_app_startup"
-    } else {
-      "paparazzi_error_quarto_startup"
-    },
+    class = switch(
+      engine,
+      "Shiny app" = "paparazzi_error_app_startup",
+      "Quarto preview" = "paparazzi_error_quarto_startup",
+      "paparazzi_error_command_startup"
+    ),
     call = call
   )
 }
@@ -626,6 +810,7 @@ PaparazziServe <- R6::R6Class(
     url = NULL,
     port = NULL,
     backend = "shiny",
+    wait = NULL,
 
     initialize = function(
       process,
@@ -633,7 +818,8 @@ PaparazziServe <- R6::R6Class(
       port,
       backend = "shiny",
       url = NULL,
-      server = NULL
+      server = NULL,
+      wait = NULL
     ) {
       private$process_ <- process
       private$log_file_ <- log_file
@@ -641,6 +827,9 @@ PaparazziServe <- R6::R6Class(
       self$port <- port
       self$backend <- backend
       self$url <- url %||% sprintf("http://127.0.0.1:%d/", port)
+      # What pz_open(wait = "auto") waits for on this handle's pages.
+      self$wait <- wait %||%
+        if (identical(backend, "shiny")) "shiny" else "load"
     },
 
     stop = function() {
@@ -654,7 +843,7 @@ PaparazziServe <- R6::R6Class(
           private$process_$interrupt()
           private$process_$wait(2000)
         }
-        if (identical(self$backend, "quarto")) {
+        if (self$backend %in% c("quarto", "command")) {
           private$process_$kill_tree()
           private$process_$wait(3000)
         } else if (private$process_$is_alive()) {

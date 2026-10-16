@@ -17,8 +17,8 @@
 #'     from [pz_serve_static()] on the right root;
 #'   * any other existing local file, opened as `file://` (use
 #'     [pz_serve_static()] to serve a page over HTTP);
-#'   * a handle from [pz_serve_shiny()], [pz_serve_quarto()], or
-#'     [pz_serve_static()], shared across pages;
+#'   * a handle from [pz_serve_shiny()], [pz_serve_quarto()],
+#'     [pz_serve_static()], or [pz_serve_command()], shared across pages;
 #'   * an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
 #'
 #'   Path detection checks Shiny first (directories containing `app.R` or
@@ -113,7 +113,11 @@ pz_open <- function(
   owned_app <- NULL
   shared_app <- if (inherits(x, "PaparazziServe")) x else NULL
   kind <- if (inherits(x, "PaparazziServe")) x$backend else serve_kind(x)
-  is_app <- identical(kind, "shiny")
+  is_app <- if (inherits(x, "PaparazziServe")) {
+    identical(x$wait, "shiny")
+  } else {
+    identical(kind, "shiny")
+  }
   if (inherits(x, "PaparazziServe")) {
     url <- x$url
   } else if (!is.null(kind)) {

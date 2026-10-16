@@ -28,8 +28,8 @@ server root, so pages that reference assets outside it, such as
 from \code{\link[=pz_serve_static]{pz_serve_static()}} on the right root;
 \item any other existing local file, opened as \verb{file://} (use
 \code{\link[=pz_serve_static]{pz_serve_static()}} to serve a page over HTTP);
-\item a handle from \code{\link[=pz_serve_shiny]{pz_serve_shiny()}}, \code{\link[=pz_serve_quarto]{pz_serve_quarto()}}, or
-\code{\link[=pz_serve_static]{pz_serve_static()}}, shared across pages;
+\item a handle from \code{\link[=pz_serve_shiny]{pz_serve_shiny()}}, \code{\link[=pz_serve_quarto]{pz_serve_quarto()}},
+\code{\link[=pz_serve_static]{pz_serve_static()}}, or \code{\link[=pz_serve_command]{pz_serve_command()}}, shared across pages;
 \item an existing \code{ChromoteSession} (wrapped as-is; nothing is navigated).
 }
 

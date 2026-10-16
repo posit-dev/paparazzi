@@ -817,3 +817,121 @@ test_that("Quarto startup timeouts clean up the process tree", {
 
   expect_true(wait_until(function() !app_port_reachable(port)))
 })
+
+test_that("pz_serve_command serves an external command and shares the handle contract", {
+  skip_if_no_chrome()
+  skip_if_no_command_server()
+  server <- command_server()
+  withr::defer(server$stop())
+
+  expect_s3_class(server, "PaparazziServe")
+  expect_true(server$is_running())
+  expect_match(server$url, "^http://127[.]0[.]0[.]1:[0-9]+/$")
+  expect_identical(server$wait, "load")
+
+  page <- local_page(server)
+  pz_expect_text(page, "command served", target = "body")
+  pz_close(page)
+  expect_true(server$is_running())
+
+  expect_invisible(server$stop())
+  expect_no_error(server$stop())
+  expect_false(server$is_running())
+  expect_true(wait_until(function() !app_port_reachable(server$port)))
+  expect_type(server$logs(), "character")
+})
+
+test_that("{port} is substituted in args and envvars", {
+  skip_if_no_chrome()
+  skip_if_no_command_server()
+  server <- command_server(envvars = c(COMMAND_PORT = "{port}"))
+  withr::defer(server$stop())
+
+  page <- local_page(server)
+  # The server heard the port in its args (it listens) and in its
+  # environment (the body reports it).
+  pz_expect_text(
+    page,
+    paste0("command served on ", server$port),
+    target = "body",
+    match = "exact"
+  )
+})
+
+test_that("an explicit port is kept, and a taken one fails instead of re-picking", {
+  skip_if_no_chrome()
+  skip_if_no_command_server()
+  server <- command_server(port = random_port())
+  withr::defer(server$stop())
+
+  page <- local_page(server)
+  pz_expect_text(page, "command served", target = "body")
+
+  expect_error(
+    command_server(port = server$port, timeout = 1),
+    class = "paparazzi_error_command_startup"
+  )
+})
+
+test_that("a command that exits during startup fails with its log", {
+  skip_if_no_command_server()
+  expect_error(
+    pz_serve_command(
+      file.path(R.home("bin"), "Rscript"),
+      c("-e", "cat('command boom\n'); quit(status = 1)"),
+      timeout = 5
+    ),
+    "command boom",
+    class = "paparazzi_error_command_startup"
+  )
+})
+
+test_that("a command that never listens times out and is cleaned up", {
+  skip_if_no_command_server()
+  err <- expect_error(
+    pz_serve_command(
+      file.path(R.home("bin"), "Rscript"),
+      c("-e", "Sys.sleep(30)"),
+      timeout = 0.5
+    ),
+    class = "paparazzi_error_command_startup",
+    regexp = "did not start"
+  )
+  expect_match(conditionMessage(err), "within 0.5 seconds", fixed = TRUE)
+})
+
+test_that("the handle's wait declaration routes pz_open's auto wait", {
+  skip_if_no_chrome()
+  skip_if_no_command_server()
+  server <- command_server(wait = "shiny")
+  withr::defer(server$stop())
+
+  expect_identical(server$wait, "shiny")
+  # auto resolves to a Shiny wait, which refuses a non-Shiny page
+  expect_error(
+    pz_open(server, timeout = 2),
+    "not a Shiny page",
+    class = "paparazzi_error_unsupported"
+  )
+})
+
+test_that("pz_serve_command validates its inputs", {
+  expect_error(pz_serve_command(command = 1), "must be a single string")
+  expect_error(pz_serve_command("true", args = 1), "must be a character vector")
+  expect_error(
+    pz_serve_command("true", wd = file.path("no", "such", "dir")),
+    class = "paparazzi_error_input"
+  )
+  expect_error(pz_serve_command("true", port = 0), "must be a whole number")
+  expect_error(
+    pz_serve_command("true", envvars = "A=1"),
+    class = "paparazzi_error_input"
+  )
+  expect_error(
+    pz_serve_command("true", path = "relative"),
+    class = "paparazzi_error_input"
+  )
+  expect_error(pz_serve_command("true", wait = "settled"), "must be one of")
+  expect_error(pz_serve_command("true", timeout = -1), "must be a number")
+  expect_error(pz_serve_command("true", extra = 1), "must be empty")
+})
