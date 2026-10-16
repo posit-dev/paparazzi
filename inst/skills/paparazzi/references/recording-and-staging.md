@@ -264,6 +264,36 @@ display and click feedback back to their defaults. The click then asks for a gre
 the Enter press shows a Mac keycap while it submits the second task. Each
 `pz_act_press()` replaces the previous key callout.
 
+## Show the wait or skip past it
+
+A click in a Shiny app can start reactive work that outlives the action.
+paparazzi never waits for that work on its own: auto-waiting would skip the
+transition states a recording exists to show and tax clicks that trigger
+nothing. The script makes the choice visible instead.
+
+Wait for the result, then hold on it — the viewer skips the busy state and
+rests on the outcome:
+
+```r
+page |>
+  pz_act_click("#add") |>
+  pz_wait_for_shiny_idle() |>
+  pz_record_hold(1.5)
+```
+
+Interact while work is in flight — the viewer watches the app stay busy
+between the click and the result:
+
+```r
+page |>
+  pz_act_click("#add") |>
+  pz_set_shiny_input("priority", "high", wait = FALSE) |>
+  pz_expect_text("3 tasks", target = "#summary", match = "exact")
+```
+
+Either way, end on the applied state: the idle wait for a settled page, an
+expectation for a specific result.
+
 ## Turn a tested script into a demo
 
 Write the steps once as a function with its expectations, run it as a check,

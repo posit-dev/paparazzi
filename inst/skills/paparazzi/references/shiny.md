@@ -183,5 +183,24 @@ The same actions and expectations make a recording: assign a staged page
 Staged cursor motion and typing only
 animate while recording, so the test still runs at full speed. Use direct
 setters for setup the viewer doesn't need to see, and user actions for the
-steps they should watch. The Recording and staging reference shows the
-pattern.
+steps they should watch.
+
+The wait after a click is part of that choice: hold on the result, or keep
+interacting while the app is busy.
+
+```r
+# Wait for the result before moving on
+page |>
+  pz_act_click("#add") |>
+  pz_wait_for_shiny_idle() |>
+  pz_record_hold(1.5)
+
+# Interact while work is in flight
+page |>
+  pz_act_click("#add") |>
+  pz_set_shiny_input("priority", "high", wait = FALSE) |>
+  pz_expect_text("3 tasks", target = "#summary", match = "exact")
+```
+
+The Recording and staging reference explains why the wait stays an explicit
+step.
