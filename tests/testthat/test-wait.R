@@ -185,14 +185,17 @@ test_that("Shiny idle and wait=TRUE setters work after invalidating a suspended 
   ))
 
   # wait = TRUE on the setter is usable again: showing the tab resumes
-  # the output, and the wait covers its slow render.
-  page |> pz_set_shiny_input("tabs", "Slow")
-  state <- pz_evaluate(
+  # the output, and the wait covers its slow render. Expect the delivered
+  # text (it retries) rather than reading once: on a loaded runner the
+  # server's busy signal can arrive after the wait's first hold.
+  page |>
+    pz_set_shiny_input("tabs", "Slow") |>
+    pz_expect_text("slow ready", target = "#slow", match = "exact")
+  # Delivery and the class clear happen in the same message processing.
+  expect_false(pz_evaluate(
     page,
-    "({slow: document.querySelector('#slow').className, slowText: document.querySelector('#slow').textContent})"
-  )
-  expect_equal(state$slowText, "slow ready")
-  expect_false(grepl("recalculating", state$slow, fixed = TRUE))
+    "document.querySelector('#slow').classList.contains('recalculating')"
+  ))
 })
 
 test_that("Shiny idle waits out the render when a suspended output resumes", {
@@ -205,14 +208,19 @@ test_that("Shiny idle waits out the render when a suspended output resumes", {
   )
 
   page |> pz_set_shiny_input("tabs", "Slow", wait = FALSE)
+  # Poll until the resume reaches the server (busy starts) so the idle
+  # wait provably overlaps the render; the input round trip can otherwise
+  # outlast the wait's first 200ms hold on a loaded runner.
+  pz_wait_for_js(
+    page,
+    "document.documentElement.classList.contains('shiny-busy')",
+    timeout = 5
+  )
   start <- Sys.time()
   pz_wait_for_shiny_idle(page, timeout = 5)
   # The resumed render sleeps 0.8s; idle must not settle before it ends.
   expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.7)
-  expect_equal(
-    pz_evaluate(page, "document.querySelector('#slow').textContent"),
-    "slow ready"
-  )
+  page |> pz_expect_text("slow ready", target = "#slow", match = "exact")
 })
 
 test_that("Shiny idle settles for a Shiny for Python app with a suspended tab output", {
@@ -237,13 +245,13 @@ test_that("Shiny idle settles for a Shiny for Python app with a suspended tab ou
   page |>
     pz_act_click("#go") |>
     pz_wait_for_shiny_idle(timeout = 5) |>
-    pz_set_shiny_input("tabs", "Slow")
-  state <- pz_evaluate(
+    pz_set_shiny_input("tabs", "Slow") |>
+    pz_expect_text("slow ready", target = "#slow", match = "exact")
+  # Delivery and the class clear happen in the same message processing.
+  expect_false(pz_evaluate(
     page,
-    "({slow: document.querySelector('#slow').className, slowText: document.querySelector('#slow').textContent})"
-  )
-  expect_equal(state$slowText, "slow ready")
-  expect_false(grepl("recalculating", state$slow, fixed = TRUE))
+    "document.querySelector('#slow').classList.contains('recalculating')"
+  ))
 })
 
 test_that("Shiny idle deadline cleans page listeners", {

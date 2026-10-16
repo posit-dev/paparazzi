@@ -6,9 +6,9 @@ skip_if_no_py_shiny <- function() {
   )
 }
 
-# Test-side server for external app processes (the product API for this is
-# kata#9999). Starts `shiny run` on a free port, waits for the socket, and
-# returns the pieces the test needs to clean up.
+# Test-side server for external app processes; paparazzi has no product API
+# for serving a command yet. Starts `shiny run` on a free port, waits for
+# the socket, and returns the pieces the test needs to clean up.
 serve_py_shiny <- function(app_file, timeout = 15) {
   port <- random_port()
   log_file <- tempfile(pattern = "paparazzi-py-shiny-", fileext = ".log")
@@ -30,9 +30,9 @@ serve_py_shiny <- function(app_file, timeout = 15) {
   deadline <- Sys.time() + timeout
   repeat {
     if (!process$is_alive()) {
-      testthat::fail(paste(
-        "Shiny for Python app exited during startup:",
-        paste(readLines(log_file, warn = FALSE), collapse = "\n")
+      cli::cli_abort(c(
+        "The Shiny for Python app at {.path {app_file}} exited during startup.",
+        x = paste(readLines(log_file, warn = FALSE), collapse = "\n")
       ))
     }
     if (app_port_connectable(port)) {
@@ -40,7 +40,9 @@ serve_py_shiny <- function(app_file, timeout = 15) {
     }
     if (Sys.time() >= deadline) {
       process$kill()
-      testthat::fail("Shiny for Python app did not start listening in time")
+      cli::cli_abort(
+        "The Shiny for Python app at {.path {app_file}} did not start listening within {timeout} seconds."
+      )
     }
     Sys.sleep(0.05)
   }

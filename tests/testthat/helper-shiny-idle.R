@@ -29,7 +29,8 @@ shared_shiny_idle_app <- function() {
 # Tabbed app whose Slow-tab output is suspended while hidden: Shiny marks
 # it .recalculating but never recomputes it until the tab shows. Exercises
 # idle settling over a stuck recalculating class. The 0.8s render coupling
-# from the shiny-idle app applies here too.
+# from the shiny-idle app applies here too. Tab state is per Shiny session,
+# so each test opens its own page (pz_local_page) to see the Slow tab hidden.
 the_shiny_suspended_app <- new.env(parent = emptyenv())
 
 shared_shiny_suspended_app <- function() {
@@ -47,9 +48,6 @@ shared_shiny_suspended_app <- function() {
   }
   app
 }
-
-# Per-test pages on this app matter: tab state is per Shiny session, so
-# each test opens its own page (pz_local_page) to see the Slow tab hidden.
 
 shiny_idle_state <- function(page) {
   pz_evaluate(
