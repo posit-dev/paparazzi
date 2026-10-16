@@ -2,8 +2,8 @@ test_that("pz_screenshot captures the viewport from the root context", {
   page <- local_screenshot_page()
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(page)
-  # pz_js() turns JS arrays into R lists; flatten for the arithmetic.
-  inner <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+  # pz_evaluate() turns JS arrays into R lists; flatten for the arithmetic.
+  inner <- unlist(pz_evaluate(page, "[window.innerWidth, window.innerHeight]"))
 
   pz_screenshot(page, path)
   expect_identical(png_dimensions(path), as.integer(round(inner * dpr)))
@@ -62,14 +62,14 @@ test_that("pz_screenshot captures a below-fold element without scrolling", {
   # capture must not scroll the page as a side effect.
   pz_screenshot(page, path, frame = "#below-fold")
   expect_identical(png_dimensions(path), as.integer(round(c(200, 100) * dpr)))
-  expect_equal(pz_js(page, "window.scrollY"), 0)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 0)
 })
 
 test_that("frame = FALSE captures without framing, like frame = NULL", {
   page <- local_screenshot_page()
   path <- withr::local_tempfile(fileext = ".png")
   dpr <- page_dpr(page)
-  inner <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+  inner <- unlist(pz_evaluate(page, "[window.innerWidth, window.innerHeight]"))
 
   pz_screenshot(page, path, frame = FALSE)
   expect_identical(png_dimensions(path), as.integer(round(inner * dpr)))
@@ -95,16 +95,16 @@ test_that("pz_screenshot clamps the viewport clip origin on negative RTL scroll"
   # Go RTL and widen the body so horizontal scroll exists; scrolling
   # left of the origin makes window.scrollX negative, which CDP would
   # reject as a clip origin.
-  pz_js(page, "document.documentElement.dir = 'rtl'")
-  pz_js(page, "document.body.style.width = '3000px'")
-  pz_js(page, "window.scrollTo(-100, 0)")
+  pz_evaluate(page, "document.documentElement.dir = 'rtl'")
+  pz_evaluate(page, "document.body.style.width = '3000px'")
+  pz_evaluate(page, "window.scrollTo(-100, 0)")
   skip_if(
-    pz_js(page, "window.scrollX") >= 0,
+    pz_evaluate(page, "window.scrollX") >= 0,
     "browser won't scroll negative in RTL"
   )
 
   expect_no_error(pz_screenshot(page, path))
-  inner <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+  inner <- unlist(pz_evaluate(page, "[window.innerWidth, window.innerHeight]"))
   expect_identical(png_dimensions(path), as.integer(round(inner * dpr)))
 })
 
@@ -369,7 +369,7 @@ test_that("pz_screenshot raises on a detached scope", {
   path <- withr::local_tempfile(fileext = ".png")
 
   ctx <- pz_find(page, "#shot-b")
-  pz_js(page, "document.getElementById('shot-b').remove()")
+  pz_evaluate(page, "document.getElementById('shot-b').remove()")
   expect_error(pz_screenshot(ctx, path), class = "paparazzi_error_detached")
 })
 

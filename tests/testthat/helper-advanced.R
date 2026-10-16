@@ -10,7 +10,7 @@ local_advanced_page <- function(.env = parent.frame()) {
 # .__pzAdvLog: one entry per event, {type, id, isTrusted}. isTrusted
 # separates CDP-dispatched input from JS-synthesized events.
 adv_log <- function(page) {
-  pz_js(page, "window.__pzAdvLog")
+  pz_evaluate(page, "window.__pzAdvLog")
 }
 
 adv_log_types <- function(log, id = NULL) {

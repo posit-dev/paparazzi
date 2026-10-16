@@ -71,7 +71,7 @@ drag_preview_dispose <- function(state) {
   state$owner <- NULL
   # Unwind must preserve the real input error, including when CDP has gone away.
   try(
-    pz_js(ctx, paste0(DRAG_PREVIEW_CONTROLLER_JS, "?.dispose()")),
+    pz_evaluate(ctx, paste0(DRAG_PREVIEW_CONTROLLER_JS, "?.dispose()")),
     silent = TRUE
   )
   invisible(NULL)
@@ -108,7 +108,7 @@ drag_preview_optional <- function(state, fn) {
 
 drag_preview_command <- function(state, method, arg = NULL) {
   drag_preview_optional(state, function(ctx) {
-    result <- pz_js(
+    result <- pz_evaluate(
       ctx,
       paste0(
         "(() => { const controller = ",

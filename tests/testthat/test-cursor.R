@@ -4,7 +4,7 @@ test_that("cursor functions draw, hide, move, and leave the overlay cursor", {
   # First show with no position: the viewport center, statically (no
   # recording, so no fade).
   page |> pz_cursor_show()
-  v <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+  v <- unlist(pz_evaluate(page, "[window.innerWidth, window.innerHeight]"))
   st <- cursor_overlay_state(page)
   expect_equal(st[[1]], 1)
   expect_equal(st[[2]], v[[1]] / 2, tolerance = 1)
@@ -29,7 +29,7 @@ test_that("cursor functions draw, hide, move, and leave the overlay cursor", {
   # The next action brings the cursor back to the pointer (not
   # recording, so it jumps) and the click still lands.
   page |> pz_act_click("#btn")
-  expect_equal(pz_js(page, "window.__log.clicks"), 1)
+  expect_equal(pz_evaluate(page, "window.__log.clicks"), 1)
   expect_equal(cursor_overlay_state(page)[2:3], c(660, 322))
 })
 
@@ -278,7 +278,10 @@ test_that("the overlay is excluded from resolution and hit-testing", {
   expect_equal(pz_get_count(page, target = "div"), before)
 
   # The cursor sits exactly over #btn; hit-testing reaches the page.
-  expect_equal(pz_js(page, "document.elementFromPoint(660, 322).id"), "btn")
+  expect_equal(
+    pz_evaluate(page, "document.elementFromPoint(660, 322).id"),
+    "btn"
+  )
   expect_no_error(page |> pz_expect_count(before, target = "div"))
 })
 
@@ -317,12 +320,12 @@ test_that("the overlay survives navigation with its size and last position", {
 
 test_that("CSS zoom keeps the cursor aligned with the pointer", {
   page <- local_cursor_page()
-  pz_js(page, "document.documentElement.style.zoom = '2'")
+  pz_evaluate(page, "document.documentElement.style.zoom = '2'")
   page |> pz_cursor_move("#btn")
 
   # getBoundingClientRect coordinates double under zoom = 2, and the
   # cursor translate matches them exactly (counter-zoomed layer).
-  rect <- unlist(pz_js(
+  rect <- unlist(pz_evaluate(
     page,
     "(() => { const r = document.getElementById('btn').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()"
   ))
@@ -331,7 +334,7 @@ test_that("CSS zoom keeps the cursor aligned with the pointer", {
 
   # The real pointer still hits the button through the zoom.
   page |> pz_act_click("#btn")
-  expect_equal(pz_js(page, "window.__log.clicks"), 1)
+  expect_equal(pz_evaluate(page, "window.__log.clicks"), 1)
 })
 
 test_that("pz_inspect reports recording and cursor state", {
@@ -559,7 +562,7 @@ test_that("all CSS cursor presets validate and select their own layer", {
     expect_identical(attr(cursor_overlay_state(page), "icon"), keyword)
     expect_identical(page_cursor(page)$icon, keyword)
     expect_equal(
-      pz_js(
+      pz_evaluate(
         page,
         "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').length"
       ),
@@ -569,7 +572,7 @@ test_that("all CSS cursor presets validate and select their own layer", {
       next
     }
     expect_equal(
-      pz_js(
+      pz_evaluate(
         page,
         sprintf(
           r"[document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-%s').children.length]",
@@ -598,7 +601,7 @@ test_that("decorative cursor icons are hidden from assistive technology", {
   page <- local_cursor_page()
   page |> pz_cursor_move("#plain")
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-cursor').getAttribute('aria-hidden')"
     ),
@@ -656,7 +659,7 @@ test_that("off-frame entries start with default and explicit icons can replace i
   # after the landing the inferred pointer is the visible icon.
   staged |> pz_cursor_move("#btn")
   expect_match(
-    pz_js(
+    pz_evaluate(
       page,
       "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-default').style.animation"
     ),
@@ -668,7 +671,7 @@ test_that("off-frame entries start with default and explicit icons can replace i
   page |> pz_cursor_move("#none", duration = 0.5)
   expect_identical(page_cursor(page)$icon, "none")
   expect_match(
-    pz_js(
+    pz_evaluate(
       page,
       "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-none').style.animation"
     ),
@@ -707,7 +710,7 @@ test_that("CSS none has no ink and auto still infers through descendants", {
 
   page |> pz_cursor_move("#none")
   expect_identical(attr(cursor_overlay_state(page), "icon"), "none")
-  drawn <- pz_js(
+  drawn <- pz_evaluate(
     page,
     "(() => { const root = document.getElementById('paparazzi-overlay-root').shadowRoot; return root.querySelector('.pz-icon-none').children.length; })()"
   )
@@ -807,10 +810,10 @@ test_that("explicit icon survives navigation and recorded press", {
 
 test_that("non-default artwork stays aligned under CSS zoom and DPR", {
   page <- local_page(cursor_fixture_file(), scale = 2)
-  pz_js(page, "document.documentElement.style.zoom = '1.5'")
+  pz_evaluate(page, "document.documentElement.style.zoom = '1.5'")
   page |> pz_cursor_move("#btn", icon = "crosshair")
 
-  center <- unlist(pz_js(
+  center <- unlist(pz_evaluate(
     page,
     "(() => { const r = document.querySelector('#btn').getBoundingClientRect(); return [r.x + r.width/2, r.y + r.height/2] })()"
   ))
@@ -881,7 +884,7 @@ test_that("automatic glide switches icon on destination entry, not landing", {
     )
   )
   visible <- function() {
-    unlist(pz_js(
+    unlist(pz_evaluate(
       page,
       "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').map(e => e.classList[1])"
     ))
@@ -998,13 +1001,13 @@ test_that("recorded moves schedule one entry flip for the intended target", {
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
   keyframes <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
     )
   }
   animations <- function() {
-    unlist(pz_js(
+    unlist(pz_evaluate(
       page,
       "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.classList[1])"
     ))
@@ -1044,7 +1047,7 @@ test_that("off-frame entrances and staged actions use destination entry", {
   pz_record_start(staged, out, fps = 10, hold = c(0, 0))
 
   staged |> pz_cursor_show("#btn", from = "left")
-  animations <- unlist(pz_js(
+  animations <- unlist(pz_evaluate(
     page,
     "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.classList[1])"
   ))
@@ -1053,7 +1056,7 @@ test_that("off-frame entrances and staged actions use destination entry", {
   page |> pz_act_hover("#plain")
   expect_identical(page_cursor(page)$icon, "default")
   expect_match(
-    pz_js(
+    pz_evaluate(
       page,
       "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
     ),
@@ -1069,7 +1072,7 @@ test_that("untargeted entrances keep the start icon until landing", {
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
   page |> pz_cursor_show("#btn", icon = "crosshair")
   visible <- function() {
-    unlist(pz_js(
+    unlist(pz_evaluate(
       page,
       "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => getComputedStyle(e).visibility === 'visible').map(e => e.classList[1])"
     ))
@@ -1079,7 +1082,7 @@ test_that("untargeted entrances keep the start icon until landing", {
   # pumps inside the call, so the schedule itself is the assertion:
   # its boundary sits at 100% of the glide, not at the dispatch.
   page |> pz_cursor_show(from = "left")
-  keyframes <- pz_js(
+  keyframes <- pz_evaluate(
     page,
     "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
   )
@@ -1124,7 +1127,7 @@ test_that("pointer actions switch at the resolved target's edge", {
   rec |> pz_cursor_move("#plain")
   rec |> pz_act_hover("#nested")
 
-  keyframes <- pz_js(
+  keyframes <- pz_evaluate(
     rec,
     "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
   )
@@ -1191,7 +1194,7 @@ test_that("offset does not dispatch real pointer events", {
 
   page |> pz_cursor_move("#plain", offset = c(500, 0))
   expect_equal(
-    unlist(pz_js(
+    unlist(pz_evaluate(
       page,
       "[window.__log.enters, window.__log.moves, window.__log.clicks]"
     )),
@@ -1199,7 +1202,7 @@ test_that("offset does not dispatch real pointer events", {
   )
 
   page |> pz_act_hover("#btn")
-  events <- unlist(pz_js(
+  events <- unlist(pz_evaluate(
     page,
     "[window.__log.enters, window.__log.moves, window.__log.clicks]"
   ))
@@ -1220,7 +1223,7 @@ test_that("off-frame offset stays shown and becomes the next glide start", {
   out <- withr::local_tempfile(fileext = ".mp4")
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
   page |> pz_cursor_move("#btn", duration = 1)
-  rules <- pz_js(
+  rules <- pz_evaluate(
     page,
     "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
   )
@@ -1245,7 +1248,7 @@ test_that("offset records landing ink and two icon boundaries outside target", {
   page |> pz_record_start(out, fps = 15, hold = c(0, 0), keep_frames = TRUE)
 
   page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.3)
-  rules <- pz_js(
+  rules <- pz_evaluate(
     page,
     "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
   )
@@ -1283,7 +1286,7 @@ test_that("inside-target offset has one entry flip and explicit icon has none", 
 
   page |> pz_cursor_move("#btn", offset = c(-40, 15), duration = 0.2)
   rules <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-icon-keyframes').textContent"
     )
@@ -1314,7 +1317,7 @@ test_that("entry and landing can schedule three distinct icon layers", {
   page |> pz_record_start(out, fps = 10, hold = c(0, 0))
 
   page |> pz_cursor_move("#plain", offset = c(500, 0), duration = 0.2)
-  animations <- unlist(pz_js(
+  animations <- unlist(pz_evaluate(
     page,
     "[...document.getElementById('paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-icon')].filter(e => e.style.animation.includes('pz-icon-')).map(e => e.style.animation.match(/pz-icon-(out|in|land)/)[0])"
   ))
@@ -1336,7 +1339,7 @@ test_that("an explicitly hidden cursor stays hidden during recorded typing", {
   defer_record_stop(page)
 
   page |> pz_act_click("#task-title")
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 window.__cursorInputOpacity = [];
@@ -1354,7 +1357,7 @@ document.querySelector('#task-title').addEventListener('input', () => {
     function() {
       list(
         pass = identical(
-          pz_js(
+          pz_evaluate(
             page,
             r"[getComputedStyle(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner')).opacity]"
           ),
@@ -1368,7 +1371,7 @@ document.querySelector('#task-title').addEventListener('input', () => {
 
   page |> pz_act_type("abc", target = "#task-title")
 
-  opacities <- unlist(pz_js(page, "window.__cursorInputOpacity"))
+  opacities <- unlist(pz_evaluate(page, "window.__cursorInputOpacity"))
   expect_length(opacities, 3)
   expect_true(all(opacities == "0"))
   expect_identical(page_cursor(page)$visibility, "hidden")
@@ -1446,12 +1449,12 @@ test_that("root typing after a recording hold rests the cursor without clicking"
   pz_record_hold(page, 0.2)
   pz_act_select_text(page, "otters", target = "#editor")
   page |> pz_cursor_move("#rich", duration = 0)
-  pz_js(page, "window.__pzAdvLog = []")
+  pz_evaluate(page, "window.__pzAdvLog = []")
 
   pz_act_type(page, "penguins")
 
   expect_equal(
-    pz_js(page, "document.getElementById('editor').textContent"),
+    pz_evaluate(page, "document.getElementById('editor').textContent"),
     "penguins are playful"
   )
   expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
@@ -1460,7 +1463,7 @@ test_that("root typing after a recording hold rests the cursor without clicking"
 
   pz_poll(
     function() {
-      pz_js(
+      pz_evaluate(
         page,
         "getComputedStyle(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner')).opacity === '0'"
       )
@@ -1484,12 +1487,12 @@ test_that("typing into a scoped held selection rests the cursor without clicking
   ctx <- pz_find(page, "#editor")
   pz_act_select_text(ctx, "otters")
   page |> pz_cursor_move("#rich", duration = 0)
-  pz_js(page, "window.__pzAdvLog = []")
+  pz_evaluate(page, "window.__pzAdvLog = []")
 
   pz_act_type(ctx, "penguins")
 
   expect_equal(
-    pz_js(page, "document.getElementById('editor').textContent"),
+    pz_evaluate(page, "document.getElementById('editor').textContent"),
     "penguins are playful"
   )
   expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
@@ -1498,7 +1501,7 @@ test_that("typing into a scoped held selection rests the cursor without clicking
 
   pz_poll(
     function() {
-      pz_js(
+      pz_evaluate(
         page,
         "getComputedStyle(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner')).opacity === '0'"
       )
@@ -1526,7 +1529,7 @@ test_that("no-click typing leaves a nonrecorded shown cursor alone", {
   expect_false(page_cursor(page)$resting)
   expect_equal(cursor_overlay_state(page), before)
   expect_equal(
-    pz_js(page, "document.getElementById('editor').textContent"),
+    pz_evaluate(page, "document.getElementById('editor').textContent"),
     "penguins! are playful"
   )
   expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))
@@ -1549,7 +1552,7 @@ test_that("no-click recorded typing never revives an explicitly hidden cursor", 
   expect_false(page_cursor(page)$resting)
   expect_equal(cursor_overlay_state(page)[[1]], 0)
   expect_equal(
-    pz_js(page, "document.getElementById('editor').textContent"),
+    pz_evaluate(page, "document.getElementById('editor').textContent"),
     "penguins! are playful"
   )
   expect_false(any(adv_log_types(adv_log(page)) %in% c("mousedown", "mouseup")))

@@ -1,5 +1,12 @@
 # paparazzi 0.0.0.9000
 
+* `pz_js()` is renamed to `pz_evaluate()`. "Evaluate" is the established
+  term for running JS in the page and returning the result across
+  Playwright (`page.evaluate()`), Puppeteer, and the Chrome DevTools
+  Protocol; the bare noun in `pz_js()` read like the `JS()` string-marker
+  functions in shiny and htmlwidgets rather than an action. paparazzi is
+  unreleased, so there is no deprecation alias.
+
 * `pz_stage_annotate()` gains `caption_side`, the page default for the side
   of new `pz_annotate_caption()` captions. `"bottom"` remains the default
   and a per-call `side` still overrides it; `pz_annotate_caption()`'s `side`

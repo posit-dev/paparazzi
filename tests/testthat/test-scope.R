@@ -238,7 +238,7 @@ test_that("lazy targets resolve inside the pinned scope at use time", {
 
   # Re-renders within the scope are fine: the lazy target follows the
   # DOM, only the pinned set itself is frozen.
-  pz_js(
+  pz_evaluate(
     page,
     'document.getElementById("messages").innerHTML = \'<li class="message user">new</li>\''
   )
@@ -251,7 +251,7 @@ test_that("a detached scope errors and never silently re-queries", {
   page <- local_elements_page()
   ctx <- pz_find(page, "#panel-inner")
 
-  pz_js(page, 'document.getElementById("panel-a").remove()')
+  pz_evaluate(page, 'document.getElementById("panel-a").remove()')
   err <- expect_error(pz_act_click(ctx), class = "paparazzi_error_detached")
   msg <- paste(conditionMessage(err), collapse = " ")
   expect_match(msg, "Scope element is no longer in the page")

@@ -1,6 +1,6 @@
 callout_page <- function(.env = parent.frame()) {
   page <- local_page(.env = .env)
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.innerHTML = '<div id=target style=\"position:absolute;left:220px;top:180px;width:80px;height:40px;background:#eee\"></div>';"
   )
@@ -8,7 +8,7 @@ callout_page <- function(.env = parent.frame()) {
 }
 
 callout_state <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-annotations'); return [...(l?.querySelectorAll('.pz-callout') || [])].map(n => ({text:n.querySelector('.pz-bubble')?.textContent, rect:(() => { const r=n.getBoundingClientRect(); return [r.left,r.top,r.width,r.height]; })()})); })()"
   )
@@ -29,7 +29,7 @@ test_that("callout draws literal text into the shared layer", {
 })
 
 callout_details <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {
@@ -75,7 +75,7 @@ callout_details <- function(page) {
 
 test_that("cardinal and diagonal callouts sit on their requested sides", {
   page <- callout_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#target').style.cssText='position:fixed;left:360px;top:300px;width:80px;height:40px;background:#eee'"
   )
@@ -130,7 +130,7 @@ test_that("cardinal and diagonal callouts sit on their requested sides", {
 
 test_that("auto chooses roomiest cardinal once and sync follows movement", {
   page <- callout_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#target').style.left='20px';document.querySelector('#target').style.top=innerHeight/2+'px'"
   )
@@ -145,11 +145,11 @@ test_that("auto chooses roomiest cardinal once and sync follows movement", {
   first <- callout_details(page)
   expect_gt(first$nodes[[1]]$rect[[1]], first$target[[3]])
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#target').style.left='740px';document.querySelector('#target').style.top='400px'"
   )
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
   )
@@ -157,11 +157,11 @@ test_that("auto chooses roomiest cardinal once and sync follows movement", {
   expect_gt(moved$nodes[[1]]$rect[[1]], first$nodes[[1]]$rect[[1]])
   expect_gt(abs(moved$nodes[[1]]$rect[[2]] - first$nodes[[1]]$rect[[2]]), 50)
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#target').style.left='80px';document.querySelector('#target').style.top='1200px';window.scrollTo(0,1000)"
   )
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
   )
@@ -169,13 +169,13 @@ test_that("auto chooses roomiest cardinal once and sync follows movement", {
   expect_gt(scrolled$nodes[[1]]$rect[[1]], scrolled$target[[3]])
   expect_true(scrolled$nodes[[1]]$visible)
 
-  pz_js(page, "document.querySelector('#target').remove()")
-  pz_js(
+  pz_evaluate(page, "document.querySelector('#target').remove()")
+  pz_evaluate(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
   )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout').style.display"
     ),
@@ -185,7 +185,7 @@ test_that("auto chooses roomiest cardinal once and sync follows movement", {
 
 test_that("multiple matches repeat text and number badges; ids share the registry", {
   page <- callout_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.insertAdjacentHTML('beforeend','<div class=mark style=\"position:absolute;left:120px;top:300px;width:70px;height:40px\"></div><div class=mark style=\"position:absolute;left:300px;top:300px;width:70px;height:40px\"></div>')"
   )
@@ -283,7 +283,7 @@ test_that("callouts validate inputs and clamp long wrapped text", {
       target = "#target",
       side = "right"
     )
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "(() => { const b=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-bubble'); return b.scrollHeight > b.clientHeight && b.offsetHeight <= innerHeight - 16; })()"
   ))
@@ -320,7 +320,7 @@ test_that("automatic placement chooses each roomiest cardinal side", {
   page <- callout_page()
 
   for (side in c("top", "right", "bottom", "left")) {
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         r"[
@@ -371,7 +371,7 @@ test_that("automatic placement chooses each roomiest cardinal side", {
 
 test_that("callout follows a target inside a scrolling container", {
   page <- callout_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.innerHTML =
@@ -386,13 +386,13 @@ document.body.innerHTML =
   # until the target scrolls into view.
   expect_false(callout_details(page)$nodes[[1]]$visible)
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#scroller').scrollTop=100;document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
   )
   first <- callout_details(page)$nodes[[1]]$rect[[2]]
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#scroller').scrollTop=80;document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').pz.sync()"
   )
@@ -405,7 +405,7 @@ document.body.innerHTML =
 
 test_that("callout hides for a clipped-away target and anchors to the visible rect of a partly clipped one", {
   page <- callout_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.insertAdjacentHTML(
@@ -491,7 +491,7 @@ test_that("idle and paused callouts do not run reveal animations", {
 
   page |> pz_annotate_callout("No animation", target = "#target", id = "tip")
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout').getAnimations({subtree:true}).length"
     ),
@@ -506,7 +506,7 @@ test_that("idle and paused callouts do not run reveal animations", {
 
   page |> pz_annotate_callout("Paused", target = "#target", id = "tip")
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout').getAnimations({subtree:true}).length"
     ),
@@ -548,7 +548,7 @@ test_that("replacing a redaction with a callout uses the same id", {
   page |> pz_annotate_callout("Replacement", target = "#target", id = "shared")
   expect_length(callout_state(page), 1)
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
@@ -561,7 +561,7 @@ test_that("replacing a redaction with a callout uses the same id", {
 
 test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping ones", {
   page <- callout_page()
-  pz_js(page, "document.querySelector('#target').style.left='0px'")
+  pz_evaluate(page, "document.querySelector('#target').style.left='0px'")
 
   page |>
     pz_annotate_callout(
@@ -571,14 +571,14 @@ test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping o
       id = "edge"
     )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout svg').style.display"
     ),
     "none"
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#target').style.left='calc(100vw - 2px)'"
   )
@@ -594,14 +594,14 @@ test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping o
   target <- unlist(state$target)
   expect_lt(bubble[3], target[1])
   expect_false(identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout svg').style.display"
     ),
     "none"
   ))
 
-  endpoints <- pz_js(
+  endpoints <- pz_evaluate(
     page,
     "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); const l=n.querySelector('.pz-shaft'); return [n.getBoundingClientRect().left+Number(l.getAttribute('x1')), n.getBoundingClientRect().left+Number(l.getAttribute('x2'))]; })()"
   )
@@ -609,7 +609,7 @@ test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping o
   expect_lt(endpoints[[2]], target[1])
   expect_gte(endpoints[[2]], bubble[3])
 
-  head <- pz_js(
+  head <- pz_evaluate(
     page,
     "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); return n.querySelector('.pz-deco-end').getAttribute('points').split(' ').map(p=>n.getBoundingClientRect().left+Number(p.split(',')[0])); })()"
   )
@@ -619,7 +619,7 @@ test_that("clamped callouts hide overlapping arrows and reroute nonoverlapping o
 
 test_that("long badges stay within the measured bubble and viewport", {
   page <- callout_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#target').style.left='calc(100vw - 80px)'"
   )
@@ -631,7 +631,7 @@ test_that("long badges stay within the measured bubble and viewport", {
       side = "right",
       label = paste(rep("LONG", 90), collapse = "")
     )
-  geometry <- pz_js(
+  geometry <- pz_evaluate(
     page,
     "(() => { const n=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-callout'); const b=n.querySelector('.pz-bubble').getBoundingClientRect(); const a=n.querySelector('span').getBoundingClientRect(); return {bubble:[b.left,b.right],badge:[a.left,a.right],viewport:innerWidth,overflow:getComputedStyle(n.querySelector('span')).textOverflow}; })()"
   )
@@ -673,7 +673,7 @@ test_that("leader heads have stroke-scaled proportions and shafts stop at the ba
     "short",
     "touching"
   )) {
-    pz_js(page, "document.querySelector('#target').style.left='220px'")
+    pz_evaluate(page, "document.querySelector('#target').style.left='220px'")
     page |>
       pz_annotate_callout(
         "Arrow",
@@ -686,7 +686,7 @@ test_that("leader heads have stroke-scaled proportions and shafts stop at the ba
       )
     if (side %in% c("short", "touching")) {
       gap <- if (side == "short") 3 else 0
-      pz_js(
+      pz_evaluate(
         page,
         sprintf(
           r"[
@@ -702,7 +702,7 @@ test_that("leader heads have stroke-scaled proportions and shafts stop at the ba
         )
       )
     }
-    geometry <- pz_js(
+    geometry <- pz_evaluate(
       page,
       r"[
 (() => {
@@ -758,7 +758,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   page |>
     pz_annotate_callout("Arrow", target = "#target", side = "right", id = "tip")
 
-  state <- pz_js(
+  state <- pz_evaluate(
     page,
     r"[
 (() => {
@@ -804,7 +804,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   expect_gt(state$offset, 0)
   expect_lt(state$offset, 1)
 
-  done <- pz_js(
+  done <- pz_evaluate(
     page,
     r"[
 (async () => {
@@ -824,7 +824,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   expect_identical(done$shown, "")
   expect_identical(done$live, 0L)
 
-  leaving <- pz_js(
+  leaving <- pz_evaluate(
     page,
     r"[
 (() => {
@@ -848,7 +848,7 @@ test_that("draw reveal draws the shaft, then shows decorations; clearing undraws
   expect_gt(leaving$offset, 0)
   expect_lt(leaving$offset, 1)
 
-  removed <- pz_js(
+  removed <- pz_evaluate(
     page,
     r"[
 (async () => {
@@ -923,7 +923,7 @@ test_that("callouts validate leader shapes and decorations", {
 test_that("leader decorations render per end and shafts stop at each base", {
   page <- callout_page()
   leader_geometry <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       r"[
 (() => {
@@ -1035,7 +1035,7 @@ test_that("short leaders clamp both decorations", {
       distance = 4,
       id = "tip"
     )
-  g <- pz_js(
+  g <- pz_evaluate(
     page,
     r"[
 (() => {
@@ -1187,7 +1187,7 @@ test_that("an unset distance is 24 with a leader and 8 without one", {
 test_that("stroke_width scales the leader and decorations and is stageable", {
   page <- callout_page()
   leader_metrics <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       r"[
 (() => {

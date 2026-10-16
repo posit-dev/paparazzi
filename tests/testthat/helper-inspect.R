@@ -30,7 +30,7 @@ inspect_capture <- function(code) {
 # exist, how many outline boxes does its shadow root hold, and what
 # inline display does the host have?
 inspect_overlay_count <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {
@@ -43,7 +43,7 @@ inspect_overlay_count <- function(page) {
 }
 
 inspect_overlay_display <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {

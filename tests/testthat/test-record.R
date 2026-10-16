@@ -17,7 +17,7 @@ test_that("recorder accessors share the page recorder binding", {
 test_that("recording rejects explicit annotated home but uses staged element home", {
   skip_if_no_av()
   page <- local_record_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=home style=\"position:absolute;left:200px;top:120px;width:100px;height:60px\"></div>')"
   )
@@ -1119,7 +1119,7 @@ test_that("framed GIFs give gifski losslessly cropped unique captures", {
   skip_if_no_gifski()
   testthat::skip_if_not_installed("png")
   page <- local_record_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.style.background = '#fdfdf5';
     document.getElementById('box').style.background = '#fdfdf5';
@@ -1322,7 +1322,7 @@ test_that("stop captures a final frame after a late page change", {
   )
   # A change right before stop must appear in the final frame; without
   # the stop-time capture the video would end on an older one.
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('box').style.backgroundColor = 'rgb(255, 0, 0)'"
   )
@@ -1626,7 +1626,7 @@ test_that("frame when = start and stop measure at different times", {
       hold = c(0, 0),
       frame = pz_frame("#box", pad = 8)
     )
-  pz_js(page, "growBox()")
+  pz_evaluate(page, "growBox()")
   pz_poll(
     function() length(page_recorder(page)$files) >= 1L,
     timeout = 5,
@@ -1647,7 +1647,7 @@ test_that("frame when = start and stop measure at different times", {
       hold = c(0, 0),
       frame = pz_frame("#box", pad = 8, when = "start")
     )
-  pz_js(page, "growBox()")
+  pz_evaluate(page, "growBox()")
   pz_poll(
     function() length(page_recorder(page)$files) >= 1L,
     timeout = 5,
@@ -1691,8 +1691,8 @@ test_that("a framed recording survives a navigation by framing the viewport", {
   skip_if_no_av()
   skip_if_not_installed("png")
   dpr <- page_dpr(page)
-  vw <- pz_js(page, "innerWidth")
-  vh <- pz_js(page, "innerHeight")
+  vw <- pz_evaluate(page, "innerWidth")
+  vh <- pz_evaluate(page, "innerHeight")
   width_at <- function(css) floor(round(css * dpr) / 4) * 4
   height_at <- function(css) floor(round(css * dpr) / 4) * 4
 
@@ -1726,7 +1726,7 @@ test_that("a framed recording survives a navigation by framing the viewport", {
   # tell a stalled capture chain apart from a slow one, so require the
   # capture to see the new document: paint it and poll for a frame that
   # shows the paint.
-  pz_js(root, "document.body.style.background = 'red'")
+  pz_evaluate(root, "document.body.style.background = 'red'")
   post_nav_red <- function() {
     files <- page_recorder(root)$files
     if (!length(files)) {
@@ -1813,7 +1813,7 @@ test_that("the even crop rounds clamped edges inward, staying inside bounds", {
   # Fractional bounds that clamp all four edges of #box (40,30 to
   # 140,90): a left bound at 40.8 and a right bound at 101.2 would
   # round to 40 and 102 under nearest-even -- outside the bounds.
-  pz_js(
+  pz_evaluate(
     page,
     "const b = document.createElement('div');
      b.id = 'frac';
@@ -1834,7 +1834,7 @@ test_that("recorded clicks reach above- and below-fold buttons at DPR 2", {
   page <- local_record_page()
   skip_if_no_av()
   pz_device(page, width = 640, height = 560)
-  pz_js(
+  pz_evaluate(
     page,
     "(() => {
     document.body.insertAdjacentHTML('beforeend', '<button id=top style=\"position:absolute;left:280px;top:100px;width:120px;height:48px\">Top</button><button id=bottom style=\"position:absolute;left:280px;top:850px;width:120px;height:48px\">Bottom</button>');
@@ -1862,7 +1862,7 @@ test_that("recorded clicks reach above- and below-fold buttons at DPR 2", {
   }
   pz_record_stop(page)
 
-  expect_equal(unlist(pz_js(page, "window.recordClicks")), targets)
+  expect_equal(unlist(pz_evaluate(page, "window.recordClicks")), targets)
   files <- sort(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE))
   expect_gt(length(files), 0)
   expect_frame_files_size(files, viewport_size)
@@ -1877,7 +1877,7 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
   page <- local_record_page()
   skip_if_no_av()
   pz_device(page, width = 640, height = 560)
-  pz_js(
+  pz_evaluate(
     page,
     "(() => {
     document.body.insertAdjacentHTML('beforeend', '<h1 style=\"display:inline-block\">Tasks</h1><main style=\"width:420px;padding:70px;box-sizing:border-box\"><button id=task-title style=\"width:180px;height:40px\">Title</button><button id=add-task style=\"width:180px;height:40px\">Add</button></main>');
@@ -1910,7 +1910,7 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
   pz_record_stop(page)
 
   expect_equal(
-    unlist(pz_js(page, "window.recordClicks")),
+    unlist(pz_evaluate(page, "window.recordClicks")),
     rep(c("task-title", "add-task"), 4)
   )
   files <- sort(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE))
@@ -2047,8 +2047,8 @@ test_that("device metrics survive an in-flight recording capture", {
   )
 
   pz_wait(page, 0.2)
-  expect_equal(pz_js(page, "innerWidth"), 800)
-  expect_equal(pz_js(page, "innerHeight"), 600)
+  expect_equal(pz_evaluate(page, "innerWidth"), 800)
+  expect_equal(pz_evaluate(page, "innerHeight"), 600)
 })
 
 test_that("recorded viewport clips follow scroll, zoom and resize", {
@@ -2056,7 +2056,7 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
   skip_if_not_installed("png")
   page <- local_record_page()
   # Styled scrollbars exercise classic gutters on overlay-scrollbar platforms.
-  pz_js(
+  pz_evaluate(
     page,
     "(() => {
     const style = document.createElement('style');
@@ -2065,7 +2065,7 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
     return true;
   })()"
   )
-  pz_js(
+  pz_evaluate(
     page,
     "(() => {
     document.body.insertAdjacentHTML('beforeend', '<div style=\"position:absolute;left:0;top:0;width:3000px;height:3000px;background:rgb(255,0,0)\"></div><div style=\"position:absolute;left:250px;top:450px;width:2000px;height:2000px;background:rgb(0,128,0)\"></div>');
@@ -2076,7 +2076,7 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
 
   for (method in c("css", "viewport")) {
     pz_device(page, width = 640, height = 560, zoom = 2, zoom_method = method)
-    pz_js(page, "window.scrollTo(0, 0)")
+    pz_evaluate(page, "window.scrollTo(0, 0)")
     out <- withr::local_tempfile(fileext = ".mp4")
     frames_dir <- paste0(tools::file_path_sans_ext(out), "_frames")
     withr::defer(unlink(frames_dir, recursive = TRUE))
@@ -2102,9 +2102,9 @@ test_that("recorded viewport clips follow scroll, zoom and resize", {
       c(1, 0, 0)
     )
 
-    pz_js(page, "window.scrollTo(650, 1100)")
-    expect_gt(pz_js(page, "window.scrollX"), 0)
-    expect_gt(pz_js(page, "window.scrollY"), 0)
+    pz_evaluate(page, "window.scrollTo(650, 1100)")
+    expect_gt(pz_evaluate(page, "window.scrollX"), 0)
+    expect_gt(pz_evaluate(page, "window.scrollY"), 0)
     pz_poll(
       function() {
         new <- setdiff(frames_in(), before)
@@ -2149,7 +2149,7 @@ test_that("classic scrollbars shrink captured frames to the visual viewport", {
   skip_if_no_av()
   page <- local_record_page()
   # Styled scrollbars exercise classic gutters on overlay-scrollbar platforms.
-  pz_js(
+  pz_evaluate(
     page,
     "(() => {
     const style = document.createElement('style');
@@ -2163,8 +2163,8 @@ test_that("classic scrollbars shrink captured frames to the visual viewport", {
   # The fixture reserved gutter space: the visual viewport is smaller
   # than the window on every scrollbar style.
   expect_lt(
-    pz_js(page, "window.visualViewport.width"),
-    pz_js(page, "window.innerWidth")
+    pz_evaluate(page, "window.visualViewport.width"),
+    pz_evaluate(page, "window.innerWidth")
   )
 
   out <- withr::local_tempfile(fileext = ".mp4")
@@ -2405,7 +2405,7 @@ test_that("screencast records real Chrome PNG events and acknowledges later fram
   )
   before <- length(rec$files)
   # A fresh paint must arrive even after the initial event has been acked.
-  pz_js(page, "document.getElementById('box').style.background = 'red'")
+  pz_evaluate(page, "document.getElementById('box').style.background = 'red'")
   pz_poll(
     function() length(rec$files) > before,
     timeout = page$page$default_timeout,
@@ -2488,7 +2488,7 @@ test_that("screencast immediate stop captures the final page state", {
     keep_frames = TRUE
   )
   defer_record_stop(page)
-  pz_js(page, "document.getElementById('box').style.background = 'red'")
+  pz_evaluate(page, "document.getElementById('box').style.background = 'red'")
   pz_record_stop(page)
 
   files <- sort(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE))
@@ -2558,18 +2558,18 @@ test_that("screencast cuts paused paints and resumes event delivery", {
 test_that("resumed screencast snapshots keep frame sizes on guttered pages", {
   skip_if_no_av()
   page <- local_record_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>')"
   )
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div style=\"position:absolute;top:0;left:0;width:2px;height:3000px\"></div>')"
   )
   # The fixture must overflow: classic gutters shrink the client viewport.
   expect_lt(
-    pz_js(page, "window.visualViewport.width"),
-    pz_js(page, "window.innerWidth")
+    pz_evaluate(page, "window.visualViewport.width"),
+    pz_evaluate(page, "window.innerWidth")
   )
 
   out <- withr::local_tempfile(fileext = ".mp4")
@@ -2637,7 +2637,7 @@ test_that("resume captures a paused change on an idle page", {
 
   pz_record_pause(page)
   before <- length(rec$files)
-  pz_js(page, "document.getElementById('box').style.background = 'red'")
+  pz_evaluate(page, "document.getElementById('box').style.background = 'red'")
   pz_wait(page, 0.25)
   expect_length(rec$files, before)
 
@@ -2686,7 +2686,7 @@ test_that("a device change captures the new state after held paints", {
   before <- length(rec$files)
   record_device_change(page$page, {
     pz_device(page, width = 800, height = 600)
-    pz_js(page, "document.getElementById('box').style.background = 'red'")
+    pz_evaluate(page, "document.getElementById('box').style.background = 'red'")
     pz_wait(page, 0.25)
     expect_length(rec$files, before)
   })
@@ -2701,7 +2701,7 @@ test_that("a device change captures the new state after held paints", {
     unname(png::readPNG(tail(rec$files, 1))[31, 31, 1:3]),
     c(1, 0, 0)
   )
-  expect_equal(pz_js(page, "window.innerWidth"), 800)
+  expect_equal(pz_evaluate(page, "window.innerWidth"), 800)
 
   before_error <- length(rec$files)
   expect_error(
@@ -2841,7 +2841,7 @@ test_that("screencast stops cleanly and can restart on the same page", {
   pz_record_stop(page)
   expect_null(old$deregister_screencast)
   expect_false(dir.exists(old$frames_dir))
-  expect_equal(pz_js(page, "document.readyState"), "complete")
+  expect_equal(pz_evaluate(page, "document.readyState"), "complete")
 
   second <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(page, second, method = "screencast", hold = c(0, 0))
@@ -3070,8 +3070,11 @@ test_that("staged settings govern a recording and carry into its context", {
   pz_record(staged, out, {
     staged |> pz_act_type("otters", target = "#name")
   })
-  expect_equal(pz_js(page, "window.__log.inputs.name"), 1)
-  expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
+  expect_equal(pz_evaluate(page, "window.__log.inputs.name"), 1)
+  expect_equal(
+    pz_evaluate(page, "document.getElementById('name').value"),
+    "otters"
+  )
 
   # The context pz_record_start() returns inherits the staged settings.
   out2 <- withr::local_tempfile(fileext = ".mp4")

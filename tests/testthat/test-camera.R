@@ -1,7 +1,7 @@
 test_that("camera shot includes a callout only with explicit annotated target box", {
   skip_if_no_av()
   page <- local_record_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=shot style=\"position:absolute;left:220px;top:180px;width:80px;height:40px\"></div>')"
   )
@@ -58,7 +58,7 @@ test_that("live screencast scroll metadata matches captured content", {
   rec <- page_recorder(page)
   withr::defer(unlink(rec$frames_dir, recursive = TRUE))
   defer_record_stop(page)
-  pz_js(page, "window.scrollTo(0,500)")
+  pz_evaluate(page, "window.scrollTo(0,500)")
   pz_poll(
     function() {
       any(vapply(
@@ -96,12 +96,12 @@ test_that("camera calls are no-ops outside recording and reset with the recorder
   expect_error(pz_camera(page, pz_frame("#missing", zoom = -1)), "zoom")
   expect_error(pz_camera(page, pz_frame("#missing", zoom = Inf)), "zoom")
   expect_error(pz_camera(page, "#missing", duration = Inf), "duration")
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.appendChild(document.createElement('p')).id = 'gone'"
   )
   gone <- pz_find(page, "#gone")
-  pz_js(page, "document.getElementById('gone').remove()")
+  pz_evaluate(page, "document.getElementById('gone').remove()")
   expect_identical(pz_camera(gone), gone)
   expect_error(pz_camera(page), "absent")
   expect_identical(withVisible(pz_camera_reset(page))$value, page)
@@ -189,7 +189,7 @@ test_that("camera shot tracks a scrolled target in the final encoded frame", {
   # A final hold maps the last output tick to the stop-time capture.
   pz_record_start(page, out, fps = 10, hold = c(0, 0.2))
   defer_record_stop(page)
-  pz_js(page, "window.scrollTo(0,500)")
+  pz_evaluate(page, "window.scrollTo(0,500)")
   pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.1, wait = TRUE)
   rec <- page_recorder(page)
   expect_warning(pz_record_stop(page), "Camera zoom exceeds.*pixel density")
@@ -212,7 +212,7 @@ test_that("framed camera uses final home, scale and each method's capture densit
   page <- local_page(html, width = 640, height = 480, scale = 2)
   for (method in c("poll", "screencast")) {
     out <- withr::local_tempfile(fileext = ".mp4")
-    pz_js(page, "document.getElementById('home').style.width = '400px'")
+    pz_evaluate(page, "document.getElementById('home').style.width = '400px'")
     pz_record_start(
       page,
       out,
@@ -234,7 +234,7 @@ test_that("framed camera uses final home, scale and each method's capture densit
     )
     pz_camera(page, pz_frame("#red", zoom = 2), duration = 0.15, wait = TRUE)
     zoom_end <- rec$camera[[length(rec$camera)]]$end
-    pz_js(page, "document.getElementById('home').style.width = '480px'")
+    pz_evaluate(page, "document.getElementById('home').style.width = '480px'")
     # Retained frames are raw captures; the zoom applies at encode. Poll
     # that a capture landed at full zoom before the reset starts shrinking
     # it. The width change above gives screencast a repaint to capture.
@@ -582,7 +582,7 @@ test_that("auto-scroll follow uses the resolved post-scroll target", {
   rec <- page_recorder(page)
   pz_camera(page, pz_frame("#near", zoom = 2), duration = 0)
   pz_act_hover(page, "#far")
-  expect_gt(pz_js(page, "window.scrollY"), 400)
+  expect_gt(pz_evaluate(page, "window.scrollY"), 400)
   move <- tail(rec$camera, 1)[[1]]
   expect_true(move$follow)
   expect_gte(move$end - move$start, 0.5)
@@ -965,7 +965,7 @@ test_that("a clamped same-viewport keyframe changes the later scroll anchor", {
     home
   )
   expect_equal(after, before, tolerance = 0.5)
-  pz_js(page, "window.scrollTo(0, 200)")
+  pz_evaluate(page, "window.scrollTo(0, 200)")
   scroll <- c(0, 200)
   anchor <- camera_at(rec$camera, rec_vt(rec), home, 2)
   expected <- camera_viewport(
@@ -1034,7 +1034,7 @@ test_that("a repeated reset after a page scroll records its new anchor", {
   pz_camera(page, pz_frame("#a", zoom = 2), duration = 0)
   pz_camera_reset(page)
   n <- length(rec$camera)
-  pz_js(page, "window.scrollTo(0, 400)")
+  pz_evaluate(page, "window.scrollTo(0, 400)")
   pz_camera_reset(page)
   expect_length(rec$camera, n + 1L)
   expect_equal(tail(rec$camera, 1)[[1]]$scroll, c(0, 400))
@@ -1093,7 +1093,7 @@ test_that("camera metadata records shots, warnings, and frame fallbacks", {
 
   # frame = FALSE: the viewport at the root, the unframed scope box when
   # scoped.
-  view <- unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+  view <- unlist(pz_evaluate(page, "[window.innerWidth, window.innerHeight]"))
   pz_camera(page, frame = FALSE, duration = 0)
   expect_equal(last_move()$box, c(0, 0, view))
   pz_find(page, "#box") |> pz_camera(frame = FALSE, duration = 0)

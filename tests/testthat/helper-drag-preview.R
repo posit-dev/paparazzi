@@ -1,7 +1,7 @@
 # Keep the application fixture: changing the marker at dragstart makes a pure
 # green carried marker evidence of a pre-dragstart capture, not the live row.
 drag_preview_task_marker <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     "(() => {
     const source = document.querySelectorAll('.task')[0];
@@ -166,7 +166,7 @@ return (
 # Measure with the native getter even when a sheet's public getter is unreadable.
 # Throwing on insertion also catches mutations hidden by upstream error handling.
 drag_preview_stylesheet_guard <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     "(() => {
       const nativeRules = Object.getOwnPropertyDescriptor(CSSStyleSheet.prototype, 'cssRules').get;
@@ -188,7 +188,7 @@ drag_preview_stylesheet_guard <- function(page) {
 }
 
 drag_preview_absent <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     "!document.getElementById('paparazzi-overlay-root')?.shadowRoot?.querySelector('.pz-drag-preview')"
   )

@@ -57,7 +57,7 @@ test_that("a positional target resolves inside the current scope", {
 
 test_that("pz_get_attr can read an attribute named target", {
   page <- local_getters_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('.link').setAttribute('target', '_blank')"
   )
@@ -271,7 +271,7 @@ test_that("target-based getters auto-wait for elements to appear", {
   page <- local_getters_page()
   # Scheduled after the page is open, so the element provably does
   # not exist when the getter is called.
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function() {
       const el = document.createElement('p');
@@ -359,7 +359,10 @@ test_that("pz_get_count on a scope returns the pinned count immediately", {
   expect_identical(pz_get_count(ctx, target = ".never"), 0L)
   # A detached scope raises instead of returning 0: the pinned set
   # promises a live set and is never silently re-queried.
-  pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[0].remove()")
+  pz_evaluate(
+    page,
+    "document.querySelectorAll('#scope-a .sc-item')[0].remove()"
+  )
   expect_error(pz_get_count(ctx), class = "paparazzi_error_detached")
 })
 
@@ -370,7 +373,7 @@ test_that("an explicit target resolves lazily inside the scope", {
   # .sc-label matches once inside #scope-b, twice at the root.
   expect_identical(pz_get_text(ctx, target = ".sc-label"), "nested-b")
   # Auto-wait still applies inside the scope.
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function() {
       const el = document.createElement('div');
@@ -415,7 +418,7 @@ test_that("the element column continues the chain from one match", {
   expect_identical(pz_get_text(second), "A2")
   expect_invisible(pz_act_hover(second))
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#scope-a .sc-item:hover').textContent"
     ),
@@ -440,7 +443,10 @@ test_that("a detached element-column context names its row", {
   ctx <- els$element[[3]]
 
   # Drop the row's element; the pinned match is stale, never re-queried.
-  pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[2].remove()")
+  pz_evaluate(
+    page,
+    "document.querySelectorAll('#scope-a .sc-item')[2].remove()"
+  )
   err <- expect_error(pz_act_click(ctx), class = "paparazzi_error_detached")
   msg <- paste(conditionMessage(err), collapse = " ")
   expect_match(msg, "Scope: `#scope-a \\.sc-item` \\(which: 3\\)")
@@ -457,7 +463,10 @@ test_that("a which-loc's element entry names its original match when detached", 
   # The target already picked its match, so the entry keeps that
   # selection instead of being re-labeled match 1; a later detach
   # names the real match, not the first one.
-  pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[5].remove()")
+  pz_evaluate(
+    page,
+    "document.querySelectorAll('#scope-a .sc-item')[5].remove()"
+  )
   err <- expect_error(pz_act_click(ctx), class = "paparazzi_error_detached")
   msg <- paste(conditionMessage(err), collapse = " ")
   expect_match(msg, "Scope: `#scope-a \\.sc-item` \\(which: last\\)")

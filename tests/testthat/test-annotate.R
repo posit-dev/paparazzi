@@ -1,6 +1,6 @@
 annotation_page <- function(.env = parent.frame()) {
   page <- local_page(.env = .env)
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.innerHTML =
@@ -15,7 +15,7 @@ document.body.innerHTML =
 }
 
 annotation_state <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {
@@ -92,7 +92,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
 
   # #inner starts scrolled out of #outer's box, so its mark is hidden;
   # bring it into the container's view before measuring movement.
-  pz_js(page, "document.getElementById('outer').scrollTop = 100")
+  pz_evaluate(page, "document.getElementById('outer').scrollTop = 100")
   pz_poll(
     function() isTRUE(annotation_state(page)[[2]]$visible),
     timeout = 5,
@@ -102,7 +102,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
   expect_true(annotation_state(page)[[2]]$visible)
 
   before <- annotation_state(page)
-  pz_js(
+  pz_evaluate(
     page,
     "window.scrollTo(0, 80); document.getElementById('outer').scrollTop = 130; document.getElementById('box').style.top = '350px'"
   )
@@ -144,7 +144,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
     tolerance = 2
   )
 
-  pz_js(page, "document.getElementById('inner').style.display = 'none'")
+  pz_evaluate(page, "document.getElementById('inner').style.display = 'none'")
   pz_poll(
     function() isFALSE(annotation_state(page)[[2]]$visible),
     timeout = 5,
@@ -153,7 +153,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
   )
   expect_false(annotation_state(page)[[2]]$visible)
 
-  pz_js(page, "document.getElementById('inner').style.display = ''")
+  pz_evaluate(page, "document.getElementById('inner').style.display = ''")
   pz_poll(
     function() isTRUE(annotation_state(page)[[2]]$visible),
     timeout = 5,
@@ -162,7 +162,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
   )
   expect_true(annotation_state(page)[[2]]$visible)
 
-  pz_js(page, "document.getElementById('outer').scrollTop = 0")
+  pz_evaluate(page, "document.getElementById('outer').scrollTop = 0")
   pz_poll(
     function() isFALSE(annotation_state(page)[[2]]$visible),
     timeout = 5,
@@ -171,7 +171,7 @@ test_that("boxes follow page scroll, inner scrolling, fixed position and layout 
   )
   expect_false(annotation_state(page)[[2]]$visible)
 
-  pz_js(page, "document.getElementById('box').remove()")
+  pz_evaluate(page, "document.getElementById('box').remove()")
   pz_poll(
     function() isFALSE(annotation_state(page)[[1]]$visible),
     timeout = 5,
@@ -252,7 +252,7 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
   expect_length(annotation_state(page), 1)
   expect_equal(
     as.numeric(unlist(annotation_state(page)[[1]]$rect)),
-    as.numeric(unlist(pz_js(
+    as.numeric(unlist(pz_evaluate(
       page,
       "(() => { const r = document.querySelector('#outer').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()"
     ))),
@@ -269,7 +269,7 @@ test_that("scoped targets, stage defaults and empty screenshot sync behave", {
     ) |>
     pz_annotate("#box", label = "A", reveal = "none")
   expect_identical(annotation_state(page)[[1]]$color, "green")
-  badge_style <- pz_js(
+  badge_style <- pz_evaluate(
     page,
     "(() => { const s = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').style; return [s.fontSize, s.fontFamily]; })()"
   )
@@ -297,7 +297,7 @@ test_that("stills sync box after immediate shift and hide inspect outlines", {
   page |> pz_annotate("#box", id = "box", reveal = "none", color = "#ff0000")
 
   # Chrome has not had to paint a frame since this synchronous layout update.
-  pz_js(page, "document.getElementById('box').style.top = '370px'")
+  pz_evaluate(page, "document.getElementById('box').style.top = '370px'")
   overlay_draw(
     page,
     NULL,
@@ -378,16 +378,19 @@ test_that("a final clear retains the unannotated frame before the end hold", {
   # Styled scrollbars exercise classic gutters on overlay-scrollbar
   # platforms: the screencast surface is wider than the client viewport, so
   # settle captures that clip to the client area would mix frame sizes.
-  pz_js(
+  pz_evaluate(
     page,
     "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>')"
   )
   expect_lt(
-    pz_js(page, "window.visualViewport.width"),
-    pz_js(page, "window.innerWidth")
+    pz_evaluate(page, "window.visualViewport.width"),
+    pz_evaluate(page, "window.innerWidth")
   )
 
-  pz_js(page, "document.getElementById('box').style.background = '#0000ff'")
+  pz_evaluate(
+    page,
+    "document.getElementById('box').style.background = '#0000ff'"
+  )
   path <- withr::local_tempfile(fileext = ".mp4")
   pz_record_start(
     page,
@@ -429,7 +432,7 @@ test_that("a final clear retains the unannotated frame before the end hold", {
 
   # Extend the browser's actual exits without changing the reported durations.
   # Completion must not depend on the nominal animation budget.
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 const originalAnimate = Element.prototype.animate;
@@ -474,7 +477,7 @@ test_that("a final reveal is complete in the retained poll frame", {
   withr::defer(unlink(rec$frames_dir, recursive = TRUE))
   defer_record_stop(page)
 
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 const originalAnimate = Element.prototype.animate;
@@ -609,7 +612,7 @@ test_that("recorded clear removes all nodes after mixed exit animations", {
   # Node removal runs in the browser animation's onfinish callback.
   pz_poll(
     function() {
-      pz_js(
+      pz_evaluate(
         page,
         "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
       ) ==
@@ -620,7 +623,7 @@ test_that("recorded clear removes all nodes after mixed exit animations", {
     what = "the mixed exit animations to remove all annotation nodes"
   )
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
     ),
@@ -669,7 +672,7 @@ test_that("paused recording skips fade on draw and clear", {
 test_that("redaction fills every match immediately and hides after disconnection", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelectorAll('.mark').forEach(el => el.textContent = 'SECRET')"
   )
@@ -680,7 +683,7 @@ test_that("redaction fills every match immediately and hides after disconnection
     staged
   )
 
-  nodes <- pz_js(
+  nodes <- pz_evaluate(
     page,
     "(() => { const layer = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); return [...layer.querySelectorAll('.pz-redaction')].map(n => ({x:parseFloat(n.style.left),y:parseFloat(n.style.top),visible:n.style.display !== 'none',animations:n.getAnimations().length,color:getComputedStyle(n).backgroundColor})); })()"
   )
@@ -698,11 +701,11 @@ test_that("redaction fills every match immediately and hides after disconnection
   }
   expect_equal(at(220, 330), rep(23 / 255, 3), tolerance = 0.03)
 
-  pz_js(page, "document.getElementById('box').remove()")
+  pz_evaluate(page, "document.getElementById('box').remove()")
   pz_poll(
     function() {
       identical(
-        pz_js(
+        pz_evaluate(
           page,
           "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')[1].style.display"
         ),
@@ -713,7 +716,7 @@ test_that("redaction fills every match immediately and hides after disconnection
     loop = page$child_loop,
     what = "the removed target's redaction to hide"
   )
-  after <- pz_js(
+  after <- pz_evaluate(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')[1].style.display"
   )
@@ -732,7 +735,7 @@ annotation_drag_safety <- function(
   source = "document.getElementById('box')",
   footprint = "source.getBoundingClientRect()"
 ) {
-  pz_js(
+  pz_evaluate(
     page,
     sprintf(
       r"[
@@ -752,7 +755,7 @@ annotation_drag_safety <- function(
 
 test_that("drag previews reject redacted sources and ancestors for fill and blur", {
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('box').innerHTML = '<div id=child style=width:20px;height:20px></div>'"
   )
@@ -772,13 +775,13 @@ test_that("drag previews reject redacted sources and ancestors for fill and blur
 
 test_that("drag previews reject hidden redacted descendants before capture", {
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('box').innerHTML = '<div id=secret style=width:20px;height:20px></div>'"
   )
 
   page |> pz_annotate_redact("#secret")
-  pz_js(page, "document.getElementById('secret').style.display = 'none'")
+  pz_evaluate(page, "document.getElementById('secret').style.display = 'none'")
   expect_identical(
     annotation_drag_safety(page),
     list(safe = FALSE, reason = "related-redaction")
@@ -795,7 +798,7 @@ test_that("unrelated fill and blur masks permit drag previews without changing e
       list(safe = TRUE, reason = "safe")
     )
     expect_equal(
-      pz_js(
+      pz_evaluate(
         page,
         "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
       ),
@@ -812,7 +815,7 @@ test_that("unrelated fill and blur masks permit drag previews without changing e
 
 test_that("drag safety synchronizes padded mask overlap with the supplied footprint", {
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('fixed').style.cssText = 'position:fixed;left:310px;top:310px;width:20px;height:50px'"
   )
@@ -823,7 +826,7 @@ test_that("drag safety synchronizes padded mask overlap with the supplied footpr
     list(safe = FALSE, reason = "overlapping-redaction")
   )
 
-  pz_js(page, "document.getElementById('fixed').style.left = '400px'")
+  pz_evaluate(page, "document.getElementById('fixed').style.left = '400px'")
   expect_identical(
     annotation_drag_safety(page),
     list(safe = TRUE, reason = "safe")
@@ -848,7 +851,7 @@ test_that("drag previews fail closed for missing, disconnected and cross-root so
     list(safe = FALSE, reason = "unknown-source")
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "window.__source = document.getElementById('box'); window.__source.remove()"
   )
@@ -857,7 +860,7 @@ test_that("drag previews fail closed for missing, disconnected and cross-root so
     list(safe = FALSE, reason = "unknown-source")
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('fixed').attachShadow({mode:'open'}).innerHTML = '<div id=source style=width:20px;height:20px></div>'"
   )
@@ -875,7 +878,7 @@ test_that("drag previews fail closed for stale masks, targets and unsupported me
   page <- annotation_page()
   page |> pz_annotate_redact("#fixed", id = "secret")
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').remove()"
   )
@@ -885,14 +888,14 @@ test_that("drag previews fail closed for stale masks, targets and unsupported me
   )
 
   page |> pz_annotate_redact("#fixed", id = "secret")
-  pz_js(page, "document.getElementById('fixed').remove()")
+  pz_evaluate(page, "document.getElementById('fixed').remove()")
   expect_identical(
     annotation_drag_safety(page),
     list(safe = FALSE, reason = "unknown-state")
   )
 
   page |> pz_annotate_clear()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document
@@ -917,7 +920,7 @@ test_that("drag previews fail closed for cross-root redactions and untracked mas
   page <- annotation_page()
   page |> pz_annotate_redact("#fixed")
 
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {
@@ -942,7 +945,7 @@ test_that("drag previews fail closed for cross-root redactions and untracked mas
   )
 
   page |> pz_annotate_clear("shadow")
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {
@@ -961,7 +964,7 @@ test_that("drag previews fail closed for cross-root redactions and untracked mas
 
 test_that("drag safety uses the painted clip rather than the whole padded mask", {
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.getElementById('fixed').style.cssText =
@@ -999,7 +1002,7 @@ test_that("drag safety rejects invalid footprints", {
 test_that("redaction paints only inside a scrolling ancestor as its target moves", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.insertAdjacentHTML(
@@ -1022,7 +1025,7 @@ document.body.insertAdjacentHTML(
   expect_equal(pixel(380, 190), rep(23 / 255, 3), tolerance = 0.03)
   expect_equal(pixel(380, 202), rep(1, 3), tolerance = 0.03)
 
-  pz_js(page, "document.getElementById('clip').scrollTop = 80")
+  pz_evaluate(page, "document.getElementById('clip').scrollTop = 80")
   pz_poll(
     function() {
       all(
@@ -1037,11 +1040,11 @@ document.body.insertAdjacentHTML(
   expect_equal(pixel(380, 110), rep(23 / 255, 3), tolerance = 0.03)
   expect_equal(pixel(380, 190), rep(1, 3), tolerance = 0.03)
 
-  pz_js(page, "document.getElementById('clip').scrollTop = 250")
+  pz_evaluate(page, "document.getElementById('clip').scrollTop = 250")
   pz_poll(
     function() {
       identical(
-        pz_js(
+        pz_evaluate(
           page,
           "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
         ),
@@ -1053,7 +1056,7 @@ document.body.insertAdjacentHTML(
     what = "the fully scrolled-out redaction to hide"
   )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
     ),
@@ -1061,7 +1064,7 @@ document.body.insertAdjacentHTML(
   )
   expect_equal(pixel(380, 110), rep(1, 3), tolerance = 0.03)
 
-  pz_js(page, "document.getElementById('clip').scrollTop = 0")
+  pz_evaluate(page, "document.getElementById('clip').scrollTop = 0")
   pz_poll(
     function() {
       all(
@@ -1079,7 +1082,7 @@ document.body.insertAdjacentHTML(
 
 test_that("redaction padding stays clipped even when its target is uncut", {
   page <- local_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.innerHTML =
@@ -1101,7 +1104,7 @@ document.body.style.background = 'white';
 test_that("redaction intersects nested horizontal and vertical overflow clips", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.insertAdjacentHTML(
@@ -1131,7 +1134,7 @@ document.body.insertAdjacentHTML(
 test_that("positioned targets escape only overflow ancestors outside their containing block", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.insertAdjacentHTML(
@@ -1169,7 +1172,7 @@ document.body.insertAdjacentHTML(
 test_that("redaction covers visible content in the scrollport padding", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.insertAdjacentHTML(
@@ -1195,7 +1198,7 @@ document.body.insertAdjacentHTML(
 test_that("redaction clips scaled overflow ancestors in viewport coordinates", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.insertAdjacentHTML(
@@ -1235,7 +1238,7 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
 
   # Annotation nodes are created in target order, so index i pairs the i-th
   # Done button with the i-th box.
-  info <- pz_js(
+  info <- pz_evaluate(
     page,
     r"[
 (() => {
@@ -1330,7 +1333,7 @@ test_that("marks and badges hide on scrolled-out and visibility:hidden targets",
 
 test_that("a fully visible new task keeps every padded outline edge", {
   page <- local_page(pz_example("tasks"), width = 992, height = 720)
-  pz_js(
+  pz_evaluate(
     page,
     "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>')"
   )
@@ -1391,7 +1394,7 @@ test_that("flush fractional scaled targets keep all padded outline edges", {
   red <- c(255, 0, 0)
 
   for (style in styles) {
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         r"[
@@ -1431,7 +1434,10 @@ document.getElementById('clip').style.cssText = '%s'
 
 test_that("genuinely subpixel-clipped sides do not regain their padded outline", {
   page <- local_page(test_path("fixtures", "annotation-clipping.html"))
-  pz_js(page, "document.getElementById('target').style.left = '-0.015625px'")
+  pz_evaluate(
+    page,
+    "document.getElementById('target').style.left = '-0.015625px'"
+  )
   rect <- pz_get_rect(page, "#target")
   path <- withr::local_tempfile(fileext = ".png")
   page |>
@@ -1456,7 +1462,7 @@ test_that("genuinely subpixel-clipped sides do not regain their padded outline",
 
 test_that("padding cannot reveal a target touching a fractional clip from outside", {
   page <- local_page(test_path("fixtures", "annotation-clipping.html"))
-  pz_js(page, "document.getElementById('target').style.top = '100%'")
+  pz_evaluate(page, "document.getElementById('target').style.top = '100%'")
   rect <- pz_get_rect(page, "#target")
   path <- withr::local_tempfile(fileext = ".png")
   page |>
@@ -1469,7 +1475,7 @@ test_that("padding cannot reveal a target touching a fractional clip from outsid
 
 test_that("a subpixel-visible target still shows its mark", {
   page <- local_page(test_path("fixtures", "annotation-clipping.html"))
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('target').style.top = 'calc(100% - 0.015625px)'"
   )
@@ -1522,7 +1528,7 @@ test_that("redactions stay inside fractional scaled overflow clips", {
 
 test_that("only the cut side of a partially visible mark loses its padding", {
   page <- local_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.innerHTML =
@@ -1542,7 +1548,7 @@ document.body.style.background = 'white';
   )
 
   for (side in names(cases)) {
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         r"[
@@ -1575,7 +1581,7 @@ document.getElementById('marked').style.cssText =
 
 test_that("a fully clipped target hides its mark even when padding overlaps", {
   page <- local_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.innerHTML =
@@ -1603,7 +1609,7 @@ document.body.style.background = 'white';
 
 test_that("padding does not reveal zero-size targets on a clipping edge", {
   page <- local_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.innerHTML =
@@ -1627,7 +1633,7 @@ document.body.style.background = 'white';
 test_that("a mark clips at the edge of a scrolling overflow ancestor", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.insertAdjacentHTML(
@@ -1651,7 +1657,7 @@ document.body.insertAdjacentHTML(
   expect_equal(pixel(371, 180), c(1, 0, 0), tolerance = 0.05)
   expect_equal(pixel(371, 205), c(1, 1, 1), tolerance = 0.03)
 
-  pz_js(page, "document.getElementById('markclip').scrollTop = 250")
+  pz_evaluate(page, "document.getElementById('markclip').scrollTop = 250")
   pz_poll(
     function() isFALSE(annotation_state(page)[[1]]$visible),
     timeout = 5,
@@ -1665,7 +1671,7 @@ document.body.insertAdjacentHTML(
 test_that("non-clipping inline and root body overflow do not hide redactions", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.style.overflow = 'hidden';
@@ -1712,7 +1718,7 @@ test_that("redaction follows scroll and scoped targets without restyling element
   scoped |> pz_annotate_redact("#inner", id = "inner")
   page |> pz_annotate_redact("#fixed", id = "fixed")
   rects <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       "[...document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')].map(n => [parseFloat(n.style.top), parseFloat(n.style.left)])"
     )
@@ -1720,11 +1726,11 @@ test_that("redaction follows scroll and scoped targets without restyling element
   before <- rects()
 
   expect_identical(
-    pz_js(page, "document.getElementById('inner').style.backgroundColor"),
+    pz_evaluate(page, "document.getElementById('inner').style.backgroundColor"),
     ""
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "window.scrollTo(0, 80); document.getElementById('outer').scrollTop = 30"
   )
@@ -1766,18 +1772,18 @@ test_that("redaction uses the current scope and anonymous ids", {
 
   scoped |> pz_annotate_redact()
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
     1
   )
   expect_equal(
-    as.numeric(unlist(pz_js(
+    as.numeric(unlist(pz_evaluate(
       page,
       "(() => { const n = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction'); return [parseFloat(n.style.left), parseFloat(n.style.top), parseFloat(n.style.width), parseFloat(n.style.height)]; })()"
     ))),
-    as.numeric(unlist(pz_js(
+    as.numeric(unlist(pz_evaluate(
       page,
       "(() => { const r = document.querySelector('#outer').getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })()"
     ))),
@@ -1786,7 +1792,7 @@ test_that("redaction uses the current scope and anonymous ids", {
 
   page |> pz_annotate_redact()
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
@@ -1795,7 +1801,7 @@ test_that("redaction uses the current scope and anonymous ids", {
 
   page |> pz_annotate_clear()
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
@@ -1804,11 +1810,11 @@ test_that("redaction uses the current scope and anonymous ids", {
 
   pz_find(page, "#fixed, #box") |> pz_annotate_redact()
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "[...document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction')].map(n => [parseFloat(n.style.left), parseFloat(n.style.top), parseFloat(n.style.width), parseFloat(n.style.height)]).sort((a, b) => a[1] - b[1])"
     ),
-    pz_js(
+    pz_evaluate(
       page,
       "['#fixed', '#box'].map(s => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; })"
     ),
@@ -1826,7 +1832,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
     pz_annotate_redact("#box", id = "shared", color = "rgba(255, 0, 0, 0.5)")
   expect_length(annotation_state(page), 0)
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
@@ -1857,7 +1863,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
   img <- png::readPNG(path)
   expect_equal(rgb(45, 35), rep(23 / 255, 3), tolerance = 0.03)
 
-  pz_js(page, "document.getElementById('fixed').style.display = 'none'")
+  pz_evaluate(page, "document.getElementById('fixed').style.display = 'none'")
   pz_poll(
     function() {
       page |> pz_screenshot(path)
@@ -1877,7 +1883,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
     "rendered box"
   )
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
@@ -1893,7 +1899,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
 
   page |> pz_annotate_clear("shared")
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
@@ -1902,7 +1908,7 @@ test_that("redaction shares ids, stays above later marks, and rejects unsafe sta
 
   page |> pz_annotate_clear()
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
@@ -1914,7 +1920,7 @@ test_that("modal content cannot replace an existing redaction", {
   page <- annotation_page()
   page |> pz_annotate_redact("#box", id = "secret")
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<dialog id=modal><div id=modal-secret>SECRET</div></dialog>'); document.getElementById('modal').showModal()"
   )
@@ -1922,7 +1928,7 @@ test_that("modal content cannot replace an existing redaction", {
     pz_annotate_redact(page, "#modal-secret", id = "secret"),
     "modal dialog or popover"
   )
-  survivor <- pz_js(
+  survivor <- pz_evaluate(
     page,
     "(() => { const n = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction'); return [n.style.left, n.style.top, n.style.width, n.style.height]; })()"
   )
@@ -1933,7 +1939,7 @@ test_that("zero-height overflowing content cannot replace an existing redaction"
   page <- annotation_page()
   page |> pz_annotate_redact("#box", id = "secret")
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=zero style=\"position:absolute;left:120px;top:160px;width:100px;height:0;overflow:visible\">SECRET</div>')"
   )
@@ -1941,7 +1947,7 @@ test_that("zero-height overflowing content cannot replace an existing redaction"
     pz_annotate_redact(page, "#zero", id = "secret"),
     "nonzero width and height"
   )
-  survivor <- pz_js(
+  survivor <- pz_evaluate(
     page,
     "(() => { const n = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction'); return [n.style.left, n.style.top, n.style.width, n.style.height]; })()"
   )
@@ -1951,18 +1957,18 @@ test_that("zero-height overflowing content cannot replace an existing redaction"
 test_that("below-fold redaction covers a target-framed still without scrolling", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=far style=\"position:absolute;left:120px;top:1500px;width:180px;height:90px;background:white;color:black\">SECRET</div>')"
   )
-  expect_equal(pz_js(page, "window.scrollY"), 0)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 0)
 
   page |> pz_annotate_redact("#far")
-  expect_equal(pz_js(page, "window.scrollY"), 0)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 0)
 
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path, frame = "#far")
-  expect_equal(pz_js(page, "window.scrollY"), 0)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 0)
   img <- png::readPNG(path)
   expect_equal(mean(img[,, 1:3]), 23 / 255, tolerance = 0.025)
 })
@@ -1970,7 +1976,7 @@ test_that("below-fold redaction covers a target-framed still without scrolling",
 test_that("blur changes text pixels and hides when target stops rendering", {
   skip_if_not_installed("png")
   page <- annotation_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=secret style=\"position:absolute;left:110px;top:410px;width:400px;height:120px;background:white;color:black;font:56px monospace\">SECRET</div>')"
   )
@@ -1980,7 +1986,7 @@ test_that("blur changes text pixels and hides when target stops rendering", {
 
   page |> pz_annotate_redact("#secret", method = "blur", id = "blur")
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.backdropFilter"
     ),
@@ -1995,11 +2001,11 @@ test_that("blur changes text pixels and hides when target stops rendering", {
   soft <- png::readPNG(after)[rows, cols, 1]
   expect_gt(mean(abs(sharp - soft)), 0.05)
 
-  pz_js(page, "document.getElementById('secret').style.display = 'none'")
+  pz_evaluate(page, "document.getElementById('secret').style.display = 'none'")
   pz_poll(
     function() {
       identical(
-        pz_js(
+        pz_evaluate(
           page,
           "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
         ),
@@ -2011,14 +2017,14 @@ test_that("blur changes text pixels and hides when target stops rendering", {
     what = "the hidden target's redaction to hide"
   )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
     ),
     "none"
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('secret').style.display = ''; document.getElementById('secret').style.visibility = 'hidden'"
   )
@@ -2027,18 +2033,21 @@ test_that("blur changes text pixels and hides when target stops rendering", {
   # display value cannot express.
   pump_loop(page$child_loop, 0.05)
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
     ),
     "none"
   )
 
-  pz_js(page, "document.getElementById('secret').style.visibility = 'visible'")
+  pz_evaluate(
+    page,
+    "document.getElementById('secret').style.visibility = 'visible'"
+  )
   pz_poll(
     function() {
       identical(
-        pz_js(
+        pz_evaluate(
           page,
           "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
         ),
@@ -2050,20 +2059,20 @@ test_that("blur changes text pixels and hides when target stops rendering", {
     what = "the restored target's redaction to reappear"
   )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
     ),
     ""
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('secret').innerHTML = '<span style=\"visibility:visible\">SECRET</span>'; document.getElementById('secret').style.visibility = 'hidden'"
   )
   pump_loop(page$child_loop, 0.05)
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-redaction').style.display"
     ),
@@ -2114,7 +2123,7 @@ test_that("poll captures started after redaction returns are covered", {
 
   page |> pz_annotate_clear("secret")
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelectorAll('.pz-redaction').length"
     ),
@@ -2167,7 +2176,7 @@ test_that("circle, underline, and highlight paint only their intended regions", 
   expect_gt(pixel(250, 325)[2], 0.9)
 
   page |> pz_annotate_clear()
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('box').innerHTML = '<span style=\"font: bold 40px sans-serif;color:black\">IIII</span>'"
   )
@@ -2203,7 +2212,7 @@ test_that("all reveals show sampled entry and reverse exit frames", {
   }
 
   for (reveal in c("fade", "draw", "pop", "slide", "wipe")) {
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         r"[
@@ -2230,7 +2239,7 @@ test_that("all reveals show sampled entry and reverse exit frames", {
       )
     )
     entering <- lapply(c(0, 0.25, 0.5, 0.75, 1), function(fraction) {
-      pz_js(
+      pz_evaluate(
         page,
         sprintf(
           r"[
@@ -2252,12 +2261,12 @@ test_that("all reveals show sampled entry and reverse exit frames", {
       expect_gt(mean(abs(entering[[i]] - entering[[5]])), 0.001)
     }
 
-    pz_js(
+    pz_evaluate(
       page,
       "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); window.__exitNode=l.querySelector('.pz-annotation'); l.pz.clear({id:'test',animate:true}); window.__exitNode.getAnimations({subtree:true})[0].pause(); })()"
     )
     leaving <- lapply(c(0, 0.25, 0.5, 0.75, 1), function(fraction) {
-      pz_js(
+      pz_evaluate(
         page,
         sprintf(
           r"[
@@ -2278,7 +2287,7 @@ test_that("all reveals show sampled entry and reverse exit frames", {
       expect_gt(mean(abs(leaving[[i]] - leaving[[5]])), 0.001)
     }
 
-    pz_js(
+    pz_evaluate(
       page,
       "window.__exitNode.remove()"
     )
@@ -2338,25 +2347,25 @@ test_that("draw leaves badge visible and removes it at start of reverse", {
     pz_annotate("#box", id = "boot", reveal = "none") |>
     pz_annotate_clear()
 
-  pz_js(
+  pz_evaluate(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.draw([document.querySelector('#box')], {id:'badge',type:'circle',pad:[0,0,0,0],label:'A',color:'red',strokeWidth:3,labelFill:'#171717',labelTextColor:'white',fontFamily:'sans-serif',fontSize:14,reveal:'draw',animate:true}); l.querySelector('.pz-annotation').getAnimations({subtree:true})[0].pause(); })()"
   )
   expect_equal(annotation_state(page)[[1]]$label, "A")
 
-  pz_js(
+  pz_evaluate(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); window.__exitNode=l.querySelector('.pz-annotation'); l.pz.clear({id:'badge',animate:true}); window.__exitNode.getAnimations({subtree:true})[0].pause(); })()"
   )
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "window.__exitNode.querySelector('span') === null"
     ),
     TRUE
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "window.__exitNode.remove()"
   )
@@ -2366,7 +2375,7 @@ test_that("default reveals animate entry and reverse clear during recording", {
   skip_if_no_av()
   page <- annotation_page()
   path <- withr::local_tempfile(fileext = ".mp4")
-  pz_js(
+  pz_evaluate(
     page,
     "window.__markAnimations = []; const originalAnimate = Element.prototype.animate; Element.prototype.animate = function(frames, options) { window.__markAnimations.push({frames, direction:options.direction, duration:options.duration}); return originalAnimate.call(this, frames, options); };"
   )
@@ -2378,7 +2387,7 @@ test_that("default reveals animate entry and reverse clear during recording", {
     page |> pz_annotate_clear("default")
   }
 
-  first <- pz_js(
+  first <- pz_evaluate(
     page,
     "window.__markAnimations.filter((_, i) => i % 2 === 0).map(animation => Object.keys(animation.frames[0]))"
   )
@@ -2387,14 +2396,14 @@ test_that("default reveals animate entry and reverse clear during recording", {
   expect_true("transform" %in% first[[3]])
   expect_true("transform" %in% first[[4]])
 
-  pz_js(page, "window.__markAnimations = []")
+  pz_evaluate(page, "window.__markAnimations = []")
   page |>
     pz_annotate_spotlight("#box") |>
     pz_annotate_clear("spotlight") |>
     pz_annotate_callout("Tip", target = "#box", id = "tip") |>
     pz_annotate_clear("tip")
 
-  animations <- pz_js(page, "window.__markAnimations")
+  animations <- pz_evaluate(page, "window.__markAnimations")
   expect_length(animations, 4)
   expect_equal(
     vapply(animations, `[[`, character(1), "direction"),
@@ -2416,7 +2425,7 @@ test_that("clear returns the longest active exit duration", {
     pz_annotate("#box", id = "boot", reveal = "none") |>
     pz_annotate_clear()
 
-  durations <- pz_js(
+  durations <- pz_evaluate(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); const el=document.querySelector('#box'); const o={type:'box',pad:[0,0,0,0],label:null,color:'red',strokeWidth:3,fontFamily:'sans-serif',fontSize:14,animate:true}; const short=l.pz.draw([el], {...o,id:'short',reveal:'fade'}); const long=l.pz.draw([el], {...o,id:'long',reveal:'wipe'}); const clear=l.pz.clear({id:null,animate:true}); [...l.children].forEach(n=>n.remove()); return [short,long,clear,l.pz.clear({id:null,animate:true})]; })()"
   )
@@ -2430,7 +2439,7 @@ test_that("a labeled wipe reveals the badge before its shape finishes", {
     pz_annotate("#box", id = "boot", reveal = "none") |>
     pz_annotate_clear()
 
-  pz_js(
+  pz_evaluate(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); l.pz.draw([document.querySelector('#box')], {id:'labeled',type:'box',pad:[0,0,0,0],label:'A',color:'#ff0000',strokeWidth:3,labelFill:'#171717',labelTextColor:'white',fontFamily:'sans-serif',fontSize:14,reveal:'wipe',animate:true}); const a=l.querySelector('.pz-annotation').getAnimations({subtree:true})[0]; a.pause(); a.currentTime=200; })()"
   )
@@ -2446,16 +2455,16 @@ test_that("a labeled wipe reveals the badge before its shape finishes", {
   expect_lt(pixel(275, 311)[2], 0.2)
   expect_gt(pixel(225, 311)[2], 0.9)
 
-  pz_js(
+  pz_evaluate(
     page,
     "(() => { const l=document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations'); window.__exitNode=l.querySelector('.pz-annotation'); return l.pz.clear({id:'labeled',animate:true}); })()"
   )
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "window.__exitNode.querySelector('span') === null"
   ))
 
-  pz_js(
+  pz_evaluate(
     page,
     "window.__exitNode.remove()"
   )
@@ -2465,7 +2474,7 @@ test_that("a drawn box has the same rounded outline as a still box", {
   page <- annotation_page()
   page |> pz_annotate("#box", type = "box", reveal = "draw")
 
-  radius <- pz_js(
+  radius <- pz_evaluate(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation svg rect')?.getAttribute('rx')"
   )
@@ -2476,7 +2485,7 @@ test_that("a drawn box has the same rounded outline as a still box", {
 test_that("anonymous kinds coexist across shared-id replacement and clear", {
   page <- annotation_page()
   layer_counts <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       r"[
 (() => {
@@ -2521,7 +2530,7 @@ test_that("anonymous kinds coexist across shared-id replacement and clear", {
   page |> pz_annotate_clear()
   expect_equal(unlist(layer_counts()), c(0, 0, 0))
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
     ),
@@ -2532,7 +2541,7 @@ test_that("anonymous kinds coexist across shared-id replacement and clear", {
 test_that("overlay function sources parse in Chrome", {
   page <- local_page()
   parse_js <- function(source) {
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         r"[
@@ -2616,7 +2625,7 @@ test_that("auto reveals preserve the type defaults and zero padding", {
 test_that("mark badges follow their mark unless overridden per call", {
   page <- annotation_page()
   badge_style <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       "(() => { const s = getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span')); return [s.backgroundColor, s.color]; })()"
     )
@@ -2662,7 +2671,7 @@ test_that("mark badges follow their mark unless overridden per call", {
 test_that("mark badges size to their label, not their mark", {
   page <- annotation_page()
   badge_box <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       "(() => { const r = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').getBoundingClientRect(); return [r.width, r.height]; })()"
     )
@@ -2711,7 +2720,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
     pz_annotate("#box", type = "box", reveal = "none", id = "mark")
   # The declared width: computed border widths snap to device pixels, so
   # a fractional default reads back rounded at a device pixel ratio of 1.
-  default_border <- pz_js(
+  default_border <- pz_evaluate(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape').style.borderTopWidth"
   )
@@ -2725,7 +2734,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
       stroke_width = 6
     )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape')).borderTopWidth"
     ),
@@ -2741,7 +2750,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
       stroke_width = 5
     )
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "parseFloat(getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape ellipse')).strokeWidth)"
     ),
@@ -2757,7 +2766,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
       stroke_width = 7
     )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape').style.height"
     ),
@@ -2768,7 +2777,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
     pz_stage_annotate(stroke_width = 2) |>
     pz_annotate("#box", type = "box", reveal = "none", id = "mark")
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "getComputedStyle(document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation .pz-shape')).borderTopWidth"
     ),
@@ -2783,7 +2792,7 @@ test_that("stroke_width reaches mark shapes and is stageable", {
 })
 
 annotation_badge_rects <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {
@@ -2813,7 +2822,7 @@ annotation_badge_rects <- function(page) {
 # Poll-timeout forensics: report the page state the badge polls depend on, so
 # a platform-only timeout names what actually held instead of just naming it.
 badge_edge_diagnostics <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {
@@ -2874,7 +2883,7 @@ expect_poll_badge <- function(page, predicate, what) {
 
 local_clipped_badge_page <- function(.env = parent.frame()) {
   page <- local_page(.env = .env)
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.style.background = 'white';
@@ -3007,7 +3016,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
       if (type == "highlight") c(255, 166, 166) else c(255, 0, 0)
     )
 
-    pz_js(page, "document.getElementById('vertical').scrollTop = 30")
+    pz_evaluate(page, "document.getElementById('vertical').scrollTop = 30")
     pz_poll(
       function() abs(annotation_state(page)[[1]]$rect[[2]] - 66) < 0.1,
       timeout = 5,
@@ -3019,7 +3028,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
     page |> pz_screenshot(path)
     expect_png_pixel(page, path, 102, 110, c(255, 0, 255))
 
-    pz_js(page, "document.getElementById('vertical').scrollTop = 150")
+    pz_evaluate(page, "document.getElementById('vertical').scrollTop = 150")
     pz_poll(
       function() !annotation_badge_rects(page)[[1]]$visible,
       timeout = 5,
@@ -3029,7 +3038,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
     page |> pz_screenshot(path)
     expect_png_pixel(page, path, 102, 110, rep(255, 3))
 
-    pz_js(page, "document.getElementById('vertical').scrollTop = 0")
+    pz_evaluate(page, "document.getElementById('vertical').scrollTop = 0")
     pz_poll(
       function() {
         state <- annotation_state(page)[[1]]
@@ -3040,7 +3049,10 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
       what = "the mark to return to its unscrolled position"
     )
 
-    pz_js(page, "document.getElementById('marked').style.display = 'none'")
+    pz_evaluate(
+      page,
+      "document.getElementById('marked').style.display = 'none'"
+    )
     pz_poll(
       function() !annotation_badge_rects(page)[[1]]$visible,
       timeout = 5,
@@ -3048,7 +3060,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
       what = "the non-rendered mark and badge to hide"
     )
 
-    pz_js(page, "document.getElementById('marked').style.display = ''")
+    pz_evaluate(page, "document.getElementById('marked').style.display = ''")
     pz_poll(
       function() annotation_badge_rects(page)[[1]]$visible,
       timeout = 5,
@@ -3059,7 +3071,7 @@ test_that("nested overflow clips shapes but anchors badges to the visible mark",
     page |> pz_annotate_clear("mark")
     expect_length(annotation_state(page), 0)
     expect_equal(
-      pz_js(
+      pz_evaluate(
         page,
         "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
       ),
@@ -3132,7 +3144,7 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
   path <- withr::local_tempfile(fileext = ".png")
 
   for (reveal in c("fade", "draw", "pop", "slide", "wipe")) {
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         r"[
@@ -3168,7 +3180,7 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
     page |> pz_screenshot(path)
     expect_png_pixel(page, path, 102, 110, c(255, 0, 255))
 
-    pz_js(
+    pz_evaluate(
       page,
       r"[
 (() => {
@@ -3183,7 +3195,10 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
 })()
 ]"
     )
-    has_badge <- pz_js(page, "window.__exitNode.querySelector('span') !== null")
+    has_badge <- pz_evaluate(
+      page,
+      "window.__exitNode.querySelector('span') !== null"
+    )
     expect_identical(has_badge, !reveal %in% c("draw", "wipe"))
     page |> pz_screenshot(path)
     expect_png_pixel(
@@ -3194,13 +3209,13 @@ test_that("clipped badges retain reveal, reverse exit, and replacement semantics
       if (has_badge) c(255, 0, 255) else rep(255, 3)
     )
 
-    pz_js(
+    pz_evaluate(
       page,
       "window.__exitNode.getAnimations({subtree:true})[0].finish()"
     )
     pz_poll(
       function() {
-        pz_js(
+        pz_evaluate(
           page,
           "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotations').children.length"
         ) ==
@@ -3227,7 +3242,7 @@ local_viewport_badge_page <- function(
   .env = parent.frame()
 ) {
   page <- local_page(width = width, height = height, .env = .env)
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.style.cssText = 'margin:0;background:white';
@@ -3254,7 +3269,7 @@ viewport_badge_reference <- function(page, label, pad = 0) {
 }
 
 expect_viewport_badge <- function(page, path, x, y, reference) {
-  viewport <- unlist(pz_js(
+  viewport <- unlist(pz_evaluate(
     page,
     "[document.documentElement.clientWidth,document.documentElement.clientHeight]"
   ))
@@ -3314,11 +3329,11 @@ test_that("right-edge badges translate without squeezing medium or 20em labels",
   path <- withr::local_tempfile(fileext = ".png")
 
   for (label in c("#add-task", paste(rep("word", 15), collapse = " "))) {
-    pz_js(page, "document.getElementById('edge').style.left='400px'")
+    pz_evaluate(page, "document.getElementById('edge').style.left='400px'")
     reference <- viewport_badge_reference(page, label)
     expect_gt(reference$width, 30)
 
-    pz_js(page, "document.getElementById('edge').style.left='970px'")
+    pz_evaluate(page, "document.getElementById('edge').style.left='970px'")
     page |> pz_screenshot(path)
     expect_viewport_badge(
       page,
@@ -3337,17 +3352,17 @@ test_that("top and top-right badges move down while retaining their label size",
 
   for (label in c("#add-task", paste(rep("word", 15), collapse = " "))) {
     for (pad in c(0, 4)) {
-      pz_js(
+      pz_evaluate(
         page,
         "document.getElementById('edge').style.left='400px'; document.getElementById('edge').style.top='250px'"
       )
       reference <- viewport_badge_reference(page, label, pad)
 
-      pz_js(page, "document.getElementById('edge').style.top='0px'")
+      pz_evaluate(page, "document.getElementById('edge').style.top='0px'")
       page |> pz_screenshot(path)
       expect_viewport_badge(page, path, 400 - pad, 0, reference)
 
-      pz_js(page, "document.getElementById('edge').style.left='970px'")
+      pz_evaluate(page, "document.getElementById('edge').style.left='970px'")
       page |> pz_screenshot(path)
       expect_viewport_badge(page, path, 1000 - reference$width, 0, reference)
     }
@@ -3359,16 +3374,16 @@ test_that("left and bottom viewport edges use the same minimum translation", {
   path <- withr::local_tempfile(fileext = ".png")
 
   reference <- viewport_badge_reference(page, "#add-task", pad = 4)
-  pz_js(page, "document.getElementById('edge').style.left='-6px'")
+  pz_evaluate(page, "document.getElementById('edge').style.left='-6px'")
   page |> pz_screenshot(path)
   expect_viewport_badge(page, path, 0, 246 - reference$height, reference)
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.left='400px'; document.getElementById('edge').style.top='250px'"
   )
   reference <- viewport_badge_reference(page, "A", pad = c(-40, 0, 50, 0))
-  pz_js(page, "document.getElementById('edge').style.top='690px'")
+  pz_evaluate(page, "document.getElementById('edge').style.top='690px'")
   page |> pz_screenshot(path)
   expect_viewport_badge(page, path, 400, 720 - reference$height, reference)
 })
@@ -3376,7 +3391,7 @@ test_that("left and bottom viewport edges use the same minimum translation", {
 test_that("viewport translation composes with the visible overflow anchor", {
   page <- local_viewport_badge_page()
   reference <- viewport_badge_reference(page, "#add-task", pad = 4)
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 const edge = document.getElementById('edge');
@@ -3418,7 +3433,7 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
   # before capturing, so drive the same sync here instead of waiting on
   # the requestAnimationFrame loop.
   sync_badges <- function() {
-    pz_js(page, paste0(ANNOTATION_LAYER_JS, "?.sync()"))
+    pz_evaluate(page, paste0(ANNOTATION_LAYER_JS, "?.sync()"))
   }
 
   # Badges clamp to the client area, which is narrower than the emulated
@@ -3432,7 +3447,7 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
   at_right_edge <- function(inner_width) {
     function() {
       sync_badges()
-      dims <- unlist(pz_js(
+      dims <- unlist(pz_evaluate(
         page,
         "[window.innerWidth,document.documentElement.clientWidth]"
       ))
@@ -3444,7 +3459,10 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
     }
   }
 
-  pz_js(page, "document.getElementById('edge').style.left='calc(100vw - 30px)'")
+  pz_evaluate(
+    page,
+    "document.getElementById('edge').style.left='calc(100vw - 30px)'"
+  )
   expect_poll_badge(
     page,
     at_right_edge(1000),
@@ -3458,7 +3476,7 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
     "the badge to follow the resized viewport edge"
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.left='300px'; document.body.style.height='1200px'; window.scrollTo(0,250)"
   )
@@ -3475,7 +3493,7 @@ test_that("badge placement follows movement, scroll, and viewport resize", {
   page |> pz_screenshot(path)
   expect_viewport_badge(page, path, 300, 0, reference)
 
-  pz_js(page, "window.scrollTo(0,0)")
+  pz_evaluate(page, "window.scrollTo(0,0)")
   expect_poll_badge(
     page,
     function() {
@@ -3494,7 +3512,7 @@ test_that("badges reposition themselves when targets move and scroll", {
   # animation frames on every platform, so these polls exercise the
   # requestAnimationFrame path without forcing the layer's sync.
   page <- local_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.body.style.cssText = 'margin:0;background:white';
@@ -3503,9 +3521,12 @@ document.body.innerHTML =
 ]"
   )
   viewport_badge_reference(page, "#add-task")
-  client_width <- unlist(pz_js(page, "document.documentElement.clientWidth"))
+  client_width <- unlist(pz_evaluate(
+    page,
+    "document.documentElement.clientWidth"
+  ))
 
-  pz_js(
+  pz_evaluate(
     page,
     sprintf(
       r"[
@@ -3536,7 +3557,7 @@ document.getElementById('edge').style.left = '%spx'
 
   # The default window is taller than the emulated pages, so grow the body
   # past the measured viewport or the scroll has nowhere to go.
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.getElementById('edge').style.left = '300px';
@@ -3560,19 +3581,19 @@ test_that("off-viewport badges stay with their targets in framed captures", {
   page <- local_viewport_badge_page()
   reference <- viewport_badge_reference(page, "#add-task", pad = 4)
 
-  pz_js(page, "document.getElementById('edge').style.top='730px'")
+  pz_evaluate(page, "document.getElementById('edge').style.top='730px'")
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   badge <- annotation_badge_rects(page)[[1]]
   expect_equal(c(badge$left, badge$bottom), c(396, 726), tolerance = 0.001)
 
-  pz_js(page, "document.getElementById('edge').style.top='1500px'")
+  pz_evaluate(page, "document.getElementById('edge').style.top='1500px'")
   spec <- pz_frame("#edge", target_box = "annotated", pad = 8)
   clip <- frame_clip(page, frame_effective(page, spec))
   page |> pz_screenshot(path, frame = spec)
   badge <- annotation_badge_rects(page)[[1]]
   expect_equal(badge$bottom, 1496, tolerance = 0.001)
-  expect_equal(pz_js(page, "window.scrollY"), 0)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 0)
   expect_png_pixel(
     page,
     path,
@@ -3590,7 +3611,7 @@ test_that("oversized badges pin to zero without viewport-dependent rewrapping", 
   )
 
   page |> pz_device(width = 200, height = 720)
-  pz_js(page, "document.getElementById('edge').style.left='170px'")
+  pz_evaluate(page, "document.getElementById('edge').style.left='170px'")
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   badge <- annotation_badge_rects(page)[[1]]
@@ -3603,7 +3624,7 @@ test_that("oversized badges pin to zero without viewport-dependent rewrapping", 
   expect_png_pixel(page, path, 2, badge$top + badge$height / 2, c(255, 0, 255))
 
   page |> pz_device(width = 1000, height = 40)
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.left='400px'; document.getElementById('edge').style.top='10px'"
   )
@@ -3620,10 +3641,10 @@ test_that("oversized badges pin to zero without viewport-dependent rewrapping", 
 
 test_that("fractional zoomed badge sizes do not leak past the viewport edge", {
   page <- local_viewport_badge_page()
-  pz_js(page, "document.documentElement.style.zoom='1.25'")
+  pz_evaluate(page, "document.documentElement.style.zoom='1.25'")
   reference <- viewport_badge_reference(page, "#add-task")
 
-  pz_js(page, "document.getElementById('edge').style.left='776px'")
+  pz_evaluate(page, "document.getElementById('edge').style.left='776px'")
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   expect_viewport_badge(
@@ -3638,13 +3659,13 @@ test_that("fractional zoomed badge sizes do not leak past the viewport edge", {
 test_that("pop and slide do not feed animated sizes back into badge placement", {
   page <- local_viewport_badge_page()
   reference <- viewport_badge_reference(page, "#add-task")
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='0px'"
   )
 
   for (reveal in c("pop", "slide")) {
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         r"[
@@ -3673,7 +3694,7 @@ test_that("pop and slide do not feed animated sizes back into badge placement", 
       )
     )
     for (fraction in c(0, 0.5, 1)) {
-      placement <- pz_js(
+      placement <- pz_evaluate(
         page,
         sprintf(
           r"[
@@ -3718,7 +3739,7 @@ test_that("a recorded top-right badge appears in retained frames and clears", {
   page <- local_viewport_badge_page()
   reference <- viewport_badge_reference(page, "#add-task")
   page |> pz_annotate_clear()
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='0px'"
   )
@@ -3777,7 +3798,7 @@ test_that("a recorded top-right badge appears in retained frames and clears", {
 test_that("interior zero-size marks clamp badges but viewport-edge points do not", {
   page <- local_viewport_badge_page()
   reference <- viewport_badge_reference(page, "#add-task", pad = 10)
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.cssText='position:absolute;left:990px;top:5px;width:0;height:0'"
   )
@@ -3787,7 +3808,7 @@ test_that("interior zero-size marks clamp badges but viewport-edge points do not
   expect_true(annotation_state(page)[[1]]$visible)
   expect_viewport_badge(page, path, 1000 - reference$width, 0, reference)
 
-  pz_js(page, "document.getElementById('edge').style.left='1000px'")
+  pz_evaluate(page, "document.getElementById('edge').style.left='1000px'")
   page |> pz_screenshot(path)
   badge <- annotation_badge_rects(page)[[1]]
   expect_equal(c(badge$left, badge$bottom), c(990, -5), tolerance = 0.001)
@@ -3796,7 +3817,7 @@ test_that("interior zero-size marks clamp badges but viewport-edge points do not
 test_that("padding alone cannot pull an off-viewport target's badge inward", {
   page <- local_viewport_badge_page()
   reference <- viewport_badge_reference(page, "#add-task", pad = 20)
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='730px'"
   )
@@ -3816,7 +3837,7 @@ test_that("padding alone cannot pull an off-viewport target's badge inward", {
 
 test_that("badge bounds exclude forced classic scrollbars like recorder crops", {
   page <- local_viewport_badge_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.head.insertAdjacentHTML(
@@ -3831,7 +3852,7 @@ document.body.style.height = '2000px';
 
   pz_poll(
     function() {
-      gap <- unlist(pz_js(
+      gap <- unlist(pz_evaluate(
         page,
         "[innerWidth-document.documentElement.clientWidth,innerHeight-document.documentElement.clientHeight]"
       ))
@@ -3841,11 +3862,11 @@ document.body.style.height = '2000px';
     loop = page$child_loop,
     what = "the forced classic scrollbars to reserve 24px by 18px"
   )
-  viewport <- unlist(pz_js(
+  viewport <- unlist(pz_evaluate(
     page,
     "[document.documentElement.clientWidth,document.documentElement.clientHeight]"
   ))
-  outer <- unlist(pz_js(page, "[innerWidth,innerHeight]"))
+  outer <- unlist(pz_evaluate(page, "[innerWidth,innerHeight]"))
   expect_equal(outer - viewport, c(24, 18))
   metrics <- page$session$Page$getLayoutMetrics()$cssVisualViewport
   expect_equal(c(metrics$clientWidth, metrics$clientHeight), viewport)
@@ -3853,7 +3874,7 @@ document.body.style.height = '2000px';
   path <- withr::local_tempfile(fileext = ".png")
   # Match recorder crops without the viewport expansion of framed stills.
   capture <- function() {
-    pz_js(page, paste0(ANNOTATION_LAYER_JS, "?.sync()"))
+    pz_evaluate(page, paste0(ANNOTATION_LAYER_JS, "?.sync()"))
     shot <- page$session$Page$captureScreenshot(
       format = "png",
       clip = list(
@@ -3870,7 +3891,7 @@ document.body.style.height = '2000px';
   }
 
   reference <- viewport_badge_reference(page, "#add-task")
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.left=(document.documentElement.clientWidth-30)+'px'"
   )
@@ -3891,37 +3912,37 @@ document.body.style.height = '2000px';
     as.integer(round(viewport * page_dpr(page)))
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.left=(document.documentElement.clientWidth+1)+'px'"
   )
   capture()
   expect_equal(annotation_badge_rects(page)[[1]]$left, viewport[1] + 1)
 
-  pz_js(page, "document.getElementById('edge').style.left='400px'")
+  pz_evaluate(page, "document.getElementById('edge').style.left='400px'")
   viewport_badge_reference(page, "#add-task", pad = 10)
-  pz_js(
+  pz_evaluate(
     page,
     "const edge=document.getElementById('edge'); edge.style.width='0px'; edge.style.height='0px'; edge.style.left=document.documentElement.clientWidth+'px'"
   )
   capture()
   expect_equal(annotation_badge_rects(page)[[1]]$left, viewport[1] - 10)
 
-  pz_js(page, "document.getElementById('edge').style.left='400px'")
+  pz_evaluate(page, "document.getElementById('edge').style.left='400px'")
   viewport_badge_reference(page, "#add-task", pad = c(-40, 0, 50, 10))
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.top=document.documentElement.clientHeight+'px'"
   )
   capture()
   expect_equal(annotation_badge_rects(page)[[1]]$bottom, viewport[2] + 40)
 
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.cssText='position:absolute;left:400px;top:250px;width:30px;height:30px'"
   )
   reference <- viewport_badge_reference(page, "A", pad = c(-40, 0, 50, 0))
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('edge').style.top=(document.documentElement.clientHeight-30)+'px'"
   )

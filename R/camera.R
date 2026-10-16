@@ -336,7 +336,7 @@ camera_density <- function(rec, ctx) {
   } else if (identical(rec$method, "screencast")) {
     1
   } else {
-    pz_js(ctx, "window.devicePixelRatio")
+    pz_evaluate(ctx, "window.devicePixelRatio")
   }
 }
 

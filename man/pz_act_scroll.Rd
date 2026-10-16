@@ -89,7 +89,7 @@ pz_expect_in_viewport(page, target = pz_loc(".task", which = "last"))
 
 # At the root, the container is the page itself
 page |> pz_act_scroll(to = "top")
-pz_js(page, "window.scrollY")
+pz_evaluate(page, "window.scrollY")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

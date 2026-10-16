@@ -9,7 +9,7 @@ local_shiny_input_page <- function(.env = parent.frame()) {
 }
 
 shiny_input_text <- function(page, id) {
-  pz_js(
+  pz_evaluate(
     page,
     sprintf(
       r"[document.getElementById(%s).textContent]",
@@ -23,7 +23,7 @@ test_that("binding setters update control UI and server outputs, including repea
 
   expect_invisible(pz_set_shiny_input(page, "text", "first update"))
   expect_equal(
-    pz_js(page, "document.getElementById('text').value"),
+    pz_evaluate(page, "document.getElementById('text').value"),
     "first update"
   )
   expect_equal(shiny_input_text(page, "text_out"), "first update")
@@ -35,23 +35,29 @@ test_that("binding setters update control UI and server outputs, including repea
   }
 
   pz_set_shiny_input(page, "choice", "second")
-  expect_equal(pz_js(page, "document.getElementById('choice').value"), "second")
+  expect_equal(
+    pz_evaluate(page, "document.getElementById('choice').value"),
+    "second"
+  )
   expect_equal(shiny_input_text(page, "choice_out"), "second")
 
   pz_set_shiny_input(page, "amount", 42)
-  expect_equal(pz_js(page, "document.getElementById('amount').value"), "42")
+  expect_equal(
+    pz_evaluate(page, "document.getElementById('amount').value"),
+    "42"
+  )
   expect_equal(shiny_input_text(page, "amount_out"), "42")
 
   pz_set_shiny_input(page, "day", "2024-02-12")
   expect_equal(shiny_input_text(page, "day_out"), "2024-02-12")
   expect_equal(
-    as.numeric(pz_js(page, "document.getElementById('day').value")),
+    as.numeric(pz_evaluate(page, "document.getElementById('day').value")),
     1707696000000
   )
 
   pz_set_shiny_input(page, "dates", c("2024-02-01", "2024-02-06"))
   expect_equal(
-    pz_js(
+    pz_evaluate(
       page,
       "document.getElementById('dates').querySelector('input').value"
     ),
@@ -85,7 +91,7 @@ test_that("fine-step numeric binding retains precision in control and server", {
   page <- local_shiny_input_page()
   pz_set_shiny_input(page, "precise", 1.23456789)
   expect_equal(
-    as.numeric(pz_js(page, "document.getElementById('precise').value")),
+    as.numeric(pz_evaluate(page, "document.getElementById('precise').value")),
     1.23456789,
     tolerance = 1e-10
   )
@@ -175,7 +181,7 @@ test_that("a taken port is retried while opening the widget fixture", {
   page <- pz_open(shiny_input_fixture(), shiny_options = list(port = taken))
   withr::defer(pz_close(page))
 
-  expect_false(identical(as.integer(pz_js(page, "location.port")), taken))
+  expect_false(identical(as.integer(pz_evaluate(page, "location.port")), taken))
 
   pz_set_shiny_input(page, "text", "retried")
   expect_equal(shiny_input_text(page, "text_out"), "retried")
@@ -187,7 +193,7 @@ test_that("block errors close their owned widget app", {
   port <- NULL
   expect_error(
     pz_with_page(shiny_input_fixture(), function(page) {
-      port <<- as.integer(pz_js(page, "location.port"))
+      port <<- as.integer(pz_evaluate(page, "location.port"))
       pz_set_shiny_input(page, "text", "before error")
       expect_equal(shiny_input_text(page, "text_out"), "before error")
       stop("fixture block failure")

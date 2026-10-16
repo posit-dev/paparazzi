@@ -66,7 +66,7 @@ pz_set_shiny_input <- function(ctx, id, value, ..., wait = TRUE) {
     ")"
   )
   result <- if (is.null(scoped)) {
-    pz_js(
+    pz_evaluate(
       ctx,
       paste0(
         "(",

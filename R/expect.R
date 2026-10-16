@@ -763,7 +763,7 @@ pz_expect_url <- function(
     match = match,
     not = not,
     timeout = timeout,
-    read = function() pz_js(ctx, "location.href"),
+    read = function() pz_evaluate(ctx, "location.href"),
     description = expect_headline_text(url, match, not, label = "URL")
   )
 }
@@ -807,7 +807,7 @@ pz_expect_title <- function(
     match = match,
     not = not,
     timeout = timeout,
-    read = function() pz_js(ctx, "document.title"),
+    read = function() pz_evaluate(ctx, "document.title"),
     description = expect_headline_text(title, match, not, label = "title")
   )
 }

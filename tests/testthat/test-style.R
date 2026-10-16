@@ -348,7 +348,7 @@ test_that("pz_expect_style rejects shorthands and suggests longhands", {
 
 test_that("pz_expect_style retries until the style arrives", {
   page <- local_style_page()
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(() => document.getElementById('late').classList.add('blue'), 300)",
     await = FALSE
@@ -450,8 +450,8 @@ test_that("the probe never enters the app's DOM", {
   page <- local_style_page()
   # documentElement children are head and body only, before any
   # normalization has run.
-  expect_equal(pz_js(page, "document.documentElement.children.length"), 2)
-  before <- pz_js(
+  expect_equal(pz_evaluate(page, "document.documentElement.children.length"), 2)
+  before <- pz_evaluate(
     page,
     "document.documentElement.lastElementChild === document.body"
   )
@@ -464,10 +464,16 @@ test_that("the probe never enters the app's DOM", {
   # The probe host lives only inside the synchronous JS call: once
   # the expectations return, the DOM shows no trace -- no host anywhere
   # to find, documentElement's last child unchanged, no extra nodes.
-  expect_true(pz_js(page, "document.querySelector('html > div') === null"))
-  expect_equal(pz_js(page, "document.documentElement.children.length"), 2)
+  expect_true(pz_evaluate(
+    page,
+    "document.querySelector('html > div') === null"
+  ))
+  expect_equal(pz_evaluate(page, "document.documentElement.children.length"), 2)
   expect_identical(
-    pz_js(page, "document.documentElement.lastElementChild === document.body"),
+    pz_evaluate(
+      page,
+      "document.documentElement.lastElementChild === document.body"
+    ),
     before
   )
   expect_identical(pz_get_count(page, target = "body div"), before_count)
@@ -492,7 +498,7 @@ test_that("the probe does not disturb positional-selector styles", {
   # #pos-colored read (and the #pos-sized width, read as % context)
   # must be captured before the host attaches -- otherwise the probe
   # compares against a style the page did not have.
-  pz_js(
+  pz_evaluate(
     page,
     "const s = document.createElement('style');
      s.textContent = 'body:last-child #pos-colored { color: #d62828; }'

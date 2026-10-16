@@ -747,7 +747,7 @@ test_that("a custom root resolves assets outside the page's directory", {
   expect_match(server$url, "/reference/index[.]html$")
 
   page <- local_page(server)
-  status <- pz_js(page, "fetch('../deps/styles.css').then(r => r.status)")
+  status <- pz_evaluate(page, "fetch('../deps/styles.css').then(r => r.status)")
   expect_identical(status, 200L)
 })
 

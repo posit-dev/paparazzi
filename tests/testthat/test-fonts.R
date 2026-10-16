@@ -16,7 +16,7 @@ local_corrupt_font <- function(.env = parent.frame()) {
 }
 
 page_font_families <- function(page) {
-  unlist(pz_js(
+  unlist(pz_evaluate(
     page,
     "[...document.fonts].map(f => f.family + '|' + f.weight + '|' + f.status)"
   ))
@@ -201,7 +201,7 @@ test_that("a staged font object resolves to its quoted family with fallback", {
   )
 
   pz_annotate(staged, "h1", label = "Hi")
-  style <- pz_js(
+  style <- pz_evaluate(
     page,
     "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').style.fontFamily"
   )
@@ -213,7 +213,7 @@ test_that("badge text width differs from the sans-serif fallback", {
   page <- local_page()
   pz_stage_fonts(page, pz_font_file("Silkscreen", silkscreen_fixture()))
   badge_width <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-annotation span').offsetWidth"
     )
@@ -284,13 +284,13 @@ test_that("re-staging a face with a different source replaces it in the document
   # Same family key, different bytes: stands in for a second source
   bungee <- pz_font_file("Silkscreen", bungee_fixture())
   face_count <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       "[...document.fonts].filter(f => f.family === 'Silkscreen' && f.weight === '400').length"
     )
   }
   probe_width <- function() {
-    pz_js(
+    pz_evaluate(
       page,
       r"[
 (() => {

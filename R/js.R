@@ -1,8 +1,10 @@
 #' Evaluate JavaScript in the page
 #'
 #' Evaluates `expr` in the page, optionally awaiting a returned promise, and
-#' returns the resulting value. This is the primitive all element work uses,
-#' and an escape hatch for one-off scripts. Unlike most `pz_*()` functions it
+#' returns the resulting value. This is paparazzi's equivalent of Playwright's
+#' `page.evaluate()` (and likewise Puppeteer and the CDP `Runtime.evaluate`).
+#' It is the primitive all element work uses and an escape hatch for one-off
+#' scripts. Unlike most `pz_*()` functions it
 #' **ends the chain**: it returns the value, not the context.
 #'
 #' @inheritParams pz_act_click
@@ -15,17 +17,17 @@
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' pz_js(page, "document.querySelectorAll('.task').length")
+#' pz_evaluate(page, "document.querySelectorAll('.task').length")
 #'
 #' # Arrays come back as lists
-#' pz_js(page, "[...document.querySelectorAll('.task-priority')].map(el => el.textContent)")
+#' pz_evaluate(page, "[...document.querySelectorAll('.task-priority')].map(el => el.textContent)")
 #'
 #' # Returned promises are awaited
-#' pz_js(page, "new Promise(resolve => setTimeout(() => resolve('done'), 100))")
+#' pz_evaluate(page, "new Promise(resolve => setTimeout(() => resolve('done'), 100))")
 #' pz_close(page)
 #'
 #' @export
-pz_js <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
+pz_evaluate <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
   check_context(ctx)
   check_dots_empty()
   check_string(expr)

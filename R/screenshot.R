@@ -122,7 +122,7 @@ pz_screenshot <- function(ctx, path = NULL, ..., frame = NULL) {
   if (implicit && knitting) {
     return(knitr::include_graphics(
       path,
-      dpi = 96 * pz_js(ctx, "window.devicePixelRatio")
+      dpi = 96 * pz_evaluate(ctx, "window.devicePixelRatio")
     ))
   }
   if (implicit) {
@@ -227,7 +227,7 @@ clip_viewport <- function(ctx, call = caller_env()) {
 }
 
 page_scroll <- function(ctx) {
-  unlist(pz_js(ctx, "[window.scrollX, window.scrollY]"))
+  unlist(pz_evaluate(ctx, "[window.scrollX, window.scrollY]"))
 }
 
 clip_rects_union <- function(ctx, rects, call = caller_env()) {
@@ -257,7 +257,7 @@ clip_rects_union <- function(ctx, rects, call = caller_env()) {
 # same reason).
 screenshot_capture <- function(ctx, clip, call = caller_env()) {
   cursor_sync(ctx)
-  pz_js(
+  pz_evaluate(
     ctx,
     paste0(ANNOTATION_LAYER_JS, "?.sync()")
   )

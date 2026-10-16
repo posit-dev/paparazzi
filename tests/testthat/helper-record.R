@@ -8,7 +8,7 @@ local_record_page <- function(.env = parent.frame()) {
 
 # Classic scrollbars reduce the visual viewport; zoom changes its pixel density.
 record_viewport_png_size <- function(page) {
-  size <- unlist(pz_js(
+  size <- unlist(pz_evaluate(
     page,
     "[window.visualViewport.width, window.visualViewport.height]"
   ))

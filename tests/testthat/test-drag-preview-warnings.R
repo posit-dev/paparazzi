@@ -16,7 +16,7 @@ test_that('redaction rejects unsafe capture before the library while preserving 
       pz_annotate_redact(page, '.task-list')
     } else if (case == 'hidden-descendant') {
       pz_annotate_redact(page, '#preview-marker')
-      pz_js(
+      pz_evaluate(
         page,
         'document.querySelector("#preview-marker").style.display = "none"'
       )
@@ -30,13 +30,13 @@ test_that('redaction rejects unsafe capture before the library while preserving 
       )
     }
     if (case == 'unavailable') {
-      pz_js(
+      pz_evaluate(
         page,
         'document.querySelector("#paparazzi-overlay-root").shadowRoot.querySelector(".pz-annotations").remove()'
       )
     }
     if (case == 'invalid') {
-      pz_js(
+      pz_evaluate(
         page,
         'document.querySelector("#paparazzi-overlay-root").shadowRoot.querySelector(".pz-annotations").pz.dragPreviewSafety = () => ({safe:"unknown"})'
       )
@@ -73,10 +73,10 @@ test_that('redaction rejects unsafe capture before the library while preserving 
       expect_match(conditionMessage(warnings[[1]]), 'Drag preview section')
     }
     expect_equal(
-      pz_js(page, 'window.__previewCaptures || 0'),
+      pz_evaluate(page, 'window.__previewCaptures || 0'),
       if (safe) 1 else 0
     )
-    expect_true(pz_js(
+    expect_true(pz_evaluate(
       page,
       'document.querySelectorAll(".task")[1] === window.__previewSource'
     ))
@@ -115,11 +115,14 @@ test_that('optional capture, decode, show, move and settle failures warn once an
     original_boot <- drag_preview_boot_js
     original_prepare <- drag_preview_prepare
     if (method == 'decode') {
-      pz_js(
+      pz_evaluate(
         page,
         "window.__realDecode = Image.prototype.decode"
       )
-      withr::defer(pz_js(page, 'Image.prototype.decode = window.__realDecode'))
+      withr::defer(pz_evaluate(
+        page,
+        'Image.prototype.decode = window.__realDecode'
+      ))
     }
     local_mocked_bindings(
       drag_preview_boot_js = function() {
@@ -137,7 +140,7 @@ test_that('optional capture, decode, show, move and settle failures warn once an
       drag_preview_prepare = function(state, els, from) {
         original_prepare(state, els, from)
         if (method %in% c('show', 'move', 'settle')) {
-          pz_js(
+          pz_evaluate(
             page,
             sprintf(
               r"[
@@ -184,14 +187,14 @@ test_that('optional capture, decode, show, move and settle failures warn once an
       '<anonymous>|\\n\\s+at ',
       conditionMessage(warnings[[1]])
     ))
-    expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
-    expect_true(pz_js(
+    expect_equal(pz_evaluate(page, 'window.__previewCaptures'), 1)
+    expect_true(pz_evaluate(
       page,
       'document.querySelectorAll(".task")[1] === window.__previewSource'
     ))
     expect_true(drag_preview_absent(page))
     if (method %in% c('show', 'move', 'settle')) {
-      expect_true(pz_js(
+      expect_true(pz_evaluate(
         page,
         'window.__previewController.source === null && window.__previewController.image === null'
       ))
@@ -215,7 +218,7 @@ test_that('unsafe font stylesheets skip capture without mutations or changing th
       'OpaquePreviewFont',
       test_path('fixtures', 'fonts', 'silkscreen-400.woff2')
     )
-    expect_true(pz_js(
+    expect_true(pz_evaluate(
       page,
       sprintf(
         "(() => {
@@ -252,7 +255,7 @@ test_that('unsafe font stylesheets skip capture without mutations or changing th
       )
     ))
     drag_preview_stylesheet_guard(page)
-    before <- pz_js(page, 'window.__previewStyleSnapshot()')
+    before <- pz_evaluate(page, 'window.__previewStyleSnapshot()')
     expect_equal(before$source[[1]], 'rgb(12, 34, 56)')
     pz_record_start(
       page,
@@ -293,18 +296,18 @@ test_that('unsafe font stylesheets skip capture without mutations or changing th
       if (case == 'unreadable') 'HTTP' else 'data URLs in @font-face rules'
     )
     expect_match(message, 'Drag preview section')
-    expect_equal(pz_js(page, 'window.__previewCaptures || 0'), 0)
-    expect_equal(pz_js(page, 'window.__previewInsertions'), 0)
-    expect_equal(pz_js(page, 'window.__previewStyleSnapshot()'), before)
-    expect_true(pz_js(
+    expect_equal(pz_evaluate(page, 'window.__previewCaptures || 0'), 0)
+    expect_equal(pz_evaluate(page, 'window.__previewInsertions'), 0)
+    expect_equal(pz_evaluate(page, 'window.__previewStyleSnapshot()'), before)
+    expect_true(pz_evaluate(
       page,
       'document.querySelectorAll(".task")[1] === window.__previewSource'
     ))
     expect_equal(
-      unlist(pz_js(page, 'window.__previewEvents.map(e => e.type)')),
+      unlist(pz_evaluate(page, 'window.__previewEvents.map(e => e.type)')),
       c('dragstart', 'drop', 'dragend')
     )
-    expect_true(pz_js(
+    expect_true(pz_evaluate(
       page,
       'window.__previewEvents.every(e => e.trusted) && window.__previewEvents.find(e => e.type === "drop").payload === window.__previewSource.dataset.id'
     ))
@@ -324,7 +327,7 @@ test_that('dragstart transforms and filters deliberately disable the captured pr
     page <- local_task_page(width = 800, height = 900)
     page <- pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         "document.addEventListener('dragstart', e => {
@@ -349,7 +352,7 @@ test_that('dragstart transforms and filters deliberately disable the captured pr
       },
       drag_preview_prepare = function(state, els, from) {
         original_prepare(state, els, from)
-        pz_js(
+        pz_evaluate(
           page,
           paste0('window.__previewController = ', DRAG_PREVIEW_CONTROLLER_JS)
         )
@@ -378,21 +381,21 @@ test_that('dragstart transforms and filters deliberately disable the captured pr
       'Use a source without transforms'
     )
     expect_match(conditionMessage(warnings[[1]]), 'Drag preview section')
-    expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
-    expect_identical(pz_js(page, 'window.__previewFontEmbedCSS'), '')
-    expect_true(pz_js(
+    expect_equal(pz_evaluate(page, 'window.__previewCaptures'), 1)
+    expect_identical(pz_evaluate(page, 'window.__previewFontEmbedCSS'), '')
+    expect_true(pz_evaluate(
       page,
       'window.__previewController.source === null && window.__previewController.image === null'
     ))
-    expect_true(pz_js(
+    expect_true(pz_evaluate(
       page,
       'document.querySelectorAll(".task")[1] === window.__previewSource'
     ))
     expect_equal(
-      unlist(pz_js(page, 'window.__previewEvents.map(e => e.type)')),
+      unlist(pz_evaluate(page, 'window.__previewEvents.map(e => e.type)')),
       c('dragstart', 'drop', 'dragend')
     )
-    expect_true(pz_js(
+    expect_true(pz_evaluate(
       page,
       'window.__previewEvents.every(e => e.trusted) && window.__previewEvents.find(e => e.type === "drop").payload === window.__previewSource.dataset.id'
     ))
@@ -412,7 +415,7 @@ test_that('a real missing local image disables capture without blocking the drag
   page <- pz_stage(page, pause = 0)
   drag_preview_task_marker(page)
 
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "new Promise(resolve => {
       const image = document.createElement('img');
@@ -429,7 +432,7 @@ test_that('a real missing local image disables capture without blocking the drag
     })"
   ))
 
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "(() => {
       const image = document.querySelector('#preview-missing-image');
@@ -491,14 +494,14 @@ test_that('a real missing local image disables capture without blocking the drag
   )
 
   expect_true(carried)
-  expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
+  expect_equal(pz_evaluate(page, 'window.__previewCaptures'), 1)
   expect_true(drag_preview_absent(page))
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     'document.querySelectorAll(".task")[1] === window.__previewSource'
   ))
   expect_equal(
-    unlist(pz_js(
+    unlist(pz_evaluate(
       page,
       "Array.from(document.querySelectorAll('.task-title')).slice(0,3).map(n => n.textContent.trim())"
     )),
@@ -513,7 +516,7 @@ test_that('SVG use and iframe skip capture before copying outside the source sub
   check_use <- function(redacted, iframe = FALSE) {
     page <- local_page(width = 800, height = 600)
     page <- pz_stage(page, pause = 0)
-    pz_js(
+    pz_evaluate(
       page,
       "(() => {
         document.body.insertAdjacentHTML('beforeend', `
@@ -538,7 +541,7 @@ test_that('SVG use and iframe skip capture before copying outside the source sub
       })()"
     )
     if (iframe) {
-      expect_true(pz_js(
+      expect_true(pz_evaluate(
         page,
         "new Promise(resolve => {
           const frame = document.createElement('iframe');
@@ -557,7 +560,7 @@ test_that('SVG use and iframe skip capture before copying outside the source sub
       # in html-to-image's ensureSVGSymbols, outside source containment checks.
       pz_annotate_redact(page, '#preview-definitions')
     }
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('#preview-definitions').style.display = 'none'"
     )
@@ -591,13 +594,19 @@ test_that('SVG use and iframe skip capture before copying outside the source sub
       'Use a source without these references'
     )
     expect_match(conditionMessage(warnings[[1]]), 'Drag preview section')
-    expect_equal(pz_js(page, 'window.__previewCaptures || 0'), 0)
+    expect_equal(pz_evaluate(page, 'window.__previewCaptures || 0'), 0)
     expect_equal(
-      pz_js(page, "document.querySelector('#preview-target').dataset.drops"),
+      pz_evaluate(
+        page,
+        "document.querySelector('#preview-target').dataset.drops"
+      ),
       '1'
     )
     expect_equal(
-      pz_js(page, "document.querySelector('#preview-target').dataset.payload"),
+      pz_evaluate(
+        page,
+        "document.querySelector('#preview-target').dataset.payload"
+      ),
       'svg-use'
     )
     expect_true(drag_preview_absent(page))

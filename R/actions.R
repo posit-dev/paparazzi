@@ -215,7 +215,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 
   if (is.null(target) && is.null(scope_top(ctx))) {
     if (recorder_active(ctx$page) && isTRUE(ctx_stage(ctx)$camera_follow)) {
-      rect <- pz_js(
+      rect <- pz_evaluate(
         ctx,
         "(() => { const e = document.activeElement; if (!e || e === document.body) return null; const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })()"
       )
@@ -313,7 +313,7 @@ pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
   timeout <- ctx$page$default_timeout
   mod <- NULL
   if (any(grepl("(^|\\+)mod\\+", key, ignore.case = TRUE))) {
-    mac <- pz_js(
+    mac <- pz_evaluate(
       ctx,
       "/^mac/i.test(navigator.userAgentData?.platform || navigator.platform || '')"
     )
@@ -731,7 +731,7 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
 #'
 #' # At the root, the container is the page itself
 #' page |> pz_act_scroll(to = "top")
-#' pz_js(page, "window.scrollY")
+#' pz_evaluate(page, "window.scrollY")
 #' pz_close(page)
 #'
 #' @inheritSection paparazzi-actions Acting on the page

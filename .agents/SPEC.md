@@ -242,7 +242,7 @@ Getters return values, so they end the chain. They're named `pz_get_*()`, parall
 | `pz_get_elements()` | tibble: `tag`, `id`, `class`, `text`, one row per match | – |
 | `pz_get_html()` | character, outer HTML, one per match | – |
 | `pz_get_url()` / `pz_get_title()` | character | `pz_expect_url()` / `pz_expect_title()` |
-| `pz_js()` | the JS value | `pz_expect_js()` |
+| `pz_evaluate()` | the JS value | `pz_expect_js()` |
 
 - Same argument rule as everything else: `pz_get_text(ctx, target = NULL, ...)`, `pz_get_attr(ctx, name, target = NULL, ...)`. `target = NULL` means the current scope.
 - Getters auto-wait for at least one match, then return all matches, and error after the timeout. `pz_get_count()` returns immediately, since 0 is a valid answer.
@@ -632,7 +632,7 @@ Shiny idle: `pz_wait_for_shiny_idle()` passes when `shiny:connected` has fired, 
 Escape hatches:
 
 - `pz_chromote(ctx)` returns the underlying `ChromoteSession` for raw CDP calls (not `pz_session()`, which could be confused with the page or Shiny's `session`).
-- `pz_js(ctx, expr, ..., await = TRUE, timeout = NULL)` evaluates JS, awaiting promises, and returns the value (ends the chain). `timeout` bounds the evaluation; `NULL` uses the session default.
+- `pz_evaluate(ctx, expr, ..., await = TRUE, timeout = NULL)` evaluates JS, awaiting promises, and returns the value (ends the chain). `timeout` bounds the evaluation; `NULL` uses the session default.
 
 Inspecting:
 
@@ -859,6 +859,6 @@ Arguments added to existing functions: `pz_record_start(captions = c("burn", "vt
 | Function | Signature | Name |
 |---|---|---|
 | `pz_chromote()` | `(ctx)` → `ChromoteSession` | confirmed |
-| `pz_js()` | `(ctx, expr, ..., await = TRUE, timeout = NULL)` → value | confirmed |
+| `pz_evaluate()` | `(ctx, expr, ..., await = TRUE, timeout = NULL)` → value | confirmed |
 | `pz_inspect()` | `(ctx, target = NULL, ..., show = c("auto", "screenshot", "browser", "none"))` | confirmed |
 | `page$view()` | method: opens the live browser | confirmed |
