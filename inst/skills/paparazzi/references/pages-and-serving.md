@@ -62,7 +62,9 @@ nothing else. You own that server: close its pages, then call
 Device arguments to `pz_open()` are applied before the page loads, so the
 first render already sees them. `scale` is the device pixel ratio, which sets
 the PNG's pixel size. Once you set `width`, `height` or `mobile`, the scale
-defaults to 2 unless you give one.
+defaults to 2 unless you give one. A page you never size renders at the
+browser's own ratio, 1 in headless Chrome, and leaving `scale` unset always
+keeps the current value.
 
 ```r
 phone <- pz_open(

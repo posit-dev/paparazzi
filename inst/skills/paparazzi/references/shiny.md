@@ -166,6 +166,10 @@ testthat::test_that("a high-priority task is shown in the list", {
 })
 ```
 
+`pz_open(timeout = )` sets the page's default timeout, which every later
+wait and expectation inherits; pass a per-call `timeout` only to override
+it for one step.
+
 When tests share one app handle, call `pz_local_page(app)` in each test and
 stop the handle in the suite's teardown. paparazzi tests the rendered page
 through the browser; shinytest2 suits tests built on snapshots of Shiny input

@@ -110,7 +110,8 @@ for (format in formats) {
 ```
 
 `scale = 0.5` halves each dimension; a value above 4 sets the output width in
-pixels (`scale = 800`), and `NULL` keeps the captured size. `fps` defaults to
+pixels (`scale = 800`), and `NULL` (the default) keeps the captured size:
+the recorded region's CSS size times the device pixel ratio. `fps` defaults to
 15. The default capture method polls at that rate, repeating the previous
 frame when nothing changed; `method = "screencast"` captures on visual
 changes instead and can catch more of an animation's in-between states.

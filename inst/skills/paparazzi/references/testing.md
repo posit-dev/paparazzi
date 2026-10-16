@@ -172,7 +172,9 @@ pz_with_page(pz_example("tasks"), function(page) {
 
 For checks no built-in expectation covers, `pz_expect_js()` takes a
 JavaScript function that receives each matched element and returns `true` or
-`false`. At the root, the target defaults to the page body.
+`false`. At the root, the target defaults to the page body. To read a value
+rather than check one, `pz_evaluate()` evaluates JavaScript in the page and
+returns the result; it ends the chain, so assign it instead of piping it.
 
 ```r
 pz_with_page(pz_example("tasks"), function(page) {
