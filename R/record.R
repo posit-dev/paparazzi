@@ -941,7 +941,7 @@ record_capture_settled <- function(
   capture_scale <- 1
   capture_extent <- "viewport"
   if (identical(rec$method, "screencast")) {
-    capture_scale <- 1 / pz_js(page, "window.devicePixelRatio")
+    capture_scale <- 1 / pz_evaluate(page, "window.devicePixelRatio")
     capture_extent <- "surface"
   }
   tryCatch(
@@ -981,7 +981,7 @@ record_screencast_snapshot <- function(page, rec) {
       rec,
       page,
       rec_vt(rec),
-      scale = 1 / pz_js(page, "window.devicePixelRatio"),
+      scale = 1 / pz_evaluate(page, "window.devicePixelRatio"),
       extent = "surface"
     ),
     error = function(e) record_error(rec, e)
@@ -1016,7 +1016,7 @@ record_capture <- function(
   tryCatch(
     {
       size <- if (identical(extent, "surface")) {
-        unlist(pz_js(page, "[window.innerWidth, window.innerHeight]"))
+        unlist(pz_evaluate(page, "[window.innerWidth, window.innerHeight]"))
       }
       page$session$Page$getLayoutMetrics(
         wait_ = FALSE,

@@ -87,7 +87,7 @@ pz_close(page)
 
 # Named arguments in `...` set up the device before the page loads
 phone <- pz_open(pz_example("tasks"), width = 390, height = 844, mobile = TRUE)
-pz_js(phone, "window.innerWidth")
+pz_evaluate(phone, "window.innerWidth")
 pz_screenshot(phone, frame = pz_frame("#new-task", pad = 16))
 pz_close(phone)
 \dontshow{\}) # examplesIf}

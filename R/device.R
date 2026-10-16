@@ -50,7 +50,7 @@
 #'
 #' # Only the settings you supply change
 #' page |> pz_device(width = 390, height = 844, mobile = TRUE)
-#' pz_js(page, "[window.innerWidth, window.devicePixelRatio]")
+#' pz_evaluate(page, "[window.innerWidth, window.devicePixelRatio]")
 #'
 #' page |> pz_device(color_scheme = "dark")
 #' pz_get_style(page, "background-color", target = "body")

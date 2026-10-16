@@ -440,7 +440,7 @@ stage_move_cursor <- function(ctx, point) {
 }
 
 point_hit_rect <- function(ctx, point) {
-  rect <- pz_js(
+  rect <- pz_evaluate(
     ctx,
     paste0(
       "(() => { const el = document.elementFromPoint(",
@@ -601,7 +601,7 @@ scroll_staged <- function(
     if (!is.null(scoped)) {
       els_values(scoped, wheel_container_js, call = call)
     } else {
-      pz_js(ctx, paste0("(", wheel_container_js, ").call([])"))
+      pz_evaluate(ctx, paste0("(", wheel_container_js, ").call([])"))
     }
   }
   wheel_container_hit <- function(aim) {
@@ -614,7 +614,7 @@ scroll_staged <- function(
         call = call
       )
     } else {
-      pz_js(
+      pz_evaluate(
         ctx,
         paste0(
           "(",

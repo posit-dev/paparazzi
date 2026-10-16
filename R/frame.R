@@ -677,7 +677,7 @@ box_union <- function(rects, call = caller_env()) {
 }
 
 page_geometry <- function(ctx, call = caller_env()) {
-  g <- pz_js(
+  g <- pz_evaluate(
     ctx,
     "[window.scrollX, window.scrollY, window.innerWidth, window.innerHeight,
       Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),

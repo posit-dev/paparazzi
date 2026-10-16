@@ -99,7 +99,7 @@ pz_inspect <- function(
       if (knit_image) {
         ctx$inspect_image <- structure(
           path,
-          dpi = 96 * pz_js(ctx, "window.devicePixelRatio"),
+          dpi = 96 * pz_evaluate(ctx, "window.devicePixelRatio"),
           chunk = knitr::opts_current$get("label")
         )
         return(ctx)
@@ -250,7 +250,7 @@ inspect_summary_print <- function(ctx, matches = NULL) {
     )
     return(invisible(NULL))
   }
-  view <- pz_js(
+  view <- pz_evaluate(
     ctx,
     "({href: location.href, width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio, dark: matchMedia('(prefers-color-scheme: dark)').matches})"
   )
@@ -436,7 +436,7 @@ overlay_draw <- function(ctx, scope_rects, target_rects) {
     ),
     auto_unbox = FALSE
   )
-  pz_js(ctx, paste0("(", overlay_draw_js, ")(", data, ")"), await = FALSE)
+  pz_evaluate(ctx, paste0("(", overlay_draw_js, ")(", data, ")"), await = FALSE)
   invisible(TRUE)
 }
 
@@ -471,7 +471,7 @@ overlay_draw_js <- paste0(
 )
 
 overlay_clear <- function(ctx) {
-  pz_js(
+  pz_evaluate(
     ctx,
     paste0(
       "(() => { const h = document.getElementById('",
@@ -486,7 +486,7 @@ overlay_clear <- function(ctx) {
 }
 
 inspect_outlines_hide <- function(ctx) {
-  pz_js(
+  pz_evaluate(
     ctx,
     paste0(
       "(() => { const h = document.getElementById('",
@@ -508,7 +508,7 @@ inspect_outlines_restore <- function(ctx, display) {
     return(invisible(NULL))
   }
   values <- js_literal(as.character(unlist(display)), auto_unbox = FALSE)
-  pz_js(
+  pz_evaluate(
     ctx,
     paste0(
       "(() => { const h = document.getElementById('",

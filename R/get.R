@@ -265,7 +265,7 @@ pz_get_html <- function(ctx, target = NULL, ...) {
 #' @export
 pz_get_url <- function(ctx) {
   check_context(ctx)
-  pz_js(ctx, "location.href")
+  pz_evaluate(ctx, "location.href")
 }
 
 #' Read the page title
@@ -284,7 +284,7 @@ pz_get_url <- function(ctx) {
 #' @export
 pz_get_title <- function(ctx) {
   check_context(ctx)
-  pz_js(ctx, "document.title")
+  pz_evaluate(ctx, "document.title")
 }
 
 get_impl <- function(ctx, target, timeout, read, call = caller_env()) {

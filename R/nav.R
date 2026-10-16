@@ -169,7 +169,10 @@ nav_settle_shiny <- function(page, wait, timeout) {
     }
     app_origin <- sub("/$", "", app$url)
     if (
-      !identical(pz_js(page, "location.origin", timeout = timeout), app_origin)
+      !identical(
+        pz_evaluate(page, "location.origin", timeout = timeout),
+        app_origin
+      )
     ) {
       return(invisible(page))
     }

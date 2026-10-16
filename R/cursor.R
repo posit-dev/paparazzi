@@ -352,7 +352,7 @@ cursor_current_point <- function(ctx) {
   if (!is.null(cur) && !is.null(cur$x)) {
     return(c(x = cur$x, y = cur$y))
   }
-  v <- unlist(pz_js(ctx, "[window.innerWidth, window.innerHeight]"))
+  v <- unlist(pz_evaluate(ctx, "[window.innerWidth, window.innerHeight]"))
   c(x = v[1] / 2, y = v[2] / 2)
 }
 
@@ -427,7 +427,7 @@ cursor_entry_time <- function(start, end, rect) {
 }
 
 cursor_off_frame_point <- function(ctx, side, point) {
-  v <- unlist(pz_js(ctx, "[window.innerWidth, window.innerHeight]"))
+  v <- unlist(pz_evaluate(ctx, "[window.innerWidth, window.innerHeight]"))
   margin <- 40
   x <- if ("left" %in% side) {
     -margin
@@ -716,7 +716,11 @@ cursor_command <- function(ctx, state) {
   state$scale <- ctx_stage(ctx)$cursor_scale
   state$icons <- CURSOR_ART
   json <- js_literal(state, auto_unbox = TRUE, null = "null")
-  pz_js(ctx, paste0("(", cursor_command_js, ")(", json, ")"), await = FALSE)
+  pz_evaluate(
+    ctx,
+    paste0("(", cursor_command_js, ")(", json, ")"),
+    await = FALSE
+  )
 }
 
 # The layer is position: fixed (pointer coordinates are viewport-relative,

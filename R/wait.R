@@ -60,7 +60,7 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
   }
   wait_for_load(ctx$page, timeout = timeout)
   if (
-    !isTRUE(pz_js(
+    !isTRUE(pz_evaluate(
       ctx,
       "!!window.Shiny",
       timeout = max(0.1, remaining())
@@ -123,7 +123,7 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
   )
   passed <- if (budget > 0) {
     tryCatch(
-      isTRUE(pz_js(ctx, idle_js, timeout = max(0.1, remaining() + 0.1))),
+      isTRUE(pz_evaluate(ctx, idle_js, timeout = max(0.1, remaining() + 0.1))),
       paparazzi_error_timeout = function(e) FALSE
     )
   } else {
@@ -175,7 +175,7 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
   timeout <- resolve_timeout(timeout, ctx$page)
   check <- paste0("Promise.resolve(", expr, ").then((v) => !!v)")
   pz_poll(
-    fn = function() isTRUE(pz_js(ctx, check, timeout = timeout)),
+    fn = function() isTRUE(pz_evaluate(ctx, check, timeout = timeout)),
     timeout = timeout,
     loop = ctx$page$child_loop,
     what = paste0("JS condition ", expr)
@@ -376,7 +376,7 @@ NAV_IN_FLIGHT <- list(complete = FALSE, origin = NULL)
 
 nav_snapshot <- function(ctx, timeout) {
   s <- tryCatch(
-    pz_js(
+    pz_evaluate(
       ctx,
       "JSON.stringify([document.readyState === 'complete', performance.timeOrigin])",
       timeout = timeout
@@ -410,7 +410,7 @@ nav_settle <- function(
         loader = ctx$page$session$Page$getFrameTree(
           timeout_ = timeout
         )$frameTree$frame$loaderId,
-        js = pz_js(
+        js = pz_evaluate(
           ctx,
           "JSON.stringify([document.readyState === 'complete', performance.timeOrigin])",
           timeout = timeout

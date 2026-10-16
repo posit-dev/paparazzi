@@ -188,7 +188,7 @@ pz_annotate_clear <- function(ctx, id = NULL, ...) {
     auto_unbox = TRUE,
     null = "null"
   )
-  pz_js(
+  pz_evaluate(
     ctx,
     paste0(
       "(() => { return ",
@@ -289,7 +289,7 @@ annotate_settle <- function(ctx) {
   }
   pz_poll(
     function() {
-      pz_js(
+      pz_evaluate(
         ctx,
         paste0(
           "document.getElementById('",
