@@ -18,8 +18,9 @@ page |>
   pz_expect_count(2, target = ".task")
 ```
 
-"Ready" means the Shiny connection is open, the page isn't `shiny-busy`, and
-no output is `.recalculating`, all holding for at least 200 milliseconds.
+"Ready" means the Shiny connection is open and the page isn't `shiny-busy`,
+both holding for at least 200 milliseconds. An output suspended on a hidden
+tab stays `.recalculating` until the tab shows and doesn't block readiness.
 App paths and Shiny handles wait for this automatically; for an app that's
 already running, use `pz_open(url, wait = "shiny")`.
 
