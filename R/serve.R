@@ -559,10 +559,19 @@ command_start <- function(
         command,
         timeout,
         call,
-        engine = "Command"
+        engine = "command"
       )
     }
-    server <- new_command(command, args, wd, attempt_port, envvars, path, wait)
+    server <- new_command(
+      command,
+      args,
+      wd,
+      attempt_port,
+      envvars,
+      path,
+      wait,
+      call = call
+    )
     failure <- app_wait_failure(server, timeout)
     if (is.null(failure)) {
       return(server)
@@ -571,11 +580,20 @@ command_start <- function(
     if (failure$port_taken && is.null(port) && attempt < max_attempts) {
       next
     }
-    app_startup_error(failure, command, timeout, call, engine = "Command")
+    app_startup_error(failure, command, timeout, call, engine = "command")
   }
 }
 
-new_command <- function(command, args, wd, port, envvars, path, wait) {
+new_command <- function(
+  command,
+  args,
+  wd,
+  port,
+  envvars,
+  path,
+  wait,
+  call = caller_env()
+) {
   log_file <- tempfile(pattern = "paparazzi-command-", fileext = ".log")
   substitute_port <- function(value) {
     if (is.null(value)) {
@@ -583,17 +601,26 @@ new_command <- function(command, args, wd, port, envvars, path, wait) {
     }
     gsub("{port}", as.character(port), value, fixed = TRUE)
   }
-  process <- processx::process$new(
-    command,
-    args = substitute_port(args),
-    wd = wd,
-    # File, never a pipe: an undrained pipe blocks the process's writes.
-    stdout = log_file,
-    stderr = "2>&1",
-    # "current" keeps the inherited environment; envvars override it.
-    env = c("current", substitute_port(envvars)),
-    cleanup = TRUE,
-    cleanup_tree = TRUE
+  process <- tryCatch(
+    processx::process$new(
+      command,
+      args = substitute_port(args),
+      wd = wd,
+      # File, never a pipe: an undrained pipe blocks the process's writes.
+      stdout = log_file,
+      stderr = "2>&1",
+      # "current" keeps the inherited environment; envvars override it.
+      env = c("current", substitute_port(envvars)),
+      cleanup = TRUE,
+      cleanup_tree = TRUE
+    ),
+    error = function(e) {
+      cli::cli_abort(
+        "The command {.val {command}} could not be started: {conditionMessage(e)}",
+        class = "paparazzi_error_command_startup",
+        call = call
+      )
+    }
   )
   PaparazziServe$new(
     process,

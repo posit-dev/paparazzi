@@ -888,16 +888,55 @@ test_that("a command that exits during startup fails with its log", {
 
 test_that("a command that never listens times out and is cleaned up", {
   skip_if_no_command_server()
+  port <- random_port()
   err <- expect_error(
     pz_serve_command(
       file.path(R.home("bin"), "Rscript"),
-      c("-e", "Sys.sleep(30)"),
+      c(
+        "-e",
+        "Sys.sleep(3); httpuv::runServer('127.0.0.1', {port}, list(call = function(req) list(status = 200L, body = 'late')))"
+      ),
+      port = port,
       timeout = 0.5
     ),
     class = "paparazzi_error_command_startup",
     regexp = "did not start"
   )
   expect_match(conditionMessage(err), "within 0.5 seconds", fixed = TRUE)
+  # The would-be server binds at 3 seconds if it survived the timeout.
+  Sys.sleep(3.5)
+  expect_false(app_port_reachable(port))
+})
+
+test_that("an unstartable command fails with a paparazzi startup error", {
+  skip_if_no_command_server()
+  expect_error(
+    pz_serve_command("paparazzi-no-such-command", timeout = 1),
+    "could not be started",
+    class = "paparazzi_error_command_startup"
+  )
+})
+
+test_that("nav auto waits follow the handle's wait declaration", {
+  skip_if_no_chrome()
+  skip_if_no_command_server()
+  server <- command_server(wait = "shiny")
+  withr::defer(server$stop())
+
+  page <- pz_open(server, wait = "load")
+  withr::defer(pz_close(page))
+  # auto resolves to a Shiny wait, which refuses this non-Shiny page
+  expect_error(
+    pz_nav_reload(page),
+    "not a Shiny page",
+    class = "paparazzi_error_unsupported"
+  )
+
+  plain <- command_server()
+  withr::defer(plain$stop())
+  plain_page <- pz_open(plain, wait = "load")
+  withr::defer(pz_close(plain_page))
+  expect_no_error(pz_nav_reload(plain_page))
 })
 
 test_that("the handle's wait declaration routes pz_open's auto wait", {

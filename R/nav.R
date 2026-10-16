@@ -164,10 +164,12 @@ nav_check_response <- function(nav, url, call = caller_env()) {
 nav_settle_shiny <- function(page, wait, timeout) {
   if (identical(wait, "auto")) {
     app <- page$app
-    if (is.null(app) || !identical(app$backend, "shiny")) {
+    if (is.null(app) || !identical(app$wait, "shiny")) {
       return(invisible(page))
     }
-    app_origin <- sub("/$", "", app$url)
+    # location.origin is scheme://host:port; strip any path from the
+    # handle's URL before comparing.
+    app_origin <- sub("^(https?://[^/]+).*$", "\\1", app$url)
     if (
       !identical(
         pz_evaluate(page, "location.origin", timeout = timeout),
