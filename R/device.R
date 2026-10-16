@@ -43,7 +43,8 @@
 #'
 #' @return `ctx`, invisibly.
 #'
-#' @seealso [pz_open()] forwards its `...` here.
+#' @seealso [pz_open()] forwards its `...` here; those dots are dynamic,
+#'   so `pz_open(x, !!!settings)` splices a list of settings.
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))

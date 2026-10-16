@@ -93,5 +93,6 @@ pz_close(page)
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=pz_open]{pz_open()}} forwards its \code{...} here.
+\code{\link[=pz_open]{pz_open()}} forwards its \code{...} here; those dots are dynamic,
+so \code{pz_open(x, !!!settings)} splices a list of settings.
 }

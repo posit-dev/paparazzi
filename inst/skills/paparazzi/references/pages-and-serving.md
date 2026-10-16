@@ -95,6 +95,24 @@ page |>
   pz_expect_visible(target = ".task-list")
 ```
 
+The device dots are dynamic, so a capture script can keep its profiles in
+lists: splice one into `pz_open()` with `!!!` and derive variants with
+`modifyList()`.
+
+```r
+still <- list(
+  width = 1000,
+  height = 720,
+  color_scheme = "light",
+  reduced_motion = TRUE
+)
+tall <- modifyList(still, list(height = 1200))
+
+still_page <- pz_open(pz_example("tasks"), !!!still)
+still_page |> pz_expect_visible(target = ".task-list")
+pz_close(still_page)
+```
+
 ## Navigate, then refind scopes
 
 Navigation functions return the root context and release pinned scopes. Keep

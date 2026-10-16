@@ -44,7 +44,9 @@ running. Shiny app \strong{objects} are not supported; supply an app path
 or a running app's URL instead.}
 
 \item{...}{Forwarded to \code{\link[=pz_device]{pz_device()}} as device settings (e.g.
-\verb{width = 390, mobile = TRUE}); they must be named.}
+\verb{width = 390, mobile = TRUE}); they must be named. The dots are
+dynamic: splice a list of settings with \verb{!!!} to reuse one device
+profile across calls.}
 
 \item{wait}{What to wait for before returning. \code{"auto"} (the default)
 waits for Shiny idle on app paths and handles, and for load on other
@@ -90,6 +92,13 @@ phone <- pz_open(pz_example("tasks"), width = 390, height = 844, mobile = TRUE)
 pz_evaluate(phone, "window.innerWidth")
 pz_screenshot(phone, frame = pz_frame("#new-task", pad = 16))
 pz_close(phone)
+
+# Splice a shared device profile into each call with `!!!`
+still <- list(width = 1000, height = 720, color_scheme = "light")
+tall <- modifyList(still, list(height = 1200))
+page <- pz_open(pz_example("tasks"), !!!still)
+pz_evaluate(page, "[window.innerWidth, window.innerHeight]")
+pz_close(page)
 \dontshow{\}) # examplesIf}
 \dontshow{if (paparazzi:::examples_run("shiny")) withAutoprint(\{ # examplesIf}
 # An app directory runs in a background R process that the page owns.
