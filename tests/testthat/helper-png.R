@@ -1,7 +1,7 @@
 # The page's device pixel ratio at capture time: PNG pixel dimensions
 # are round(css_size * dpr). Read live so expectations stay dpr-agnostic.
 page_dpr <- function(page) {
-  pz_js(page, "window.devicePixelRatio")
+  pz_evaluate(page, "window.devicePixelRatio")
 }
 
 # Decode a PNG file in the page and run `body` (JS statements) with the
@@ -27,7 +27,7 @@ png_canvas_eval <- function(page, path, body) {
     b64,
     body
   )
-  pz_js(page, js)
+  pz_evaluate(page, js)
 }
 
 # One device pixel of a PNG as c(r, g, b, a), at a CSS point.

@@ -43,7 +43,7 @@ test_that("a staged frame is carried by the context", {
 
 test_that("annotated framing includes only attached painted nodes", {
   page <- local_frame_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.body.insertAdjacentHTML('beforeend', '<div id=outer style=\"position:absolute;left:220px;top:180px;width:80px;height:40px\"><div id=child style=\"width:30px;height:20px\"></div></div><div id=other style=\"position:absolute;left:600px;top:180px;width:40px;height:40px\"></div>')"
   )
@@ -86,7 +86,7 @@ test_that("annotated framing includes only attached painted nodes", {
   pz_screenshot(page, painted_png)
   expect_gt(png_dimensions(painted_png)[1], png_dimensions(plain_png)[1])
   expect_identical(ctx_frame(page)$target_box, "annotated")
-  pz_js(page, "document.querySelector('#outer').style.left='250px'")
+  pz_evaluate(page, "document.querySelector('#outer').style.left='250px'")
   moved <- frame_content_box(page, pz_frame("#outer", target_box = "annotated"))
   expect_gt(moved[3], decorated[3])
 
@@ -578,7 +578,7 @@ test_that("a below-fold frame captures without scrolling", {
   pz_screenshot(page, path, frame = pz_frame("#low", pad = 20))
   expect_identical(png_dimensions(path), as.integer(round(c(140, 100) * dpr)))
   expect_png_pixel(page, path, 70, 50, c(200, 120, 30), dpr = dpr)
-  expect_equal(pz_js(page, "window.scrollY"), 0)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 0)
 })
 
 test_that("the frame clamps against geometry read after resolution auto-waits", {
@@ -589,7 +589,7 @@ test_that("the frame clamps against geometry read after resolution auto-waits", 
   # A late element expands the document while the target resolution
   # auto-waits for it; the clamp must see the expanded document, not
   # the pre-wait 2000px one.
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(() => {
       const el = document.createElement('div');
@@ -606,7 +606,7 @@ test_that("the frame clamps against geometry read after resolution auto-waits", 
   # the pre-expansion document: only fresh geometry keeps it capturable.
   expect_identical(png_dimensions(path), as.integer(round(c(104, 104) * dpr)))
   expect_equal(
-    pz_js(page, "document.documentElement.scrollHeight"),
+    pz_evaluate(page, "document.documentElement.scrollHeight"),
     2700
   )
 })
@@ -663,9 +663,9 @@ test_that("an identity frame keeps the viewport on negative RTL scroll", {
   # scrollX negative and the viewport's left portion sits at negative
   # document x. The document clamp must anchor to the real document
   # span, or an identity frame narrows by |scrollX|.
-  pz_js(page, "window.scrollTo(-100, 0)")
+  pz_evaluate(page, "window.scrollTo(-100, 0)")
   skip_if(
-    pz_js(page, "window.scrollX") >= 0,
+    pz_evaluate(page, "window.scrollX") >= 0,
     "browser won't scroll negative in RTL"
   )
 
@@ -685,7 +685,7 @@ test_that("a frame on RTL left-overflow content captures it", {
   # [0, scrollWidth] would reject it as outside the page instead of
   # capturing it.
   skip_if(
-    pz_js(page, "document.body.getBoundingClientRect().left") >= 0,
+    pz_evaluate(page, "document.body.getBoundingClientRect().left") >= 0,
     "browser doesn't overflow RTL documents to the left"
   )
 
@@ -1115,7 +1115,7 @@ test_that("recordings freeze staged targets and fields but measure at the chosen
   page <- local_frame_page()
 
   for (when in c("start", "stop")) {
-    pz_js(page, "document.getElementById('small').style.width = '60px'")
+    pz_evaluate(page, "document.getElementById('small').style.width = '60px'")
     page <- pz_stage_frame(page, "#small", pad = 8)
     out <- withr::local_tempfile(fileext = ".mp4")
     pz_record_start(page, out, hold = c(0, 0), frame = pz_frame(when = when))
@@ -1132,7 +1132,7 @@ test_that("recordings freeze staged targets and fields but measure at the chosen
 
     # Re-staging mid-recording cannot touch the frozen home frame.
     pz_stage_frame(page, "#card", pad = 30)
-    pz_js(page, "document.getElementById('small').style.width = '80px'")
+    pz_evaluate(page, "document.getElementById('small').style.width = '80px'")
     pz_wait(page, 0.2)
     pz_record_stop(page)
     expect_equal(rec$crop$width, if (when == "start") 76 else 96)
@@ -1151,9 +1151,9 @@ test_that("scoped framing stays lazy and detached scopes do not become viewport 
   spec <- frame_effective(scoped, pz_frame())
   expect_null(spec$target)
 
-  pz_js(page, "document.getElementById('card').style.width = '200px'")
+  pz_evaluate(page, "document.getElementById('card').style.width = '200px'")
   expect_equal(frame_clip(scoped, spec)$width, 200)
 
-  pz_js(page, "document.getElementById('card').remove()")
+  pz_evaluate(page, "document.getElementById('card').remove()")
   expect_error(frame_clip(scoped, spec), class = "paparazzi_error_detached")
 })

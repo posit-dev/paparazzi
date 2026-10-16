@@ -84,7 +84,7 @@ local_task_page <- function(..., .env = parent.frame()) {
   skip_if_no_chrome()
   testthat::skip_if_not_installed("httpuv")
   page <- local_page(fixture_server(pz_example("tasks")), ..., .env = .env)
-  testthat::expect_true(pz_js(
+  testthat::expect_true(pz_evaluate(
     page,
     "Array.from(document.styleSheets).every(sheet => { void sheet.cssRules; return true; })"
   ))

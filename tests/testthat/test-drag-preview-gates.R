@@ -58,7 +58,7 @@ test_that('ineligible drags do not boot the preview or call the library', {
         '#preview-target .task-drag-handle',
         preview = TRUE
       ))
-      expect_true(pz_js(
+      expect_true(pz_evaluate(
         page,
         'document.querySelectorAll(".task")[1] === window.__previewSource'
       ))
@@ -126,7 +126,7 @@ test_that('file pages explain unreadable stylesheets and link to drag preview he
   expect_false(grepl('<anonymous>|cssRules|SecurityError', message))
 
   expect_true(drag_preview_absent(page))
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     'document.querySelectorAll(".task")[1] === window.__previewSource'
   ))
@@ -158,7 +158,7 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
     local_mocked_bindings(
       drag_preview_prepare = function(state, els, from) {
         original_prepare(state, els, from)
-        pz_js(
+        pz_evaluate(
           page,
           sprintf(
             r"[
@@ -199,7 +199,7 @@ test_that('real carry errors and interrupts propagate unchanged despite failing 
     expect_identical(caught, failure)
     expect_length(warnings, 0)
     expect_true(drag_preview_absent(page))
-    expect_true(pz_js(
+    expect_true(pz_evaluate(
       page,
       'window.__previewController.source === null && window.__previewController.image === null'
     ))
@@ -229,7 +229,7 @@ test_that('failed interception disposes the prepared image without displaying it
   local_mocked_bindings(
     drag_preview_prepare = function(state, els, from) {
       original_prepare(state, els, from)
-      pz_js(
+      pz_evaluate(
         page,
         sprintf(
           r"[
@@ -268,9 +268,9 @@ test_that('failed interception disposes the prepared image without displaying it
     'injected interception failure'
   )
 
-  expect_equal(pz_js(page, 'window.__previewShows'), 0)
+  expect_equal(pz_evaluate(page, 'window.__previewShows'), 0)
   expect_true(drag_preview_absent(page))
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     'window.__previewController.source === null && window.__previewController.image === null'
   ))
@@ -336,17 +336,17 @@ return new Promise((resolve) => {
   expect_length(warnings, 1)
   expect_s3_class(warnings[[1]], 'paparazzi_warning_drag_preview')
   expect_match(conditionMessage(warnings[[1]]), 'Timed out|timed out')
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     'document.querySelectorAll(".task")[1] === window.__previewSource'
   ))
   expect_true(drag_preview_absent(page))
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     'window.__previewController.source === null && window.__previewController.image === null'
   ))
 
-  pz_js(page, 'window.__releasePreviewCapture()')
+  pz_evaluate(page, 'window.__releasePreviewCapture()')
   # The capture counter increments when toPng is called, before the
   # promise, so no poll can prove the late continuation ran; the correct
   # path is invisible by design. Give it an idle window: these negative
@@ -354,11 +354,11 @@ return new Promise((resolve) => {
   # (wrongly) display or retain.
   pump_loop(page$child_loop, 0.3)
   expect_true(drag_preview_absent(page))
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     'window.__previewController.source === null && window.__previewController.image === null'
   ))
-  expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
+  expect_equal(pz_evaluate(page, 'window.__previewCaptures'), 1)
   pz_record_stop(page)
 })
 
@@ -368,7 +368,7 @@ test_that('settling never guesses a replacement row or an unrendered source box'
     page <- local_task_page(width = 800, height = 900)
     page <- pz_stage(page, pause = 0)
     drag_preview_task_marker(page)
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         r"[
@@ -435,7 +435,7 @@ test_that('a source that gains an iframe after the drop loses its preview silent
 
   # The iframe arrives in the drop handler, after the preview is prepared
   # and before the post-drop settle re-checks the source.
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 document.addEventListener('drop', () => {
@@ -456,7 +456,7 @@ document.addEventListener('drop', () => {
     settled <<- TRUE
     expect_equal(duration, 0)
     expect_true(drag_preview_absent(page))
-    expect_true(pz_js(
+    expect_true(pz_evaluate(
       page,
       "document.querySelector('#preview-source iframe') instanceof HTMLIFrameElement"
     ))

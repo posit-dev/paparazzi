@@ -519,7 +519,10 @@ test_that("explicit holds encode both sequential captions with poll and screenca
       height = 240,
       scale = 1
     )
-    pz_js(page, "document.querySelector('#box').style.backgroundColor = 'red'")
+    pz_evaluate(
+      page,
+      "document.querySelector('#box').style.backgroundColor = 'red'"
+    )
     dir <- withr::local_tempdir()
     out <- file.path(dir, paste0(method, ".mp4"))
     pz_record_start(

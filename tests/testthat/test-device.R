@@ -1,5 +1,5 @@
 js <- function(ctx, expr) {
-  pz_js(ctx, expr)
+  pz_evaluate(ctx, expr)
 }
 
 test_that("pz_device validates its inputs", {

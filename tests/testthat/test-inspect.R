@@ -21,7 +21,7 @@ test_that("the console summary matches the spec format", {
   expect_identical(nchar(got$out[[1]]), getOption("width"))
   expect_match(got$out[[2]], "^URL        .*/inspect\\.html$")
 
-  inner <- unlist(pz_js(
+  inner <- unlist(pz_evaluate(
     page,
     "[window.innerWidth, window.innerHeight, window.devicePixelRatio]"
   ))
@@ -34,7 +34,10 @@ test_that("the console summary matches the spec format", {
   # The scheme is read live from the page (the host OS preference leaks
   # through), so the expectation derives it the same way.
   scheme <- if (
-    isTRUE(pz_js(page, "matchMedia('(prefers-color-scheme: dark)').matches"))
+    isTRUE(pz_evaluate(
+      page,
+      "matchMedia('(prefers-color-scheme: dark)').matches"
+    ))
   ) {
     "dark"
   } else {
@@ -86,7 +89,7 @@ test_that("stale pinned elements warn without aborting", {
   ctx <- pz_find(page, "#insp-btn")
 
   # Detached, but the pinned set still resolves: (live of pinned) + warning.
-  pz_js(page, "document.getElementById('insp-btn').remove()")
+  pz_evaluate(page, "document.getElementById('insp-btn').remove()")
   got <- inspect_capture(function() pz_inspect(ctx))
   expect_identical(got$out[[2]], "Scope      root › `#insp-btn` (0 of 1)")
   expect_identical(got$value, ctx)
@@ -367,7 +370,7 @@ test_that("target outline numbering keeps hidden matches in the count", {
   expect_match(viewed[[1]], "devtools", fixed = TRUE)
   expect_identical(got$out[[4]], "Target     `.insp-pair` → 2 matches")
 
-  texts <- unlist(pz_js(
+  texts <- unlist(pz_evaluate(
     page,
     r"[
 (() => {

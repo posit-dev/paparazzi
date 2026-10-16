@@ -31,11 +31,11 @@ test_that("the device scale factor round-trips", {
   page <- local_device_page()
   pz_device(page, width = 800, height = 600)
 
-  expect_equal(pz_js(page, "innerWidth"), 800)
-  expect_equal(pz_js(page, "devicePixelRatio"), 2)
+  expect_equal(pz_evaluate(page, "innerWidth"), 800)
+  expect_equal(pz_evaluate(page, "devicePixelRatio"), 2)
 
   pz_device(page, scale = 1)
-  expect_equal(pz_js(page, "devicePixelRatio"), 1)
+  expect_equal(pz_evaluate(page, "devicePixelRatio"), 1)
 })
 
 test_that("a staged cursor rasterizes into a screenshot", {
@@ -60,7 +60,7 @@ test_that("a staged file font loads into document.fonts", {
   )
   pz_stage_fonts(page, font)
 
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "[...document.fonts].some(f => f.family === 'Silkscreen' && f.status === 'loaded')"
   ))
@@ -71,12 +71,17 @@ test_that("a served Shiny app boots and responds", {
   page <- local_page(app)
 
   pz_poll(
-    function() grepl("hello paparazzi", pz_js(page, "document.body.innerText")),
+    function() {
+      grepl("hello paparazzi", pz_evaluate(page, "document.body.innerText"))
+    },
     timeout = 10,
     loop = page$page$child_loop,
     what = "the Shiny app's rendered greeting"
   )
-  expect_true(grepl("hello paparazzi", pz_js(page, "document.body.innerText")))
+  expect_true(grepl(
+    "hello paparazzi",
+    pz_evaluate(page, "document.body.innerText")
+  ))
 })
 
 test_that("a short recording yields frames and a playable video", {

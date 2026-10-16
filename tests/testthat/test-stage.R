@@ -371,12 +371,18 @@ test_that("natural typing is per-character while recording, instant otherwise", 
     pz_act_type("xy", target = "#edit")
   page |> pz_record_stop()
 
-  expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
-  expect_equal(pz_js(page, "document.getElementById('bio').value"), "abc")
-  expect_equal(pz_js(page, "document.getElementById('edit').textContent"), "xy")
-  expect_equal(pz_js(page, "window.__log.inputs.name"), 6)
-  expect_equal(pz_js(page, "window.__log.inputs.bio"), 3)
-  expect_equal(pz_js(page, "window.__log.inputs.edit"), 2)
+  expect_equal(
+    pz_evaluate(page, "document.getElementById('name').value"),
+    "otters"
+  )
+  expect_equal(pz_evaluate(page, "document.getElementById('bio').value"), "abc")
+  expect_equal(
+    pz_evaluate(page, "document.getElementById('edit').textContent"),
+    "xy"
+  )
+  expect_equal(pz_evaluate(page, "window.__log.inputs.name"), 6)
+  expect_equal(pz_evaluate(page, "window.__log.inputs.bio"), 3)
+  expect_equal(pz_evaluate(page, "window.__log.inputs.edit"), 2)
 
   # typing = "instant" is one insertion even while recording.
   page2 <- local_cursor_page()
@@ -390,14 +396,17 @@ test_that("natural typing is per-character while recording, instant otherwise", 
   page2 |> pz_act_type("otters", target = "#name")
   page2 |> pz_record_stop()
 
-  expect_equal(pz_js(page2, "window.__log.inputs.name"), 1)
-  expect_equal(pz_js(page2, "document.getElementById('name').value"), "otters")
+  expect_equal(pz_evaluate(page2, "window.__log.inputs.name"), 1)
+  expect_equal(
+    pz_evaluate(page2, "document.getElementById('name').value"),
+    "otters"
+  )
 
   # Not recording: instant whatever the setting.
   page3 <- local_cursor_page()
   page3 |> pz_stage()
   page3 |> pz_act_type("otters", target = "#name")
-  expect_equal(pz_js(page3, "window.__log.inputs.name"), 1)
+  expect_equal(pz_evaluate(page3, "window.__log.inputs.name"), 1)
 })
 
 test_that("smooth scrolling uses real wheel events while recording", {
@@ -415,26 +424,29 @@ test_that("smooth scrolling uses real wheel events while recording", {
   # per-event wheel rounding is corrected to the target, so the page ends
   # on target within the correction threshold.
   page |> pz_act_scroll(by = c(0, 600), duration = 0.1)
-  expect_true(abs(pz_js(page, "window.scrollY") - 600) <= 2)
-  expect_true(pz_js(page, "window.__log.wheels") > 0)
-  expect_true(pz_js(page, "window.__log.wheelsTrusted"))
+  expect_true(abs(pz_evaluate(page, "window.scrollY") - 600) <= 2)
+  expect_true(pz_evaluate(page, "window.__log.wheels") > 0)
+  expect_true(pz_evaluate(page, "window.__log.wheelsTrusted"))
 
   page |> pz_act_scroll(to = "bottom", duration = 0.1)
-  bottom <- pz_js(
+  bottom <- pz_evaluate(
     page,
     "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
   )
-  expect_true(abs(pz_js(page, "window.scrollY") - bottom) <= 2)
+  expect_true(abs(pz_evaluate(page, "window.scrollY") - bottom) <= 2)
 
   # A scoped scroll wheels the scope's container, not the page.
-  wheels <- pz_js(page, "window.__log.wheels")
+  wheels <- pz_evaluate(page, "window.__log.wheels")
   page |>
     pz_find("#scroller") |>
     pz_act_scroll(to = "bottom", duration = 0.1)
   expect_true(
-    abs(pz_js(page, "document.getElementById('scroller').scrollTop") - 650) <= 2
+    abs(
+      pz_evaluate(page, "document.getElementById('scroller').scrollTop") - 650
+    ) <=
+      2
   )
-  expect_true(pz_js(page, "window.__log.wheels") > wheels)
+  expect_true(pz_evaluate(page, "window.__log.wheels") > wheels)
 
   page |> pz_record_stop()
 })
@@ -472,7 +484,7 @@ test_that("wheel_position_settled falls back to the latest read when never still
 
 test_that("staged root offsets and directions correct incomplete wheels", {
   page <- local_cursor_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>');
      document.getElementById('spacer').style.width = '2000px'"
@@ -481,13 +493,13 @@ test_that("staged root offsets and directions correct incomplete wheels", {
 
   scroll_staged(page, NULL, by = c(120, 300), to = NULL, duration = 0.01)
   expect_equal(
-    unlist(pz_js(page, "[window.scrollX, window.scrollY]")),
+    unlist(pz_evaluate(page, "[window.scrollX, window.scrollY]")),
     c(120, 300)
   )
 
   scroll_staged(page, NULL, by = c(-40, -100), to = NULL, duration = 0.01)
   expect_equal(
-    unlist(pz_js(page, "[window.scrollX, window.scrollY]")),
+    unlist(pz_evaluate(page, "[window.scrollX, window.scrollY]")),
     c(80, 200)
   )
 
@@ -499,20 +511,23 @@ test_that("staged root offsets and directions correct incomplete wheels", {
     duration = 0.01
   )
   expect_equal(
-    unlist(pz_js(page, "[window.scrollX, window.scrollY]")),
-    unlist(pz_js(
+    unlist(pz_evaluate(page, "[window.scrollX, window.scrollY]")),
+    unlist(pz_evaluate(
       page,
       "[document.scrollingElement.scrollWidth - document.documentElement.clientWidth, document.scrollingElement.scrollHeight - document.documentElement.clientHeight]"
     ))
   )
 
   scroll_staged(page, NULL, by = NULL, to = c("left", "top"), duration = 0.01)
-  expect_equal(unlist(pz_js(page, "[window.scrollX, window.scrollY]")), c(0, 0))
+  expect_equal(
+    unlist(pz_evaluate(page, "[window.scrollX, window.scrollY]")),
+    c(0, 0)
+  )
 })
 
 test_that("staged scoped fallback uses offsets and directions without root serialization", {
   page <- local_cursor_page()
-  pz_js(
+  pz_evaluate(
     page,
     "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>');
      document.querySelector('#scroller > div').style.width = '600px'"
@@ -526,7 +541,7 @@ test_that("staged scoped fallback uses offsets and directions without root seria
     }
   )
   position <- function() {
-    unlist(pz_js(
+    unlist(pz_evaluate(
       page,
       "[document.getElementById('scroller').scrollLeft, document.getElementById('scroller').scrollTop]"
     ))
@@ -541,7 +556,7 @@ test_that("staged scoped fallback uses offsets and directions without root seria
   scroll_staged(ctx, scoped, by = NULL, to = "center", duration = 0.01)
   expect_equal(
     position(),
-    unlist(pz_js(
+    unlist(pz_evaluate(
       page,
       "(() => { const s = document.getElementById('scroller'); return [Math.round((s.scrollWidth - s.clientWidth) / 2), Math.round((s.scrollHeight - s.clientHeight) / 2)]; })()"
     ))
@@ -553,7 +568,7 @@ test_that("staged scoped fallback uses offsets and directions without root seria
 
 test_that("a nested scroller obstructs a scoped wheel and stays untouched", {
   page <- local_cursor_page()
-  pz_js(
+  pz_evaluate(
     page,
     "(() => {
     const outer = document.getElementById('scroller');
@@ -571,15 +586,15 @@ test_that("a nested scroller obstructs a scoped wheel and stays untouched", {
     duration = 0.01
   )
   expect_equal(
-    pz_js(page, "document.getElementById('scroller').scrollTop"),
+    pz_evaluate(page, "document.getElementById('scroller').scrollTop"),
     200
   )
   expect_equal(
-    pz_js(page, "document.getElementById('inner-scroller').scrollTop"),
+    pz_evaluate(page, "document.getElementById('inner-scroller').scrollTop"),
     0
   )
-  expect_equal(pz_js(page, "window.__log.wheels"), 0)
-  expect_equal(pz_js(page, "window.scrollY"), 0)
+  expect_equal(pz_evaluate(page, "window.__log.wheels"), 0)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 0)
 })
 
 test_that("pz_act_scroll forwards duration to staged wheels for by, to, and target", {
@@ -603,15 +618,15 @@ test_that("pz_act_scroll forwards duration to staged wheels for by, to, and targ
   )
 
   page |> pz_act_scroll(by = c(0, 300), duration = 0.05)
-  expect_equal(pz_js(page, "window.scrollY"), 300)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 300)
   expect_true(length(wheel_durations) > 0)
   expect_true(all(wheel_durations == 0.05))
   wheel_durations <- numeric()
 
   page |> pz_act_scroll(to = "bottom", duration = 0.05)
   expect_equal(
-    pz_js(page, "window.scrollY"),
-    pz_js(
+    pz_evaluate(page, "window.scrollY"),
+    pz_evaluate(
       page,
       "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
     )
@@ -621,16 +636,16 @@ test_that("pz_act_scroll forwards duration to staged wheels for by, to, and targ
   wheel_durations <- numeric()
 
   page |> pz_act_scroll(target = "#plain", duration = 0.05)
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "document.getElementById('plain').getBoundingClientRect().y >= 0"
   ))
   expect_true(length(wheel_durations) > 0)
   expect_true(all(wheel_durations == 0.05))
 
-  before <- pz_js(page, "window.scrollY")
+  before <- pz_evaluate(page, "window.scrollY")
   page |> pz_act_scroll(by = c(0, 0), duration = 0)
-  expect_equal(pz_js(page, "window.scrollY"), before)
+  expect_equal(pz_evaluate(page, "window.scrollY"), before)
 
   page |> pz_record_stop()
 })
@@ -646,24 +661,24 @@ test_that("zero-duration scrolls land instantly without queued wheel events", {
     )
 
   page |> pz_act_scroll(by = c(0, 300), duration = 0L)
-  expect_equal(pz_js(page, "window.scrollY"), 300)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 300)
 
   page |> pz_act_scroll(to = "bottom", duration = 0)
   expect_equal(
-    pz_js(page, "window.scrollY"),
-    pz_js(
+    pz_evaluate(page, "window.scrollY"),
+    pz_evaluate(
       page,
       "document.scrollingElement.scrollHeight - document.documentElement.clientHeight"
     )
   )
 
   page |> pz_act_scroll(target = "#plain", duration = 0)
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "document.getElementById('plain').getBoundingClientRect().y >= 0"
   ))
 
-  expect_equal(pz_js(page, "window.__log.wheels"), 0)
+  expect_equal(pz_evaluate(page, "window.__log.wheels"), 0)
 
   page |> pz_record_stop()
 })
@@ -681,9 +696,9 @@ test_that("the auto-scroll before actions is the same staged wheel scroll", {
   page |> pz_act_click("#below")
   page |> pz_record_stop()
 
-  expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
-  expect_true(pz_js(page, "window.__log.wheels") > 0)
-  expect_true(pz_js(page, "window.scrollY") > 500)
+  expect_equal(pz_evaluate(page, "window.__log.belowClicks"), 1)
+  expect_true(pz_evaluate(page, "window.__log.wheels") > 0)
+  expect_true(pz_evaluate(page, "window.scrollY") > 500)
 })
 
 test_that("a target visible in a below-the-fold container is wheeled into view", {
@@ -693,7 +708,7 @@ test_that("a target visible in a below-the-fold container is wheeled into view",
   # clip: the target is visible to the container yet off-screen, so the
   # auto-scroll must reach past the nearest scrollable ancestor to the
   # document.
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {
@@ -724,12 +739,15 @@ test_that("a target visible in a below-the-fold container is wheeled into view",
   page |> pz_act_click("#deep-btn")
   page |> pz_record_stop()
 
-  expect_equal(pz_js(page, "window.__log.deepClicks"), 1)
+  expect_equal(pz_evaluate(page, "window.__log.deepClicks"), 1)
   # Only the document needed scrolling: the container was already
   # showing the target.
-  expect_equal(pz_js(page, "document.getElementById('deep').scrollTop"), 0)
-  expect_true(pz_js(page, "window.scrollY") > 0)
-  expect_true(pz_js(page, "window.__log.wheels") > 0)
+  expect_equal(
+    pz_evaluate(page, "document.getElementById('deep').scrollTop"),
+    0
+  )
+  expect_true(pz_evaluate(page, "window.scrollY") > 0)
+  expect_true(pz_evaluate(page, "window.__log.wheels") > 0)
 })
 
 test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
@@ -756,7 +774,7 @@ test_that("cursor = FALSE then cursor = NULL restores the auto behavior", {
 
   page |> pz_record_stop()
 
-  expect_equal(pz_js(page, "window.__log.clicks"), 2)
+  expect_equal(pz_evaluate(page, "window.__log.clicks"), 2)
 })
 
 test_that("recording reconciles overlay visibility from the recording context", {
@@ -787,7 +805,7 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
   # application must run before any wheel fires, so recorded and
   # unrecorded chains end in the identical state.
   cover_center <- function(page) {
-    pz_js(
+    pz_evaluate(
       page,
       r"[
 (() => {
@@ -814,30 +832,33 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
     )
 
   page |> pz_act_scroll(by = c(0, 400))
-  expect_equal(pz_js(page, "window.scrollY"), 400)
+  expect_equal(pz_evaluate(page, "window.scrollY"), 400)
 
   # Not one wheel fired: the scroll was applied instantly, and the
   # covering scroller is untouched.
-  expect_equal(pz_js(page, "window.__log.wheels"), 0)
+  expect_equal(pz_evaluate(page, "window.__log.wheels"), 0)
   expect_equal(
-    pz_js(page, "document.getElementById('center-scroller').scrollTop"),
+    pz_evaluate(page, "document.getElementById('center-scroller').scrollTop"),
     0
   )
 
   # The auto-scroll before an action hits the same fallback: the fixed
   # scroller still covers every root wheel point.
   page |> pz_act_click("#below")
-  expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
-  expect_equal(pz_js(page, "window.__log.wheels"), 0)
+  expect_equal(pz_evaluate(page, "window.__log.belowClicks"), 1)
+  expect_equal(pz_evaluate(page, "window.__log.wheels"), 0)
   expect_equal(
-    pz_js(page, "document.getElementById('center-scroller').scrollTop"),
+    pz_evaluate(page, "document.getElementById('center-scroller').scrollTop"),
     0
   )
 
   page |> pz_record_stop()
   recorded <- c(
-    scrollY = pz_js(page, "window.scrollY"),
-    scoped = pz_js(page, "document.getElementById('center-scroller').scrollTop")
+    scrollY = pz_evaluate(page, "window.scrollY"),
+    scoped = pz_evaluate(
+      page,
+      "document.getElementById('center-scroller').scrollTop"
+    )
   )
 
   page2 <- local_cursor_page()
@@ -845,8 +866,8 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
   page2 |> pz_act_scroll(by = c(0, 400))
   page2 |> pz_act_click("#below")
   unrecorded <- c(
-    scrollY = pz_js(page2, "window.scrollY"),
-    scoped = pz_js(
+    scrollY = pz_evaluate(page2, "window.scrollY"),
+    scoped = pz_evaluate(
       page2,
       "document.getElementById('center-scroller').scrollTop"
     )
@@ -858,7 +879,7 @@ test_that("a nested scroller over the viewport center never eats root wheels", {
 test_that("an off-screen scope is brought into view with staged wheels too", {
   skip_if_no_av()
   page <- local_cursor_page()
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 (() => {
@@ -898,12 +919,12 @@ test_that("an off-screen scope is brought into view with staged wheels too", {
   expect_true(length(wheel_durations) > 0)
   expect_true(all(wheel_durations == 0.05))
 
-  expect_true(pz_js(page, "window.__log.wheels") > 0)
+  expect_true(pz_evaluate(page, "window.__log.wheels") > 0)
   expect_equal(
-    pz_js(page, "document.getElementById('deep-scope').scrollTop"),
+    pz_evaluate(page, "document.getElementById('deep-scope').scrollTop"),
     0
   )
-  expect_true(pz_js(page, "window.scrollY") > 0)
+  expect_true(pz_evaluate(page, "window.scrollY") > 0)
 })
 
 test_that("the stage pause holds after each action only while recording", {
@@ -927,7 +948,7 @@ test_that("the stage pause holds after each action only while recording", {
   page2 <- local_cursor_page()
   page2 <- page2 |> pz_stage(pause = 0.5)
   page2 |> pz_act_click("#btn")
-  expect_equal(pz_js(page2, "window.__log.clicks"), 1)
+  expect_equal(pz_evaluate(page2, "window.__log.clicks"), 1)
 })
 
 test_that("the stage pause holds after focus and root or scoped blur", {
@@ -953,12 +974,12 @@ test_that("the stage pause holds after focus and root or scoped blur", {
   )
 
   page |> pz_act_focus("#name")
-  expect_true(pz_js(page, "document.activeElement.id === 'name'"))
+  expect_true(pz_evaluate(page, "document.activeElement.id === 'name'"))
   expect_equal(tail(pauses, 1), 0.37)
 
   pauses <- numeric()
   page |> pz_act_blur()
-  expect_false(pz_js(page, "document.activeElement.id === 'name'"))
+  expect_false(pz_evaluate(page, "document.activeElement.id === 'name'"))
   expect_equal(tail(pauses, 1), 0.37)
 
   pauses <- numeric()
@@ -1044,7 +1065,7 @@ test_that("the stage pause holds after press, select_text, and drag too", {
   holds <- numeric()
   page |> pz_act_select_text("Go", target = "#btn")
   expect_equal(tail(holds, 1), pause)
-  expect_equal(pz_js(page, "window.getSelection().toString()"), "Go")
+  expect_equal(pz_evaluate(page, "window.getSelection().toString()"), "Go")
 
   holds <- numeric()
   page |> pz_act_drag("#plain", by = c(50, 0))
@@ -1116,11 +1137,14 @@ test_that("recorded demo glides, types, and scrolls on camera", {
     pz_act_click("#below") |>
     pz_record_stop()
 
-  expect_equal(pz_js(page, "window.__log.clicks"), 1)
-  expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
-  expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
-  expect_equal(pz_js(page, "window.__log.inputs.name"), 6)
-  expect_true(pz_js(page, "window.__log.wheels") > 0)
+  expect_equal(pz_evaluate(page, "window.__log.clicks"), 1)
+  expect_equal(pz_evaluate(page, "window.__log.belowClicks"), 1)
+  expect_equal(
+    pz_evaluate(page, "document.getElementById('name').value"),
+    "otters"
+  )
+  expect_equal(pz_evaluate(page, "window.__log.inputs.name"), 6)
+  expect_true(pz_evaluate(page, "window.__log.wheels") > 0)
 
   # The auto cursor belonged to the recording and left with it.
   expect_equal(cursor_overlay_state(page)[[1]], 0)
@@ -1168,13 +1192,16 @@ test_that("without a recording the same chain runs straight to the final state",
     pz_act_type("otters", target = "#name") |>
     pz_act_click("#below")
 
-  expect_equal(pz_js(page, "window.__log.clicks"), 1)
-  expect_equal(pz_js(page, "window.__log.belowClicks"), 1)
-  expect_equal(pz_js(page, "document.getElementById('name').value"), "otters")
+  expect_equal(pz_evaluate(page, "window.__log.clicks"), 1)
+  expect_equal(pz_evaluate(page, "window.__log.belowClicks"), 1)
+  expect_equal(
+    pz_evaluate(page, "document.getElementById('name').value"),
+    "otters"
+  )
 
   # No staging happened: one insertion, no wheels, no cursor layer.
-  expect_equal(pz_js(page, "window.__log.inputs.name"), 1)
-  expect_equal(pz_js(page, "window.__log.wheels"), 0)
+  expect_equal(pz_evaluate(page, "window.__log.inputs.name"), 1)
+  expect_equal(pz_evaluate(page, "window.__log.wheels"), 0)
   expect_null(cursor_overlay_state(page))
 })
 

@@ -273,7 +273,7 @@ test_that("expectations retry until they pass", {
   page <- local_elements_page()
 
   # The element gains the expected text only after 300 ms.
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(() => { document.querySelector('.late-text').textContent = 'ready now'; }, 300)",
     await = FALSE
@@ -284,7 +284,7 @@ test_that("expectations retry until they pass", {
 test_that("timeout = 0 checks once and fails fast", {
   page <- local_elements_page()
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(() => { document.querySelector('.late-text').textContent = 'ready now'; }, 300)",
     await = FALSE
@@ -410,7 +410,7 @@ test_that("each attempt re-queries lazily inside the pinned scope", {
   page <- local_scopes_page()
   ctx <- pz_find(page, "#scope-a")
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function() {
       const el = document.createElement('span');
@@ -429,7 +429,10 @@ test_that("a detached scope aborts expectations before the retry loop", {
   page <- local_scopes_page()
   ctx <- pz_find(page, "#scope-a .sc-item")
 
-  pz_js(page, "document.querySelectorAll('#scope-a .sc-item')[0].remove()")
+  pz_evaluate(
+    page,
+    "document.querySelectorAll('#scope-a .sc-item')[0].remove()"
+  )
   expect_error(
     ctx |> pz_expect_count(3, target = ".sc-item", timeout = 0.3),
     class = "paparazzi_error_detached"
@@ -447,7 +450,7 @@ test_that("a scope detaching mid-expectation raises the classed error", {
   # The expectation fails and keeps retrying; the scope detaches
   # mid-retry, and the next attempt's probe aborts instead of letting
   # the checks degrade into failures on a stale set.
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function() {
       document.querySelectorAll('#scope-a .sc-item').forEach((el) => el.remove());
@@ -463,7 +466,7 @@ test_that("a mid-expectation detach raises for target = NULL too", {
   page <- local_scopes_page()
   ctx <- pz_find(page, "#scope-b .sc-item")
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function() {
       document.getElementById('scope-b').remove();
@@ -506,7 +509,7 @@ test_that("pz_expect_enabled requires every match to be enabled", {
 test_that("pz_expect_enabled retries until a control is enabled", {
   page <- local_state_page()
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function () {
     document.getElementById('btn-disabled').disabled = false;
@@ -678,11 +681,14 @@ test_that("pz_expect_value treats a missing value property as unsatisfied", {
 test_that("pz_expect_value follows a typed value", {
   page <- local_state_page()
 
-  pz_js(page, "document.getElementById('val-text').value = 'typed otters'")
+  pz_evaluate(
+    page,
+    "document.getElementById('val-text').value = 'typed otters'"
+  )
   pz_expect_value(page, "typed otters", target = "#val-text", match = "exact")
 
   # And it retries: the input only carries the text after a timer.
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function () {
     document.getElementById('val-line-1').value = 'later';
@@ -718,12 +724,15 @@ test_that("pz_expect_attr checks named attribute pairs", {
     .timeout = 0
   )
 
-  pz_js(page, "document.getElementById('link-one').setAttribute('not', 'yet')")
-  pz_js(
+  pz_evaluate(
+    page,
+    "document.getElementById('link-one').setAttribute('not', 'yet')"
+  )
+  pz_evaluate(
     page,
     "document.getElementById('link-one').setAttribute('match', 'yes')"
   )
-  pz_js(
+  pz_evaluate(
     page,
     "document.getElementById('link-one').setAttribute('timeout', 'now')"
   )
@@ -814,7 +823,7 @@ test_that("pz_expect_attr validates attribute pairs", {
 test_that("pz_expect_attr retries until the attribute lands", {
   page <- local_state_page()
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function () {
     document.getElementById('btn-one').setAttribute('data-state', 'ready');
@@ -866,7 +875,7 @@ test_that("pz_expect_js maps the predicate over every match", {
   pz_expect_js(page, "el => el.disabled", target = "#btn-disabled")
   pz_expect_js(page, "el => el.disabled", target = "#btn-enabled", not = TRUE)
 
-  pz_js(page, "document.getElementById('scroll-box').scrollTop = 50")
+  pz_evaluate(page, "document.getElementById('scroll-box').scrollTop = 50")
   pz_expect_js(page, "el => el.scrollTop > 0", target = "#scroll-box")
   pz_expect_js(
     page,
@@ -928,7 +937,7 @@ test_that("pz_expect_js surfaces a throwing predicate as a JS error", {
 test_that("pz_expect_js works from a scoped context", {
   page <- local_state_page()
 
-  pz_js(page, "document.getElementById('scroll-box').scrollTop = 50")
+  pz_evaluate(page, "document.getElementById('scroll-box').scrollTop = 50")
   ctx <- pz_find(page, "#scroll-box")
 
   # target = NULL is the pinned set: the predicate sees #scroll-box.
@@ -962,7 +971,7 @@ test_that("pz_expect_title failure uses the classed format", {
 test_that("pz_expect_title retries until the title changes", {
   page <- local_state_page()
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function () { document.title = 'renamed title'; }, 300)",
     await = FALSE
@@ -1001,7 +1010,7 @@ test_that("pz_expect_url failure uses the classed format", {
 test_that("pz_expect_url retries until the hash lands", {
   page <- local_state_page()
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function () { location.hash = 'later'; }, 300)",
     await = FALSE

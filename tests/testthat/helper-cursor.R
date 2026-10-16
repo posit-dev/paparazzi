@@ -10,7 +10,7 @@ local_cursor_page <- function(.env = parent.frame()) {
 # the inner layer, the glide translate (viewport CSS px), and whether
 # the visible icon keyword. NULL when no cursor layer exists.
 cursor_overlay_state <- function(page) {
-  v <- pz_js(
+  v <- pz_evaluate(
     page,
     r"[
 (() => {
@@ -101,7 +101,7 @@ return count;
 }
 
 cursor_overlay_scale <- function(page) {
-  pz_js(
+  pz_evaluate(
     page,
     r"[parseFloat(document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner').style.transform.slice(6))]"
   )

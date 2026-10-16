@@ -14,7 +14,7 @@ test_that("Shiny idle waits for a slow reactive output and holds for 200ms", {
   # after its 200ms stability hold. Reading the stamp after the wait
   # returns only inflates the measured hold, so the bound is safe; the
   # 10ms margin covers timer granularity.
-  held_ms <- pz_js(page, "performance.now() - window.__slowReadyAt")
+  held_ms <- pz_evaluate(page, "performance.now() - window.__slowReadyAt")
   expect_gte(held_ms / 1000, 0.19)
 })
 
@@ -24,12 +24,12 @@ test_that("Shiny idle restarts its stability window when busy returns", {
   page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
 
-  # start precedes each pz_js so the 600ms pulse provably starts after
+  # start precedes each pz_evaluate so the 600ms pulse provably starts after
   # the reference, and the pulse must outlive the wait's observer
   # attach: a pulse that ends before the attach is never observed, and
   # the wait would resolve after just the 200ms hold.
   start <- Sys.time()
-  pz_js(
+  pz_evaluate(
     page,
     "document.documentElement.classList.add('shiny-busy'); setTimeout(() => document.documentElement.classList.remove('shiny-busy'), 600)"
   )
@@ -37,7 +37,7 @@ test_that("Shiny idle restarts its stability window when busy returns", {
   expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.78)
 
   start <- Sys.time()
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#slow').classList.add('recalculating'); setTimeout(() => document.querySelector('#slow').classList.remove('recalculating'), 600)"
   )
@@ -51,7 +51,7 @@ test_that("Shiny idle restarts the hold when busy returns mid-window", {
   page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(() => document.documentElement.classList.add('shiny-busy'), 100); setTimeout(() => document.documentElement.classList.remove('shiny-busy'), 360)"
   )
@@ -81,7 +81,7 @@ test_that("Shiny idle counts brief busy and recalculating pulses inside the hold
       r"[document.getElementById('brief-pulse').remove();]"
     }
 
-    pz_js(
+    pz_evaluate(
       page,
       sprintf(
         r"[
@@ -111,14 +111,17 @@ document.querySelector = function(selector) {
       )
     )
     pz_wait_for_shiny_idle(page, timeout = 3)
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector = window.__idleQuery; window.MutationObserver = window.__idleObserver"
     )
 
-    expect_gte(pz_js(page, "window.__idleObservers"), 1)
-    expect_true(pz_js(page, "window.__idlePulseEnd !== null"), info = kind)
-    lag <- pz_js(page, "performance.now() - window.__idlePulseEnd")
+    expect_gte(pz_evaluate(page, "window.__idleObservers"), 1)
+    expect_true(
+      pz_evaluate(page, "window.__idlePulseEnd !== null"),
+      info = kind
+    )
+    lag <- pz_evaluate(page, "performance.now() - window.__idlePulseEnd")
     expect_gte(lag, 200)
   }
 })
@@ -129,7 +132,7 @@ test_that("Shiny idle resets the hold on Shiny connection events", {
   page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
 
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 window.__idleEventEnd = null;
@@ -149,12 +152,15 @@ document.querySelector = function(selector) {
 };
 ]"
   )
-  withr::defer(pz_js(page, "document.querySelector = window.__idleQuery"))
+  withr::defer(pz_evaluate(page, "document.querySelector = window.__idleQuery"))
 
   pz_wait_for_shiny_idle(page, timeout = 3)
-  expect_true(pz_js(page, "window.__idleEventArmed"))
-  expect_true(pz_js(page, "window.__idleEventEnd !== null"))
-  expect_gte(pz_js(page, "performance.now() - window.__idleEventEnd"), 200)
+  expect_true(pz_evaluate(page, "window.__idleEventArmed"))
+  expect_true(pz_evaluate(page, "window.__idleEventEnd !== null"))
+  expect_gte(
+    pz_evaluate(page, "performance.now() - window.__idleEventEnd"),
+    200
+  )
 })
 
 test_that("Shiny idle deadline cleans page listeners and observer", {
@@ -167,9 +173,9 @@ test_that("Shiny idle deadline cleans page listeners and observer", {
 ['shiny:connected', 'shiny:disconnected', 'shiny:busy', 'shiny:idle']
   .map((event) => (window.jQuery._data(document, 'events')?.[event] || []).length)
 ]"
-  before <- pz_js(page, listeners)
+  before <- pz_evaluate(page, listeners)
 
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 window.__idleDisconnects = 0;
@@ -188,12 +194,12 @@ window.MutationObserver = class extends window.__idleObserver {
 document.documentElement.classList.add('shiny-busy');
 ]"
   )
-  withr::defer(pz_js(
+  withr::defer(pz_evaluate(
     page,
     "window.MutationObserver = window.__idleObserver; document.documentElement.classList.remove('shiny-busy')"
   ))
 
-  original_js <- pz_js
+  original_js <- pz_evaluate
   # The fixture is already loaded; exercise the browser deadline, not preflight.
   with_mocked_bindings(
     {
@@ -204,7 +210,7 @@ document.documentElement.classList.add('shiny-busy');
       )
     },
     wait_for_load = function(...) invisible(NULL),
-    pz_js = function(ctx, expr, ...) {
+    pz_evaluate = function(ctx, expr, ...) {
       if (identical(expr, "!!window.Shiny")) {
         return(TRUE)
       }
@@ -214,7 +220,7 @@ document.documentElement.classList.add('shiny-busy');
 
   pz_poll(
     function() {
-      pz_js(
+      pz_evaluate(
         page,
         "window.__idleObservers > 0 && window.__idleDisconnects >= window.__idleObservers"
       )
@@ -224,13 +230,13 @@ document.documentElement.classList.add('shiny-busy');
     what = "Shiny idle observer cleanup after the deadline"
   )
 
-  expect_gte(pz_js(page, "window.__idleObservers"), 1)
+  expect_gte(pz_evaluate(page, "window.__idleObservers"), 1)
   expect_equal(
-    pz_js(page, "window.__idleDisconnects"),
-    pz_js(page, "window.__idleObservers")
+    pz_evaluate(page, "window.__idleDisconnects"),
+    pz_evaluate(page, "window.__idleObservers")
   )
-  expect_identical(pz_js(page, listeners), before)
-  pz_js(page, "document.documentElement.classList.remove('shiny-busy')")
+  expect_identical(pz_evaluate(page, listeners), before)
+  pz_evaluate(page, "document.documentElement.classList.remove('shiny-busy')")
   expect_no_error(pz_wait_for_shiny_idle(page, timeout = 2))
 })
 
@@ -238,7 +244,7 @@ test_that("Shiny idle waits for a late shinyapp after the Shiny global loads", {
   skip_if_no_chrome()
   page <- local_page(test_path("fixtures", "shiny-late-init.html"))
 
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 setTimeout(() => {
@@ -249,7 +255,7 @@ setTimeout(() => {
   )
 
   expect_no_error(pz_wait_for_shiny_idle(page, timeout = 2))
-  expect_true(pz_js(page, "!!Shiny.shinyapp"))
+  expect_true(pz_evaluate(page, "!!Shiny.shinyapp"))
 })
 
 test_that("Shiny global without an app times out waiting for idle", {
@@ -280,7 +286,7 @@ test_that("Shiny idle times out while the page remains busy", {
   page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
 
-  pz_js(page, "document.documentElement.classList.add('shiny-busy')")
+  pz_evaluate(page, "document.documentElement.classList.add('shiny-busy')")
 
   expect_error(
     pz_wait_for_shiny_idle(page, timeout = 0.35),
@@ -373,7 +379,7 @@ test_that("pz_poll returns as soon as the condition holds", {
 test_that("pz_wait_for_js waits for a condition to become truthy", {
   page <- local_waits_page()
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function () { window.__ready = true; }, 300)",
     await = FALSE
@@ -519,7 +525,7 @@ test_that("pz_wait_for_stable accepts a context instead of a target", {
 test_that("pz_wait_for_stable samples any single property", {
   page <- local_state_page()
 
-  pz_js(page, "document.getElementById('scroll-box').scrollTop = 50")
+  pz_evaluate(page, "document.getElementById('scroll-box').scrollTop = 50")
   pz_wait_for_stable(
     page,
     target = "#scroll-box",
@@ -555,7 +561,7 @@ test_that("pz_wait_for_stable keeps the locator and stability budgets separate",
   # budgets shared, only 0.4s would remain -- less than the 500ms
   # window -- and the wait would false-timeout; the stability loop
   # gets its own full budget, so the window completes.
-  pz_js(
+  pz_evaluate(
     page,
     r"[
 setTimeout(function() {
@@ -665,7 +671,7 @@ test_that("nav settle restarts its hold when the main-frame loader changes", {
     )
   )
   local_mocked_bindings(
-    pz_js = function(...) states[[index]]$js,
+    pz_evaluate = function(...) states[[index]]$js,
     pz_poll = function(fn, ...) {
       for (i in seq_len(4)) {
         index <<- i
@@ -702,7 +708,7 @@ test_that("nav_settle timeout reports the last read against the snapshot", {
       )
     )
   )
-  local_mocked_bindings(pz_js = function(...) "[true,3.5]")
+  local_mocked_bindings(pz_evaluate = function(...) "[true,3.5]")
 
   err <- expect_error(
     nav_settle(
@@ -743,7 +749,7 @@ test_that("nav_settle timeout keeps the last good read when later reads fail", {
   )
   reads <- 0L
   local_mocked_bindings(
-    pz_js = function(...) {
+    pz_evaluate = function(...) {
       reads <<- reads + 1L
       if (reads > 2L) {
         stop("Execution context was destroyed")
@@ -784,7 +790,7 @@ test_that("nav_settle_detail covers reads that never succeed", {
 
 test_that("nav_snapshot propagates closed-page and JavaScript errors", {
   failure <- NULL
-  local_mocked_bindings(pz_js = function(...) stop(failure))
+  local_mocked_bindings(pz_evaluate = function(...) stop(failure))
 
   for (class in c("paparazzi_error_closed", "paparazzi_error_js")) {
     failure <- rlang::error_cnd(class, message = class)
@@ -793,7 +799,7 @@ test_that("nav_snapshot propagates closed-page and JavaScript errors", {
 })
 
 test_that("nav_snapshot treats a chromote swap error as in-flight", {
-  local_mocked_bindings(pz_js = function(...) {
+  local_mocked_bindings(pz_evaluate = function(...) {
     stop("Execution context was destroyed")
   })
 
@@ -809,8 +815,8 @@ test_that("a completed bfcache restore is caught once after history.back()", {
   server <- pz_serve_static(test_path("fixtures", "nav-cache"))
   withr::defer(server$stop())
   page <- local_page(paste0(server$url, "a.html"))
-  identity <- pz_js(page, "window.identity")
-  origin <- pz_js(page, "performance.timeOrigin")
+  identity <- pz_evaluate(page, "window.identity")
+  origin <- pz_evaluate(page, "performance.timeOrigin")
 
   pz_act_click(page, "#next")
   pz_wait_for_js(
@@ -825,9 +831,12 @@ test_that("a completed bfcache restore is caught once after history.back()", {
     "document.readyState === 'complete' && !!document.querySelector('#next') && window.shows.includes(true)"
   )
 
-  expect_identical(pz_js(page, "window.identity"), identity)
-  expect_identical(pz_js(page, "performance.timeOrigin"), origin)
-  expect_identical(pz_js(page, "window.shows[window.shows.length - 1]"), TRUE)
+  expect_identical(pz_evaluate(page, "window.identity"), identity)
+  expect_identical(pz_evaluate(page, "performance.timeOrigin"), origin)
+  expect_identical(
+    pz_evaluate(page, "window.shows[window.shows.length - 1]"),
+    TRUE
+  )
 
   reset <- pz_wait_for_navigation(back, timeout = 2)
   expect_length(reset$scope, 0)
@@ -855,7 +864,7 @@ test_that("pz_wait_for_navigation catches a navigation that starts after the wai
   # The redirect fires 100ms in: after the wait starts, well inside
   # its timeout, so the new document's timeOrigin is positive
   # evidence and the wait follows it out.
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function () { location.href = 'nav-target.html'; }, 100)",
     await = FALSE
@@ -870,7 +879,7 @@ test_that("pz_wait_for_navigation waits for a pending navigation and resets scop
   page <- local_waits_page()
   ctx <- pz_find(page, "#nav-link")
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(function () { location.href = 'nav-target.html'; }, 300)",
     await = FALSE
@@ -952,7 +961,7 @@ test_that("explicit post-action navigation waits for Shiny output", {
   app <- local_shiny_app(shiny_idle_fixture())
   page <- local_nav_page()
 
-  pz_js(
+  pz_evaluate(
     page,
     sprintf(
       r"[
@@ -972,15 +981,15 @@ test_that("post-action auto waits for app-backed Shiny but not a different origi
   page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
   withr::defer(pz_close(page))
 
-  pz_js(page, "setTimeout(() => location.reload(), 100)", await = FALSE)
+  pz_evaluate(page, "setTimeout(() => location.reload(), 100)", await = FALSE)
   pz_wait_for_navigation(page, timeout = 5)
   expect_identical(shiny_idle_state(page)$text, "reactive ready")
 
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(() => location.href = 'about:blank', 100)",
     await = FALSE
   )
   pz_wait_for_navigation(page, timeout = 5)
-  expect_identical(pz_js(page, "location.href"), "about:blank")
+  expect_identical(pz_evaluate(page, "location.href"), "about:blank")
 })

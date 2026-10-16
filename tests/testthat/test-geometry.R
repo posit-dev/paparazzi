@@ -39,7 +39,7 @@ test_that("el_scroll_into_view brings an off-screen element into the viewport", 
   els <- loc_resolve(page, "#below-fold", multiple = "all")
   withr::defer(release_elements(els))
 
-  inner_height <- pz_js(page, "window.innerHeight")
+  inner_height <- pz_evaluate(page, "window.innerHeight")
   expect_gt(el_rects(els)$y, inner_height)
 
   el_scroll_into_view(els)
@@ -56,7 +56,7 @@ test_that("el_scroll_into_view scrolls the FIRST element, instantly", {
   withr::defer(release_elements(els))
   expect_identical(els$count, 2L)
 
-  inner_height <- pz_js(page, "window.innerHeight")
+  inner_height <- pz_evaluate(page, "window.innerHeight")
   el_scroll_into_view(els)
   y <- el_rects(els)$y
   expect_gte(y[1], 0)

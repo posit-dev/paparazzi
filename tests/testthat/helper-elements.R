@@ -12,7 +12,7 @@ elements_text <- function(els) {
 
 # Viewport center of the first element matching `selector`, as c(x, y).
 element_center <- function(page, selector) {
-  unlist(pz_js(
+  unlist(pz_evaluate(
     page,
     sprintf(
       r"[

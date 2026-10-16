@@ -223,7 +223,7 @@ test_that("loc_resolve times out with a classed error showing the description", 
 
 test_that("loc_resolve auto-waits for a late insert", {
   page <- local_elements_page()
-  pz_js(
+  pz_evaluate(
     page,
     "setTimeout(() => document.body.insertAdjacentHTML('beforeend', '<p class=\"late\">x</p>'), 300)",
     await = FALSE
@@ -241,7 +241,7 @@ test_that("re-resolving the same spec follows DOM changes", {
   withr::defer(release_elements(before))
   expect_identical(before$count, 3L)
 
-  pz_js(page, "document.querySelector('.message').remove()")
+  pz_evaluate(page, "document.querySelector('.message').remove()")
 
   # Specs are lazy: the same object resolves against the current DOM.
   after <- loc_resolve(page, spec, multiple = "all")

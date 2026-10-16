@@ -24,31 +24,37 @@ test_that("task rows show drag affordances and cursor states", {
   page <- local_page(pz_example("tasks"))
 
   expect_true(
-    pz_js(
+    pz_evaluate(
       page,
       "Array.from(document.querySelectorAll('.task')).every((task) => task.querySelector('.task-drag-handle'))"
     )
   )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('.task-drag-handle') ? getComputedStyle(document.querySelector('.task-drag-handle')).cursor : null"
     ),
     "grab"
   )
   expect_identical(
-    pz_js(page, "getComputedStyle(document.querySelector('.task')).cursor"),
+    pz_evaluate(
+      page,
+      "getComputedStyle(document.querySelector('.task')).cursor"
+    ),
     "grab"
   )
 
-  pz_js(
+  pz_evaluate(
     page,
     "window.__dragCursors = []; document.addEventListener('dragover', (event) => { window.__dragCursors.push(getComputedStyle(event.target).cursor); }, true);"
   )
   pz_act_drag(page, ".task:nth-child(5)", ".task:first-child")
-  expect_true("grabbing" %in% unlist(pz_js(page, "window.__dragCursors")))
+  expect_true("grabbing" %in% unlist(pz_evaluate(page, "window.__dragCursors")))
   expect_identical(
-    pz_js(page, "getComputedStyle(document.querySelector('.task')).cursor"),
+    pz_evaluate(
+      page,
+      "getComputedStyle(document.querySelector('.task')).cursor"
+    ),
     "grab"
   )
   expect_identical(
@@ -65,13 +71,13 @@ test_that("new tasks get drag affordances", {
     pz_expect_visible(pz_loc(".task", has_text = "Send documents"))
 
   expect_true(
-    pz_js(
+    pz_evaluate(
       page,
       "!!document.querySelector('.task:first-child .task-drag-handle')"
     )
   )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "document.querySelector('.task:first-child .task-drag-handle') ? getComputedStyle(document.querySelector('.task:first-child .task-drag-handle')).cursor : null"
     ),
@@ -97,7 +103,7 @@ test_that("walkthrough keeps both high-priority task titles in view", {
     pz_act_scroll("#toggle-help") |>
     pz_annotate_redact("[data-priority='high'] .task-title")
 
-  rows <- pz_js(
+  rows <- pz_evaluate(
     page,
     "(() => { const list = document.querySelector('.task-list'); const clip = list.getBoundingClientRect(); return [...list.querySelectorAll('[data-priority=high] .task-title')].map(el => { const r = el.getBoundingClientRect(); return {title:el.textContent, visible:r.top >= clip.top + list.clientTop && r.bottom <= clip.top + list.clientTop + list.clientHeight}; }); })()"
   )
@@ -107,7 +113,7 @@ test_that("walkthrough keeps both high-priority task titles in view", {
   )
   expect_true(all(vapply(rows, `[[`, logical(1), "visible")))
 
-  redactions <- pz_js(
+  redactions <- pz_evaluate(
     page,
     r"[
 (() => {
@@ -134,14 +140,14 @@ test_that("task titles can be edited, committed, and reverted", {
 
   task |> pz_act_click(".task-edit")
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "getComputedStyle(document.querySelector('.task-title[contenteditable=true]')).cursor"
     ),
     "text"
   )
   expect_identical(
-    pz_js(
+    pz_evaluate(
       page,
       "getComputedStyle(document.querySelector('.task-drag-handle')).cursor"
     ),
@@ -155,7 +161,10 @@ test_that("task titles can be edited, committed, and reverted", {
     pz_act_press("Enter")
   expect_identical(pz_get_text(task, ".task-title"), "Renew driving licence")
   expect_identical(
-    pz_js(page, "getComputedStyle(document.querySelector('.task')).cursor"),
+    pz_evaluate(
+      page,
+      "getComputedStyle(document.querySelector('.task')).cursor"
+    ),
     "grab"
   )
   expect_identical(
@@ -197,7 +206,7 @@ test_that("new tasks carry attachments and support inline editing", {
   expect_match(pz_get_text(task), basename(file), fixed = TRUE)
   expect_identical(pz_get_text(page, "#attachment-name"), "No file attached.")
   expect_equal(
-    pz_js(page, "document.querySelector('#attachment').files.length"),
+    pz_evaluate(page, "document.querySelector('#attachment').files.length"),
     0
   )
 
@@ -214,14 +223,14 @@ test_that("the tasks theme follows live color scheme changes", {
   page <- local_page(pz_example("tasks"), color_scheme = "dark")
 
   expect_identical(
-    pz_js(page, "document.documentElement.dataset.bsTheme"),
+    pz_evaluate(page, "document.documentElement.dataset.bsTheme"),
     "dark"
   )
 
   pz_device(page, color_scheme = "light")
   pz_wait_for_js(page, "document.documentElement.dataset.bsTheme === 'light'")
   expect_identical(
-    pz_js(page, "document.documentElement.dataset.bsTheme"),
+    pz_evaluate(page, "document.documentElement.dataset.bsTheme"),
     "light"
   )
 })

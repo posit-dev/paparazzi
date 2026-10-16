@@ -9,8 +9,8 @@ test_that("pz_open serves a local HTML file over HTTP and pz_close stops the ser
   expect_s3_class(page, "PaparazziPage")
   expect_s3_class(page, "PaparazziContext")
   expect_false(page$is_closed())
-  expect_match(pz_js(page, "location.protocol"), "http:")
-  expect_identical(pz_js(page, "document.title"), "paparazzi fixture")
+  expect_match(pz_evaluate(page, "location.protocol"), "http:")
+  expect_identical(pz_evaluate(page, "document.title"), "paparazzi fixture")
 
   app <- page$app
   expect_s3_class(app, "PaparazziServe")
@@ -23,13 +23,13 @@ test_that("pz_open opens a local file as file:// without httpuv", {
   local_mocked_bindings(httpuv_available = function() FALSE)
   page <- local_page()
 
-  expect_match(pz_js(page, "location.protocol"), "file:")
-  expect_identical(pz_js(page, "document.title"), "paparazzi fixture")
+  expect_match(pz_evaluate(page, "location.protocol"), "file:")
+  expect_identical(pz_evaluate(page, "document.title"), "paparazzi fixture")
 })
 
 test_that("pz_open opens a URL with a scheme", {
   page <- local_page("about:blank")
-  expect_identical(pz_js(page, "location.href"), "about:blank")
+  expect_identical(pz_evaluate(page, "location.href"), "about:blank")
 })
 
 test_that("pz_open wraps an existing ChromoteSession", {
@@ -48,8 +48,8 @@ test_that("pz_open wraps an existing ChromoteSession", {
 
 test_that("pz_open waits for load by default", {
   page <- local_page()
-  expect_identical(pz_js(page, "document.readyState"), "complete")
-  expect_true(pz_js(page, "window.fixtureReady"))
+  expect_identical(pz_evaluate(page, "document.readyState"), "complete")
+  expect_true(pz_evaluate(page, "window.fixtureReady"))
 })
 
 test_that("new-session load waits anchor to the destination commit", {
@@ -66,9 +66,12 @@ test_that("new-session load waits anchor to the destination commit", {
     pz_with_page(
       url,
       function(page) {
-        expect_identical(pz_js(page, "location.href"), url)
-        expect_identical(pz_js(page, "document.readyState"), "complete")
-        expect_identical(pz_js(page, "document.title"), "paparazzi nav slow")
+        expect_identical(pz_evaluate(page, "location.href"), url)
+        expect_identical(pz_evaluate(page, "document.readyState"), "complete")
+        expect_identical(
+          pz_evaluate(page, "document.title"),
+          "paparazzi nav slow"
+        )
       },
       wait = wait,
       timeout = 5
@@ -81,7 +84,10 @@ test_that("opening a same-document fragment returns without a new commit", {
   pz_with_page(
     "about:blank#fragment",
     function(page) {
-      expect_identical(pz_js(page, "location.href"), "about:blank#fragment")
+      expect_identical(
+        pz_evaluate(page, "location.href"),
+        "about:blank#fragment"
+      )
     },
     wait = "load"
   )
@@ -210,16 +216,16 @@ test_that("pz_open owns an app started from a directory", {
   )
   withr::defer(pz_close(page))
 
-  port <- as.integer(pz_js(page, "location.port"))
+  port <- as.integer(pz_evaluate(page, "location.port"))
   expect_true(app_port_reachable(port))
 
   owned <- page$app
   expect_true(any(grepl("marker: open-owned", owned$logs(), fixed = TRUE)))
   expect_false(any(grepl("Listening on", owned$logs(), fixed = TRUE)))
-  expect_equal(pz_js(page, "innerWidth"), 390)
+  expect_equal(pz_evaluate(page, "innerWidth"), 390)
 
   expect_true(wait_until(function() {
-    grepl("hello paparazzi", pz_js(page, "document.body.innerText"))
+    grepl("hello paparazzi", pz_evaluate(page, "document.body.innerText"))
   }))
 
   pz_close(page)
@@ -237,7 +243,7 @@ test_that("a page opened on a handle does not own the app", {
   withr::defer(pz_close(page))
 
   expect_true(wait_until(function() {
-    grepl("hello paparazzi", pz_js(page, "document.body.innerText"))
+    grepl("hello paparazzi", pz_evaluate(page, "document.body.innerText"))
   }))
 
   gc()
@@ -248,7 +254,7 @@ test_that("a page opened on a handle does not own the app", {
   second <- pz_open(app)
   withr::defer(pz_close(second))
   expect_true(wait_until(function() {
-    grepl("hello paparazzi", pz_js(second, "document.body.innerText"))
+    grepl("hello paparazzi", pz_evaluate(second, "document.body.innerText"))
   }))
 })
 
@@ -261,11 +267,11 @@ test_that("a temporary app handle survives GC while its page is open", {
     page$app$stop()
   })
 
-  port <- as.integer(pz_js(page, "location.port"))
+  port <- as.integer(pz_evaluate(page, "location.port"))
   gc()
   expect_true(app_port_reachable(port))
   expect_true(wait_until(function() {
-    grepl("hello paparazzi", pz_js(page, "document.body.innerText"))
+    grepl("hello paparazzi", pz_evaluate(page, "document.body.innerText"))
   }))
 })
 
@@ -330,7 +336,7 @@ test_that("block helpers stop owned apps on exit and error", {
 
   expect_error(
     pz_with_page(shiny_app_fixture_dir(), function(page) {
-      port <<- as.integer(pz_js(page, "location.port"))
+      port <<- as.integer(pz_evaluate(page, "location.port"))
       stop("boom")
     }),
     "boom"
@@ -339,7 +345,7 @@ test_that("block helpers stop owned apps on exit and error", {
 
   local({
     page <- pz_local_page(shiny_app_fixture_dir())
-    port <<- as.integer(pz_js(page, "location.port"))
+    port <<- as.integer(pz_evaluate(page, "location.port"))
     expect_true(app_port_reachable(port))
   })
   expect_true(wait_until(function() !app_port_reachable(port)))
@@ -368,7 +374,7 @@ test_that("pz_open validates shiny_options and envvars types", {
 test_that("pz_open forwards dots to pz_device", {
   skip_if_no_chrome()
   page <- local_page(width = 390)
-  expect_equal(pz_js(page, "innerWidth"), 390)
+  expect_equal(pz_evaluate(page, "innerWidth"), 390)
 })
 
 test_that("session default timeout is 10s, configurable at open", {
@@ -390,7 +396,7 @@ test_that("pz_close is idempotent and functions reject closed pages", {
   expect_true(page$is_closed())
   expect_no_error(pz_close(page))
 
-  expect_error(pz_js(page, "1 + 1"), class = "paparazzi_error_closed")
+  expect_error(pz_evaluate(page, "1 + 1"), class = "paparazzi_error_closed")
   expect_error(pz_wait(page, 0), class = "paparazzi_error_closed")
 })
 
@@ -555,7 +561,7 @@ test_that("pz_open starts recognized Shiny app file names", {
     file.copy(shiny_app_fixture_file(), path)
 
     page <- pz_open(path)
-    port <- as.integer(pz_js(page, "location.port"))
+    port <- as.integer(pz_evaluate(page, "location.port"))
     expect_true(app_port_reachable(port), info = f)
 
     pz_close(page)
@@ -581,15 +587,15 @@ test_that("split app files open as files, while their directory runs as an app",
 
   for (file in c(ui, server)) {
     page <- pz_open(file)
-    expect_identical(pz_js(page, "location.protocol"), "file:")
+    expect_identical(pz_evaluate(page, "location.protocol"), "file:")
     pz_close(page)
   }
 
   page <- pz_open(dir)
   withr::defer(pz_close(page))
-  expect_identical(pz_js(page, "location.protocol"), "http:")
+  expect_identical(pz_evaluate(page, "location.protocol"), "http:")
   expect_true(wait_until(function() {
-    grepl("hello split app", pz_js(page, "document.body.innerText"))
+    grepl("hello split app", pz_evaluate(page, "document.body.innerText"))
   }))
 })
 
@@ -600,7 +606,7 @@ test_that("files whose names end in app.R variants open fine", {
 
   page <- pz_open(r_file)
   withr::defer(pz_close(page))
-  expect_match(pz_js(page, "location.protocol"), "file:")
+  expect_match(pz_evaluate(page, "location.protocol"), "file:")
 })
 
 test_that("file_url percent-encodes special characters", {
@@ -616,7 +622,7 @@ test_that("file_url percent-encodes special characters", {
   skip_if_no_chrome()
   page <- pz_open(url)
   withr::defer(pz_close(page))
-  expect_match(pz_js(page, "location.protocol"), "file:")
+  expect_match(pz_evaluate(page, "location.protocol"), "file:")
 })
 
 test_that("file_url encodes question marks where filenames allow them", {
@@ -639,7 +645,7 @@ test_that("file_url encodes literal percent signs in file names", {
   skip_if_no_chrome()
   page <- pz_open(url)
   withr::defer(pz_close(page))
-  expect_match(pz_js(page, "location.pathname"), "a%2520b", fixed = TRUE)
+  expect_match(pz_evaluate(page, "location.pathname"), "a%2520b", fixed = TRUE)
 })
 
 test_that("print() works on open and closed pages", {
@@ -666,7 +672,7 @@ test_that("pz_close rejects non-pages", {
 })
 
 test_that("check_context rejects non-contexts", {
-  expect_error(pz_js("nope", "1"), class = "paparazzi_error_context")
+  expect_error(pz_evaluate("nope", "1"), class = "paparazzi_error_context")
   expect_error(pz_wait(list(), 1), class = "paparazzi_error_context")
 })
 

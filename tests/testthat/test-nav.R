@@ -1,17 +1,17 @@
 js <- function(ctx, expr) {
-  pz_js(ctx, expr)
+  pz_evaluate(ctx, expr)
 }
 
 test_that("pz_nav_goto navigates and returns the root context", {
   ctx <- local_nav_page()
-  expect_identical(pz_js(ctx, "document.title"), "paparazzi nav A")
+  expect_identical(pz_evaluate(ctx, "document.title"), "paparazzi nav A")
 
   root <- pz_nav_goto(ctx, nav_fixture_url("b"))
   expect_s3_class(root, "PaparazziContext")
   expect_identical(root, ctx)
   expect_equal(length(root$scope), 0L)
-  expect_identical(pz_js(root, "document.title"), "paparazzi nav B")
-  expect_match(pz_js(root, "location.href"), "nav-b\\.html$")
+  expect_identical(pz_evaluate(root, "document.title"), "paparazzi nav B")
+  expect_match(pz_evaluate(root, "location.href"), "nav-b\\.html$")
 
   expect_invisible(pz_nav_goto(root, nav_fixture_url("a")))
 })
@@ -19,14 +19,14 @@ test_that("pz_nav_goto navigates and returns the root context", {
 test_that("pz_nav_reload restores the page", {
   ctx <- local_nav_page()
 
-  pz_js(
+  pz_evaluate(
     ctx,
     "document.body.appendChild(document.createElement('div')).id = 'added'"
   )
   expect_equal(js(ctx, "document.querySelectorAll('#added').length"), 1)
 
   root <- pz_nav_reload(ctx)
-  expect_identical(pz_js(root, "document.title"), "paparazzi nav A")
+  expect_identical(pz_evaluate(root, "document.title"), "paparazzi nav A")
   expect_equal(js(root, "document.querySelectorAll('#added').length"), 0)
 })
 
@@ -37,8 +37,8 @@ test_that("pz_nav_goto waits for a delayed destination to settle", {
   ctx <- local_nav_page()
 
   root <- pz_nav_goto(ctx, nav_fixture_url("slow"))
-  expect_identical(pz_js(root, "document.title"), "paparazzi nav slow")
-  expect_identical(pz_js(root, "document.readyState"), "complete")
+  expect_identical(pz_evaluate(root, "document.title"), "paparazzi nav slow")
+  expect_identical(pz_evaluate(root, "document.readyState"), "complete")
 })
 
 test_that("pz_nav_goto handles a same-document fragment navigation", {
@@ -47,8 +47,8 @@ test_that("pz_nav_goto handles a same-document fragment navigation", {
   # A fragment navigation commits no new document, so no
   # frameNavigated ever fires; the wait must not wait on one.
   root <- pz_nav_goto(ctx, paste0(nav_fixture_url("a"), "#page"))
-  expect_match(pz_js(root, "location.hash"), "#page", fixed = TRUE)
-  expect_identical(pz_js(root, "document.title"), "paparazzi nav A")
+  expect_match(pz_evaluate(root, "location.hash"), "#page", fixed = TRUE)
+  expect_identical(pz_evaluate(root, "document.title"), "paparazzi nav A")
 
   # ...while a full navigation to the same URL anchor-less still works.
   expect_no_error(pz_nav_goto(root, nav_fixture_url("b")))
@@ -135,20 +135,20 @@ test_that("history traversal works: goto, back, forward", {
   ctx <- local_nav_page()
 
   ctx <- pz_nav_goto(ctx, nav_fixture_url("b"))
-  expect_identical(pz_js(ctx, "document.title"), "paparazzi nav B")
+  expect_identical(pz_evaluate(ctx, "document.title"), "paparazzi nav B")
 
   ctx <- pz_nav_back(ctx)
-  expect_identical(pz_js(ctx, "document.title"), "paparazzi nav A")
+  expect_identical(pz_evaluate(ctx, "document.title"), "paparazzi nav A")
 
   ctx <- pz_nav_forward(ctx)
-  expect_identical(pz_js(ctx, "document.title"), "paparazzi nav B")
+  expect_identical(pz_evaluate(ctx, "document.title"), "paparazzi nav B")
 })
 
 test_that("back at the history start is a no-op", {
   ctx <- local_nav_page()
 
   root <- pz_nav_back(ctx)
-  expect_identical(pz_js(root, "document.title"), "paparazzi nav A")
+  expect_identical(pz_evaluate(root, "document.title"), "paparazzi nav A")
   expect_equal(length(root$scope), 0L)
 })
 
@@ -290,10 +290,10 @@ test_that("app-backed auto waits for Shiny only on its own origin", {
 
   app_url <- pz_get_url(page)
   pz_nav_goto(page, nav_fixture_url("b"))
-  expect_identical(pz_js(page, "document.title"), "paparazzi nav B")
+  expect_identical(pz_evaluate(page, "document.title"), "paparazzi nav B")
   pz_nav_goto(page, app_url)
   pz_nav_back(page)
-  expect_identical(pz_js(page, "document.title"), "paparazzi nav B")
+  expect_identical(pz_evaluate(page, "document.title"), "paparazzi nav B")
 })
 
 test_that("plain-URL pages use load even when navigating to an app URL", {
@@ -301,17 +301,17 @@ test_that("plain-URL pages use load even when navigating to an app URL", {
   page <- local_nav_page()
 
   pz_nav_goto(page, app$url)
-  expect_identical(pz_js(page, "document.readyState"), "complete")
+  expect_identical(pz_evaluate(page, "document.readyState"), "complete")
 
-  pz_js(page, "document.documentElement.classList.add('shiny-busy')")
+  pz_evaluate(page, "document.documentElement.classList.add('shiny-busy')")
   pz_nav_goto(page, paste0(app$url, "#plain"))
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "document.documentElement.classList.contains('shiny-busy')"
   ))
 
   pz_nav_reload(page)
-  expect_identical(pz_js(page, "document.readyState"), "complete")
+  expect_identical(pz_evaluate(page, "document.readyState"), "complete")
 })
 
 test_that("shared app handle uses Shiny auto on its origin", {

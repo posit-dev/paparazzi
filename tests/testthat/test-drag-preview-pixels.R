@@ -12,7 +12,7 @@ test_that("the retained-pixel instrument distinguishes the task marker color", {
     page,
     verify = drag_preview_marker_present(page)
   )
-  marker <- pz_js(
+  marker <- pz_evaluate(
     page,
     "(() => { const r = document.querySelector('#preview-marker').getBoundingClientRect(); return {x:r.x,y:r.y,width:r.width,height:r.height}; })()"
   )
@@ -26,7 +26,7 @@ test_that("the retained-pixel instrument distinguishes the task marker color", {
   # Deliberately incorrect color is a passing negative control: a broken or
   # non-discriminating instrument cannot pass both of these assertions.
   expect_null(drag_preview_marker_box(page, path, color = c(220, 20, 180)))
-  pz_js(
+  pz_evaluate(
     page,
     "document.querySelector('#preview-marker').style.background = 'rgb(220,20,180)'"
   )
@@ -86,7 +86,7 @@ test_that('disabled previews retain the original marker but never carry it', {
 
   expect_null(drag_preview_marker_box(page, carried))
   expect_true(drag_preview_absent(page))
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "document.querySelectorAll('.task')[1] === window.__previewSource"
   ))
@@ -114,12 +114,12 @@ test_that('retained carry and settle pixels follow the same task row for to and 
     page <- pz_stage(page, pause = 0, cursor_speed = 120)
     drag_preview_task_marker(page)
     if (case$geometry) {
-      pz_js(
+      pz_evaluate(
         page,
         "document.documentElement.style.zoom = '1.1'; document.body.style.paddingTop = '220px'; document.body.style.minHeight = '2000px'; window.scrollTo(0,150)"
       )
       expect_equal(page_dpr(page), 2)
-      expect_gt(pz_js(page, 'window.scrollY'), 0)
+      expect_gt(pz_evaluate(page, 'window.scrollY'), 0)
     }
     source <- '#preview-source .task-drag-handle'
     out <- withr::local_tempfile(fileext = '.mp4')
@@ -131,7 +131,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
       NULL
     }
     geometry_frame <- if (case$geometry) {
-      pz_js(
+      pz_evaluate(
         page,
         "(() => { const r = document.querySelector('.task-list-frame').getBoundingClientRect(); return {x:r.x-16,y:r.y-16,width:r.width+32,height:r.height+32}; })()"
       )
@@ -152,7 +152,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
     } else {
       pz_cursor_move(page, '#task-title', duration = 0)
     }
-    initial <- pz_js(
+    initial <- pz_evaluate(
       page,
       "(() => {
       const r = window.__previewSource.getBoundingClientRect();
@@ -203,7 +203,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         expect_true(sampled)
       },
       drag_preview_settle = function(state) {
-        start_box <- pz_js(
+        start_box <- pz_evaluate(
           page,
           sprintf(
             r"[
@@ -218,7 +218,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         settle_start <<- unlist(start_box) + c(x = initial$dx, y = initial$dy)
         duration <- original_settle(state)
         expect_gt(duration, 0)
-        sample <- pz_js(
+        sample <- pz_evaluate(
           page,
           sprintf(
             r"[
@@ -251,7 +251,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
         expect_gt(abs(final[['y']] - target[['y']]), initial$height / 2)
         # Flush the paused WAAPI sample, then measure and retain actual pixels.
         pump_loop(page$child_loop, 0.04)
-        box <- pz_js(
+        box <- pz_evaluate(
           page,
           sprintf(
             r"[
@@ -268,7 +268,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
           page,
           verify = drag_preview_marker_at(page, settle_expected)
         )
-        pz_js(
+        pz_evaluate(
           page,
           sprintf(
             r"[
@@ -287,7 +287,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
             final + c(x = initial$dx, y = initial$dy)
           )
         )
-        pz_js(
+        pz_evaluate(
           page,
           paste0(DRAG_PREVIEW_CONTROLLER_JS, '.image.getAnimations()[0].play()')
         )
@@ -339,19 +339,19 @@ test_that('retained carry and settle pixels follow the same task row for to and 
     expect_true(drag_preview_absent(page))
     expect_false(page_cursor(page)$pressed)
     expect_equal(c(x = page_cursor(page)$x, y = page_cursor(page)$y), pointer)
-    expect_true(pz_js(
+    expect_true(pz_evaluate(
       page,
       "document.querySelectorAll('.task')[1] === window.__previewSource"
     ))
     expect_equal(
-      unlist(pz_js(
+      unlist(pz_evaluate(
         page,
         "Array.from(document.querySelectorAll('.task-title')).slice(0,3).map(n => n.textContent.trim())"
       )),
       c('File tax return', 'Renew passport', 'Book dentist appointment')
     )
-    expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
-    events <- pz_js(page, 'window.__previewEvents')
+    expect_equal(pz_evaluate(page, 'window.__previewCaptures'), 1)
+    events <- pz_evaluate(page, 'window.__previewEvents')
     drop <- events[vapply(
       events,
       function(e) identical(e$type, 'drop'),
@@ -361,7 +361,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
     expect_true(drop[[1]]$trusted)
     expect_identical(
       drop[[1]]$payload,
-      pz_js(page, 'window.__previewSource.dataset.id')
+      pz_evaluate(page, 'window.__previewSource.dataset.id')
     )
     cleaned <- drag_preview_retained_checkpoint(
       page,
@@ -440,7 +440,7 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
   defer_record_stop(page)
 
   pz_cursor_move(page, '#preview-source .task-drag-handle', duration = 0)
-  initial <- pz_js(
+  initial <- pz_evaluate(
     page,
     "(() => { const r = window.__previewSource.getBoundingClientRect(); const m = document.querySelector('#preview-marker').getBoundingClientRect(); return {x:r.x,y:r.y,height:r.height,dx:m.x-r.x,dy:m.y-r.y}; })()"
   )
@@ -450,7 +450,7 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
   resting <- target <- NULL
   local_mocked_bindings(drag_preview_settle = function(state) {
     first_settle_frame <<- length(page_recorder(page)$files) + 1L
-    boxes <- pz_js(
+    boxes <- pz_evaluate(
       page,
       "(() => { const s = window.__previewSource.getBoundingClientRect(); const t = document.querySelector('#preview-target').getBoundingClientRect(); return {source:{x:s.x,y:s.y},target:{x:t.x,y:t.y}}; })()"
     )
@@ -491,7 +491,7 @@ test_that('the unpaused production path records carry and a one-row-up settle', 
   # execution and geometry are asserted via the boundary mock instead.
   expect_gt(target[['y']] - resting[['y']], initial$height / 2)
   expect_equal(
-    unlist(pz_js(
+    unlist(pz_evaluate(
       page,
       "Array.from(document.querySelectorAll('.task-title')).slice(0,3).map(n => n.textContent.trim())"
     )),
@@ -520,7 +520,7 @@ test_that('a loaded local font and image survive the production drag carry', {
   pz_stage_fonts(page, font)
 
   # The staged FontFace is programmatic; also exercise readable grouped CSS.
-  pz_js(
+  pz_evaluate(
     page,
     sprintf(
       "(() => {
@@ -539,7 +539,7 @@ test_that('a loaded local font and image survive the production drag carry', {
       gsub('[[:space:]]', '', font$data)
     )
   )
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "(async () => {
       const title = window.__previewSource.querySelector('.task-title');
@@ -563,7 +563,7 @@ test_that('a loaded local font and image survive the production drag carry', {
   defer_record_stop(page)
 
   drag_preview_stylesheet_guard(page)
-  before <- pz_js(page, 'window.__previewStyleSnapshot()')
+  before <- pz_evaluate(page, 'window.__previewStyleSnapshot()')
   original_boot <- drag_preview_boot_js
   original_carry <- stage_drag_carry
   carried <- NULL
@@ -607,20 +607,20 @@ test_that('a loaded local font and image survive the production drag carry', {
     1.5
   )
 
-  expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
-  expect_true(pz_js(
+  expect_equal(pz_evaluate(page, 'window.__previewCaptures'), 1)
+  expect_true(pz_evaluate(
     page,
     'window.__previewFontEmbedCSS.includes("@font-face") && window.__previewFontEmbedCSS.includes("data:font/woff2;base64,")'
   ))
-  expect_equal(pz_js(page, 'window.__previewInsertions'), 0)
-  expect_equal(pz_js(page, 'window.__previewStyleSnapshot()'), before)
-  expect_true(pz_js(
+  expect_equal(pz_evaluate(page, 'window.__previewInsertions'), 0)
+  expect_equal(pz_evaluate(page, 'window.__previewStyleSnapshot()'), before)
+  expect_true(pz_evaluate(
     page,
     '!matchMedia("not all").matches && !CSS.supports("display: paparazzi-invalid-display") && !window.__previewFontEmbedCSS.includes("InactiveMediaPreviewFont") && !window.__previewFontEmbedCSS.includes("InactiveSupportsPreviewFont")'
   ))
 
   # Font-specific glyph dimensions in the raster, not just a loaded page face.
-  glyph <- pz_js(
+  glyph <- pz_evaluate(
     page,
     "(async () => {
       const image = new Image(); image.src = window.__previewPNG; await image.decode();
@@ -653,12 +653,12 @@ test_that('a loaded local font and image survive the production drag carry', {
   expect_lt(abs(glyph$height - glyph$expectedHeight), 1.5)
   expect_gt(abs(glyph$width - glyph$fallbackWidth), 3)
 
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     'document.querySelectorAll(".task")[1] === window.__previewSource'
   ))
   expect_equal(
-    unlist(pz_js(
+    unlist(pz_evaluate(
       page,
       "Array.from(document.querySelectorAll('.task-title')).slice(0,3).map(n => n.textContent.trim())"
     )),
@@ -674,7 +674,7 @@ test_that('content-box captures preserve the measured border box and far-edge pi
   page <- local_page(width = 800, height = 600)
   page <- pz_stage(page, pause = 0)
 
-  expect_true(pz_js(
+  expect_true(pz_evaluate(
     page,
     "(() => {
       document.body.insertAdjacentHTML('beforeend', `
@@ -699,7 +699,7 @@ test_that('content-box captures preserve the measured border box and far-edge pi
       return getComputedStyle(source).boxSizing === 'content-box';
     })()"
   ))
-  measured <- pz_js(
+  measured <- pz_evaluate(
     page,
     "(() => { const r = document.querySelector('#preview-source').getBoundingClientRect(); return {width:r.width,height:r.height}; })()"
   )
@@ -724,7 +724,7 @@ test_that('content-box captures preserve the measured border box and far-edge pi
             point[['y']] > from[['y']] + 90 &&
             point[['y']] < to[['y']] - 25
         ) {
-          capture <<- pz_js(
+          capture <<- pz_evaluate(
             ctx,
             "(() => {
               const controller = document.getElementById('paparazzi-overlay-root').shadowRoot.querySelector('.pz-drag-preview').pz;
@@ -791,13 +791,16 @@ test_that('content-box captures preserve the measured border box and far-edge pi
     1.5
   )
 
-  expect_equal(pz_js(page, 'window.__previewCaptures'), 1)
-  expect_true(pz_js(
+  expect_equal(pz_evaluate(page, 'window.__previewCaptures'), 1)
+  expect_true(pz_evaluate(
     page,
     "window.htmlToImage === document.querySelector('#preview-source').pageLibrary"
   ))
   expect_equal(
-    pz_js(page, "document.querySelector('#preview-target').dataset.payload"),
+    pz_evaluate(
+      page,
+      "document.querySelector('#preview-target').dataset.payload"
+    ),
     'border-box'
   )
   expect_true(drag_preview_absent(page))
