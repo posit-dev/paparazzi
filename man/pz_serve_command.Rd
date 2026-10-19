@@ -29,9 +29,10 @@ directory.}
 
 \item{port}{The port to listen on. \code{NULL} (the default) picks a random
 free port; if startup fails because the port was taken, a new port is
-tried. Pass a number when the command fixes its own port: paparazzi
-skips picking but still checks the port is free before starting and
-waits for it to listen.}
+tried. When \code{port} is \code{NULL}, \code{{port}} must appear in \code{args} or
+\code{envvars} so the command learns the chosen port. Pass a number when
+the command fixes its own port: paparazzi skips picking but still
+checks the port is free before starting and waits for it to listen.}
 
 \item{envvars}{Named character vector of environment variables set in
 the process, on top of the inherited environment; \code{{port}} is

@@ -890,6 +890,7 @@ test_that("a command that exits during startup fails with its log", {
     pz_serve_command(
       file.path(R.home("bin"), "Rscript"),
       c("-e", "cat('command boom\n'); quit(status = 1)"),
+      port = random_port(),
       timeout = 5
     ),
     "command boom",
@@ -922,7 +923,11 @@ test_that("a command that never listens times out and is cleaned up", {
 test_that("an unstartable command fails with a paparazzi startup error", {
   skip_if_no_command_server()
   expect_error(
-    pz_serve_command("paparazzi-no-such-command", timeout = 1),
+    pz_serve_command(
+      "paparazzi-no-such-command",
+      c("--port", "{port}"),
+      timeout = 1
+    ),
     "could not be started",
     class = "paparazzi_error_command_startup"
   )
@@ -948,6 +953,24 @@ test_that("nav auto waits follow the handle's wait declaration", {
   plain_page <- pz_open(plain, wait = "load")
   withr::defer(pz_close(plain_page))
   expect_no_error(pz_nav_reload(plain_page))
+})
+
+test_that("a sub-path handle still routes auto waits to Shiny after navigation", {
+  skip_if_no_chrome()
+  skip_if_no_command_server()
+  server <- command_server(path = "/sub/", wait = "shiny")
+  withr::defer(server$stop())
+
+  expect_match(server$url, "/sub/$")
+  page <- pz_open(server, wait = "load")
+  # The origin comparison must strip the sub-path from the handle's URL
+  # before matching location.origin, or the auto wait silently degrades
+  # to load on sub-path handles.
+  expect_error(
+    pz_nav_reload(page),
+    "not a Shiny page",
+    class = "paparazzi_error_unsupported"
+  )
 })
 
 test_that("the handle's wait declaration routes pz_open's auto wait", {
@@ -984,4 +1007,9 @@ test_that("pz_serve_command validates its inputs", {
   expect_error(pz_serve_command("true", wait = "settled"), "must be one of")
   expect_error(pz_serve_command("true", timeout = -1), "must be a number")
   expect_error(pz_serve_command("true", extra = 1), "must be empty")
+  # Without {port} there is no way to tell the command its port
+  expect_error(
+    pz_serve_command("true", c("--port", "8000")),
+    class = "paparazzi_error_input"
+  )
 })

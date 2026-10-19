@@ -249,9 +249,10 @@ pz_serve_quarto <- function(path, ..., render = FALSE) {
 #'   directory.
 #' @param port The port to listen on. `NULL` (the default) picks a random
 #'   free port; if startup fails because the port was taken, a new port is
-#'   tried. Pass a number when the command fixes its own port: paparazzi
-#'   skips picking but still checks the port is free before starting and
-#'   waits for it to listen.
+#'   tried. When `port` is `NULL`, `{port}` must appear in `args` or
+#'   `envvars` so the command learns the chosen port. Pass a number when
+#'   the command fixes its own port: paparazzi skips picking but still
+#'   checks the port is free before starting and waits for it to listen.
 #' @param envvars Named character vector of environment variables set in
 #'   the process, on top of the inherited environment; `{port}` is
 #'   replaced here too. `NULL` adds no environment overrides.
@@ -319,6 +320,16 @@ pz_serve_command <- function(
   }
   wait <- arg_match(wait)
   check_number_decimal(timeout, min = 0)
+  if (is.null(port) && !any(grepl("{port}", c(args, envvars), fixed = TRUE))) {
+    port_token <- "{port}"
+    cli::cli_abort(
+      c(
+        "When {.arg port} is {.code NULL}, {.arg args} or {.arg envvars} must contain {.val {port_token}} so the command learns its port.",
+        i = "Write {.val {port_token}} where the command takes its port, or pass {.arg port} when the command fixes its own port."
+      ),
+      class = "paparazzi_error_input"
+    )
+  }
   command_start(
     command,
     args,
@@ -457,7 +468,7 @@ quarto_cli <- function() {
 
 quarto_start <- function(path, render, cli, timeout = 60, call = caller_env()) {
   for (attempt in seq_len(5)) {
-    port <- random_port()
+    port <- random_port(error_class = "paparazzi_error_quarto_startup")
     if (app_port_connectable(port)) {
       # Some platforms allow a second bind, but requests would reach the first
       # listener instead.
@@ -552,7 +563,11 @@ command_start <- function(
     call = call
   )
   for (attempt in seq_len(max_attempts)) {
-    attempt_port <- port %||% random_port(call = call)
+    attempt_port <- port %||%
+      random_port(
+        call = call,
+        error_class = "paparazzi_error_command_startup"
+      )
     if (app_port_connectable(attempt_port)) {
       # Some platforms allow a second bind, but requests would reach the
       # first listener instead. An explicit port is the caller's contract,
@@ -779,7 +794,12 @@ chrome_blocked_ports <- function() {
   c(3659, 4045, 5060, 5061, 6000, 6566, 6665:6669, 6697)
 }
 
-random_port <- function(call = caller_env()) {
+random_port <- function(
+  ...,
+  call = caller_env(),
+  error_class = "paparazzi_error_app_startup"
+) {
+  check_dots_empty()
   candidates <- setdiff(3000:8000, chrome_blocked_ports())
   for (i in 1:100) {
     port <- sample(candidates, 1)
@@ -791,7 +811,7 @@ random_port <- function(call = caller_env()) {
   }
   cli::cli_abort(
     "Could not find a free port for the server.",
-    class = "paparazzi_error_app_startup",
+    class = error_class,
     call = call
   )
 }
