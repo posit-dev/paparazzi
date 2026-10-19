@@ -61,6 +61,7 @@ reference:
       - pz_serve_shiny
       - pz_serve_quarto
       - pz_serve_static
+      - pz_serve_command
       - pz_device
       - pz_nav_goto
 
