@@ -105,11 +105,12 @@ pz_with_page(pz_example("tasks"), function(page) {
   pz_expect_text(page, label, target = passport_title)
   pz_expect_attr(
     page, pz_loc(".task", has_text = "passport"),
-    `data-priority` = pz_regex("^(high|normal)$"), draggable = "true"
+    !!!list(`data-priority` = pz_regex("^(high|normal)$"), draggable = "true")
   )
 })
 ```
 
+Attribute calls also accept a named list spliced with `!!!`, as above.
 `match` and `.match` govern plain strings only, including string pairs in a
 mixed attribute call; a regex value carries its own semantics. Existing
 string-based `match = "regex"` and `.match = "regex"` keep using R's `grepl()`
