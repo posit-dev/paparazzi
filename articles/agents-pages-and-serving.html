@@ -187,7 +187,9 @@ nothing else. You own that server: close its pages, then call
 page loads, so the first render already sees them. <code>scale</code> is
 the device pixel ratio, which sets the PNG’s pixel size. Once you set
 <code>width</code>, <code>height</code> or <code>mobile</code>, the
-scale defaults to 2 unless you give one.</p>
+scale defaults to 2 unless you give one. A page you never size renders
+at the browser’s own ratio, 1 in headless Chrome, and leaving
+<code>scale</code> unset always keeps the current value.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">phone</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_open.html">pz_open</a></span><span class="op">(</span></span>
 <span>  <span class="va">server</span>,</span>
@@ -215,6 +217,21 @@ leaves media queries alone. Set motion preferences before recording:
 <span>    zoom <span class="op">=</span> <span class="fl">1</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span>target <span class="op">=</span> <span class="st">".task-list"</span><span class="op">)</span></span></code></pre></div>
+<p>The device dots are dynamic, so a capture script can keep its
+profiles in lists: splice one into <code><a href="../reference/pz_open.html">pz_open()</a></code> with
+<code>!!!</code> and derive variants with <code><a href="https://rdrr.io/r/utils/modifyList.html" class="external-link">modifyList()</a></code>.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">still</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  width <span class="op">=</span> <span class="fl">1000</span>,</span>
+<span>  height <span class="op">=</span> <span class="fl">720</span>,</span>
+<span>  color_scheme <span class="op">=</span> <span class="st">"light"</span>,</span>
+<span>  reduced_motion <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">tall</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/modifyList.html" class="external-link">modifyList</a></span><span class="op">(</span><span class="va">still</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>height <span class="op">=</span> <span class="fl">1200</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">still_page</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_open.html">pz_open</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span>, <span class="op">!</span><span class="op">!</span><span class="op">!</span><span class="va">still</span><span class="op">)</span></span>
+<span><span class="va">still_page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span>target <span class="op">=</span> <span class="st">".task-list"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">still_page</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="navigate-then-refind-scopes">Navigate, then refind scopes<a class="anchor" aria-label="anchor" href="#navigate-then-refind-scopes"></a>
@@ -229,7 +246,7 @@ when there’s no history in that direction.</p>
 <p>The task page’s filters change the URL fragment. After navigating,
 expect the visible result, since the app may update the page after the
 load.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">base_url</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_get_url.html">pz_get_url</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_nav_goto.html">pz_nav_goto</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">base_url</span>, <span class="st">"#done"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -264,7 +281,7 @@ document fully before preview. For HTML that’s already rendered, open it
 with <code><a href="../reference/pz_open.html">pz_open()</a></code>.</p>
 <p>This example writes a small document with no code chunks and checks
 its heading.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">doc_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"paparazzi-doc-"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">doc_dir</span><span class="op">)</span></span>
 <span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">doc_dir</span>, <span class="st">"index.qmd"</span><span class="op">)</span></span>
@@ -290,11 +307,37 @@ interactive documents through Shiny instead of Quarto preview (see
 Shiny).</p>
 </div>
 <div class="section level2">
+<h2 id="serve-an-external-command">Serve an external command<a class="anchor" aria-label="anchor" href="#serve-an-external-command"></a>
+</h2>
+<p><code><a href="../reference/pz_serve_command.html">pz_serve_command()</a></code> runs any local server command — a
+Shiny for Python app, a dev server, anything that binds a port — in a
+background process with the same handle contract as
+<code><a href="../reference/pz_serve_shiny.html">pz_serve_shiny()</a></code>. Write <code>{port}</code> where the
+command takes its port; paparazzi picks a free one and substitutes it,
+in arguments and in <code>envvars</code>. Pass
+<code>wait = "shiny"</code> so pages opened from the handle wait for
+Shiny idle automatically.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">py_app</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_serve_command.html">pz_serve_command</a></span><span class="op">(</span></span>
+<span>  <span class="st">"shiny"</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"run"</span>, <span class="st">"app.py"</span>, <span class="st">"--port"</span>, <span class="st">"{port}"</span><span class="op">)</span>,</span>
+<span>  wait <span class="op">=</span> <span class="st">"shiny"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_open.html">pz_open</a></span><span class="op">(</span><span class="va">py_app</span><span class="op">)</span></span>
+<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span><span class="st">"Ready"</span>, target <span class="op">=</span> <span class="st">"h1"</span>, match <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span>
+<span><span class="va">py_app</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>When the command fixes its own port, pass <code>port</code> and leave
+<code>{port}</code> out; paparazzi keeps the port and still waits for
+the server to listen. <code>path</code> points the handle’s URL below
+the root when the app mounts elsewhere.</p>
+</div>
+<div class="section level2">
 <h2 id="close-the-page-then-stop-the-server">Close the page, then stop the server<a class="anchor" aria-label="anchor" href="#close-the-page-then-stop-the-server"></a>
 </h2>
 <p>Here <code>page</code> owns a browser session and <code>server</code>
 owns the HTTP service. Close the page first.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span>
 <span><span class="va">server</span><span class="op">$</span><span class="kw">stop</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>Inside a function, call <code>withr::defer(server$stop())</code>

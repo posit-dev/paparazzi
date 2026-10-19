@@ -198,7 +198,10 @@ For checks no built-in expectation covers,
 [`pz_expect_js()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_js.md)
 takes a JavaScript function that receives each matched element and
 returns `true` or `false`. At the root, the target defaults to the page
-body.
+body. To read a value rather than check one,
+[`pz_evaluate()`](https://posit-dev.github.io/paparazzi/reference/pz_evaluate.md)
+evaluates JavaScript in the page and returns the result; it ends the
+chain, so assign it instead of piping it.
 
 ``` r
 

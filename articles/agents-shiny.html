@@ -103,9 +103,10 @@ both.</p>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span><span class="st">"2 tasks"</span>, target <span class="op">=</span> <span class="st">"#summary"</span>, match <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_count.html">pz_expect_count</a></span><span class="op">(</span><span class="fl">2</span>, target <span class="op">=</span> <span class="st">".task"</span><span class="op">)</span></span></code></pre></div>
-<p>“Ready” means the Shiny connection is open, the page isn’t
-<code>shiny-busy</code>, and no output is <code>.recalculating</code>,
-all holding for at least 200 milliseconds. App paths and Shiny handles
+<p>“Ready” means the Shiny connection is open and the page isn’t
+<code>shiny-busy</code>, both holding for at least 200 milliseconds. An
+output suspended on a hidden tab stays <code>.recalculating</code> until
+the tab shows and doesn’t block readiness. App paths and Shiny handles
 wait for this automatically; for an app that’s already running, use
 <code>pz_open(url, wait = "shiny")</code>.</p>
 <p>The app process inherits environment variables but none of your R
@@ -137,6 +138,21 @@ loaded.</p>
 <span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pz_get_text.html">pz_get_text</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="st">"#summary"</span><span class="op">)</span></span></code></pre></div>
+<p>An output can also stay busy past the flush: an
+<code>ExtendedTask</code> or <code>req(cancelOutput = "progress")</code>
+keeps its output <code>.recalculating</code> until the result arrives,
+while the app is otherwise idle. To wait for one output like that — a
+plot with no text to expect is the common case — expect the class to
+clear. Delivery and the class clearing happen together, so a cleared
+class means the output is ready to capture.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#recalculate"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_expect_class.html">pz_expect_class</a></span><span class="op">(</span><span class="st">"recalculating"</span>, target <span class="op">=</span> <span class="st">"#plot"</span>, not <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>The idle wait comes first so the invalidation has reached the output;
+a class check without it can pass on the old state before work even
+starts.</p>
 <p>When you know the expected output, an expectation is the better
 check: it states what the script relies on, and its failure says what
 was missing.</p>
@@ -150,7 +166,7 @@ the page the way a user does, which is what a recording should show.
 input and change events, which is faster for setup. For widgets such as
 selectize inputs and sliders, <code><a href="../reference/pz_set_shiny_input.html">pz_set_shiny_input()</a></code> goes
 through the Shiny input binding, so the widget and the server agree.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_set_shiny_input.html">pz_set_shiny_input</a></span><span class="op">(</span><span class="st">"priority"</span>, <span class="st">"high"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_set_value.html">pz_set_value</a></span><span class="op">(</span><span class="st">"Water the plants"</span>, target <span class="op">=</span> <span class="st">"#title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -174,7 +190,7 @@ with <code><a href="../reference/pz_set_files.html">pz_set_files()</a></code>.</
 <p>Each <code><a href="../reference/pz_set_shiny_input.html">pz_set_shiny_input()</a></code> waits for Shiny to go idle. To
 set several inputs before one result, pass <code>wait = FALSE</code> and
 end with an idle wait or an expectation.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_set_shiny_input.html">pz_set_shiny_input</a></span><span class="op">(</span><span class="st">"title"</span>, <span class="st">"Check smoke alarms"</span>, wait <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_set_shiny_input.html">pz_set_shiny_input</a></span><span class="op">(</span><span class="st">"priority"</span>, <span class="st">"normal"</span>, wait <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -189,7 +205,7 @@ end with an idle wait or an expectation.</p>
 pins the element it found. Keep a <code><a href="../reference/pz_loc.html">pz_loc()</a></code> spec for the
 output, expect the new content, then find it again (see Locators and
 scopes).</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">smoke</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, has_text <span class="op">=</span> <span class="st">"Check smoke alarms"</span><span class="op">)</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span><span class="va">smoke</span><span class="op">)</span></span>
 <span><span class="va">row</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_find.html">pz_find</a></span><span class="op">(</span><span class="va">page</span>, <span class="va">smoke</span><span class="op">)</span></span>
@@ -206,7 +222,7 @@ Each page opened from the handle gets its own Shiny session, and closing
 the pages leaves the app running. The handle owns the process and has
 <code>$stop()</code>, <code>$logs()</code>, <code>$is_running()</code>,
 <code>$url</code> and <code>$port</code>.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">compare_layouts</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">app</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_serve_shiny.html">pz_serve_shiny</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks-app"</span><span class="op">)</span>,</span>
@@ -238,7 +254,7 @@ process.</p>
 <p><code><a href="../reference/pz_with_page.html">pz_local_page()</a></code> starts the app and closes it when the
 test ends. Open a fresh page in each test so tests don’t share task
 state.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">testthat</span><span class="fu">::</span><span class="fu"><a href="https://testthat.r-lib.org/reference/test_that.html" class="external-link">test_that</a></span><span class="op">(</span><span class="st">"a high-priority task is shown in the list"</span>, <span class="op">{</span></span>
 <span>  <span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_with_page.html">pz_local_page</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks-app"</span><span class="op">)</span>, timeout <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
 <span>  <span class="va">page</span> <span class="op">|&gt;</span></span>
@@ -248,6 +264,9 @@ state.</p>
 <span>    <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span><span class="st">"3 tasks"</span>, target <span class="op">=</span> <span class="st">"#summary"</span>, match <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task[data-priority='high']"</span>, has_text <span class="op">=</span> <span class="st">"Book dentist"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<p><code>pz_open(timeout = )</code> sets the page’s default timeout,
+which every later wait and expectation inherits; pass a per-call
+<code>timeout</code> only to override it for one step.</p>
 <p>When tests share one app handle, call <code>pz_local_page(app)</code>
 in each test and stop the handle in the suite’s teardown. paparazzi
 tests the rendered page through the browser; shinytest2 suits tests
@@ -261,8 +280,23 @@ page (<code>page &lt;- page |&gt; pz_stage(...)</code>), then run the
 steps inside <code><a href="../reference/pz_record.html">pz_record()</a></code>. Staged cursor motion and typing
 only animate while recording, so the test still runs at full speed. Use
 direct setters for setup the viewer doesn’t need to see, and user
-actions for the steps they should watch. The Recording and staging
-reference shows the pattern.</p>
+actions for the steps they should watch.</p>
+<p>The wait after a click is part of that choice: hold on the result, or
+keep interacting while the app is busy.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Wait for the result before moving on</span></span>
+<span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">1.5</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Interact while work is in flight</span></span>
+<span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_set_shiny_input.html">pz_set_shiny_input</a></span><span class="op">(</span><span class="st">"priority"</span>, <span class="st">"high"</span>, wait <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span><span class="st">"3 tasks"</span>, target <span class="op">=</span> <span class="st">"#summary"</span>, match <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span></span></code></pre></div>
+<p>The Recording and staging reference explains why the wait stays an
+explicit step.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

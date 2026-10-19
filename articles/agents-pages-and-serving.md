@@ -70,7 +70,9 @@ Device arguments to
 are applied before the page loads, so the first render already sees
 them. `scale` is the device pixel ratio, which sets the PNG’s pixel
 size. Once you set `width`, `height` or `mobile`, the scale defaults to
-2 unless you give one.
+2 unless you give one. A page you never size renders at the browser’s
+own ratio, 1 in headless Chrome, and leaving `scale` unset always keeps
+the current value.
 
 ``` r
 
@@ -104,6 +106,27 @@ page |>
     zoom = 1
   ) |>
   pz_expect_visible(target = ".task-list")
+```
+
+The device dots are dynamic, so a capture script can keep its profiles
+in lists: splice one into
+[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+with `!!!` and derive variants with
+[`modifyList()`](https://rdrr.io/r/utils/modifyList.html).
+
+``` r
+
+still <- list(
+  width = 1000,
+  height = 720,
+  color_scheme = "light",
+  reduced_motion = TRUE
+)
+tall <- modifyList(still, list(height = 1200))
+
+still_page <- pz_open(pz_example("tasks"), !!!still)
+still_page |> pz_expect_visible(target = ".task-list")
+pz_close(still_page)
 ```
 
 ## Navigate, then refind scopes
@@ -194,6 +217,36 @@ unlink(doc_dir, recursive = TRUE)
 Quarto, Shiny and static handles all have `$logs()` and `$is_running()`;
 a static handle’s log is always empty. Serve interactive documents
 through Shiny instead of Quarto preview (see Shiny).
+
+## Serve an external command
+
+[`pz_serve_command()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_command.md)
+runs any local server command — a Shiny for Python app, a dev server,
+anything that binds a port — in a background process with the same
+handle contract as
+[`pz_serve_shiny()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_shiny.md).
+Write `{port}` where the command takes its port; paparazzi picks a free
+one and substitutes it, in arguments and in `envvars`. Pass
+`wait = "shiny"` so pages opened from the handle wait for Shiny idle
+automatically.
+
+``` r
+
+py_app <- pz_serve_command(
+  "shiny",
+  c("run", "app.py", "--port", "{port}"),
+  wait = "shiny"
+)
+page <- pz_open(py_app)
+page |> pz_expect_text("Ready", target = "h1", match = "exact")
+pz_close(page)
+py_app$stop()
+```
+
+When the command fixes its own port, pass `port` and leave `{port}` out;
+paparazzi keeps the port and still waits for the server to listen.
+`path` points the handle’s URL below the root when the app mounts
+elsewhere.
 
 ## Close the page, then stop the server
 

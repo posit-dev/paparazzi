@@ -126,9 +126,10 @@ for (format in formats) {
 ```
 
 `scale = 0.5` halves each dimension; a value above 4 sets the output
-width in pixels (`scale = 800`), and `NULL` keeps the captured size.
-`fps` defaults to 15. The default capture method polls at that rate,
-repeating the previous frame when nothing changed;
+width in pixels (`scale = 800`), and `NULL` (the default) keeps the
+captured size: the recorded region’s CSS size times the device pixel
+ratio. `fps` defaults to 15. The default capture method polls at that
+rate, repeating the previous frame when nothing changed;
 `method = "screencast"` captures on visual changes instead and can catch
 more of an animation’s in-between states.
 
@@ -302,6 +303,38 @@ for a green ring just for that action, and the Enter press shows a Mac
 keycap while it submits the second task. Each
 [`pz_act_press()`](https://posit-dev.github.io/paparazzi/reference/pz_act_press.md)
 replaces the previous key callout.
+
+## Show the wait or skip past it
+
+A click in a Shiny app can start reactive work that outlives the action.
+paparazzi never waits for that work on its own: auto-waiting would skip
+the transition states a recording exists to show and tax clicks that
+trigger nothing. The script makes the choice visible instead.
+
+Wait for the result, then hold on it — the viewer skips the busy state
+and rests on the outcome:
+
+``` r
+
+page |>
+  pz_act_click("#add") |>
+  pz_wait_for_shiny_idle() |>
+  pz_record_hold(1.5)
+```
+
+Interact while work is in flight — the viewer watches the app stay busy
+between the click and the result:
+
+``` r
+
+page |>
+  pz_act_click("#add") |>
+  pz_set_shiny_input("priority", "high", wait = FALSE) |>
+  pz_expect_text("3 tasks", target = "#summary", match = "exact")
+```
+
+Either way, end on the applied state: the idle wait for a settled page,
+an expectation for a specific result.
 
 ## Turn a tested script into a demo
 

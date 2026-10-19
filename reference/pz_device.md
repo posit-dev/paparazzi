@@ -103,7 +103,8 @@ it's opt-in because it's usually wrong for videos.
 ## See also
 
 [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
-forwards its `...` here.
+forwards its `...` here; those dots are dynamic, so
+`pz_open(x, !!!settings)` splices a list of settings.
 
 ## Examples
 
@@ -112,7 +113,7 @@ page <- pz_open(pz_example("tasks"))
 
 # Only the settings you supply change
 page |> pz_device(width = 390, height = 844, mobile = TRUE)
-pz_js(page, "[window.innerWidth, window.devicePixelRatio]")
+pz_evaluate(page, "[window.innerWidth, window.devicePixelRatio]")
 #> [[1]]
 #> [1] 390
 #> 

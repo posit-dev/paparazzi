@@ -46,6 +46,7 @@
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_cursor_move.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_cursor_show.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_device.html</loc></url>
+<url><loc>https://posit-dev.github.io/paparazzi/reference/pz_evaluate.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_example.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_expect_attr.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_expect_checked.html</loc></url>
@@ -83,7 +84,6 @@
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_get_url.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_get_value.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_inspect.html</loc></url>
-<url><loc>https://posit-dev.github.io/paparazzi/reference/pz_js.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_loc.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_nav_goto.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_open.html</loc></url>
@@ -93,6 +93,7 @@
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_record_start.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_record_stop.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_screenshot.html</loc></url>
+<url><loc>https://posit-dev.github.io/paparazzi/reference/pz_serve_command.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_serve_quarto.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_serve_shiny.html</loc></url>
 <url><loc>https://posit-dev.github.io/paparazzi/reference/pz_serve_static.html</loc></url>

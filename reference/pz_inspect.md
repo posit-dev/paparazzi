@@ -79,7 +79,7 @@ includes the recording instead of the inspect image.
 page <- pz_open(pz_example("tasks"))
 page |> pz_inspect()
 #> ── paparazzi page ──────────────────────────────────────────────────────────────
-#> URL        http://127.0.0.1:4316/tasks.html
+#> URL        http://127.0.0.1:3129/tasks.html
 #> Device     992 × 1323 @1x · light
 #> Recording  off · cursor hidden
 
@@ -89,7 +89,7 @@ page |>
   pz_inspect(".task.done", show = "none")
 #> ── paparazzi scope ─────────────────────────────────────────────────────────────
 #> Scope      root › `.task-list` (1)
-#> URL        http://127.0.0.1:4316/tasks.html
+#> URL        http://127.0.0.1:3129/tasks.html
 #> Device     992 × 1323 @1x · light
 #> Target     `.task.done` → 1 match
 #>   1  <li class="task done list-group-item d-flex align-items-cen…
@@ -102,7 +102,7 @@ page |>
   pz_inspect(".task-done", show = "screenshot", path = file.path(tempdir(), "inspect.png"))
 #> ── paparazzi scope ─────────────────────────────────────────────────────────────
 #> Scope      root › `.task-list` (1)
-#> URL        http://127.0.0.1:4316/tasks.html
+#> URL        http://127.0.0.1:3129/tasks.html
 #> Device     992 × 1323 @1x · light
 #> Target     `.task-done` → 7 matches
 #>   1  <button type="button" class="task-done btn btn-sm btn-outli…
@@ -120,6 +120,6 @@ page |>
 #>   7  <button type="button" class="task-done btn btn-sm btn-outli…
 #>      visible · enabled · at 760,552 · 55 × 31
 #> Recording  off · cursor hidden
-#> Annotated screenshot: /tmp/Rtmp0zJaGh/inspect.png
+#> Annotated screenshot: /tmp/RtmpiQgLDR/inspect.png
 pz_close(page)
 ```

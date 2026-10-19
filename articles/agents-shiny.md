@@ -23,10 +23,12 @@ page |>
   pz_expect_count(2, target = ".task")
 ```
 
-“Ready” means the Shiny connection is open, the page isn’t `shiny-busy`,
-and no output is `.recalculating`, all holding for at least 200
-milliseconds. App paths and Shiny handles wait for this automatically;
-for an app that’s already running, use `pz_open(url, wait = "shiny")`.
+“Ready” means the Shiny connection is open and the page isn’t
+`shiny-busy`, both holding for at least 200 milliseconds. An output
+suspended on a hidden tab stays `.recalculating` until the tab shows and
+doesn’t block readiness. App paths and Shiny handles wait for this
+automatically; for an app that’s already running, use
+`pz_open(url, wait = "shiny")`.
 
 The app process inherits environment variables but none of your R
 session’s objects. Load what the app needs in its own code, and pass
@@ -65,6 +67,25 @@ page |>
   pz_wait_for_shiny_idle()
 pz_get_text(page, target = "#summary")
 ```
+
+An output can also stay busy past the flush: an `ExtendedTask` or
+`req(cancelOutput = "progress")` keeps its output `.recalculating` until
+the result arrives, while the app is otherwise idle. To wait for one
+output like that — a plot with no text to expect is the common case —
+expect the class to clear. Delivery and the class clearing happen
+together, so a cleared class means the output is ready to capture.
+
+``` r
+
+page |>
+  pz_act_click("#recalculate") |>
+  pz_wait_for_shiny_idle() |>
+  pz_expect_class("recalculating", target = "#plot", not = TRUE)
+```
+
+The idle wait comes first so the invalidation has reached the output; a
+class check without it can pass on the old state before work even
+starts.
 
 When you know the expected output, an expectation is the better check:
 it states what the script relies on, and its failure says what was
@@ -200,6 +221,10 @@ testthat::test_that("a high-priority task is shown in the list", {
 })
 ```
 
+`pz_open(timeout = )` sets the page’s default timeout, which every later
+wait and expectation inherits; pass a per-call `timeout` only to
+override it for one step.
+
 When tests share one app handle, call `pz_local_page(app)` in each test
 and stop the handle in the suite’s teardown. paparazzi tests the
 rendered page through the browser; shinytest2 suits tests built on
@@ -213,4 +238,24 @@ The same actions and expectations make a recording: assign a staged page
 Staged cursor motion and typing only animate while recording, so the
 test still runs at full speed. Use direct setters for setup the viewer
 doesn’t need to see, and user actions for the steps they should watch.
-The Recording and staging reference shows the pattern.
+
+The wait after a click is part of that choice: hold on the result, or
+keep interacting while the app is busy.
+
+``` r
+
+# Wait for the result before moving on
+page |>
+  pz_act_click("#add") |>
+  pz_wait_for_shiny_idle() |>
+  pz_record_hold(1.5)
+
+# Interact while work is in flight
+page |>
+  pz_act_click("#add") |>
+  pz_set_shiny_input("priority", "high", wait = FALSE) |>
+  pz_expect_text("3 tasks", target = "#summary", match = "exact")
+```
+
+The Recording and staging reference explains why the wait stays an
+explicit step.

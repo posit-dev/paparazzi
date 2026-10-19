@@ -36,8 +36,9 @@ page |>
 At the root, the default capture is the viewport. On a scoped context it
 is the scope’s box. PNG dimensions are the captured CSS size multiplied
 by the device pixel ratio (`scale` on
-[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)),
-so set that explicitly when pixel dimensions matter.
+[`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)):
+1 by default, 2 once you set `width`, `height` or `mobile`. Set `scale`
+explicitly when pixel dimensions matter.
 
 ## Frame the content
 

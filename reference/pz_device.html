@@ -159,7 +159,8 @@ it's opt-in because it's usually wrong for videos.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="pz_open.html">pz_open()</a></code> forwards its <code>...</code> here.</p></div>
+    <div class="dont-index"><p><code><a href="pz_open.html">pz_open()</a></code> forwards its <code>...</code> here; those dots are dynamic,
+so <code>pz_open(x, !!!settings)</code> splices a list of settings.</p></div>
     </div>
 
     <div class="section level2">
@@ -168,7 +169,7 @@ it's opt-in because it's usually wrong for videos.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Only the settings you supply change</span></span></span>
 <span class="r-in"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu">pz_device</span><span class="op">(</span>width <span class="op">=</span> <span class="fl">390</span>, height <span class="op">=</span> <span class="fl">844</span>, mobile <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="pz_js.html">pz_js</a></span><span class="op">(</span><span class="va">page</span>, <span class="st">"[window.innerWidth, window.devicePixelRatio]"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="pz_evaluate.html">pz_evaluate</a></span><span class="op">(</span><span class="va">page</span>, <span class="st">"[window.innerWidth, window.devicePixelRatio]"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 390</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

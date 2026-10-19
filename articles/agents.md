@@ -82,7 +82,9 @@ pz_with_page(pz_example("tasks"), function(page) {
   and
   [`pz_inspect()`](https://posit-dev.github.io/paparazzi/reference/pz_inspect.md).
   Target IDs, data attributes and meaningful classes; add `has_text`
-  when text identifies a row.
+  when text identifies a row. When nothing built-in fits,
+  [`pz_evaluate()`](https://posit-dev.github.io/paparazzi/reference/pz_evaluate.md)
+  runs custom JavaScript in the page and returns the value.
 - **Keep the root page and scopes apart.** `row <- pz_find(page, spec)`
   leaves `page` unchanged. Use `row` for row-level steps and `page` for
   whole-page checks.

@@ -2,6 +2,15 @@
 
 ## paparazzi 0.0.0.9000
 
+- `pz_js()` is renamed to
+  [`pz_evaluate()`](https://posit-dev.github.io/paparazzi/reference/pz_evaluate.md).
+  “Evaluate” is the established term for running JS in the page and
+  returning the result across Playwright (`page.evaluate()`), Puppeteer,
+  and the Chrome DevTools Protocol; the bare noun in `pz_js()` read like
+  the `JS()` string-marker functions in shiny and htmlwidgets rather
+  than an action. paparazzi is unreleased, so there is no deprecation
+  alias.
+
 - [`pz_stage_annotate()`](https://posit-dev.github.io/paparazzi/reference/pz_stage_annotate.md)
   gains `caption_side`, the page default for the side of new
   [`pz_annotate_caption()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_caption.md)

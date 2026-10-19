@@ -198,11 +198,12 @@ controls output size.</p>
 <span><span class="op">}</span></span></code></pre></div>
 <p><code>scale = 0.5</code> halves each dimension; a value above 4 sets
 the output width in pixels (<code>scale = 800</code>), and
-<code>NULL</code> keeps the captured size. <code>fps</code> defaults to
-15. The default capture method polls at that rate, repeating the
-previous frame when nothing changed; <code>method = "screencast"</code>
-captures on visual changes instead and can catch more of an animation’s
-in-between states.</p>
+<code>NULL</code> (the default) keeps the captured size: the recorded
+region’s CSS size times the device pixel ratio. <code>fps</code>
+defaults to 15. The default capture method polls at that rate, repeating
+the previous frame when nothing changed;
+<code>method = "screencast"</code> captures on visual changes instead
+and can catch more of an animation’s in-between states.</p>
 <p>The <code>hold</code> argument to <code><a href="../reference/pz_record_start.html">pz_record_start()</a></code> adds
 seconds to the first and last frames; its default is
 <code>c(0.5, 1)</code>. <code>pz_record_hold(seconds)</code> adds a hold
@@ -353,12 +354,37 @@ shows a Mac keycap while it submits the second task. Each
 <code><a href="../reference/pz_act_press.html">pz_act_press()</a></code> replaces the previous key callout.</p>
 </div>
 <div class="section level2">
+<h2 id="show-the-wait-or-skip-past-it">Show the wait or skip past it<a class="anchor" aria-label="anchor" href="#show-the-wait-or-skip-past-it"></a>
+</h2>
+<p>A click in a Shiny app can start reactive work that outlives the
+action. paparazzi never waits for that work on its own: auto-waiting
+would skip the transition states a recording exists to show and tax
+clicks that trigger nothing. The script makes the choice visible
+instead.</p>
+<p>Wait for the result, then hold on it — the viewer skips the busy
+state and rests on the outcome:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">1.5</span><span class="op">)</span></span></code></pre></div>
+<p>Interact while work is in flight — the viewer watches the app stay
+busy between the click and the result:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_set_shiny_input.html">pz_set_shiny_input</a></span><span class="op">(</span><span class="st">"priority"</span>, <span class="st">"high"</span>, wait <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span><span class="st">"3 tasks"</span>, target <span class="op">=</span> <span class="st">"#summary"</span>, match <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span></span></code></pre></div>
+<p>Either way, end on the applied state: the idle wait for a settled
+page, an expectation for a specific result.</p>
+</div>
+<div class="section level2">
 <h2 id="turn-a-tested-script-into-a-demo">Turn a tested script into a demo<a class="anchor" aria-label="anchor" href="#turn-a-tested-script-into-a-demo"></a>
 </h2>
 <p>Write the steps once as a function with its expectations, run it as a
 check, then stage the page and record the same function. This example
 needs shiny.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">app</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_open.html">pz_open</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks-app"</span><span class="op">)</span>,</span>
 <span>  width <span class="op">=</span> <span class="fl">900</span>,</span>
@@ -392,7 +418,7 @@ needs shiny.</p>
 <p>Staging only animates while recording, so the check runs at full
 speed, and the expectations that stay in the recorded function confirm
 that the demo reached the state it shows.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">video</span>, <span class="va">outputs</span>, <span class="va">paused_video</span>, <span class="va">block_video</span>, <span class="va">per_call_video</span>, <span class="va">shiny_demo</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>

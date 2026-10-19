@@ -308,8 +308,10 @@ without opening a viewer, and the chain continues.</p>
 <p>For checks no built-in expectation covers,
 <code><a href="../reference/pz_expect_js.html">pz_expect_js()</a></code> takes a JavaScript function that receives
 each matched element and returns <code>true</code> or
-<code>false</code>. At the root, the target defaults to the page
-body.</p>
+<code>false</code>. At the root, the target defaults to the page body.
+To read a value rather than check one, <code><a href="../reference/pz_evaluate.html">pz_evaluate()</a></code>
+evaluates JavaScript in the page and returns the result; it ends the
+chain, so assign it instead of piping it.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pz_with_page.html">pz_with_page</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">page</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">page</span> <span class="op">|&gt;</span></span>

@@ -20,6 +20,8 @@ chain. Set the page’s size and display settings, and move between pages.
   : Serve a document or project with Quarto
 - [`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md)
   : Serve static files over HTTP
+- [`pz_serve_command()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_command.md)
+  : Serve an external app process with a command
 - [`pz_device()`](https://posit-dev.github.io/paparazzi/reference/pz_device.md)
   : Set the page's size and display settings
 - [`pz_nav_goto()`](https://posit-dev.github.io/paparazzi/reference/pz_nav_goto.md)
@@ -255,7 +257,7 @@ Read values from the page. Getters return values, so they end the chain.
 
 - [`pz_inspect()`](https://posit-dev.github.io/paparazzi/reference/pz_inspect.md)
   : Inspect the current page state
-- [`pz_js()`](https://posit-dev.github.io/paparazzi/reference/pz_js.md)
+- [`pz_evaluate()`](https://posit-dev.github.io/paparazzi/reference/pz_evaluate.md)
   : Evaluate JavaScript in the page
 - [`pz_chromote()`](https://posit-dev.github.io/paparazzi/reference/pz_chromote.md)
   : Get the underlying ChromoteSession

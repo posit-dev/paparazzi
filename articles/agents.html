@@ -161,7 +161,9 @@ needs the gifski package.</p>
 <strong>Read the page before choosing selectors.</strong> Look at
 the app’s HTML, or call <code><a href="../reference/pz_get_elements.html">pz_get_elements()</a></code> and
 <code><a href="../reference/pz_inspect.html">pz_inspect()</a></code>. Target IDs, data attributes and meaningful
-classes; add <code>has_text</code> when text identifies a row.</li>
+classes; add <code>has_text</code> when text identifies a row. When
+nothing built-in fits, <code><a href="../reference/pz_evaluate.html">pz_evaluate()</a></code> runs custom JavaScript
+in the page and returns the value.</li>
 <li>
 <strong>Keep the root page and scopes apart.</strong>
 <code>row &lt;- pz_find(page, spec)</code> leaves <code>page</code>

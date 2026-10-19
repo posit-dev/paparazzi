@@ -62,7 +62,14 @@ those pages leaves the app running.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pz_serve_shiny</span><span class="op">(</span><span class="va">app</span>, <span class="va">...</span>, envvars <span class="op">=</span> <span class="cn">NULL</span>, shiny_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, timeout <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pz_serve_shiny</span><span class="op">(</span></span>
+<span>  <span class="va">app</span>,</span>
+<span>  <span class="va">...</span>,</span>
+<span>  envvars <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  shiny_options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  wait <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"shiny"</span>, <span class="st">"load"</span><span class="op">)</span>,</span>
+<span>  timeout <span class="op">=</span> <span class="fl">10</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -90,6 +97,13 @@ environment overrides.</p></dd>
 the app. <code>host</code> and <code>port</code> are managed by paparazzi: <code>host</code> defaults
 to <code>"127.0.0.1"</code>, and <code>port</code> (default <code>NULL</code>) picks a random free port.
 If startup fails because the port was taken, a new port is tried.</p></dd>
+
+
+<dt id="arg-wait">wait<a class="anchor" aria-label="anchor" href="#arg-wait"></a></dt>
+<dd><p>What <code><a href="pz_open.html">pz_open()</a></code> with <code>wait = "auto"</code> waits for on pages
+opened from this handle: <code>"shiny"</code> (the default) waits for Shiny
+idle, <code>"load"</code> waits only for the page to load. Pass <code>"load"</code> when
+an app's busy/idle cycle makes idle waits unsuitable.</p></dd>
 
 
 <dt id="arg-timeout">timeout<a class="anchor" aria-label="anchor" href="#arg-timeout"></a></dt>

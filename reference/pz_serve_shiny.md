@@ -9,7 +9,14 @@ for each page. Closing those pages leaves the app running.
 ## Usage
 
 ``` r
-pz_serve_shiny(app, ..., envvars = NULL, shiny_options = list(), timeout = 10)
+pz_serve_shiny(
+  app,
+  ...,
+  envvars = NULL,
+  shiny_options = list(),
+  wait = c("shiny", "load"),
+  timeout = 10
+)
 ```
 
 ## Arguments
@@ -39,6 +46,15 @@ pz_serve_shiny(app, ..., envvars = NULL, shiny_options = list(), timeout = 10)
   to `"127.0.0.1"`, and `port` (default `NULL`) picks a random free
   port. If startup fails because the port was taken, a new port is
   tried.
+
+- wait:
+
+  What
+  [`pz_open()`](https://posit-dev.github.io/paparazzi/reference/pz_open.md)
+  with `wait = "auto"` waits for on pages opened from this handle:
+  `"shiny"` (the default) waits for Shiny idle, `"load"` waits only for
+  the page to load. Pass `"load"` when an app's busy/idle cycle makes
+  idle waits unsuitable.
 
 - timeout:
 

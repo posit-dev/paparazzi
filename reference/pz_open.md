@@ -47,8 +47,9 @@ pz_open(
   - a handle from
     [`pz_serve_shiny()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_shiny.md),
     [`pz_serve_quarto()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_quarto.md),
-    or
     [`pz_serve_static()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_static.md),
+    or
+    [`pz_serve_command()`](https://posit-dev.github.io/paparazzi/reference/pz_serve_command.md),
     shared across pages;
 
   - an existing `ChromoteSession` (wrapped as-is; nothing is navigated).
@@ -67,7 +68,8 @@ pz_open(
   Forwarded to
   [`pz_device()`](https://posit-dev.github.io/paparazzi/reference/pz_device.md)
   as device settings (e.g. `width = 390, mobile = TRUE`); they must be
-  named.
+  named. The dots are dynamic: splice a list of settings with `!!!` to
+  reuse one device profile across calls.
 
 - wait:
 
@@ -119,10 +121,23 @@ pz_close(page)
 
 # Named arguments in `...` set up the device before the page loads
 phone <- pz_open(pz_example("tasks"), width = 390, height = 844, mobile = TRUE)
-pz_js(phone, "window.innerWidth")
+pz_evaluate(phone, "window.innerWidth")
 #> [1] 390
 pz_screenshot(phone, frame = pz_frame("#new-task", pad = 16))
 pz_close(phone)
+
+# Splice a shared device profile into each call with `!!!`
+still <- list(width = 1000, height = 720, color_scheme = "light")
+tall <- modifyList(still, list(height = 1200))
+page <- pz_open(pz_example("tasks"), !!!still)
+pz_evaluate(page, "[window.innerWidth, window.innerHeight]")
+#> [[1]]
+#> [1] 1000
+#> 
+#> [[2]]
+#> [1] 720
+#> 
+pz_close(page)
 if (FALSE) { # paparazzi:::examples_run("shiny")
 # An app directory runs in a background R process that the page owns.
 # pz_open() returns once Shiny has connected and gone idle.

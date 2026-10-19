@@ -119,8 +119,9 @@ the result of each action before capturing it.</p>
 <p>At the root, the default capture is the viewport. On a scoped context
 it is the scope’s box. PNG dimensions are the captured CSS size
 multiplied by the device pixel ratio (<code>scale</code> on
-<code><a href="../reference/pz_open.html">pz_open()</a></code>), so set that explicitly when pixel dimensions
-matter.</p>
+<code><a href="../reference/pz_open.html">pz_open()</a></code>): 1 by default, 2 once you set
+<code>width</code>, <code>height</code> or <code>mobile</code>. Set
+<code>scale</code> explicitly when pixel dimensions matter.</p>
 </div>
 <div class="section level2">
 <h2 id="frame-the-content">Frame the content<a class="anchor" aria-label="anchor" href="#frame-the-content"></a>
