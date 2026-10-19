@@ -19,12 +19,14 @@ pz_expect_attr(
 \item{.target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 either. \code{NULL} selects the current context.}
 
-\item{...}{Named attribute/value pairs. Values are character vectors;
-use backticks for names such as \code{aria-expanded}. Dynamic dots support
-splicing a named list with \verb{!!!}.}
+\item{...}{Named attribute/value pairs. Values are character vectors
+or single \code{\link[=pz_regex]{pz_regex()}} values; use backticks for names such as
+\code{aria-expanded}. Dynamic dots support splicing a named list with
+\verb{!!!}.}
 
-\item{.match}{Comparison mode for all pairs: \code{"exact"} (default),
-\code{"contains"}, or \code{"regex"}.}
+\item{.match}{Comparison mode for string pairs: \code{"exact"} (default),
+\code{"contains"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).
+\code{\link[=pz_regex]{pz_regex()}} values carry their own flags and ignore \code{.match}.}
 
 \item{.not}{Invert the combined expectation?}
 
@@ -37,7 +39,14 @@ splicing a named list with \verb{!!!}.}
 \code{\link[=pz_expect_attr]{pz_expect_attr()}} passes when at least one element matches and every
 matched element satisfies every named attribute/value pair in \code{...}.
 Missing attributes satisfy no pair. Comparisons are exact by default;
-\code{.match = "contains"} or \code{"regex"} applies to all pairs in the call.
+\code{.match = "contains"} or \code{"regex"} applies to all string pairs in the
+call.
+
+A pair's value may instead be a single \code{\link[=pz_regex]{pz_regex()}}, matched in Chrome
+with JavaScript \code{RegExp} syntax against the whitespace-collapsed,
+trimmed attribute. Regex and string pairs can mix in one call;
+\code{.match} doesn't apply to regex values, and a missing attribute never
+matches one, not even an empty pattern.
 
 A length-1 value applies to every element. A vector requires exactly
 that many matches and compares pairwise, in order. With \code{.not = TRUE},
@@ -58,7 +67,8 @@ page |> pz_expect_attr(
 
 page |>
   pz_act_click("#toggle_help") |>
-  pz_expect_attr("#toggle_help", `aria-expanded` = "true")
+  pz_expect_attr("#toggle_help", `aria-expanded` = "true") |>
+  pz_expect_attr("#toggle_help", `aria-expanded` = pz_regex("^true$"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

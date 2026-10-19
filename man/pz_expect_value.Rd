@@ -18,7 +18,8 @@ pz_expect_value(
 \item{ctx}{A paparazzi context.}
 
 \item{value}{A character vector of expected values: length 1 applies
-to every match, length \code{n} is compared pairwise in order.}
+to every match, length \code{n} is compared pairwise in order. Or a
+single \code{\link[=pz_regex]{pz_regex()}} value, matched against every match in Chrome.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
@@ -28,8 +29,9 @@ page text.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{match}{How to compare \code{text}: \code{"contains"} (substring),
-\code{"exact"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).}
+\item{match}{How to compare \code{text} when it's a character vector:
+\code{"contains"} (substring), \code{"exact"}, or \code{"regex"} (an R regex
+matched with \code{\link[=grepl]{grepl()}}). Ignored for \code{\link[=pz_regex]{pz_regex()}} values.}
 
 \item{not}{Invert the check.}
 
@@ -51,6 +53,10 @@ requires exactly \code{n} matches and compares pairwise, in order. With
 \code{not = TRUE}, the expectation passes when no match satisfies \code{value},
 including when nothing matches.
 
+Pass a single \code{\link[=pz_regex]{pz_regex()}} value instead of strings to match with
+Chrome's JavaScript \code{RegExp} dialect, as in \code{\link[=pz_expect_text]{pz_expect_text()}}. A
+missing value never matches, not even an empty pattern.
+
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
 reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect_exists()}} for the
@@ -60,6 +66,7 @@ retry, timeout, and bridge behavior shared by all expectations.
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_expect_value("normal", target = "#task_priority", match = "exact")
+page |> pz_expect_value(pz_regex("^(low|normal|high)$"), target = "#task_priority")
 
 page |>
   pz_act_type("Buy milk", target = "#task_title") |>

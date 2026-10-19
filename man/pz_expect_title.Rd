@@ -16,12 +16,15 @@ pz_expect_title(
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{title}{The expected page title, a single string.}
+\item{title}{The expected page title: a single string, or a single
+\code{\link[=pz_regex]{pz_regex()}} value matched in Chrome with JavaScript \code{RegExp}
+syntax.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{match}{How to compare \code{url}: \code{"contains"} (substring),
-\code{"exact"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).}
+\item{match}{How to compare \code{url} when it's a string: \code{"contains"}
+(substring), \code{"exact"}, or \code{"regex"} (an R regex matched with
+\code{\link[=grepl]{grepl()}}). Ignored for \code{\link[=pz_regex]{pz_regex()}} values.}
 
 \item{not}{Invert the check.}
 
@@ -45,6 +48,7 @@ retry, timeout, and bridge behavior shared by all expectations.
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_expect_title("Tasks", match = "exact")
+page |> pz_expect_title(pz_regex("^tasks$", flags = "i"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

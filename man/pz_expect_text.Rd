@@ -18,7 +18,8 @@ pz_expect_text(
 \item{ctx}{A paparazzi context.}
 
 \item{text}{A character vector of expected text: length 1 applies to
-every match, length \code{n} is compared pairwise in order.}
+every match, length \code{n} is compared pairwise in order. Or a single
+\code{\link[=pz_regex]{pz_regex()}} value, matched against every match in Chrome.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
@@ -28,8 +29,9 @@ page text.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{match}{How to compare \code{text}: \code{"contains"} (substring),
-\code{"exact"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).}
+\item{match}{How to compare \code{text} when it's a character vector:
+\code{"contains"} (substring), \code{"exact"}, or \code{"regex"} (an R regex
+matched with \code{\link[=grepl]{grepl()}}). Ignored for \code{\link[=pz_regex]{pz_regex()}} values.}
 
 \item{not}{Invert the check.}
 
@@ -50,6 +52,13 @@ exactly \code{n} matches and compares pairwise, in order. With
 \code{not = TRUE}, the expectation passes when no match satisfies \code{text},
 including when nothing matches.
 
+Pass a single \code{\link[=pz_regex]{pz_regex()}} value instead of strings to match with
+Chrome's JavaScript \code{RegExp} dialect. paparazzi collapses whitespace
+and trims each element's text in the browser before matching, but
+never changes the pattern source; one regex value applies to every
+match. \code{match} governs plain strings only, because a regex value
+carries its own flags.
+
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
 reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect_exists()}} for the
@@ -66,6 +75,9 @@ page |> pz_expect_text(c("All", "Open", "Done"), target = ".filters a")
 
 # Regular expressions use R's syntax
 page |> pz_expect_text("^[A-Z]", target = ".task-title", match = "regex")
+
+# A pz_regex() value uses the browser's JavaScript dialect instead
+page |> pz_expect_text(pz_regex("^[A-Z]"), target = ".task-title")
 
 # On failure, the error shows the target and the last text seen
 try(pz_expect_text(page, "otters", target = "h1", timeout = 0.5))
