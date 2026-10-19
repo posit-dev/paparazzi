@@ -93,6 +93,8 @@ JavaScript timestamps. Top-level <code>NULL</code> and atomic <code>NA</code> ar
 
 <dt id="arg-wait">wait<a class="anchor" aria-label="anchor" href="#arg-wait"></a></dt>
 <dd><p>If <code>TRUE</code>, call <code><a href="pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle()</a></code> after the change.
+This does not acknowledge the input update or wait for a particular
+output; expect the result you need before reading or capturing it.
 If <code>FALSE</code>, return immediately after dispatching the change.</p></dd>
 
 </dl></div>
@@ -106,7 +108,7 @@ If <code>FALSE</code>, return immediately after dispatching the change.</p></dd>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># paparazzi:::examples_run("shiny")</span></span></span>
 <span class="r-in"><span><span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="pz_open.html">pz_open</a></span><span class="op">(</span><span class="fu"><a href="pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks-app"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Each call waits for Shiny to go idle, so the server has seen the value</span></span></span>
+<span class="r-in"><span><span class="co"># Set the inputs, then expect the task count after clicking Add</span></span></span>
 <span class="r-in"><span><span class="va">page</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">pz_set_shiny_input</span><span class="op">(</span><span class="st">"title"</span>, <span class="st">"Buy milk"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">pz_set_shiny_input</span><span class="op">(</span><span class="st">"priority"</span>, <span class="st">"high"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>

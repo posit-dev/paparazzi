@@ -34,9 +34,9 @@ pz_wait_for_shiny_idle(ctx, ..., timeout = NULL)
 
 ## Details
 
-Idle means the server finished its reactive flush; it does not prove a
-particular output was delivered or is ready to capture. Expect the
-content you rely on (e.g.
+Idle means Shiny's busy signal has stayed clear; it does not acknowledge
+a particular input update or prove an output was delivered or is ready
+to capture. Expect the content you rely on (e.g.
 [`pz_expect_text()`](https://posit-dev.github.io/paparazzi/reference/pz_expect_text.md))
 before reading or capturing it.
 
@@ -57,7 +57,8 @@ page <- pz_open(pz_example("tasks-app"))
 page |>
   pz_set_value("Buy milk", target = "#title") |>
   pz_act_click("#add") |>
-  pz_wait_for_shiny_idle()
+  pz_wait_for_shiny_idle() |>
+  pz_expect_text("3 tasks", target = "#summary", match = "exact")
 pz_get_text(page, target = "#summary")
 pz_close(page)
 }

@@ -108,7 +108,8 @@ both.</p>
 output suspended on a hidden tab stays <code>.recalculating</code> until
 the tab shows and doesn’t block readiness. App paths and Shiny handles
 wait for this automatically; for an app that’s already running, use
-<code>pz_open(url, wait = "shiny")</code>.</p>
+<code>pz_open(url, wait = "shiny")</code>. This wait does not prove that
+initial rendering has finished; expect the content you need.</p>
 <p>The app process inherits environment variables but none of your R
 session’s objects. Load what the app needs in its own code, and pass
 configuration with <code>envvars</code> or <code>shiny_options</code>,
@@ -128,34 +129,35 @@ delay.</p>
 <span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span><span class="st">"3 tasks"</span>, target <span class="op">=</span> <span class="st">"#summary"</span>, match <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, has_text <span class="op">=</span> <span class="st">"Buy milk"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>When there’s no particular value to expect, wait for Shiny to go
-idle, then read or capture. <code><a href="../reference/pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle()</a></code> checks
-the connection and reactive work, not just whether the page has
-loaded.</p>
+<p><code><a href="../reference/pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle()</a></code> observes Shiny’s connection and
+busy signal, not just page loading. It does not acknowledge a particular
+input update or wait for a particular output. Expect new content before
+reading or capturing the result.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_set_value.html">pz_set_value</a></span><span class="op">(</span><span class="st">"Renew library card"</span>, target <span class="op">=</span> <span class="st">"#title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span><span class="st">"4 tasks"</span>, target <span class="op">=</span> <span class="st">"#summary"</span>, match <span class="op">=</span> <span class="st">"exact"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pz_get_text.html">pz_get_text</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="st">"#summary"</span><span class="op">)</span></span></code></pre></div>
 <p>An output can also stay busy past the flush: an
 <code>ExtendedTask</code> or <code>req(cancelOutput = "progress")</code>
 keeps its output <code>.recalculating</code> until the result arrives,
-while the app is otherwise idle. To wait for one output like that — a
-plot with no text to expect is the common case — expect the class to
-clear. Delivery and the class clearing happen together, so a cleared
-class means the output is ready to capture.</p>
+while the app is otherwise idle. For a long-running output whose
+progress state you can observe — a plot with no text to expect is the
+common case — confirm the class is present, then wait for it to
+clear.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#recalculate"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_wait_for_shiny_idle.html">pz_wait_for_shiny_idle</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_expect_class.html">pz_expect_class</a></span><span class="op">(</span><span class="st">"recalculating"</span>, target <span class="op">=</span> <span class="st">"#plot"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_class.html">pz_expect_class</a></span><span class="op">(</span><span class="st">"recalculating"</span>, target <span class="op">=</span> <span class="st">"#plot"</span>, not <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>The idle wait comes first so the invalidation has reached the output;
-a class check without it can pass on the old state before work even
-starts.</p>
-<p>When you know the expected output, an expectation is the better
-check: it states what the script relies on, and its failure says what
-was missing.</p>
+<p>This waits for an observable recalculation to finish, not for every
+update triggered by an action. A fast output can finish before you
+observe the class, making the first expectation time out. An idle wait
+alone does not prove that invalidation reached the output either. When
+you know the expected new output, expect its content instead; that
+states what the script relies on, and its failure says what was
+missing.</p>
 </div>
 <div class="section level2">
 <h2 id="choose-user-actions-or-direct-setters">Choose user actions or direct setters<a class="anchor" aria-label="anchor" href="#choose-user-actions-or-direct-setters"></a>
