@@ -10,6 +10,16 @@ into whatever element currently has focus; if nothing editable is
 focused, the text goes nowhere, exactly like typing into a page with no
 focused field.
 
+With `target = NULL` inside a scope, paparazzi normally clicks the
+scope's element before typing. It can preserve a non-collapsed text
+selection instead: if the scope itself is `contenteditable`, paparazzi
+focuses it without clicking. Otherwise, paparazzi preserves a selection
+inside an already-focused `contenteditable` descendant without clicking.
+That selection must stay inside the scope and one editing host (an
+editable element whose parent is not editable), without crossing any
+`contenteditable="false"` islands. An explicit `target` always takes the
+click path.
+
 Insertion is instant (one `insertText`), except while recording with
 `typing = "natural"` (the default; see
 [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)):
@@ -59,10 +69,11 @@ or use the browser's own focus and text-selection methods. They never
 set a form value directly.
 
 An action with a `target` looks for it in the current scope and waits
-until it matches an element. Inside a scope, `target = NULL` acts on the
-scope's element, and scrolling with `by` or `to` scrolls the scope's
-container. An explicit target is scrolled into view first when needed. A
-few actions, like
+until it matches an element. Inside a scope, `target = NULL` normally
+acts on the scope's element; `pz_act_type()` can instead preserve a held
+selection in a focused editable descendant. Scrolling with `by` or `to`
+scrolls the scope's container. An explicit target is scrolled into view
+first when needed. A few actions, like
 [`pz_act_press()`](https://posit-dev.github.io/paparazzi/reference/pz_act_press.md),
 take no target and act on the focused element instead.
 

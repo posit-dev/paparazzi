@@ -180,9 +180,9 @@ page |>
   pz_find(dentist) |>
   pz_act_click(".task-edit") |>
   pz_act_select_text("dentist", target = ".task-title") |>
-  pz_find_reset() |>
   pz_act_type("eye doctor") |>
   pz_act_press("Enter") |>
+  pz_find_reset() |>
   # [3] Reorder the list
   pz_annotate_caption("Drag tasks to reorder them") |>
   pz_annotate_spotlight(".task-list", pad = 4) |>
@@ -221,13 +221,12 @@ watching. The steps fall into four groups:
     `.task-title` mean that task’s Edit button and title. Clicking Edit
     makes the title editable, and
     [`pz_act_select_text()`](https://posit-dev.github.io/paparazzi/reference/pz_act_select_text.md)
-    selects the word “dentist”.
-    [`pz_find_reset()`](https://posit-dev.github.io/paparazzi/reference/pz_find_reset.md)
-    returns to the whole page before typing: with a scope,
+    selects the word “dentist”. Without a target,
     [`pz_act_type()`](https://posit-dev.github.io/paparazzi/reference/pz_act_type.md)
-    would click the task first and lose the selection. Without a target,
-    it types into the focused title, replacing the selected word, and
-    Enter saves the new title.
+    preserves the selection in the focused title within the task scope,
+    replacing the selected word, and Enter saves the new title.
+    [`pz_find_reset()`](https://posit-dev.github.io/paparazzi/reference/pz_find_reset.md)
+    then returns to the whole page for the drag.
 3.  **Reorder the list.**
     [`pz_annotate_spotlight()`](https://posit-dev.github.io/paparazzi/reference/pz_annotate_spotlight.md)
     dims everything but the list, drawing the viewer’s attention to the

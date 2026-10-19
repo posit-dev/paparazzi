@@ -8,6 +8,15 @@ click lands, just like a real user. With target = NULL at the
 root context, inserts into whatever element currently has focus;
 if nothing editable is focused, the text goes nowhere, exactly like
 typing into a page with no focused field.
+With target = NULL inside a scope, paparazzi normally clicks the scope's
+element before typing. It can preserve a non-collapsed text selection
+instead: if the scope itself is contenteditable, paparazzi focuses it
+without clicking. Otherwise, paparazzi preserves a selection inside an
+already-focused contenteditable descendant without clicking. That
+selection must stay inside the scope and one editing host (an editable
+element whose parent is not editable), without crossing any
+contenteditable=&quot;false&quot; islands.
+An explicit target always takes the click path.
 Insertion is instant (one insertText), except while recording
 with typing = &quot;natural&quot; (the default; see pz_stage()): one
 insertText per character with randomized delays around
@@ -24,6 +33,15 @@ click lands, just like a real user. With target = NULL at the
 root context, inserts into whatever element currently has focus;
 if nothing editable is focused, the text goes nowhere, exactly like
 typing into a page with no focused field.
+With target = NULL inside a scope, paparazzi normally clicks the scope's
+element before typing. It can preserve a non-collapsed text selection
+instead: if the scope itself is contenteditable, paparazzi focuses it
+without clicking. Otherwise, paparazzi preserves a selection inside an
+already-focused contenteditable descendant without clicking. That
+selection must stay inside the scope and one editing host (an editable
+element whose parent is not editable), without crossing any
+contenteditable=&quot;false&quot; islands.
+An explicit target always takes the click path.
 Insertion is instant (one insertText), except while recording
 with typing = &quot;natural&quot; (the default; see pz_stage()): one
 insertText per character with randomized delays around
@@ -89,6 +107,15 @@ click lands, just like a real user. With <code>target = NULL</code> at the
 root context, inserts into whatever element currently has focus;
 if nothing editable is focused, the text goes nowhere, exactly like
 typing into a page with no focused field.</p>
+<p>With <code>target = NULL</code> inside a scope, paparazzi normally clicks the scope's
+element before typing. It can preserve a non-collapsed text selection
+instead: if the scope itself is <code>contenteditable</code>, paparazzi focuses it
+without clicking. Otherwise, paparazzi preserves a selection inside an
+already-focused <code>contenteditable</code> descendant without clicking. That
+selection must stay inside the scope and one editing host (an editable
+element whose parent is not editable), without crossing any
+<code>contenteditable="false"</code> islands.
+An explicit <code>target</code> always takes the click path.</p>
 <p>Insertion is instant (one <code>insertText</code>), except while recording
 with <code>typing = "natural"</code> (the default; see <code><a href="pz_stage.html">pz_stage()</a></code>): one
 <code>insertText</code> per character with randomized delays around
@@ -139,10 +166,11 @@ real browser input, such as pointer moves, clicks and key presses, or use
 the browser's own focus and text-selection methods. They never set a form
 value directly.</p>
 <p>An action with a <code>target</code> looks for it in the current scope and waits until
-it matches an element. Inside a scope, <code>target = NULL</code> acts on the scope's
-element, and scrolling with <code>by</code> or <code>to</code> scrolls the scope's container. An
-explicit target is scrolled into view first when needed. A few actions,
-like <code><a href="pz_act_press.html">pz_act_press()</a></code>, take no target and act on the focused element
+it matches an element. Inside a scope, <code>target = NULL</code> normally acts on the
+scope's element; <code>pz_act_type()</code> can instead preserve a held selection in a
+focused editable descendant. Scrolling with <code>by</code> or <code>to</code> scrolls the scope's
+container. An explicit target is scrolled into view first when needed. A few
+actions, like <code><a href="pz_act_press.html">pz_act_press()</a></code>, take no target and act on the focused element
 instead.</p>
 <p>While the page is recording, actions are staged as <code><a href="pz_stage.html">pz_stage()</a></code> sets them
 up: the cursor glides to pointer targets, typing is paced, scrolls normally

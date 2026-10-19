@@ -268,9 +268,9 @@ down:</p>
 <span>  <span class="fu"><a href="../reference/pz_find.html">pz_find</a></span><span class="op">(</span><span class="va">dentist</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">".task-edit"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_select_text.html">pz_act_select_text</a></span><span class="op">(</span><span class="st">"dentist"</span>, target <span class="op">=</span> <span class="st">".task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_find_reset.html">pz_find_reset</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"eye doctor"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_press.html">pz_act_press</a></span><span class="op">(</span><span class="st">"Enter"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_find_reset.html">pz_find_reset</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># [3] Reorder the list</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_caption.html">pz_annotate_caption</a></span><span class="op">(</span><span class="st">"Drag tasks to reorder them"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_spotlight.html">pz_annotate_spotlight</a></span><span class="op">(</span><span class="st">".task-list"</span>, pad <span class="op">=</span> <span class="fl">4</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -305,11 +305,11 @@ the start.</li>
 chain to the dentist task, so <code>.task-edit</code> and
 <code>.task-title</code> mean that task’s Edit button and title.
 Clicking Edit makes the title editable, and
-<code><a href="../reference/pz_act_select_text.html">pz_act_select_text()</a></code> selects the word “dentist”.
-<code><a href="../reference/pz_find_reset.html">pz_find_reset()</a></code> returns to the whole page before typing:
-with a scope, <code><a href="../reference/pz_act_type.html">pz_act_type()</a></code> would click the task first and
-lose the selection. Without a target, it types into the focused title,
-replacing the selected word, and Enter saves the new title.</li>
+<code><a href="../reference/pz_act_select_text.html">pz_act_select_text()</a></code> selects the word “dentist”. Without a
+target, <code><a href="../reference/pz_act_type.html">pz_act_type()</a></code> preserves the selection in the
+focused title within the task scope, replacing the selected word, and
+Enter saves the new title. <code><a href="../reference/pz_find_reset.html">pz_find_reset()</a></code> then returns to
+the whole page for the drag.</li>
 <li>
 <strong>Reorder the list.</strong>
 <code><a href="../reference/pz_annotate_spotlight.html">pz_annotate_spotlight()</a></code> dims everything but the list,

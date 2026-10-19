@@ -59,11 +59,13 @@ or use the browser's own focus and text-selection methods. They never
 set a form value directly.
 
 An action with a `target` looks for it in the current scope and waits
-until it matches an element. Inside a scope, `target = NULL` acts on the
-scope's element, and scrolling with `by` or `to` scrolls the scope's
-container. An explicit target is scrolled into view first when needed. A
-few actions, like `pz_act_press()`, take no target and act on the
-focused element instead.
+until it matches an element. Inside a scope, `target = NULL` normally
+acts on the scope's element;
+[`pz_act_type()`](https://posit-dev.github.io/paparazzi/reference/pz_act_type.md)
+can instead preserve a held selection in a focused editable descendant.
+Scrolling with `by` or `to` scrolls the scope's container. An explicit
+target is scrolled into view first when needed. A few actions, like
+`pz_act_press()`, take no target and act on the focused element instead.
 
 While the page is recording, actions are staged as
 [`pz_stage()`](https://posit-dev.github.io/paparazzi/reference/pz_stage.md)

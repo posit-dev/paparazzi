@@ -2,6 +2,12 @@
 
 ## paparazzi 0.0.0.9000
 
+- [`pz_act_type()`](https://posit-dev.github.io/paparazzi/reference/pz_act_type.md)
+  with `target = NULL` now preserves a held selection in an
+  already-focused `contenteditable` descendant of the current scope,
+  provided the selection stays within one editing host and doesn’t cross
+  non-editable islands. Explicit targets still click before typing.
+
 - `pz_js()` is renamed to
   [`pz_evaluate()`](https://posit-dev.github.io/paparazzi/reference/pz_evaluate.md).
   “Evaluate” is the established term for running JS in the page and

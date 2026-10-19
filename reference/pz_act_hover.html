@@ -102,10 +102,11 @@ real browser input, such as pointer moves, clicks and key presses, or use
 the browser's own focus and text-selection methods. They never set a form
 value directly.</p>
 <p>An action with a <code>target</code> looks for it in the current scope and waits until
-it matches an element. Inside a scope, <code>target = NULL</code> acts on the scope's
-element, and scrolling with <code>by</code> or <code>to</code> scrolls the scope's container. An
-explicit target is scrolled into view first when needed. A few actions,
-like <code><a href="pz_act_press.html">pz_act_press()</a></code>, take no target and act on the focused element
+it matches an element. Inside a scope, <code>target = NULL</code> normally acts on the
+scope's element; <code><a href="pz_act_type.html">pz_act_type()</a></code> can instead preserve a held selection in a
+focused editable descendant. Scrolling with <code>by</code> or <code>to</code> scrolls the scope's
+container. An explicit target is scrolled into view first when needed. A few
+actions, like <code><a href="pz_act_press.html">pz_act_press()</a></code>, take no target and act on the focused element
 instead.</p>
 <p>While the page is recording, actions are staged as <code><a href="pz_stage.html">pz_stage()</a></code> sets them
 up: the cursor glides to pointer targets, typing is paced, scrolls normally
