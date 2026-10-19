@@ -60,19 +60,22 @@ pz_get_text(page, target = "#summary")
 
 An output can also stay busy past the flush: an `ExtendedTask` or
 `req(cancelOutput = "progress")` keeps its output `.recalculating` until the
-result arrives, while the app is otherwise idle. For an output known to be
-recalculating — a plot with no text to expect is the common case — expect
-the class to clear before capturing it.
+result arrives, while the app is otherwise idle. For a long-running output
+whose progress state you can observe — a plot with no text to expect is the
+common case — confirm the class is present, then wait for it to clear.
 
 ```r
 page |>
+  pz_expect_class("recalculating", target = "#plot") |>
   pz_expect_class("recalculating", target = "#plot", not = TRUE)
 ```
 
-A class-only check can accept the old result before invalidation reaches
-the output; an idle wait alone does not establish that invalidation. When
-you know the expected new output, expect its content instead; that states
-what the script relies on, and its failure says what was missing.
+This waits for an observable recalculation to finish, not for every update
+triggered by an action. A fast output can finish before you observe the
+class, making the first expectation time out. An idle wait alone does not
+prove that invalidation reached the output either. When you know the
+expected new output, expect its content instead; that states what the
+script relies on, and its failure says what was missing.
 
 ## Choose user actions or direct setters
 
