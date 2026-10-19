@@ -437,6 +437,10 @@ test_that("predicates distinguish status children from whole-row notes", {
     predicate = 'function(el) { return el.querySelector(".status")?.textContent === "Ready"; }',
     within = pz_loc("tbody", within = "#reports")
   )
+  expect_identical(
+    pz_get_count(page, pz_loc("tr", has_text = "Ready", within = "#reports")),
+    3L
+  )
   expect_identical(pz_get_attr(page, "id", spec), "ready")
   scope <- pz_find(page, "#reports")
   scoped_spec <- pz_loc(

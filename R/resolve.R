@@ -7,6 +7,8 @@
 # callers never see an expression, only the function.
 loc_resolver_js <- function(locs) {
   specs <- js_literal(lapply(locs, loc_spec_fields), auto_unbox = TRUE)
+  # CDP compiles these function expressions without page-side eval, so
+  # predicates also work on pages whose CSP forbids unsafe-eval.
   sources <- unique(unlist(lapply(locs, loc_predicate_sources)))
   factories <- vapply(
     sources,
