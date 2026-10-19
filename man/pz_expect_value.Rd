@@ -59,11 +59,11 @@ retry, timeout, and bridge behavior shared by all expectations.
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_expect_value("normal", target = "#task-priority", match = "exact")
+page |> pz_expect_value("normal", target = "#task_priority", match = "exact")
 
 page |>
-  pz_act_type("Buy milk", target = "#task-title") |>
-  pz_expect_value("milk", target = "#task-title")
+  pz_act_type("Buy milk", target = "#task_title") |>
+  pz_expect_value("milk", target = "#task_title")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

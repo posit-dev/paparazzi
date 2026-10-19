@@ -77,15 +77,15 @@ To set a value directly instead, without staging, use \code{\link[=pz_set_value]
 \examples{
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_act_type("Buy milk", target = "#task-title")
-pz_get_value(page, target = "#task-title")
+page |> pz_act_type("Buy milk", target = "#task_title")
+pz_get_value(page, target = "#task_title")
 
 # Typing fires input events, so the page reacts: Add is now enabled
-pz_expect_enabled(page, target = "#add-task")
+pz_expect_enabled(page, target = "#add_task")
 
 # At the root, target = NULL types into the focused element
 page |> pz_act_type(" and eggs")
-pz_get_value(page, target = "#task-title")
+pz_get_value(page, target = "#task_title")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

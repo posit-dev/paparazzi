@@ -73,12 +73,12 @@ page |> pz_screenshot(path)
 
 # A locator captures its box; a list captures the union of the boxes
 page |> pz_screenshot(path, frame = ".task-list")
-page |> pz_screenshot(path, frame = list("#new-task", ".filters"))
+page |> pz_screenshot(path, frame = list("#new_task", ".filters"))
 
 # Padding, aspect ratio and anchoring come from pz_frame()
-page |> pz_screenshot(path, frame = pz_frame("#new-task", pad = 16))
+page |> pz_screenshot(path, frame = pz_frame("#new_task", pad = 16))
 file.exists(path)
-pz_screenshot(page, frame = pz_frame("#new-task", pad = 16))
+pz_screenshot(page, frame = pz_frame("#new_task", pad = 16))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

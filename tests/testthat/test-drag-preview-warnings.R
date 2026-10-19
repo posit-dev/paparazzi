@@ -9,7 +9,7 @@ test_that('redaction rejects unsafe capture before the library while preserving 
     ) {
       pz_annotate_redact(
         page,
-        '#task-title',
+        '#task_title',
         method = if (case == 'unrelated-blur') 'blur' else 'fill'
       )
     } else if (case == 'ancestor') {

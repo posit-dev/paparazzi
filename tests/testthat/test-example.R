@@ -66,8 +66,8 @@ test_that("task rows show drag affordances and cursor states", {
 test_that("new tasks get drag affordances", {
   page <- local_page(pz_example("tasks"))
   page |>
-    pz_act_type("Send documents", target = "#task-title") |>
-    pz_act_click("#add-task") |>
+    pz_act_type("Send documents", target = "#task_title") |>
+    pz_act_click("#add_task") |>
     pz_expect_visible(pz_loc(".task", has_text = "Send documents"))
 
   expect_true(
@@ -88,8 +88,8 @@ test_that("new tasks get drag affordances", {
 test_that("walkthrough keeps both high-priority task titles in view", {
   page <- local_page(pz_example("tasks"), width = 800, height = 900)
   page |>
-    pz_act_type("Prepare release notes", target = "#task-title") |>
-    pz_act_click("#add-task") |>
+    pz_act_type("Prepare release notes", target = "#task_title") |>
+    pz_act_click("#add_task") |>
     pz_expect_text(
       "Prepare release notes",
       target = pz_loc(".task-title", which = "first")
@@ -100,7 +100,7 @@ test_that("walkthrough keeps both high-priority task titles in view", {
     pz_act_click(".filters a[href='#done']") |>
     pz_act_click(".filters a[href='#all']") |>
     pz_expect_visible(pz_loc(".task", has_text = "File tax return")) |>
-    pz_act_scroll("#toggle-help") |>
+    pz_act_scroll("#toggle_help") |>
     pz_annotate_redact("[data-priority='high'] .task-title")
 
   rows <- pz_evaluate(
@@ -196,15 +196,15 @@ test_that("new tasks carry attachments and support inline editing", {
 
   page |>
     pz_set_files(file, target = "#attachment") |>
-    pz_act_type("Send documents", target = "#task-title") |>
-    pz_act_click("#add-task") |>
+    pz_act_type("Send documents", target = "#task_title") |>
+    pz_act_click("#add_task") |>
     pz_expect_text(
       "Send documents",
       target = pz_loc(".task-title", which = "first")
     )
   task <- pz_find(page, pz_loc(".task", has_text = "Send documents"))
   expect_match(pz_get_text(task), basename(file), fixed = TRUE)
-  expect_identical(pz_get_text(page, "#attachment-name"), "No file attached.")
+  expect_identical(pz_get_text(page, "#attachment_name"), "No file attached.")
   expect_equal(
     pz_evaluate(page, "document.querySelector('#attachment').files.length"),
     0

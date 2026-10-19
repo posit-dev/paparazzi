@@ -37,9 +37,9 @@ demo |>
     code = {
       demo |>
         pz_annotate_caption("Add a task") |>
-        pz_camera("#new-task", wait = TRUE) |>
-        pz_act_type("Repot the fern", target = "#task-title") |>
-        pz_act_click("#add-task") |>
+        pz_camera("#new_task", wait = TRUE) |>
+        pz_act_type("Repot the fern", target = "#task_title") |>
+        pz_act_click("#add_task") |>
         pz_camera_reset() |>
         pz_expect_visible(fern) |>
         pz_annotate(fern, type = "box", pad = 4) |>
@@ -86,15 +86,15 @@ When you end a knitted chunk with a screenshot and no file path, the screenshot 
 
 ## Script the steps
 
-To add a task, a person using the task tracker would type a title into the form and click Add. Our script does the same, but it has to tell paparazzi which elements to use. paparazzi finds elements with CSS selectors: the title field is `#task-title`, the Add button is `#add-task`, and each task in the list shows its title in a `.task-title` element.
+To add a task, a person using the task tracker would type a title into the form and click Add. Our script does the same, but it has to tell paparazzi which elements to use. paparazzi finds elements with CSS selectors: the title field is `#task_title`, the Add button is `#add_task`, and each task in the list shows its title in a `.task-title` element.
 
-```{r, echo = FALSE, fig.alt = "The task tracker with its selectors labeled. Red callouts point down at the new-task title field, reading #task-title, and at the Add button, reading #add-task. Every task title in the list is underlined in blue, and a blue callout reading .task-title points at the first one."}
+```{r, echo = FALSE, fig.alt = "The task tracker with its selectors labeled. Red callouts point down at the new-task title field, reading #task_title, and at the Add button, reading #add_task. Every task title in the list is underlined in blue, and a blue callout reading .task-title points at the first one."}
 page |>
   pz_stage_annotate(font_family = "monospace") |>
-  pz_annotate("#task-title", pad = 2) |>
-  pz_annotate_callout("#task-title", target = "#task-title", side = "top") |>
-  pz_annotate("#add-task", pad = 2) |>
-  pz_annotate_callout("#add-task", target = "#add-task", side = "top") |>
+  pz_annotate("#task_title", pad = 2) |>
+  pz_annotate_callout("#task_title", target = "#task_title", side = "top") |>
+  pz_annotate("#add_task", pad = 2) |>
+  pz_annotate_callout("#add_task", target = "#add_task", side = "top") |>
   pz_annotate(".task-title", type = "underline", color = "#56B4E9") |>
   pz_annotate_callout(
     ".task-title",
@@ -104,7 +104,7 @@ page |>
   ) |>
   pz_screenshot(
     frame = pz_frame(
-      list("h1", "#add-task", ".task-list"),
+      list("h1", "#add_task", ".task-list"),
       pad = 24,
       target_box = "annotated"
     )
@@ -117,13 +117,13 @@ page |> pz_annotate_clear()
 
 ```{r}
 page |>
-  pz_act_type("Repot the fern", target = "#task-title") |>
-  pz_act_click("#add-task")
+  pz_act_type("Repot the fern", target = "#task_title") |>
+  pz_act_click("#add_task")
 ```
 
 Before an action clicks or types, paparazzi waits for its element to be ready: on the page, not hidden, and not covered by anything else. The element doesn't need to be on screen yet: if it's scrolled out of view, paparazzi scrolls to it, then clicks or types.
 
-Let's check that the new task arrived. Some elements are easy to target: the page has only one `#task-title` input and one `#add-task` button. But it has a `.task-title` for every task, so we need a more expressive way to say which one we want.
+Let's check that the new task arrived. Some elements are easy to target: the page has only one `#task_title` input and one `#add_task` button. But it has a `.task-title` for every task, so we need a more expressive way to say which one we want.
 
 `pz_loc()` describes an element more precisely than a selector alone, and it lets us define how to find an element once and reuse it in several calls. New tasks go to the top of the list, so we'll get the first `.task-title` with `which = "first"` and then use `pz_get_text()` to read that element's text.
 
@@ -180,8 +180,8 @@ page |> pz_nav_reload()
 
 page |>
   pz_record_start(format = "gif", scale = 800) |>
-  pz_act_type("Repot the fern", target = "#task-title") |>
-  pz_act_click("#add-task") |>
+  pz_act_type("Repot the fern", target = "#task_title") |>
+  pz_act_click("#add_task") |>
   pz_expect_visible(fern)
 ```
 
@@ -234,9 +234,9 @@ page |>
     code = {
       page |>
         pz_annotate_caption("Add a task") |>
-        pz_camera("#new-task", wait = TRUE) |>
-        pz_act_type("Repot the fern", target = "#task-title") |>
-        pz_act_click("#add-task") |>
+        pz_camera("#new_task", wait = TRUE) |>
+        pz_act_type("Repot the fern", target = "#task_title") |>
+        pz_act_click("#add_task") |>
         pz_camera_reset() |>
         pz_expect_visible(fern) |>
         pz_annotate(fern, type = "box", pad = 4) |>
@@ -249,7 +249,7 @@ page |>
 
 The new lines fall into three groups:
 
-- **Camera.** `pz_camera("#new-task")` zooms in on the form. By default, camera moves run alongside the next step, so the camera and the cursor would move at the same time; `wait = TRUE` lets the camera arrive first. `pz_camera_reset()` pulls back out to the whole frame. While it's zoomed in, the camera also pans to keep each click and keystroke in view.
+- **Camera.** `pz_camera("#new_task")` zooms in on the form. By default, camera moves run alongside the next step, so the camera and the cursor would move at the same time; `wait = TRUE` lets the camera arrive first. `pz_camera_reset()` pulls back out to the whole frame. While it's zoomed in, the camera also pans to keep each click and keystroke in view.
 - **Annotations.** `pz_annotate_caption()` sets the caption, and calling it again replaces the caption. `pz_annotate()` draws a box around the new task, after `pz_expect_visible()` has waited for the task to exist. Annotations follow their elements as the page moves.
 - **Pacing.** `pz_cursor_leave()` moves the cursor out of the shot, so it doesn't cover the result. `pz_record_hold()` holds the last frame for 1.5 seconds, so viewers have time to read the caption. paparazzi adds the hold to the video, not to the script, so outside a recording it doesn't slow anything down.
 
@@ -268,11 +268,11 @@ page |>
   pz_record(
     format = "gif",
     scale = 800,
-    frame = pz_frame("#new-task", pad = 8),
+    frame = pz_frame("#new_task", pad = 8),
     code = {
       page |>
-        pz_act_click("#task-urgent") |>
-        pz_act_click("#task-urgent", effect = "ring")
+        pz_act_click("#task_urgent") |>
+        pz_act_click("#task_urgent", effect = "ring")
     }
   )
 ```
@@ -350,8 +350,8 @@ test_that("a new task goes to the top of the list", {
   page <- pz_local_page(pz_example("tasks"))
 
   page |>
-    pz_act_type("Repot the fern", target = "#task-title") |>
-    pz_act_click("#add-task") |>
+    pz_act_type("Repot the fern", target = "#task_title") |>
+    pz_act_click("#add_task") |>
     pz_expect_text(
       "Repot the fern",
       target = pz_loc(".task-title", which = "first")

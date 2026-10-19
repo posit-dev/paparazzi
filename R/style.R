@@ -133,12 +133,12 @@ pz_get_style <- function(ctx, props = NULL, target = NULL, ...) {
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Expected values are written as you'd write them in CSS
-#' page |> pz_expect_style("#add-task", background_color = "#0d6efd")
+#' page |> pz_expect_style("#add_task", background_color = "#0d6efd")
 #' page |> pz_expect_style("h1", font_size = "1.5rem")
 #' page |> pz_expect_style("#help", display = "none")
 #'
 #' page |>
-#'   pz_act_click("#toggle-help") |>
+#'   pz_act_click("#toggle_help") |>
 #'   pz_expect_style("#help", display = "none", .not = TRUE)
 #' pz_close(page)
 #'

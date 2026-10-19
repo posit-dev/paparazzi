@@ -48,25 +48,25 @@
     <div class="col-lg-9 col-xl-8 mx-auto">
       <h1 class="mb-3">Tasks</h1>
   
-      <form id="new-task" autocomplete="off" class="mb-2">
-        <label for="task-title" class="form-label">New task</label>
+      <form id="new_task" autocomplete="off" class="mb-2">
+        <label for="task_title" class="form-label">New task</label>
         <div class="d-flex gap-2 mb-2">
-          <input type="text" id="task-title" class="form-control" placeholder="What needs doing?">
-          <button type="submit" id="add-task" class="btn btn-primary" disabled>Add</button>
+          <input type="text" id="task_title" class="form-control" placeholder="What needs doing?">
+          <button type="submit" id="add_task" class="btn btn-primary" disabled>Add</button>
         </div>
         <div class="d-flex align-items-center flex-wrap gap-2 gap-sm-3 mb-2">
-          <select id="task-priority" class="form-select form-select-sm w-auto" aria-label="Priority">
+          <select id="task_priority" class="form-select form-select-sm w-auto" aria-label="Priority">
             <option value="low">Low</option>
             <option value="normal" selected>Normal</option>
             <option value="high">High</option>
           </select>
           <div class="form-check mb-0">
-            <input type="checkbox" id="task-urgent" class="form-check-input">
-            <label for="task-urgent" class="form-check-label">Urgent</label>
+            <input type="checkbox" id="task_urgent" class="form-check-input">
+            <label for="task_urgent" class="form-check-label">Urgent</label>
           </div>
-          <input type="file" id="attachment" class="form-control form-control-sm w-auto" aria-label="Attachment" aria-describedby="attachment-name">
+          <input type="file" id="attachment" class="form-control form-control-sm w-auto" aria-label="Attachment" aria-describedby="attachment_name">
         </div>
-        <p id="attachment-name" class="form-text text-body-secondary small mb-0">No file attached.</p>
+        <p id="attachment_name" class="form-text text-body-secondary small mb-0">No file attached.</p>
       </form>
       <p id="status" role="status" class="small text-body-secondary my-2"></p>
   
@@ -131,8 +131,8 @@
       </div>
   
       <div class="d-flex align-items-center justify-content-between">
-        <button type="button" id="toggle-help" class="btn btn-sm btn-outline-secondary" aria-expanded="false" aria-controls="help">Show help</button>
-        <a id="start-over" href="tasks.html" class="small">Start over</a>
+        <button type="button" id="toggle_help" class="btn btn-sm btn-outline-secondary" aria-expanded="false" aria-controls="help">Show help</button>
+        <a id="start_over" href="tasks.html" class="small">Start over</a>
       </div>
       <div id="help" class="hidden alert alert-info mt-3 mb-0">
         Type a task and press Enter to add it. Edit a title, mark a task done, or drag tasks to reorder them.
@@ -142,11 +142,11 @@
   </main>
 
   <script>
-    const form = document.getElementById("new-task");
-    const title = document.getElementById("task-title");
-    const priority = document.getElementById("task-priority");
-    const urgent = document.getElementById("task-urgent");
-    const add = document.getElementById("add-task");
+    const form = document.getElementById("new_task");
+    const title = document.getElementById("task_title");
+    const priority = document.getElementById("task_priority");
+    const urgent = document.getElementById("task_urgent");
+    const add = document.getElementById("add_task");
     const status = document.getElementById("status");
     const list = document.querySelector(".task-list");
 
@@ -155,7 +155,7 @@
     });
 
     const attachment = document.getElementById("attachment");
-    const attachmentName = document.getElementById("attachment-name");
+    const attachmentName = document.getElementById("attachment_name");
 
     function taskItem(text, level, filename) {
       const li = document.createElement("li");
@@ -288,11 +288,11 @@
 
     document.getElementById("attachment").addEventListener("change", (event) => {
       const file = event.target.files[0];
-      document.getElementById("attachment-name").textContent =
+      document.getElementById("attachment_name").textContent =
         file ? "Attached " + file.name + "." : "No file attached.";
     });
 
-    const toggle = document.getElementById("toggle-help");
+    const toggle = document.getElementById("toggle_help");
     const help = document.getElementById("help");
     toggle.addEventListener("click", () => {
       const open = help.classList.toggle("hidden") === false;

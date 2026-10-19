@@ -115,7 +115,7 @@ test_that("spotlight dims the visible bottom of a tall document", {
   baseline <- spotlight_viewport_image(page, path)
   page |>
     pz_annotate_spotlight(
-      list("#task-title", "#add-task"),
+      list("#task_title", "#add_task"),
       dim = 0.75,
       reveal = "none"
     )

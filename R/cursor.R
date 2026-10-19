@@ -65,9 +65,9 @@ NULL
 #'
 #' # Outside a recording the cursor appears at once, ready for a still
 #' page |>
-#'   pz_cursor_show("#add-task", icon = "pointer") |>
-#'   pz_screenshot(path, frame = pz_frame("#new-task", pad = 24))
-#' pz_screenshot(page, frame = pz_frame("#new-task", pad = 24))
+#'   pz_cursor_show("#add_task", icon = "pointer") |>
+#'   pz_screenshot(path, frame = pz_frame("#new_task", pad = 24))
+#' pz_screenshot(page, frame = pz_frame("#new_task", pad = 24))
 #' pz_close(page)
 #'
 #' @export
@@ -130,10 +130,10 @@ pz_cursor_show <- function(ctx, target = NULL, ..., from = NULL, icon = NULL) {
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
-#'   pz_cursor_show("#add-task") |>
+#'   pz_cursor_show("#add_task") |>
 #'   pz_cursor_hide() |>
 #'   pz_screenshot(file.path(tempdir(), "no-cursor.png"))
-#' pz_screenshot(page, frame = pz_frame("#new-task", pad = 24))
+#' pz_screenshot(page, frame = pz_frame("#new_task", pad = 24))
 #' pz_close(page)
 #'
 #' @export
@@ -185,8 +185,8 @@ pz_cursor_hide <- function(ctx, ...) {
 #'   pz_record(path, {
 #'     page |>
 #'       pz_cursor_show(".filters", from = "left") |>
-#'       pz_cursor_move("#toggle-help", duration = 1) |>
-#'       pz_cursor_move("#add-task", icon = "crosshair")
+#'       pz_cursor_move("#toggle_help", duration = 1) |>
+#'       pz_cursor_move("#add_task", icon = "crosshair")
 #'   })
 #' pz_close(page)
 #'
@@ -252,7 +252,7 @@ pz_cursor_move <- function(
 #' page |>
 #'   pz_record(path, {
 #'     page |>
-#'       pz_act_click("#toggle-help") |>
+#'       pz_act_click("#toggle_help") |>
 #'       # Move the cursor out of the way so the help text is unobstructed
 #'       pz_cursor_leave("right", icon = "default") |>
 #'       pz_record_hold(1)

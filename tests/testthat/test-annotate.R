@@ -1338,8 +1338,8 @@ test_that("a fully visible new task keeps every padded outline edge", {
     "document.head.insertAdjacentHTML('beforeend', '<style>::-webkit-scrollbar { width:15px; height:15px }</style>')"
   )
   page |>
-    pz_act_type("Prepare release notes", target = "#task-title") |>
-    pz_act_click("#add-task")
+    pz_act_type("Prepare release notes", target = "#task_title") |>
+    pz_act_click("#add_task")
   target <- pz_loc(".task", has_text = "Prepare release notes")
   pz_expect_visible(page, target)
 
@@ -2907,7 +2907,7 @@ test_that("the tasks Add badge stays on one line beyond its narrow button", {
 
   page |>
     pz_annotate(
-      "#add-task",
+      "#add_task",
       label = "A",
       pad = 2,
       font_family = "monospace",
@@ -2917,8 +2917,8 @@ test_that("the tasks Add badge stays on one line beyond its narrow button", {
 
   page |>
     pz_annotate(
-      "#add-task",
-      label = "#add-task",
+      "#add_task",
+      label = "#add_task",
       pad = 2,
       font_family = "monospace",
       label_fill = "#ff00ff",
@@ -2927,7 +2927,7 @@ test_that("the tasks Add badge stays on one line beyond its narrow button", {
   path <- withr::local_tempfile(fileext = ".png")
   page |> pz_screenshot(path)
   badge <- annotation_badge_rects(page)[[1]]
-  target <- pz_get_rect(page, "#add-task")
+  target <- pz_get_rect(page, "#add_task")
   expect_equal(badge$height, one_line)
   expect_equal(badge$lines, 1)
   expect_gt(badge$width, target$width)
@@ -3328,7 +3328,7 @@ test_that("right-edge badges translate without squeezing medium or 20em labels",
   page <- local_viewport_badge_page()
   path <- withr::local_tempfile(fileext = ".png")
 
-  for (label in c("#add-task", paste(rep("word", 15), collapse = " "))) {
+  for (label in c("#add_task", paste(rep("word", 15), collapse = " "))) {
     pz_evaluate(page, "document.getElementById('edge').style.left='400px'")
     reference <- viewport_badge_reference(page, label)
     expect_gt(reference$width, 30)
@@ -3350,7 +3350,7 @@ test_that("top and top-right badges move down while retaining their label size",
   page <- local_viewport_badge_page()
   path <- withr::local_tempfile(fileext = ".png")
 
-  for (label in c("#add-task", paste(rep("word", 15), collapse = " "))) {
+  for (label in c("#add_task", paste(rep("word", 15), collapse = " "))) {
     for (pad in c(0, 4)) {
       pz_evaluate(
         page,
@@ -3373,7 +3373,7 @@ test_that("left and bottom viewport edges use the same minimum translation", {
   page <- local_viewport_badge_page()
   path <- withr::local_tempfile(fileext = ".png")
 
-  reference <- viewport_badge_reference(page, "#add-task", pad = 4)
+  reference <- viewport_badge_reference(page, "#add_task", pad = 4)
   pz_evaluate(page, "document.getElementById('edge').style.left='-6px'")
   page |> pz_screenshot(path)
   expect_viewport_badge(page, path, 0, 246 - reference$height, reference)
@@ -3390,7 +3390,7 @@ test_that("left and bottom viewport edges use the same minimum translation", {
 
 test_that("viewport translation composes with the visible overflow anchor", {
   page <- local_viewport_badge_page()
-  reference <- viewport_badge_reference(page, "#add-task", pad = 4)
+  reference <- viewport_badge_reference(page, "#add_task", pad = 4)
   pz_evaluate(
     page,
     r"[
@@ -3426,7 +3426,7 @@ inner.appendChild(edge);
 
 test_that("badge placement follows movement, scroll, and viewport resize", {
   page <- local_viewport_badge_page()
-  reference <- viewport_badge_reference(page, "#add-task")
+  reference <- viewport_badge_reference(page, "#add_task")
 
   # Badge placement rides animation frames, which headless CI does not
   # reliably produce on device-emulated pages. Screenshots force a sync
@@ -3520,7 +3520,7 @@ document.body.innerHTML =
   '<div id=edge style="position:absolute;left:400px;top:250px;width:30px;height:30px"></div>';
 ]"
   )
-  viewport_badge_reference(page, "#add-task")
+  viewport_badge_reference(page, "#add_task")
   client_width <- unlist(pz_evaluate(
     page,
     "document.documentElement.clientWidth"
@@ -3579,7 +3579,7 @@ window.scrollTo(0, 250);
 
 test_that("off-viewport badges stay with their targets in framed captures", {
   page <- local_viewport_badge_page()
-  reference <- viewport_badge_reference(page, "#add-task", pad = 4)
+  reference <- viewport_badge_reference(page, "#add_task", pad = 4)
 
   pz_evaluate(page, "document.getElementById('edge').style.top='730px'")
   path <- withr::local_tempfile(fileext = ".png")
@@ -3642,7 +3642,7 @@ test_that("oversized badges pin to zero without viewport-dependent rewrapping", 
 test_that("fractional zoomed badge sizes do not leak past the viewport edge", {
   page <- local_viewport_badge_page()
   pz_evaluate(page, "document.documentElement.style.zoom='1.25'")
-  reference <- viewport_badge_reference(page, "#add-task")
+  reference <- viewport_badge_reference(page, "#add_task")
 
   pz_evaluate(page, "document.getElementById('edge').style.left='776px'")
   path <- withr::local_tempfile(fileext = ".png")
@@ -3658,7 +3658,7 @@ test_that("fractional zoomed badge sizes do not leak past the viewport edge", {
 
 test_that("pop and slide do not feed animated sizes back into badge placement", {
   page <- local_viewport_badge_page()
-  reference <- viewport_badge_reference(page, "#add-task")
+  reference <- viewport_badge_reference(page, "#add_task")
   pz_evaluate(
     page,
     "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='0px'"
@@ -3677,7 +3677,7 @@ test_that("pop and slide do not feed animated sizes back into badge placement", 
     id: 'edge',
     type: 'box',
     pad: [0, 0, 0, 0],
-    label: '#add-task',
+    label: '#add_task',
     color: 'red',
     strokeWidth: 3,
     labelFill: '#ff00ff',
@@ -3737,7 +3737,7 @@ test_that("a recorded top-right badge appears in retained frames and clears", {
   skip_if_no_av()
   skip_if_not_installed("png")
   page <- local_viewport_badge_page()
-  reference <- viewport_badge_reference(page, "#add-task")
+  reference <- viewport_badge_reference(page, "#add_task")
   page |> pz_annotate_clear()
   pz_evaluate(
     page,
@@ -3770,7 +3770,7 @@ test_that("a recorded top-right badge appears in retained frames and clears", {
   page |>
     pz_annotate(
       "#edge",
-      label = "#add-task",
+      label = "#add_task",
       font_family = "monospace",
       label_fill = "#ff00ff",
       reveal = "fade",
@@ -3797,7 +3797,7 @@ test_that("a recorded top-right badge appears in retained frames and clears", {
 
 test_that("interior zero-size marks clamp badges but viewport-edge points do not", {
   page <- local_viewport_badge_page()
-  reference <- viewport_badge_reference(page, "#add-task", pad = 10)
+  reference <- viewport_badge_reference(page, "#add_task", pad = 10)
   pz_evaluate(
     page,
     "document.getElementById('edge').style.cssText='position:absolute;left:990px;top:5px;width:0;height:0'"
@@ -3816,7 +3816,7 @@ test_that("interior zero-size marks clamp badges but viewport-edge points do not
 
 test_that("padding alone cannot pull an off-viewport target's badge inward", {
   page <- local_viewport_badge_page()
-  reference <- viewport_badge_reference(page, "#add-task", pad = 20)
+  reference <- viewport_badge_reference(page, "#add_task", pad = 20)
   pz_evaluate(
     page,
     "document.getElementById('edge').style.left='970px'; document.getElementById('edge').style.top='730px'"
@@ -3890,7 +3890,7 @@ document.body.style.height = '2000px';
     writeBin(jsonlite::base64_dec(shot$data), path)
   }
 
-  reference <- viewport_badge_reference(page, "#add-task")
+  reference <- viewport_badge_reference(page, "#add_task")
   pz_evaluate(
     page,
     "document.getElementById('edge').style.left=(document.documentElement.clientWidth-30)+'px'"
@@ -3920,7 +3920,7 @@ document.body.style.height = '2000px';
   expect_equal(annotation_badge_rects(page)[[1]]$left, viewport[1] + 1)
 
   pz_evaluate(page, "document.getElementById('edge').style.left='400px'")
-  viewport_badge_reference(page, "#add-task", pad = 10)
+  viewport_badge_reference(page, "#add_task", pad = 10)
   pz_evaluate(
     page,
     "const edge=document.getElementById('edge'); edge.style.width='0px'; edge.style.height='0px'; edge.style.left=document.documentElement.clientWidth+'px'"
@@ -3929,7 +3929,7 @@ document.body.style.height = '2000px';
   expect_equal(annotation_badge_rects(page)[[1]]$left, viewport[1] - 10)
 
   pz_evaluate(page, "document.getElementById('edge').style.left='400px'")
-  viewport_badge_reference(page, "#add-task", pad = c(-40, 0, 50, 10))
+  viewport_badge_reference(page, "#add_task", pad = c(-40, 0, 50, 10))
   pz_evaluate(
     page,
     "document.getElementById('edge').style.top=document.documentElement.clientHeight+'px'"

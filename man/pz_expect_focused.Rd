@@ -40,12 +40,12 @@ retry, timeout, and bridge behavior shared by all expectations.
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
-  pz_act_click("#task-title") |>
-  pz_expect_focused(target = "#task-title")
+  pz_act_click("#task_title") |>
+  pz_expect_focused(target = "#task_title")
 
 page |>
   pz_act_press("Tab") |>
-  pz_expect_focused(target = "#task-priority")
+  pz_expect_focused(target = "#task_priority")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

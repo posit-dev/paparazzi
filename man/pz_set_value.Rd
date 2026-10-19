@@ -41,15 +41,15 @@ content replaced in one step.
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |>
-  pz_set_value("Buy milk", target = "#task-title") |>
-  pz_set_value("high", target = "#task-priority") |>
-  pz_set_value(TRUE, target = "#task-urgent")
-pz_get_value(page, target = list("#task-title", "#task-priority"))
-pz_expect_checked(page, target = "#task-urgent")
+  pz_set_value("Buy milk", target = "#task_title") |>
+  pz_set_value("high", target = "#task_priority") |>
+  pz_set_value(TRUE, target = "#task_urgent")
+pz_get_value(page, target = list("#task_title", "#task_priority"))
+pz_expect_checked(page, target = "#task_urgent")
 
 # An empty string clears a text input
-page |> pz_set_value("", target = "#task-title")
-pz_expect_enabled(page, target = "#add-task", not = TRUE)
+page |> pz_set_value("", target = "#task_title")
+pz_expect_enabled(page, target = "#add_task", not = TRUE)
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

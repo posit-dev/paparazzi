@@ -1880,7 +1880,7 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
   pz_evaluate(
     page,
     "(() => {
-    document.body.insertAdjacentHTML('beforeend', '<h1 style=\"display:inline-block\">Tasks</h1><main style=\"width:420px;padding:70px;box-sizing:border-box\"><button id=task-title style=\"width:180px;height:40px\">Title</button><button id=add-task style=\"width:180px;height:40px\">Add</button></main>');
+    document.body.insertAdjacentHTML('beforeend', '<h1 style=\"display:inline-block\">Tasks</h1><main style=\"width:420px;padding:70px;box-sizing:border-box\"><button id=task_title style=\"width:180px;height:40px\">Title</button><button id=add_task style=\"width:180px;height:40px\">Add</button></main>');
     window.recordClicks = [];
     document.addEventListener('mousedown', e => recordClicks.push(e.target.id));
     return true;
@@ -1904,14 +1904,14 @@ test_that("framed DPR-2 recordings retain viewport frames and click targets", {
     frame = pz_frame(list("h1", "main"), pad = 16)
   )
   defer_record_stop(page)
-  for (target in rep(c("task-title", "add-task"), 4)) {
+  for (target in rep(c("task_title", "add_task"), 4)) {
     pz_act_click(page, paste0("#", target))
   }
   pz_record_stop(page)
 
   expect_equal(
     unlist(pz_evaluate(page, "window.recordClicks")),
-    rep(c("task-title", "add-task"), 4)
+    rep(c("task_title", "add_task"), 4)
   )
   files <- sort(list.files(frames_dir, pattern = "[.]png$", full.names = TRUE))
   expect_gt(length(files), 0)

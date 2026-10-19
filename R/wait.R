@@ -15,7 +15,7 @@
 #' # A fixed pause; prefer an expectation or wait_for function when you
 #' # know what you're waiting for
 #' page |>
-#'   pz_act_click("#toggle-help") |>
+#'   pz_act_click("#toggle_help") |>
 #'   pz_wait(0.5)
 #' pz_close(page)
 #'
@@ -154,7 +154,7 @@ pz_wait_for_shiny_idle <- function(ctx, ..., timeout = NULL) {
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
-#'   pz_act_type("Buy milk", target = "#task-title") |>
+#'   pz_act_type("Buy milk", target = "#task_title") |>
 #'   pz_act_press("Enter") |>
 #'   pz_wait_for_js("document.querySelectorAll('.task').length === 8")
 #' pz_get_text(page, target = pz_loc(".task-title", which = "first"))
@@ -213,8 +213,8 @@ pz_wait_for_js <- function(ctx, expr, ..., timeout = NULL) {
 #'
 #' # The status line reads "Saving..." and then "Saved"; wait for it to settle
 #' page |>
-#'   pz_act_type("Buy milk", target = "#task-title") |>
-#'   pz_act_click("#add-task") |>
+#'   pz_act_type("Buy milk", target = "#task_title") |>
+#'   pz_act_click("#add_task") |>
 #'   pz_wait_for_stable(target = "#status", for_ms = 500)
 #' pz_get_text(page, target = "#status")
 #' pz_close(page)
@@ -328,7 +328,7 @@ pz_wait_for_stable <- function(
 #'
 #' # "Start over" is a link to a new copy of the page
 #' page |>
-#'   pz_act_click("#start-over") |>
+#'   pz_act_click("#start_over") |>
 #'   pz_wait_for_navigation()
 #' pz_get_count(page, target = ".task.done")
 #' pz_close(page)

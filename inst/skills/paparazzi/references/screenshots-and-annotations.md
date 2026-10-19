@@ -23,8 +23,8 @@ page <- pz_open(
 )
 fern <- pz_loc(".task", has_text = "Repot the fern")
 page |>
-  pz_act_type("Repot the fern", target = "#task-title") |>
-  pz_act_click("#add-task") |>
+  pz_act_type("Repot the fern", target = "#task_title") |>
+  pz_act_click("#add_task") |>
   pz_expect_visible(fern) |>
   pz_expect_count(8, target = ".task") |>
   pz_screenshot(tempfile(fileext = ".png"))
@@ -48,7 +48,7 @@ page |>
   pz_screenshot(tempfile(fileext = ".png"), frame = ".task-list") |>
   pz_screenshot(
     tempfile(fileext = ".png"),
-    frame = pz_frame(list("h1", "#new-task"), pad = 24, ratio = 16 / 9)
+    frame = pz_frame(list("h1", "#new_task"), pad = 24, ratio = 16 / 9)
   )
 ```
 
@@ -63,7 +63,7 @@ page |>
   pz_screenshot(
     tempfile(fileext = ".png"),
     frame = pz_frame(
-      "#new-task",
+      "#new_task",
       pad = c(16, 24, 16, 24),
       ratio = 4 / 3,
       anchor = "top",
@@ -90,7 +90,7 @@ staged target when the capture has no target of its own.
 
 ```r
 page |>
-  pz_stage_frame("#new-task", pad = 16) |>
+  pz_stage_frame("#new_task", pad = 16) |>
   pz_screenshot(tempfile(fileext = ".png")) |>
   pz_screenshot(
     tempfile(fileext = ".png"),
@@ -114,14 +114,14 @@ is drawn. Use `pad` to give the mark room around its target.
 
 ```r
 page |>
-  pz_annotate("#task-title", type = "box", label = "Title", pad = 4) |>
-  pz_annotate("#add-task", type = "circle", pad = 6) |>
+  pz_annotate("#task_title", type = "box", label = "Title", pad = 4) |>
+  pz_annotate("#add_task", type = "circle", pad = 6) |>
   pz_annotate("h1", type = "underline") |>
   pz_annotate(".filters a", type = "highlight", label = TRUE) |>
   pz_screenshot(
     tempfile(fileext = ".png"),
     frame = pz_frame(
-      list("h1", "#new-task", ".filters"),
+      list("h1", "#new_task", ".filters"),
       pad = 16,
       target_box = "annotated"
     )
@@ -164,7 +164,7 @@ page |>
     font_size = 16
   ) |>
   pz_annotate(
-    "#add-task",
+    "#add_task",
     label = "Add",
     id = "button",
     label_fill = "#dbeafe",
@@ -172,7 +172,7 @@ page |>
   ) |>
   pz_screenshot(
     tempfile(fileext = ".png"),
-    frame = pz_frame("#new-task", pad = 16, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 16, target_box = "annotated")
   ) |>
   pz_annotate_clear(id = "button")
 ```
@@ -193,7 +193,7 @@ viewport. Set the viewport before drawing so the text wraps for that size.
 page |>
   pz_annotate_callout(
     "New tasks appear first",
-    target = "#add-task",
+    target = "#add_task",
     side = "bottom",
     leader = c(start = "dot", end = "arrow"),
     label = "1",
@@ -201,7 +201,7 @@ page |>
   ) |>
   pz_screenshot(
     tempfile(fileext = ".png"),
-    frame = pz_frame("#new-task", pad = 12, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 12, target_box = "annotated")
   ) |>
   pz_annotate_clear(id = "explanation")
 ```
@@ -221,7 +221,7 @@ cutouts. Each call replaces the page's one spotlight.
 ```r
 page |>
   pz_annotate_spotlight(
-    list("#task-title", "#add-task"),
+    list("#task_title", "#add_task"),
     pad = 6,
     dim = 0.65
   ) |>
@@ -279,10 +279,10 @@ fallback.
 page |>
   pz_stage_fonts(pz_font_google("Inter"), pz_font_bunny("Lato")) |>
   pz_stage_annotate(font_family = '"Inter", sans-serif') |>
-  pz_annotate("#add-task", label = "Add", font_family = '"Lato", sans-serif') |>
+  pz_annotate("#add_task", label = "Add", font_family = '"Lato", sans-serif') |>
   pz_screenshot(
     tempfile(fileext = ".png"),
-    frame = pz_frame("#new-task", pad = 16, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 16, target_box = "annotated")
   ) |>
   pz_annotate_clear()
 ```
@@ -303,10 +303,10 @@ font_path <- system.file(
 page |>
   pz_stage_fonts(pz_font_file("Project Sans", font_path)) |>
   pz_stage_annotate(font_family = '"Project Sans", sans-serif') |>
-  pz_annotate_callout("Ready to add", target = "#add-task", side = "bottom") |>
+  pz_annotate_callout("Ready to add", target = "#add_task", side = "bottom") |>
   pz_screenshot(
     tempfile(fileext = ".png"),
-    frame = pz_frame("#new-task", pad = 16, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 16, target_box = "annotated")
   ) |>
   pz_annotate_clear()
 pz_close(page)

@@ -47,8 +47,8 @@ Let's draw one of each, with a `label` naming its type:
 
 ```{r mark-types, fig.alt = "The task tracker with four labeled marks: a box around the title field, a circle around the Add button, an underline under the File tax return task, and a highlight over the Water the plants task."}
 page |>
-  pz_annotate("#task-title", type = "box", label = "box") |>
-  pz_annotate("#add-task", type = "circle", label = "circle") |>
+  pz_annotate("#task_title", type = "box", label = "box") |>
+  pz_annotate("#add_task", type = "circle", label = "circle") |>
   pz_annotate(
     pz_loc(".task", has_text = "File tax return"),
     type = "underline",
@@ -98,19 +98,19 @@ paparazzi fills each badge with the mark's color and writes its text in white; `
 
 Here, an amber highlight covers the title field, and a blue box with a monospace badge fits snugly around the Add button:
 
-```{r pad-color, fig.alt = "The new-task form with a loose amber highlight around the title field and a blue box around the Add button, with a monospace badge reading #add-task."}
+```{r pad-color, fig.alt = "The new-task form with a loose amber highlight around the title field and a blue box around the Add button, with a monospace badge reading #add_task."}
 page |>
-  pz_annotate("#task-title", type = "highlight", pad = 6, color = "#f59e0b") |>
+  pz_annotate("#task_title", type = "highlight", pad = 6, color = "#f59e0b") |>
   pz_annotate(
-    "#add-task",
-    label = "#add-task",
+    "#add_task",
+    label = "#add_task",
     pad = c(2, 6, 2, 6),
     color = "#2563eb",
     font_family = "monospace",
     font_size = 16
   ) |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 24, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 24, target_box = "annotated")
   )
 ```
 
@@ -128,18 +128,18 @@ paparazzi keeps every bubble inside the viewport, even if that moves it off the 
 page |>
   pz_annotate_callout(
     "Name the task",
-    target = "#task-title",
+    target = "#task_title",
     side = "top",
     label = 1
   ) |>
   pz_annotate_callout(
     "Priority is optional",
-    target = "#task-priority",
+    target = "#task_priority",
     side = "bottom",
     leader = FALSE
   ) |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 12, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 12, target_box = "annotated")
   )
 ```
 
@@ -159,7 +159,7 @@ By default, a bubble takes the callout's accent color for its fill, and paparazz
 page |>
   pz_annotate_callout(
     "Add it to the list",
-    target = "#add-task",
+    target = "#add_task",
     side = "bottom",
     leader = c(start = "dot", end = "arrow"),
     distance = 40,
@@ -167,7 +167,7 @@ page |>
     text_color = "#171717"
   ) |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 12, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 12, target_box = "annotated")
   )
 ```
 
@@ -182,7 +182,7 @@ page |> pz_annotate_clear()
 ```{r spotlight, fig.alt = "The task tracker dimmed to near-black, with bright cutouts around the title field and the Add button."}
 page |>
   pz_annotate_spotlight(
-    list("#task-title", "#add-task"),
+    list("#task_title", "#add_task"),
     pad = 8,
     dim = 0.75
   ) |>
@@ -262,9 +262,9 @@ page |> pz_annotate_clear(id = "caption")
 
 ```{r replace, fig.alt = "The new-task form with only a circle around the Add button; the box that was around the title field is gone."}
 page |>
-  pz_annotate("#task-title", id = "mark") |>
-  pz_annotate("#add-task", type = "circle", id = "mark") |>
-  pz_screenshot(frame = pz_frame("#new-task", pad = 16))
+  pz_annotate("#task_title", id = "mark") |>
+  pz_annotate("#add_task", type = "circle", id = "mark") |>
+  pz_screenshot(frame = pz_frame("#new_task", pad = 16))
 ```
 
 ```{r, include = FALSE}
@@ -286,9 +286,9 @@ page |>
     font_family = "monospace",
     font_size = 24
   ) |>
-  pz_annotate("#add-task", label = "A") |>
+  pz_annotate("#add_task", label = "A") |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 8, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 8, target_box = "annotated")
   )
 ```
 
@@ -317,7 +317,7 @@ page |>
     side = "bottom"
   ) |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 8, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 8, target_box = "annotated")
   )
 ```
 
@@ -364,17 +364,17 @@ So far, every annotation has appeared fully drawn. During a recording, paparazzi
 ```{r reveals}
 page |>
   pz_record_start(
-    frame = pz_frame("#new-task", pad = 40, when = "start"),
+    frame = pz_frame("#new_task", pad = 40, when = "start"),
     scale = 0.6,
     hold = c(0.3, 0.5)
   ) |>
-  pz_annotate("#task-title", type = "box") |>
+  pz_annotate("#task_title", type = "box") |>
   pz_record_hold(0.4) |>
-  pz_annotate("#task-priority", type = "circle") |>
+  pz_annotate("#task_priority", type = "circle") |>
   pz_record_hold(0.4) |>
   pz_annotate_callout(
     "Then press Add",
-    target = "#add-task",
+    target = "#add_task",
     side = "bottom"
   ) |>
   pz_record_hold(1) |>
@@ -392,10 +392,10 @@ The task tracker adds a task when you press Enter in the title field, so we'll s
 ```{r show-keys}
 page |>
   pz_record_start(
-    frame = pz_frame("#new-task", pad = 24, when = "start"),
+    frame = pz_frame("#new_task", pad = 24, when = "start"),
     scale = 0.6
   ) |>
-  pz_act_type("Water the dog", target = "#task-title") |>
+  pz_act_type("Water the dog", target = "#task_title") |>
   pz_act_press("Enter", show_keys = "mac") |>
   pz_expect_text(
     "Water the dog",

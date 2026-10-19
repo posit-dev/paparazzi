@@ -27,7 +27,7 @@ page |>
   pz_act_click(".task-done") |>
   # The help toggle is outside the list, so start again from the root
   pz_find_reset() |>
-  pz_act_click("#toggle-help") |>
+  pz_act_click("#toggle_help") |>
   pz_expect_visible(target = "#help") |>
   pz_get_text(target = "#help")
 pz_close(page)

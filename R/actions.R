@@ -69,8 +69,8 @@ NULL
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_act_click("#toggle-help")
-#' pz_get_text(page, target = "#toggle-help")
+#' page |> pz_act_click("#toggle_help")
+#' pz_get_text(page, target = "#toggle_help")
 #'
 #' # In a scoped context, target = NULL clicks the scope element
 #' page |>
@@ -204,15 +204,15 @@ pz_act_hover <- function(ctx, target = NULL, ...) {
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_act_type("Buy milk", target = "#task-title")
-#' pz_get_value(page, target = "#task-title")
+#' page |> pz_act_type("Buy milk", target = "#task_title")
+#' pz_get_value(page, target = "#task_title")
 #'
 #' # Typing fires input events, so the page reacts: Add is now enabled
-#' pz_expect_enabled(page, target = "#add-task")
+#' pz_expect_enabled(page, target = "#add_task")
 #'
 #' # At the root, target = NULL types into the focused element
 #' page |> pz_act_type(" and eggs")
-#' pz_get_value(page, target = "#task-title")
+#' pz_get_value(page, target = "#task_title")
 #' pz_close(page)
 #'
 #' @inheritSection paparazzi-actions Acting on the page
@@ -295,9 +295,9 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
-#'   pz_act_type("Buy milkk", target = "#task-title") |>
+#'   pz_act_type("Buy milkk", target = "#task_title") |>
 #'   pz_act_press("Backspace")
-#' pz_get_value(page, target = "#task-title")
+#' pz_get_value(page, target = "#task_title")
 #'
 #' # Enter submits the form; the page shows "Saving..." before the task appears
 #' page |> pz_act_press("Enter")
@@ -306,7 +306,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 #'
 #' # A vector presses keys in sequence; + joins keys pressed together
 #' page |> pz_act_press(c("Tab", "Shift+Tab"))
-#' pz_expect_focused(page, target = "#task-title")
+#' pz_expect_focused(page, target = "#task_title")
 #' pz_close(page)
 #'
 #' @inheritSection paparazzi-actions Acting on the page
@@ -392,8 +392,8 @@ pz_act_press <- function(ctx, key, ..., show_keys = NULL) {
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_act_focus("#task-title")
-#' pz_expect_focused(page, target = "#task-title")
+#' page |> pz_act_focus("#task_title")
+#' pz_expect_focused(page, target = "#task_title")
 #' pz_close(page)
 #'
 #' @inheritSection paparazzi-actions Acting on the page
@@ -428,11 +428,11 @@ pz_act_focus <- function(ctx, target = NULL, ...) {
 #'
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_act_focus("#task-title")
+#' page |> pz_act_focus("#task_title")
 #'
 #' # Remove the focus ring, e.g. before a screenshot
 #' page |> pz_act_blur()
-#' pz_expect_focused(page, target = "#task-title", not = TRUE)
+#' pz_expect_focused(page, target = "#task_title", not = TRUE)
 #' pz_close(page)
 #'
 #' @inheritSection paparazzi-actions Acting on the page
@@ -493,15 +493,15 @@ pz_act_blur <- function(ctx, ...) {
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
-#'   pz_set_value("Buy milk", target = "#task-title") |>
-#'   pz_set_value("high", target = "#task-priority") |>
-#'   pz_set_value(TRUE, target = "#task-urgent")
-#' pz_get_value(page, target = list("#task-title", "#task-priority"))
-#' pz_expect_checked(page, target = "#task-urgent")
+#'   pz_set_value("Buy milk", target = "#task_title") |>
+#'   pz_set_value("high", target = "#task_priority") |>
+#'   pz_set_value(TRUE, target = "#task_urgent")
+#' pz_get_value(page, target = list("#task_title", "#task_priority"))
+#' pz_expect_checked(page, target = "#task_urgent")
 #'
 #' # An empty string clears a text input
-#' page |> pz_set_value("", target = "#task-title")
-#' pz_expect_enabled(page, target = "#add-task", not = TRUE)
+#' page |> pz_set_value("", target = "#task_title")
+#' pz_expect_enabled(page, target = "#add_task", not = TRUE)
 #' pz_close(page)
 #'
 #' @export
@@ -554,7 +554,7 @@ pz_set_value <- function(ctx, value, ..., target = NULL) {
 #'
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_set_files(notes, target = "#attachment")
-#' pz_get_text(page, target = "#attachment-name")
+#' pz_get_text(page, target = "#attachment_name")
 #' pz_close(page)
 #'
 #' @export
@@ -731,8 +731,8 @@ pz_act_select_text <- function(ctx, text, ..., target = NULL) {
 #' page <- pz_open(pz_example("tasks"), height = 600)
 #'
 #' # With a target, scroll it into view
-#' page |> pz_act_scroll("#toggle-help")
-#' pz_expect_in_viewport(page, target = "#toggle-help")
+#' page |> pz_act_scroll("#toggle_help")
+#' pz_expect_in_viewport(page, target = "#toggle_help")
 #'
 #' # With `to` or `by`, scroll the current scope's container: here the list
 #' page |>

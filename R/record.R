@@ -120,7 +120,7 @@
 #' # Record the help panel opening, cropped to the page's card
 #' page |>
 #'   pz_record_start(path, frame = pz_frame("main")) |>
-#'   pz_act_click("#toggle-help") |>
+#'   pz_act_click("#toggle_help") |>
 #'   pz_expect_visible(target = "#help") |>
 #'   pz_record_stop()
 #' file.exists(path)
@@ -359,13 +359,13 @@ pz_record_stop <- function(ctx) {
 #' path <- file.path(tempdir(), "add-task.mp4")
 #' page |>
 #'   pz_record_start(path) |>
-#'   pz_act_click("#task-title") |>
+#'   pz_act_click("#task_title") |>
 #'   pz_record_pause() |>
 #'   # Filling in the form is cut from the video
-#'   pz_set_value("Buy milk", target = "#task-title") |>
-#'   pz_set_value("high", target = "#task-priority") |>
+#'   pz_set_value("Buy milk", target = "#task_title") |>
+#'   pz_set_value("high", target = "#task_priority") |>
 #'   pz_record_resume() |>
-#'   pz_act_click("#add-task") |>
+#'   pz_act_click("#add_task") |>
 #'   pz_expect_count(8, target = ".task") |>
 #'   pz_record_stop()
 #' pz_close(page)
@@ -440,7 +440,7 @@ pz_record_resume <- function(ctx) {
 #' path <- file.path(tempdir(), "help.mp4")
 #' page |>
 #'   pz_record_start(path) |>
-#'   pz_act_click("#toggle-help") |>
+#'   pz_act_click("#toggle_help") |>
 #'   # Give viewers a second to read the help text
 #'   pz_record_hold(1) |>
 #'   pz_record_stop()
@@ -494,8 +494,8 @@ pz_record_hold <- function(ctx, seconds) {
 #' page |>
 #'   pz_record(path, {
 #'     page |>
-#'       pz_act_type("Buy milk", target = "#task-title") |>
-#'       pz_act_click("#add-task") |>
+#'       pz_act_type("Buy milk", target = "#task_title") |>
+#'       pz_act_click("#add_task") |>
 #'       pz_expect_count(8, target = ".task")
 #'   }) |>
 #'   pz_screenshot(file.path(tempdir(), "after.png"))

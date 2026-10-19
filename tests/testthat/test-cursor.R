@@ -1338,12 +1338,12 @@ test_that("an explicitly hidden cursor stays hidden during recorded typing", {
     )
   defer_record_stop(page)
 
-  page |> pz_act_click("#task-title")
+  page |> pz_act_click("#task_title")
   pz_evaluate(
     page,
     r"[
 window.__cursorInputOpacity = [];
-document.querySelector('#task-title').addEventListener('input', () => {
+document.querySelector('#task_title').addEventListener('input', () => {
   const inner = document.querySelector('#paparazzi-overlay-root').shadowRoot.querySelector('.pz-inner');
   window.__cursorInputOpacity.push(getComputedStyle(inner).opacity);
 });
@@ -1369,7 +1369,7 @@ document.querySelector('#task-title').addEventListener('input', () => {
     loop = page$child_loop
   )
 
-  page |> pz_act_type("abc", target = "#task-title")
+  page |> pz_act_type("abc", target = "#task_title")
 
   opacities <- unlist(pz_evaluate(page, "window.__cursorInputOpacity"))
   expect_length(opacities, 3)

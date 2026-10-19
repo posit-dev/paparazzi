@@ -30,7 +30,7 @@ the \code{id} and \code{class} attributes, and the whitespace-collapsed text.
 \examples{
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-pz_get_elements(page, target = "#new-task > *")
+pz_get_elements(page, target = "#new_task > *")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

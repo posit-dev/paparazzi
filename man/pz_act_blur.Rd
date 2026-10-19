@@ -46,11 +46,11 @@ To set a value directly instead, without staging, use \code{\link[=pz_set_value]
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_act_focus("#task-title")
+page |> pz_act_focus("#task_title")
 
 # Remove the focus ring, e.g. before a screenshot
 page |> pz_act_blur()
-pz_expect_focused(page, target = "#task-title", not = TRUE)
+pz_expect_focused(page, target = "#task_title", not = TRUE)
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

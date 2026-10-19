@@ -110,8 +110,8 @@ path <- file.path(tempdir(), "add-task.mp4")
 page |>
   pz_record(path, {
     page |>
-      pz_act_type("Buy milk", target = "#task-title") |>
-      pz_act_click("#add-task")
+      pz_act_type("Buy milk", target = "#task_title") |>
+      pz_act_click("#add_task")
   })
 
 # NULL restores a setting's built-in default
@@ -120,8 +120,8 @@ page <- page |> pz_stage(pause = NULL)
 # cursor = TRUE shows the cursor in screenshots too
 page |>
   pz_stage(cursor = TRUE) |>
-  pz_act_hover("#task-title") |>
-  pz_screenshot(file.path(tempdir(), "cursor.png"), frame = "#new-task")
+  pz_act_hover("#task_title") |>
+  pz_screenshot(file.path(tempdir(), "cursor.png"), frame = "#new_task")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

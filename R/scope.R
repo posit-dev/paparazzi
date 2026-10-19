@@ -54,9 +54,9 @@
 #'
 #' # from_root looks outside the current scope, but still pushes a new scope
 #' task_list |>
-#'   pz_find("#new-task", from_root = TRUE) |>
-#'   pz_act_type("Buy milk", target = "#task-title")
-#' pz_get_value(page, target = "#task-title")
+#'   pz_find("#new_task", from_root = TRUE) |>
+#'   pz_act_type("Buy milk", target = "#task_title")
+#' pz_get_value(page, target = "#task_title")
 #' pz_close(page)
 #'
 #' @export
@@ -235,7 +235,7 @@ pz_find_pop <- function(ctx) {
 #'   pz_act_click(".task-done") |>
 #'   # The help toggle is outside the list, so start again from the root
 #'   pz_find_reset() |>
-#'   pz_act_click("#toggle-help") |>
+#'   pz_act_click("#toggle_help") |>
 #'   pz_expect_visible(target = "#help") |>
 #'   pz_get_text(target = "#help")
 #' pz_close(page)

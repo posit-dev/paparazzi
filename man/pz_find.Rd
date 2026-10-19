@@ -59,9 +59,9 @@ pz_get_count(task_list, target = ".task.done")
 
 # from_root looks outside the current scope, but still pushes a new scope
 task_list |>
-  pz_find("#new-task", from_root = TRUE) |>
-  pz_act_type("Buy milk", target = "#task-title")
-pz_get_value(page, target = "#task-title")
+  pz_find("#new_task", from_root = TRUE) |>
+  pz_act_type("Buy milk", target = "#task_title")
+pz_get_value(page, target = "#task_title")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

@@ -104,8 +104,8 @@ pz_get_text <- function(ctx, target = NULL, ..., raw = FALSE) {
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_act_type("Buy milk", target = "#task-title")
-#' pz_get_value(page, target = list("#task-title", "#task-priority"))
+#' page |> pz_act_type("Buy milk", target = "#task_title")
+#' pz_get_value(page, target = list("#task_title", "#task_priority"))
 #' pz_close(page)
 #'
 #' @export
@@ -201,7 +201,7 @@ pz_get_rect <- function(ctx, target = NULL, ...) {
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' pz_get_elements(page, target = "#new-task > *")
+#' pz_get_elements(page, target = "#new_task > *")
 #' pz_close(page)
 #'
 #' @export

@@ -90,8 +90,8 @@ pz_expect_exists <- function(
 #' # Expectations retry, so they wait for the page to catch up: the new task
 #' # appears after a short "Saving..." delay
 #' page |>
-#'   pz_act_type("Buy milk", target = "#task-title") |>
-#'   pz_act_click("#add-task") |>
+#'   pz_act_type("Buy milk", target = "#task_title") |>
+#'   pz_act_click("#add_task") |>
 #'   pz_expect_count(8, target = ".task")
 #' pz_close(page)
 #'
@@ -174,7 +174,7 @@ pz_expect_count <- function(
 #' page |> pz_expect_hidden(target = "#help")
 #'
 #' page |>
-#'   pz_act_click("#toggle-help") |>
+#'   pz_act_click("#toggle_help") |>
 #'   pz_expect_visible(target = "#help")
 #'
 #' # Every match must pass, so check one task or narrow the target
@@ -306,10 +306,10 @@ pz_expect_text <- function(
 #' page <- pz_open(pz_example("tasks"))
 #'
 #' # Add is disabled until the title has text
-#' page |> pz_expect_enabled(target = "#add-task", not = TRUE)
+#' page |> pz_expect_enabled(target = "#add_task", not = TRUE)
 #' page |>
-#'   pz_act_type("Buy milk", target = "#task-title") |>
-#'   pz_expect_enabled(target = "#add-task")
+#'   pz_act_type("Buy milk", target = "#task_title") |>
+#'   pz_expect_enabled(target = "#add_task")
 #' pz_close(page)
 #'
 #' @export
@@ -354,12 +354,12 @@ pz_expect_enabled <- function(
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |>
-#'   pz_act_click("#task-title") |>
-#'   pz_expect_focused(target = "#task-title")
+#'   pz_act_click("#task_title") |>
+#'   pz_expect_focused(target = "#task_title")
 #'
 #' page |>
 #'   pz_act_press("Tab") |>
-#'   pz_expect_focused(target = "#task-priority")
+#'   pz_expect_focused(target = "#task_priority")
 #' pz_close(page)
 #'
 #' @export
@@ -403,10 +403,10 @@ pz_expect_focused <- function(
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_expect_checked(target = "#task-urgent", not = TRUE)
+#' page |> pz_expect_checked(target = "#task_urgent", not = TRUE)
 #' page |>
-#'   pz_act_click("#task-urgent") |>
-#'   pz_expect_checked(target = "#task-urgent")
+#'   pz_act_click("#task_urgent") |>
+#'   pz_expect_checked(target = "#task_urgent")
 #' pz_close(page)
 #'
 #' @export
@@ -509,11 +509,11 @@ pz_expect_in_viewport <- function(
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_expect_value("normal", target = "#task-priority", match = "exact")
+#' page |> pz_expect_value("normal", target = "#task_priority", match = "exact")
 #'
 #' page |>
-#'   pz_act_type("Buy milk", target = "#task-title") |>
-#'   pz_expect_value("milk", target = "#task-title")
+#'   pz_act_type("Buy milk", target = "#task_title") |>
+#'   pz_expect_value("milk", target = "#task_title")
 #' pz_close(page)
 #'
 #' @export
@@ -576,8 +576,8 @@ pz_expect_value <- function(
 #' )
 #'
 #' page |>
-#'   pz_act_click("#toggle-help") |>
-#'   pz_expect_attr("#toggle-help", `aria-expanded` = "true")
+#'   pz_act_click("#toggle_help") |>
+#'   pz_expect_attr("#toggle_help", `aria-expanded` = "true")
 #' pz_close(page)
 #'
 #' @export

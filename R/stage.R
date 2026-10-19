@@ -92,8 +92,8 @@
 #' page |>
 #'   pz_record(path, {
 #'     page |>
-#'       pz_act_type("Buy milk", target = "#task-title") |>
-#'       pz_act_click("#add-task")
+#'       pz_act_type("Buy milk", target = "#task_title") |>
+#'       pz_act_click("#add_task")
 #'   })
 #'
 #' # NULL restores a setting's built-in default
@@ -102,8 +102,8 @@
 #' # cursor = TRUE shows the cursor in screenshots too
 #' page |>
 #'   pz_stage(cursor = TRUE) |>
-#'   pz_act_hover("#task-title") |>
-#'   pz_screenshot(file.path(tempdir(), "cursor.png"), frame = "#new-task")
+#'   pz_act_hover("#task_title") |>
+#'   pz_screenshot(file.path(tempdir(), "cursor.png"), frame = "#new_task")
 #' pz_close(page)
 #'
 #' @export
@@ -280,14 +280,14 @@ pz_stage <- function(
 #'
 #' # Assignment makes these styles page-wide defaults for new annotations
 #' page <- page |> pz_stage_annotate(color = "#2563eb", font_size = 16)
-#' page |> pz_annotate("#add-task", label = TRUE) |> pz_screenshot(path)
+#' page |> pz_annotate("#add_task", label = TRUE) |> pz_screenshot(path)
 #'
 #' # A one-off pipeline can undo a default with NULL: its callout uses
 #' # the built-in red again
 #' page |>
 #'   pz_stage_annotate(color = NULL) |>
-#'   pz_annotate("#task-title", label = TRUE) |>
-#'   pz_screenshot(path, frame = pz_frame("#task-title", pad = 16, target_box = "annotated"))
+#'   pz_annotate("#task_title", label = TRUE) |>
+#'   pz_screenshot(path, frame = pz_frame("#task_title", pad = 16, target_box = "annotated"))
 #' pz_close(page)
 #'
 #' @export

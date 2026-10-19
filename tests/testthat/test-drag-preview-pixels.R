@@ -150,7 +150,7 @@ test_that('retained carry and settle pixels follow the same task row for to and 
     if (case$parked) {
       pz_cursor_move(page, source, duration = 0)
     } else {
-      pz_cursor_move(page, '#task-title', duration = 0)
+      pz_cursor_move(page, '#task_title', duration = 0)
     }
     initial <- pz_evaluate(
       page,

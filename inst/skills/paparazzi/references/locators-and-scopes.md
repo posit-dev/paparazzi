@@ -15,7 +15,7 @@ data attributes for collections.
 library(paparazzi)
 page <- pz_open(pz_example("tasks"), width = 1000, height = 720)
 page |> pz_expect_count(7, target = ".task")
-pz_get_elements(page, target = "#new-task input")
+pz_get_elements(page, target = "#new_task input")
 ```
 
 `pz_get_elements()` describes the matches; `pz_get_text()`, `pz_get_value()`,
@@ -106,7 +106,7 @@ a target.
 A scope can itself be the thing you click:
 
 ```r
-help_button <- pz_find(page, "#toggle-help")
+help_button <- pz_find(page, "#toggle_help")
 help_button |> pz_act_click()
 page |> pz_expect_visible(target = "#help")
 ```
@@ -150,11 +150,11 @@ passport_row |>
 
 passport_row |>
   pz_find_reset() |>
-  pz_expect_visible(target = "#new-task")
+  pz_expect_visible(target = "#new_task")
 
 task_list |>
-  pz_find("#new-task", from_root = TRUE) |>
-  pz_expect_exists(target = "#task-title") |>
+  pz_find("#new_task", from_root = TRUE) |>
+  pz_expect_exists(target = "#task_title") |>
   pz_find_pop() |>
   pz_expect_count(7, target = ".task")
 ```
