@@ -118,9 +118,9 @@ page |>
   pz_find(dentist) |>
   pz_act_click(".task-edit") |>
   pz_act_select_text("dentist", target = ".task-title") |>
-  pz_find_reset() |>
   pz_act_type("eye doctor") |>
   pz_act_press("Enter") |>
+  pz_find_reset() |>
   # [3] Reorder the list
   pz_annotate_caption("Drag tasks to reorder them") |>
   pz_annotate_spotlight(".task-list", pad = 4) |>
@@ -139,7 +139,7 @@ page |>
 paparazzi shows one caption at a time. Each call to `pz_annotate_caption()` replaces the caption on screen, and while recording, the old caption fades out as the new one appears. That makes it easy to give each step its own caption, so the caption always describes what the viewer is watching. The steps fall into four groups:
 
 1. **Slow down.** `pz_stage()` slows the cursor to 350 pixels per second and typing to 10 characters per second, and pauses 0.6 seconds after each step instead of 0.2. Staged settings belong to the chain, so the slowdown lasts to the end of this chunk and the next section returns to the pace we staged on `page` at the start.
-2. **Rename a task.** `pz_find()` narrows the chain to the dentist task, so `.task-edit` and `.task-title` mean that task's Edit button and title. Clicking Edit makes the title editable, and `pz_act_select_text()` selects the word "dentist". `pz_find_reset()` returns to the whole page before typing: with a scope, `pz_act_type()` would click the task first and lose the selection. Without a target, it types into the focused title, replacing the selected word, and Enter saves the new title.
+2. **Rename a task.** `pz_find()` narrows the chain to the dentist task, so `.task-edit` and `.task-title` mean that task's Edit button and title. Clicking Edit makes the title editable, and `pz_act_select_text()` selects the word "dentist". Without a target, `pz_act_type()` preserves the selection in the focused title within the task scope, replacing the selected word, and Enter saves the new title. `pz_find_reset()` then returns to the whole page for the drag.
 3. **Reorder the list.** `pz_annotate_spotlight()` dims everything but the list, drawing the viewer's attention to the drag action. `pz_act_drag()` drags "Water the plants" onto "File tax return", using the same mouse input a person would. While paparazzi records, the cursor carries an image of the task as it glides. The spotlight's id is always `"spotlight"`, so `pz_annotate_clear(id = "spotlight")` removes it once the task lands.
 4. **Finish a task.** `pz_find()` narrows the chain again so `.task-done` means the tax task's Done button. Then a click on the Open filter hides finished tasks, and `pz_expect_visible()` checks that "Water the plants" is still in the list.
 

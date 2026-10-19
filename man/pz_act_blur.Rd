@@ -27,10 +27,11 @@ the browser's own focus and text-selection methods. They never set a form
 value directly.
 
 An action with a \code{target} looks for it in the current scope and waits until
-it matches an element. Inside a scope, \code{target = NULL} acts on the scope's
-element, and scrolling with \code{by} or \code{to} scrolls the scope's container. An
-explicit target is scrolled into view first when needed. A few actions,
-like \code{\link[=pz_act_press]{pz_act_press()}}, take no target and act on the focused element
+it matches an element. Inside a scope, \code{target = NULL} normally acts on the
+scope's element; \code{\link[=pz_act_type]{pz_act_type()}} can instead preserve a held selection in a
+focused editable descendant. Scrolling with \code{by} or \code{to} scrolls the scope's
+container. An explicit target is scrolled into view first when needed. A few
+actions, like \code{\link[=pz_act_press]{pz_act_press()}}, take no target and act on the focused element
 instead.
 
 While the page is recording, actions are staged as \code{\link[=pz_stage]{pz_stage()}} sets them

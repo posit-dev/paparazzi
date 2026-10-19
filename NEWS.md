@@ -1,5 +1,10 @@
 # paparazzi 0.0.0.9000
 
+* `pz_act_type()` with `target = NULL` now preserves a held selection in an
+  already-focused `contenteditable` descendant of the current scope, provided
+  the selection stays within one editing host and doesn't cross non-editable
+  islands. Explicit targets still click before typing.
+
 * `pz_js()` is renamed to `pz_evaluate()`. "Evaluate" is the established
   term for running JS in the page and returning the result across
   Playwright (`page.evaluate()`), Puppeteer, and the Chrome DevTools

@@ -31,6 +31,16 @@ root context, inserts into whatever element currently has focus;
 if nothing editable is focused, the text goes nowhere, exactly like
 typing into a page with no focused field.
 
+With \code{target = NULL} inside a scope, paparazzi normally clicks the scope's
+element before typing. It can preserve a non-collapsed text selection
+instead: if the scope itself is \code{contenteditable}, paparazzi focuses it
+without clicking. Otherwise, paparazzi preserves a selection inside an
+already-focused \code{contenteditable} descendant without clicking. That
+selection must stay inside the scope and one editing host (an editable
+element whose parent is not editable), without crossing any
+\code{contenteditable="false"} islands.
+An explicit \code{target} always takes the click path.
+
 Insertion is instant (one \code{insertText}), except while recording
 with \code{typing = "natural"} (the default; see \code{\link[=pz_stage]{pz_stage()}}): one
 \code{insertText} per character with randomized delays around
@@ -48,10 +58,11 @@ the browser's own focus and text-selection methods. They never set a form
 value directly.
 
 An action with a \code{target} looks for it in the current scope and waits until
-it matches an element. Inside a scope, \code{target = NULL} acts on the scope's
-element, and scrolling with \code{by} or \code{to} scrolls the scope's container. An
-explicit target is scrolled into view first when needed. A few actions,
-like \code{\link[=pz_act_press]{pz_act_press()}}, take no target and act on the focused element
+it matches an element. Inside a scope, \code{target = NULL} normally acts on the
+scope's element; \code{\link[=pz_act_type]{pz_act_type()}} can instead preserve a held selection in a
+focused editable descendant. Scrolling with \code{by} or \code{to} scrolls the scope's
+container. An explicit target is scrolled into view first when needed. A few
+actions, like \code{\link[=pz_act_press]{pz_act_press()}}, take no target and act on the focused element
 instead.
 
 While the page is recording, actions are staged as \code{\link[=pz_stage]{pz_stage()}} sets them

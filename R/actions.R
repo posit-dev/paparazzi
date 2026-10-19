@@ -18,10 +18,11 @@
 #' value directly.
 #'
 #' An action with a `target` looks for it in the current scope and waits until
-#' it matches an element. Inside a scope, `target = NULL` acts on the scope's
-#' element, and scrolling with `by` or `to` scrolls the scope's container. An
-#' explicit target is scrolled into view first when needed. A few actions,
-#' like [pz_act_press()], take no target and act on the focused element
+#' it matches an element. Inside a scope, `target = NULL` normally acts on the
+#' scope's element; [pz_act_type()] can instead preserve a held selection in a
+#' focused editable descendant. Scrolling with `by` or `to` scrolls the scope's
+#' container. An explicit target is scrolled into view first when needed. A few
+#' actions, like [pz_act_press()], take no target and act on the focused element
 #' instead.
 #'
 #' While the page is recording, actions are staged as [pz_stage()] sets them
@@ -170,6 +171,16 @@ pz_act_hover <- function(ctx, target = NULL, ...) {
 #' root context, inserts into whatever element currently has focus;
 #' if nothing editable is focused, the text goes nowhere, exactly like
 #' typing into a page with no focused field.
+#'
+#' With `target = NULL` inside a scope, paparazzi normally clicks the scope's
+#' element before typing. It can preserve a non-collapsed text selection
+#' instead: if the scope itself is `contenteditable`, paparazzi focuses it
+#' without clicking. Otherwise, paparazzi preserves a selection inside an
+#' already-focused `contenteditable` descendant without clicking. That
+#' selection must stay inside the scope and one editing host (an editable
+#' element whose parent is not editable), without crossing any
+#' `contenteditable="false"` islands.
+#' An explicit `target` always takes the click path.
 #'
 #' Insertion is instant (one `insertText`), except while recording
 #' with `typing = "natural"` (the default; see [pz_stage()]): one
@@ -1359,17 +1370,32 @@ insert_text_once <- function(ctx, target, text, call = caller_env()) {
 
 focus_held_selection_js <- "function() {
   const el = this[0];
-  if (!el || !el.isContentEditable) {
+  if (!el) {
     return false;
   }
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
     return false;
   }
-  if (!el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+  const range = sel.getRangeAt(0);
+  if (!el.contains(range.commonAncestorContainer)) {
     return false;
   }
-  el.focus();
+  if (el.isContentEditable) {
+    el.focus();
+    return true;
+  }
+  const host = document.activeElement;
+  if (!host || !host.isContentEditable || !el.contains(host) ||
+      (host.parentElement && host.parentElement.isContentEditable) ||
+      !host.contains(range.commonAncestorContainer)) {
+    return false;
+  }
+  for (const island of host.querySelectorAll('[contenteditable]')) {
+    if (!island.isContentEditable && range.intersectsNode(island)) {
+      return false;
+    }
+  }
   return true;
 }"
 

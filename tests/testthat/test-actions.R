@@ -1524,6 +1524,139 @@ test_that("pz_act_select_text lets typing replace the selection", {
   )
 })
 
+local_held_selection_page <- function(setup = "", .env = parent.frame()) {
+  page <- local_advanced_page(.env = .env)
+  pz_evaluate(
+    page,
+    paste0(
+      "(() => {
+    document.body.innerHTML = `
+      <section id='scope' style='width:500px;padding:30px'>
+        <div id='host' contenteditable='true'><span id='first'>otters</span><span id='last'> are playful</span></div>
+        <div id='second' contenteditable='true'>second editor</div>
+      </section>
+      <div id='outside' contenteditable='true'>outside editor</div>
+      <button id='button'>Other focus</button>`;
+    const host = document.getElementById('host');
+    const first = document.getElementById('first');
+    const last = document.getElementById('last');
+    host.focus();
+    const range = document.createRange();
+    range.selectNodeContents(first);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    ",
+      setup,
+      "
+    window.__typingClicks = 0;
+    document.addEventListener('mousedown', e => {
+      if (e.isTrusted) window.__typingClicks++;
+    });
+  })()"
+    )
+  )
+  page
+}
+
+test_that("scoped typing replaces a focused descendant's held selection", {
+  page <- local_held_selection_page()
+  ctx <- pz_find(page, "#scope")
+
+  expect_invisible(pz_act_type(ctx, "penguins"))
+
+  expect_equal(pz_get_text(page, "#host"), "penguins are playful")
+  expect_equal(pz_evaluate(page, "window.__typingClicks"), 0)
+  expect_equal(pz_evaluate(page, "document.activeElement.id"), "host")
+})
+
+test_that("scoped typing honors inherited editability across inline descendants", {
+  page <- local_held_selection_page(
+    "range.setStart(first.firstChild, 0); range.setEnd(last.firstChild, 4);"
+  )
+  ctx <- pz_find(page, "#scope")
+
+  pz_act_type(ctx, "penguins")
+
+  expect_equal(pz_get_text(page, "#host"), "penguins playful")
+  expect_equal(pz_evaluate(page, "window.__typingClicks"), 0)
+})
+
+test_that("an explicit typing target takes precedence over its held selection", {
+  page <- local_held_selection_page()
+  ctx <- pz_find(page, "#scope")
+
+  pz_act_type(ctx, "x", target = "#host")
+
+  expect_match(pz_get_text(page, "#host"), "otters", fixed = TRUE)
+  expect_match(pz_get_text(page, "#host"), "x", fixed = TRUE)
+  expect_equal(pz_evaluate(page, "window.__typingClicks"), 1)
+  expect_equal(pz_evaluate(page, "document.activeElement.id"), "host")
+})
+
+test_that("an editable scope still refocuses its held selection without clicking", {
+  page <- local_held_selection_page(
+    "document.getElementById('button').focus();"
+  )
+  ctx <- pz_find(page, "#host")
+  expect_equal(pz_evaluate(page, "document.activeElement.id"), "button")
+  expect_equal(pz_evaluate(page, "window.getSelection().toString()"), "otters")
+
+  pz_act_type(ctx, "penguins")
+
+  expect_equal(pz_get_text(page, "#host"), "penguins are playful")
+  expect_equal(pz_evaluate(page, "window.__typingClicks"), 0)
+  expect_equal(pz_evaluate(page, "document.activeElement.id"), "host")
+})
+
+test_that("a non-editable island outside the selection does not prevent replacement", {
+  page <- local_held_selection_page(
+    "first.insertAdjacentHTML('afterend', '<span contenteditable=false> frozen</span>');"
+  )
+  ctx <- pz_find(page, "#scope")
+
+  pz_act_type(ctx, "penguins")
+
+  expect_equal(pz_get_text(page, "#host"), "penguins frozen are playful")
+  expect_equal(pz_evaluate(page, "window.__typingClicks"), 0)
+})
+
+held_selection_fallbacks <- c(
+  "an unfocused descendant" = "document.getElementById('button').focus();",
+  "a collapsed selection" = "range.collapse(true);",
+  "no selection" = "sel.removeAllRanges();",
+  "a selection outside the scope" = "const outside = document.getElementById('outside'); outside.focus(); range.selectNodeContents(outside);",
+  "a selection crossing the scope" = "range.setEnd(document.getElementById('outside').firstChild, 7);",
+  "endpoints in different editing hosts" = "range.setEnd(document.getElementById('second').firstChild, 6);",
+  "an endpoint in a non-editable island" = "first.contentEditable = 'false';",
+  "a range spanning a non-editable island" = "first.insertAdjacentHTML('afterend', '<span contenteditable=false> frozen</span>'); range.setStart(first.firstChild, 0); range.setEnd(last.firstChild, 4);",
+  "a range spanning a nested editing host" = "first.insertAdjacentHTML('afterend', '<span contenteditable=false><span contenteditable=true>nested</span></span>'); range.setStart(first.firstChild, 0); range.setEnd(last.firstChild, 4);"
+)
+
+for (scenario in names(held_selection_fallbacks)) {
+  test_that(paste("scoped typing still clicks for", scenario), {
+    page <- local_held_selection_page(held_selection_fallbacks[[scenario]])
+    ctx <- pz_find(page, "#scope")
+
+    pz_act_type(ctx, "x")
+
+    expect_equal(pz_evaluate(page, "window.__typingClicks"), 1)
+  })
+}
+
+test_that("scoped typing replaces a selected word in a task title", {
+  page <- local_page(pz_example("tasks"))
+  task <- pz_find(page, pz_loc(".task", has_text = "Book dentist appointment"))
+
+  task |>
+    pz_act_click(".task-edit") |>
+    pz_act_select_text("dentist", target = ".task-title") |>
+    pz_act_type("eye doctor") |>
+    pz_act_press("Enter")
+
+  expect_equal(pz_get_text(task, ".task-title"), "Book eye doctor appointment")
+})
+
 test_that("pz_act_select_text errors on absent text, emptiness, and multiple matches", {
   page <- local_advanced_page()
 
