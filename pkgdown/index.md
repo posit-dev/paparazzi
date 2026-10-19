@@ -115,9 +115,9 @@ page |>
     scale = 800
   ) |>
   pz_annotate_caption("Add a task") |>
-  pz_camera("#new-task", wait = TRUE) |>
-  pz_act_type("Prepare release notes", target = "#task-title") |>
-  pz_act_click("#add-task") |>
+  pz_camera("#new_task", wait = TRUE) |>
+  pz_act_type("Prepare release notes", target = "#task_title") |>
+  pz_act_click("#add_task") |>
   pz_expect_visible(task_release) |>
   pz_annotate(task_release, type = "box", pad = 4, id = "new") |>
   pz_annotate_caption("New tasks go to the top of the list") |>
