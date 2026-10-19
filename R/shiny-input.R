@@ -13,12 +13,14 @@
 #'   strings. Date-valued sliders accept ISO date strings, converted to
 #'   JavaScript timestamps. Top-level `NULL` and atomic `NA` are rejected.
 #' @param wait If `TRUE`, call [pz_wait_for_shiny_idle()] after the change.
+#'   This does not acknowledge the input update or wait for a particular
+#'   output; expect the result you need before reading or capturing it.
 #'   If `FALSE`, return immediately after dispatching the change.
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run("shiny")
 #' page <- pz_open(pz_example("tasks-app"))
 #'
-#' # Each call waits for Shiny to go idle, so the server has seen the value
+#' # Set the inputs, then expect the task count after clicking Add
 #' page |>
 #'   pz_set_shiny_input("title", "Buy milk") |>
 #'   pz_set_shiny_input("priority", "high") |>

@@ -1,21 +1,16 @@
-test_that("Shiny idle waits for a slow reactive output and holds for 200ms", {
+test_that("Shiny idle settles on a real app and returns its context invisibly", {
   skip_if_no_chrome()
   skip_if_no_shiny()
   page <- pz_open(shared_shiny_idle_app(), wait = "none")
   withr::defer(pz_close(page))
 
+  # Output delivery does not anchor idle; the controlled busy/idle tests
+  # below pin the hold's duration.
+  page |> pz_expect_text("reactive ready", target = "#slow", match = "exact")
+
   result <- withVisible(pz_wait_for_shiny_idle(page, timeout = 5))
   expect_false(result$visible)
   expect_identical(result$value, page)
-  expect_equal(shiny_idle_state(page)$text, "reactive ready")
-
-  # The hold measured against the render itself: __slowReadyAt stamps
-  # the moment #slow rendered (page clock), and the wait resolved only
-  # after its 200ms stability hold. Reading the stamp after the wait
-  # returns only inflates the measured hold, so the bound is safe; the
-  # 10ms margin covers timer granularity.
-  held_ms <- pz_evaluate(page, "performance.now() - window.__slowReadyAt")
-  expect_gte(held_ms / 1000, 0.19)
 })
 
 test_that("Shiny idle restarts its stability window when busy returns", {
@@ -147,21 +142,25 @@ test_that("Shiny idle settles with a suspended output on a hidden tab", {
     timeout = 10
   )
 
-  # The Slow tab's output is suspended: Shiny marked it .recalculating
-  # but never recomputes it while hidden. The old predicate never
-  # settled here; idle must settle with that class still present.
+  # Arrange visible delivery; the hidden output stays recalculating.
+  page |> pz_expect_text("fast ready", target = "#fast", match = "exact")
   state <- pz_evaluate(
     page,
-    "({fast: document.querySelector('#fast').className, slow: document.querySelector('#slow').className, fastText: document.querySelector('#fast').textContent})"
+    "({fast: document.querySelector('#fast').className, slow: document.querySelector('#slow').className})"
   )
-  expect_equal(state$fastText, "fast ready")
   expect_false(grepl("recalculating", state$fast, fixed = TRUE))
   expect_true(grepl("recalculating", state$slow, fixed = TRUE))
 
+  # Recheck after delivery so an early startup settle cannot satisfy this
+  # regression.
+  expect_no_error(pz_wait_for_shiny_idle(page, timeout = 5))
+  expect_true(pz_evaluate(
+    page,
+    "document.querySelector('#slow').classList.contains('recalculating')"
+  ))
+
   shot <- tempfile(fileext = ".png")
-  page |>
-    pz_expect_text("fast ready", target = "#fast", match = "exact") |>
-    pz_screenshot(shot)
+  pz_screenshot(page, shot)
   expect_true(file.exists(shot))
 })
 
@@ -184,10 +183,8 @@ test_that("Shiny idle and wait=TRUE setters work after invalidating a suspended 
     "document.querySelector('#slow').classList.contains('recalculating')"
   ))
 
-  # wait = TRUE on the setter is usable again: showing the tab resumes
-  # the output, and the wait covers its slow render. Expect the delivered
-  # text (it retries) rather than reading once: on a loaded runner the
-  # server's busy signal can arrive after the wait's first hold.
+  # Showing the tab resumes rendering. The setter waits for idle;
+  # expect delivered text separately.
   page |>
     pz_set_shiny_input("tabs", "Slow") |>
     pz_expect_text("slow ready", target = "#slow", match = "exact")
@@ -198,7 +195,7 @@ test_that("Shiny idle and wait=TRUE setters work after invalidating a suspended 
   ))
 })
 
-test_that("Shiny idle waits out the render when a suspended output resumes", {
+test_that("Shiny idle settles after a suspended output resumes", {
   skip_if_no_chrome()
   skip_if_no_shiny()
   page <- pz_local_page(
@@ -208,18 +205,14 @@ test_that("Shiny idle waits out the render when a suspended output resumes", {
   )
 
   page |> pz_set_shiny_input("tabs", "Slow", wait = FALSE)
-  # Poll until the resume reaches the server (busy starts) so the idle
-  # wait provably overlaps the render; the input round trip can otherwise
-  # outlast the wait's first 200ms hold on a loaded runner.
+  # Observe server busy first; input dispatch may outlast an idle hold.
+  # Controlled busy/idle tests pin the hold; expect delivery separately.
   pz_wait_for_js(
     page,
     "document.documentElement.classList.contains('shiny-busy')",
     timeout = 5
   )
-  start <- Sys.time()
   pz_wait_for_shiny_idle(page, timeout = 5)
-  # The resumed render sleeps 0.8s; idle must not settle before it ends.
-  expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.7)
   page |> pz_expect_text("slow ready", target = "#slow", match = "exact")
 })
 
@@ -232,15 +225,21 @@ test_that("Shiny idle settles for a Shiny for Python app with a suspended tab ou
   page <- pz_open(app, timeout = 15)
   withr::defer(pz_close(page))
 
-  # Same contract as the R app: the hidden tab's output keeps
-  # .recalculating and idle settles anyway.
+  # As in R, arrange delivery before testing the suspended-output state.
+  page |> pz_expect_text("fast ready", target = "#fast", match = "exact")
   state <- pz_evaluate(
     page,
-    "({fast: document.querySelector('#fast').className, slow: document.querySelector('#slow').className, fastText: document.querySelector('#fast').textContent})"
+    "({fast: document.querySelector('#fast').className, slow: document.querySelector('#slow').className})"
   )
-  expect_equal(state$fastText, "fast ready")
   expect_false(grepl("recalculating", state$fast, fixed = TRUE))
   expect_true(grepl("recalculating", state$slow, fixed = TRUE))
+
+  # Recheck after delivery to exclude an early startup settle.
+  expect_no_error(pz_wait_for_shiny_idle(page, timeout = 5))
+  expect_true(pz_evaluate(
+    page,
+    "document.querySelector('#slow').classList.contains('recalculating')"
+  ))
 
   page |>
     pz_act_click("#go") |>
@@ -1013,9 +1012,10 @@ test_that("pz_wait_for_navigation validates its inputs", {
   expect_error(pz_wait_for_navigation(page, timeout = -1), "timeout")
 })
 
-test_that("explicit post-action navigation waits for Shiny output", {
+test_that("explicit post-action navigation routes to Shiny idle on the destination", {
   app <- local_shiny_app(shiny_idle_fixture())
   page <- local_nav_page()
+  spy <- local_shiny_idle_spy()
 
   pz_evaluate(
     page,
@@ -1029,17 +1029,21 @@ setTimeout(() => location.href = '%s', 100)
   )
 
   pz_wait_for_navigation(page, wait = "shiny", timeout = 5)
-  expect_identical(shiny_idle_state(page)$text, "reactive ready")
+  expect_identical(spy$urls, app$url)
+  page |> pz_expect_text("reactive ready", target = "#slow", match = "exact")
 })
 
 test_that("post-action auto waits for app-backed Shiny but not a different origin", {
   skip_if_no_shiny()
-  page <- pz_open(shared_shiny_idle_app(), wait = "shiny")
+  app <- shared_shiny_idle_app()
+  page <- pz_open(app, wait = "shiny")
   withr::defer(pz_close(page))
+  spy <- local_shiny_idle_spy()
 
   pz_evaluate(page, "setTimeout(() => location.reload(), 100)", await = FALSE)
   pz_wait_for_navigation(page, timeout = 5)
-  expect_identical(shiny_idle_state(page)$text, "reactive ready")
+  expect_identical(spy$urls, app$url)
+  page |> pz_expect_text("reactive ready", target = "#slow", match = "exact")
 
   pz_evaluate(
     page,
@@ -1048,4 +1052,5 @@ test_that("post-action auto waits for app-backed Shiny but not a different origi
   )
   pz_wait_for_navigation(page, timeout = 5)
   expect_identical(pz_evaluate(page, "location.href"), "about:blank")
+  expect_identical(spy$urls, app$url)
 })

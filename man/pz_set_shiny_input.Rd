@@ -19,6 +19,8 @@ JavaScript timestamps. Top-level \code{NULL} and atomic \code{NA} are rejected.}
 \item{...}{Checked empty; reserved for future use.}
 
 \item{wait}{If \code{TRUE}, call \code{\link[=pz_wait_for_shiny_idle]{pz_wait_for_shiny_idle()}} after the change.
+This does not acknowledge the input update or wait for a particular
+output; expect the result you need before reading or capturing it.
 If \code{FALSE}, return immediately after dispatching the change.}
 }
 \value{
@@ -35,7 +37,7 @@ unbound inputs, action buttons, or file inputs.
 \dontshow{if (paparazzi:::examples_run("shiny")) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks-app"))
 
-# Each call waits for Shiny to go idle, so the server has seen the value
+# Set the inputs, then expect the task count after clicking Add
 page |>
   pz_set_shiny_input("title", "Buy milk") |>
   pz_set_shiny_input("priority", "high") |>

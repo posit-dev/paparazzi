@@ -22,7 +22,8 @@ page |>
 both holding for at least 200 milliseconds. An output suspended on a hidden
 tab stays `.recalculating` until the tab shows and doesn't block readiness.
 App paths and Shiny handles wait for this automatically; for an app that's
-already running, use `pz_open(url, wait = "shiny")`.
+already running, use `pz_open(url, wait = "shiny")`. This wait does not prove
+that initial rendering has finished; expect the content you need.
 
 The app process inherits environment variables but none of your R session's
 objects. Load what the app needs in its own code, and pass configuration
@@ -43,37 +44,35 @@ page |>
   pz_expect_visible(pz_loc(".task", has_text = "Buy milk"))
 ```
 
-When there's no particular value to expect, wait for Shiny to go idle, then
-read or capture. `pz_wait_for_shiny_idle()` checks the connection and
-reactive work, not just whether the page has loaded.
+`pz_wait_for_shiny_idle()` observes Shiny's connection and busy signal,
+not just page loading. It does not acknowledge a particular input update
+or wait for a particular output. Expect new content before reading or
+capturing the result.
 
 ```r
 page |>
   pz_set_value("Renew library card", target = "#title") |>
   pz_act_click("#add") |>
-  pz_wait_for_shiny_idle()
+  pz_wait_for_shiny_idle() |>
+  pz_expect_text("4 tasks", target = "#summary", match = "exact")
 pz_get_text(page, target = "#summary")
 ```
 
 An output can also stay busy past the flush: an `ExtendedTask` or
 `req(cancelOutput = "progress")` keeps its output `.recalculating` until the
-result arrives, while the app is otherwise idle. To wait for one output like
-that — a plot with no text to expect is the common case — expect the class
-to clear. Delivery and the class clearing happen together, so a cleared
-class means the output is ready to capture.
+result arrives, while the app is otherwise idle. For an output known to be
+recalculating — a plot with no text to expect is the common case — expect
+the class to clear before capturing it.
 
 ```r
 page |>
-  pz_act_click("#recalculate") |>
-  pz_wait_for_shiny_idle() |>
   pz_expect_class("recalculating", target = "#plot", not = TRUE)
 ```
 
-The idle wait comes first so the invalidation has reached the output; a
-class check without it can pass on the old state before work even starts.
-
-When you know the expected output, an expectation is the better check: it
-states what the script relies on, and its failure says what was missing.
+A class-only check can accept the old result before invalidation reaches
+the output; an idle wait alone does not establish that invalidation. When
+you know the expected new output, expect its content instead; that states
+what the script relies on, and its failure says what was missing.
 
 ## Choose user actions or direct setters
 

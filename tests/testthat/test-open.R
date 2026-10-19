@@ -132,18 +132,18 @@ test_that("explicit Shiny wait on a wrapped non-Shiny session fails without clos
   expect_no_error(session$Runtime$evaluate("1 + 1"))
 })
 
-test_that("explicit and auto Shiny waits settle after the slow output", {
+test_that("explicit and auto Shiny opening invokes idle on the destination", {
   skip_if_no_chrome()
   skip_if_no_shiny()
+  calls <- local_shiny_idle_spy()
   for (wait in c("shiny", "auto")) {
-    start <- Sys.time()
+    calls$urls <- character()
     page <- pz_open(shiny_idle_fixture(), wait = wait, timeout = 5)
+    withr::defer(pz_close(page))
 
+    expect_identical(calls$urls, page$app$url)
     expect_true(shiny_idle_state(page)$connected)
-    expect_false(shiny_idle_state(page)$busy)
-    expect_equal(shiny_idle_state(page)$recalculating, 0)
-    expect_equal(shiny_idle_state(page)$text, "reactive ready")
-    expect_gte(as.numeric(difftime(Sys.time(), start, units = "secs")), 0.9)
+    pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
 
     pz_close(page)
   }
@@ -161,6 +161,7 @@ test_that("new-session Shiny waits anchor to the destination commit", {
   )
 
   app <- local_shiny_app(shiny_idle_fixture())
+  calls <- local_shiny_idle_spy()
   await <- nav_await
   commits <- character()
   local_mocked_bindings(nav_await = function(page, p, what, ...) {
@@ -171,25 +172,29 @@ test_that("new-session Shiny waits anchor to the destination commit", {
 
   for (wait in c("shiny", "auto")) {
     page <- pz_open(app, wait = wait, timeout = 5)
-    expect_equal(shiny_idle_state(page)$text, "reactive ready")
+    withr::defer(pz_close(page))
+    pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
     pz_close(page)
   }
 
   expect_identical(commits, rep(app$url, 2))
+  expect_identical(calls$urls, rep(app$url, 2))
 })
 
 test_that("auto routes Shiny app files and shared handles to idle wait", {
   skip_if_no_chrome()
   skip_if_no_shiny()
-  # The only end-to-end proof that wait = "auto" routes both an app
-  # file and a shared handle to the Shiny idle wait.
   app_file <- file.path(shiny_idle_fixture(), "app.R")
   app <- local_shiny_app(shiny_idle_fixture())
+  calls <- local_shiny_idle_spy()
 
   for (x in list(app_file, app)) {
+    calls$urls <- character()
     page <- pz_open(x, timeout = 5)
+    withr::defer(pz_close(page))
+    expect_identical(calls$urls, page$app$url)
     expect_true(shiny_idle_state(page)$connected)
-    expect_equal(shiny_idle_state(page)$text, "reactive ready")
+    pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
     pz_close(page)
   }
 })

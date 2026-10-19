@@ -27,10 +27,10 @@ it invalidated but never recomputes it; the wait deliberately does not
 inspect per-output recalculating state, so such apps settle.
 }
 \details{
-Idle means the server finished its reactive flush; it does not prove a
-particular output was delivered or is ready to capture. Expect the
-content you rely on (e.g. \code{\link[=pz_expect_text]{pz_expect_text()}}) before reading or
-capturing it.
+Idle means Shiny's busy signal has stayed clear; it does not acknowledge
+a particular input update or prove an output was delivered or is ready
+to capture. Expect the content you rely on (e.g. \code{\link[=pz_expect_text]{pz_expect_text()}})
+before reading or capturing it.
 
 A page without the Shiny global errors instead of waiting; a page whose
 Shiny app never connects times out.
@@ -43,7 +43,8 @@ page <- pz_open(pz_example("tasks-app"))
 page |>
   pz_set_value("Buy milk", target = "#title") |>
   pz_act_click("#add") |>
-  pz_wait_for_shiny_idle()
+  pz_wait_for_shiny_idle() |>
+  pz_expect_text("3 tasks", target = "#summary", match = "exact")
 pz_get_text(page, target = "#summary")
 pz_close(page)
 \dontshow{\}) # examplesIf}

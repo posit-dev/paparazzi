@@ -8,16 +8,6 @@ local_shiny_input_page <- function(.env = parent.frame()) {
   page
 }
 
-shiny_input_text <- function(page, id) {
-  pz_evaluate(
-    page,
-    sprintf(
-      r"[document.getElementById(%s).textContent]",
-      jsonlite::toJSON(id, auto_unbox = TRUE)
-    )
-  )
-}
-
 test_that("binding setters update control UI and server outputs, including repeated waits", {
   page <- local_shiny_input_page()
 
@@ -26,12 +16,12 @@ test_that("binding setters update control UI and server outputs, including repea
     pz_evaluate(page, "document.getElementById('text').value"),
     "first update"
   )
-  expect_equal(shiny_input_text(page, "text_out"), "first update")
+  pz_expect_text(page, "first update", target = "#text_out", match = "exact")
 
   for (i in seq_len(8)) {
     value <- paste("repeat", i)
     expect_invisible(pz_set_shiny_input(page, "text", value))
-    expect_equal(shiny_input_text(page, "text_out"), value)
+    pz_expect_text(page, value, target = "#text_out", match = "exact")
   }
 
   pz_set_shiny_input(page, "choice", "second")
@@ -39,17 +29,17 @@ test_that("binding setters update control UI and server outputs, including repea
     pz_evaluate(page, "document.getElementById('choice').value"),
     "second"
   )
-  expect_equal(shiny_input_text(page, "choice_out"), "second")
+  pz_expect_text(page, "second", target = "#choice_out", match = "exact")
 
   pz_set_shiny_input(page, "amount", 42)
   expect_equal(
     pz_evaluate(page, "document.getElementById('amount').value"),
     "42"
   )
-  expect_equal(shiny_input_text(page, "amount_out"), "42")
+  pz_expect_text(page, "42", target = "#amount_out", match = "exact")
 
   pz_set_shiny_input(page, "day", "2024-02-12")
-  expect_equal(shiny_input_text(page, "day_out"), "2024-02-12")
+  pz_expect_text(page, "2024-02-12", target = "#day_out", match = "exact")
   expect_equal(
     as.numeric(pz_evaluate(page, "document.getElementById('day').value")),
     1707696000000
@@ -63,28 +53,39 @@ test_that("binding setters update control UI and server outputs, including repea
     ),
     "2024-02-01"
   )
-  expect_equal(shiny_input_text(page, "dates_out"), "2024-02-01 / 2024-02-06")
+  pz_expect_text(
+    page,
+    "2024-02-01 / 2024-02-06",
+    target = "#dates_out",
+    match = "exact"
+  )
 
   pz_set_shiny_input(
     page,
     "dates",
     list(start = "2024-03-01", end = "2024-03-04")
   )
-  expect_equal(shiny_input_text(page, "dates_out"), "2024-03-01 / 2024-03-04")
+  pz_expect_text(
+    page,
+    "2024-03-01 / 2024-03-04",
+    target = "#dates_out",
+    match = "exact"
+  )
 
   scoped <- pz_find(page, "#module-root")
   pz_set_shiny_input(scoped, "mod-text", "inside")
-  expect_equal(shiny_input_text(page, "mod-out"), "inside")
+  pz_expect_text(page, "inside", target = "#mod-out", match = "exact")
   expect_error(
     pz_set_shiny_input(scoped, "text", "outside"),
     "text.*scope",
     class = "paparazzi_error_binding"
   )
-  expect_equal(shiny_input_text(page, "text_out"), "repeat 8")
+  # The prior expectation established this value; a rejected update sends nothing.
+  expect_equal(pz_get_text(page, target = "#text_out"), "repeat 8")
 
   input_scope <- pz_find(page, "#mod-text")
   pz_set_shiny_input(input_scope, "mod-text", "root itself")
-  expect_equal(shiny_input_text(page, "mod-out"), "root itself")
+  pz_expect_text(page, "root itself", target = "#mod-out", match = "exact")
 })
 
 test_that("fine-step numeric binding retains precision in control and server", {
@@ -95,7 +96,29 @@ test_that("fine-step numeric binding retains precision in control and server", {
     1.23456789,
     tolerance = 1e-10
   )
-  expect_equal(shiny_input_text(page, "precise_out"), "1.23456789")
+  pz_expect_text(page, "1.23456789", target = "#precise_out", match = "exact")
+})
+
+test_that("binding setters delegate to the real Shiny idle wait per the wait argument", {
+  page <- local_shiny_input_page()
+  pz_expect_text(page, "initial", target = "#text_out", match = "exact")
+  spy <- local_shiny_idle_spy()
+  url <- pz_get_url(page)
+
+  expect_invisible(pz_set_shiny_input(page, "text", "default wait"))
+  expect_equal(spy$urls, url)
+
+  expect_invisible(
+    pz_set_shiny_input(page, "text", "explicit wait", wait = TRUE)
+  )
+  expect_equal(spy$urls, c(url, url))
+
+  expect_invisible(
+    pz_set_shiny_input(page, "text", "no wait", wait = FALSE)
+  )
+  expect_equal(spy$urls, c(url, url))
+
+  pz_expect_text(page, "no wait", target = "#text_out", match = "exact")
 })
 
 test_that("missing bindings, unsupported values and invalid arguments fail clearly", {
@@ -167,9 +190,6 @@ test_that("the owned fixture app has readable logs and stops at page close", {
     fixed = TRUE
   )))
 
-  pz_set_shiny_input(page, "choice", "second")
-  expect_equal(shiny_input_text(page, "choice_out"), "second")
-
   pz_close(page)
   expect_true(wait_until(function() !app_port_reachable(port)))
 })
@@ -184,7 +204,7 @@ test_that("a taken port is retried while opening the widget fixture", {
   expect_false(identical(as.integer(pz_evaluate(page, "location.port")), taken))
 
   pz_set_shiny_input(page, "text", "retried")
-  expect_equal(shiny_input_text(page, "text_out"), "retried")
+  pz_expect_text(page, "retried", target = "#text_out", match = "exact")
 })
 
 test_that("block errors close their owned widget app", {
@@ -195,7 +215,12 @@ test_that("block errors close their owned widget app", {
     pz_with_page(shiny_input_fixture(), function(page) {
       port <<- as.integer(pz_evaluate(page, "location.port"))
       pz_set_shiny_input(page, "text", "before error")
-      expect_equal(shiny_input_text(page, "text_out"), "before error")
+      pz_expect_text(
+        page,
+        "before error",
+        target = "#text_out",
+        match = "exact"
+      )
       stop("fixture block failure")
     }),
     "fixture block failure"
