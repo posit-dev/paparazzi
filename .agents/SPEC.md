@@ -588,7 +588,7 @@ All three serving functions return a `PaparazziServe` handle with `$url`, `$port
 - Quarto input watching and automatic navigation are disabled; resource changes can still reload pages. Interactive `runtime: shiny` / `server: shiny` documents are outside the supported scope.
 - `pz_serve_static(path, ..., root = NULL)` serves a directory or `.html` file through `httpuv::runStaticServer(background = TRUE)`. For a file, its directory is served and the URL points to the file. `root` (files only) serves a wider directory while still navigating to the file: `path` must live inside `root` (both resolved with `normalizePath()`, so symlinks resolve first, and `root` can't be the filesystem root), and the handle URL points at `path` relative to `root`. Its logs are empty.
 - `pz_serve_command(command, args, ..., wd = NULL, port = NULL, envvars = NULL, path = "/", wait = c("load", "shiny"), timeout = 10)` runs any local server command (e.g. `shiny run app.py` for Shiny for Python) in a background process with the shared handle contract. `{port}` in `args`/`envvars` is replaced with the chosen port; `port = NULL` picks a random free port and re-picks on bind failure, while an explicit port is kept (a taken one errors). `$stop()` interrupts, waits, then kills the process tree.
-- Every serving handle carries a `wait` declaration (`"shiny"` for `pz_serve_shiny()` handles, otherwise `"load"` unless declared) that `pz_open(wait = "auto")` resolves to on the handle's pages.
+- Every serving handle carries a `wait` declaration (`"shiny"` for `pz_serve_shiny()` handles by default, otherwise `"load"`) that `pz_open(wait = "auto")` resolves to on the handle's pages.
 - App stdout/stderr go to a temp log file (no undrained pipes), readable with `app$logs()`.
 - Shutdown: interrupt, wait, kill. Runs on close, on error in block forms, and from a finalizer as a last resort.
 - Ports come from a base-R picker using `serverSocket()` (R >= 4.0), not httpuv. If the app dies because the port was taken, retry with a new port.
@@ -716,7 +716,7 @@ Every function takes `ctx` first and returns it invisibly unless noted. The `pz_
 | `pz_close()` | `(page)` | confirmed |
 | `pz_with_page()` | `(x, code, ...)` | confirmed |
 | `pz_local_page()` | `(x, ..., .env = parent.frame())` → page | confirmed |
-| `pz_serve_shiny()` | `(app, ..., envvars = NULL, shiny_options = list(), timeout = 10)` → app handle with `$stop()`, `$logs()` | confirmed |
+| `pz_serve_shiny()` | `(app, ..., envvars = NULL, shiny_options = list(), wait = c("shiny", "load"), timeout = 10)` → app handle with `$stop()`, `$logs()` | confirmed |
 | `pz_serve_quarto()` | `(path, ..., render = FALSE)` → serving handle | confirmed |
 | `pz_serve_static()` | `(path, ..., root = NULL)` → serving handle | confirmed |
 | `pz_serve_command()` | `(command, args, ..., wd = NULL, port = NULL, envvars = NULL, path = "/", wait = c("load", "shiny"), timeout = 10)` → serving handle | confirmed |

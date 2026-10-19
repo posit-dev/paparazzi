@@ -4,7 +4,14 @@
 \alias{pz_serve_shiny}
 \title{Run a Shiny app in a background process}
 \usage{
-pz_serve_shiny(app, ..., envvars = NULL, shiny_options = list(), timeout = 10)
+pz_serve_shiny(
+  app,
+  ...,
+  envvars = NULL,
+  shiny_options = list(),
+  wait = c("shiny", "load"),
+  timeout = 10
+)
 }
 \arguments{
 \item{app}{A path to a Shiny app directory or an app file
@@ -21,6 +28,11 @@ environment overrides.}
 the app. \code{host} and \code{port} are managed by paparazzi: \code{host} defaults
 to \code{"127.0.0.1"}, and \code{port} (default \code{NULL}) picks a random free port.
 If startup fails because the port was taken, a new port is tried.}
+
+\item{wait}{What \code{\link[=pz_open]{pz_open()}} with \code{wait = "auto"} waits for on pages
+opened from this handle: \code{"shiny"} (the default) waits for Shiny
+idle, \code{"load"} waits only for the page to load. Pass \code{"load"} when
+an app's busy/idle cycle makes idle waits unsuitable.}
 
 \item{timeout}{Seconds to wait for the app to start listening;
 defaults to 10.}

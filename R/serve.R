@@ -27,6 +27,10 @@
 #'   If startup fails because the port was taken, a new port is tried.
 #' @param timeout Seconds to wait for the app to start listening;
 #'   defaults to 10.
+#' @param wait What [pz_open()] with `wait = "auto"` waits for on pages
+#'   opened from this handle: `"shiny"` (the default) waits for Shiny
+#'   idle, `"load"` waits only for the page to load. Pass `"load"` when
+#'   an app's busy/idle cycle makes idle waits unsuitable.
 #'
 #' @return A `PaparazziServe` handle with public fields `url` and `port`
 #'   and methods `stop()`, `logs()`, and `is_running()`.
@@ -53,6 +57,7 @@ pz_serve_shiny <- function(
   ...,
   envvars = NULL,
   shiny_options = list(),
+  wait = c("shiny", "load"),
   timeout = 10
 ) {
   app_dir <- app
@@ -77,6 +82,7 @@ pz_serve_shiny <- function(
     )
   }
   check_number_decimal(timeout, min = 0)
+  wait <- arg_match(wait)
   rlang::check_installed("shiny", reason = "to run a Shiny app.")
 
   if (is_file_app(app_dir)) {
@@ -93,7 +99,7 @@ pz_serve_shiny <- function(
     )
   }
 
-  app_start(app_dir, envvars, shiny_options, timeout)
+  app_start(app_dir, envvars, shiny_options, wait, timeout)
 }
 
 #' Serve static files over HTTP
@@ -661,6 +667,7 @@ app_start <- function(
   app_dir,
   envvars,
   shiny_options,
+  wait,
   timeout,
   call = caller_env()
 ) {
@@ -693,7 +700,7 @@ app_start <- function(
       list(host = "127.0.0.1", port = port, launch.browser = FALSE)
     )
     config <- config[!duplicated(names(config), fromLast = TRUE)]
-    app <- new_app(config, port, envvars)
+    app <- new_app(config, port, envvars, wait)
     failure <- app_wait_failure(app, timeout)
     if (is.null(failure)) {
       return(app)
@@ -809,7 +816,7 @@ app_port_connectable <- function(port, host = "127.0.0.1") {
   TRUE
 }
 
-new_app <- function(config, port, envvars) {
+new_app <- function(config, port, envvars, wait = "shiny") {
   config_file <- tempfile(pattern = "paparazzi-app-", fileext = ".rds")
   saveRDS(config, config_file)
   log_file <- tempfile(pattern = "paparazzi-app-", fileext = ".log")
@@ -828,7 +835,7 @@ new_app <- function(config, port, envvars) {
     cleanup = TRUE,
     cleanup_tree = TRUE
   )
-  PaparazziServe$new(process, log_file, port)
+  PaparazziServe$new(process, log_file, port, wait = wait)
 }
 
 PaparazziServe <- R6::R6Class(

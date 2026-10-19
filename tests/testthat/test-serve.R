@@ -276,9 +276,22 @@ test_that("shiny_options, envvars, timeout, and dots are validated", {
     "must be a number"
   )
   expect_error(
+    pz_serve_shiny(shiny_app_fixture_dir(), wait = "settled"),
+    "must be one of"
+  )
+  expect_error(
     pz_serve_shiny(shiny_app_fixture_dir(), width = 390),
     "must be empty"
   )
+})
+
+test_that("the wait declaration lands on the shiny handle", {
+  skip_if_no_shiny()
+  app <- local_shiny_app(shiny_app_fixture_dir())
+  expect_identical(app$wait, "shiny")
+
+  load_app <- local_shiny_app(shiny_app_fixture_dir(), wait = "load")
+  expect_identical(load_app$wait, "load")
 })
 
 test_that("an app that never listens times out and is cleaned up", {
