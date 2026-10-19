@@ -124,10 +124,10 @@ appears.</p>
 <span>    hold <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.5</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_caption.html">pz_annotate_caption</a></span><span class="op">(</span><span class="st">"Add a task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_camera.html">pz_camera</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, zoom <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>, wait <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Water the basil"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_camera.html">pz_camera</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, zoom <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>, wait <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Water the basil"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span></span>
-<span>    <span class="st">"#add-task"</span>,</span>
+<span>    <span class="st">"#add_task"</span>,</span>
 <span>    effect <span class="op">=</span> <span class="st">"ring"</span>,</span>
 <span>    effect_color <span class="op">=</span> <span class="st">"#2563eb"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -191,7 +191,7 @@ controls output size.</p>
 <span>    scale <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>    code <span class="op">=</span> <span class="op">{</span></span>
 <span>      <span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle-help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>        <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle_help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>        <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span>target <span class="op">=</span> <span class="st">"#help"</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
 <span>  <span class="op">)</span></span>
@@ -229,12 +229,12 @@ state.</p>
 <span><span class="va">paused_video</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".webm"</span><span class="op">)</span></span>
 <span><span class="va">recording</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_record_start.html">pz_record_start</a></span><span class="op">(</span><span class="va">page</span>, <span class="va">paused_video</span>, fps <span class="op">=</span> <span class="fl">10</span>, scale <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span>
 <span><span class="va">recording</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle-help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle_help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span>target <span class="op">=</span> <span class="st">"#help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_pause.html">pz_record_pause</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle-help"</span><span class="op">)</span></span>
+<span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle_help"</span><span class="op">)</span></span>
 <span><span class="va">recording</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_pause.html">pz_record_resume</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_hidden</a></span><span class="op">(</span>target <span class="op">=</span> <span class="st">"#help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -258,7 +258,7 @@ and forwards recording options to <code><a href="../reference/pz_record_start.ht
 <span>  scale <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  code <span class="op">=</span> <span class="op">{</span></span>
 <span>    <span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>      <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle-help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>      <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle_help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>      <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span>target <span class="op">=</span> <span class="st">"#help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>      <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
@@ -333,16 +333,16 @@ for a single call with
 <span>  scale <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  code <span class="op">=</span> <span class="op">{</span></span>
 <span>    <span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>      <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Review the garden"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>      <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Review the garden"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>      <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span></span>
-<span>        <span class="st">"#add-task"</span>,</span>
+<span>        <span class="st">"#add_task"</span>,</span>
 <span>        effect <span class="op">=</span> <span class="st">"ring"</span>,</span>
 <span>        effect_color <span class="op">=</span> <span class="st">"#16a34a"</span></span>
 <span>      <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>      <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span></span>
 <span>        <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, has_text <span class="op">=</span> <span class="st">"Review the garden"</span><span class="op">)</span></span>
 <span>      <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>      <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Plant the mint"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>      <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Plant the mint"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>      <span class="fu"><a href="../reference/pz_act_press.html">pz_act_press</a></span><span class="op">(</span><span class="st">"Enter"</span>, show_keys <span class="op">=</span> <span class="st">"mac"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>      <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, has_text <span class="op">=</span> <span class="st">"Plant the mint"</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>

@@ -40,13 +40,13 @@ at get time (see
 
 ``` r
 page <- pz_open(pz_example("tasks"))
-pz_get_elements(page, target = "#new-task > *")
+pz_get_elements(page, target = "#new_task > *")
 #> # A tibble: 4 × 5
 #>   tag   id              class                                     text  element 
 #>   <chr> <chr>           <chr>                                     <chr> <list>  
 #> 1 label NA              form-label                                New … <pz_ctx>
 #> 2 div   NA              d-flex gap-2 mb-2                         Add   <pz_ctx>
 #> 3 div   NA              d-flex align-items-center flex-wrap gap-… Low … <pz_ctx>
-#> 4 p     attachment-name form-text text-body-secondary small mb-0  No f… <pz_ctx>
+#> 4 p     attachment_name form-text text-body-secondary small mb-0  No f… <pz_ctx>
 pz_close(page)
 ```

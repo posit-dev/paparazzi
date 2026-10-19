@@ -94,13 +94,13 @@ instead.
 To add a task, a person using the task tracker would type a title into
 the form and click Add. Our script does the same, but it has to tell
 paparazzi which elements to use. paparazzi finds elements with CSS
-selectors: the title field is `#task-title`, the Add button is
-`#add-task`, and each task in the list shows its title in a
+selectors: the title field is `#task_title`, the Add button is
+`#add_task`, and each task in the list shows its title in a
 `.task-title` element.
 
 ![The task tracker with its selectors labeled. Red callouts point down
-at the new-task title field, reading \#task-title, and at the Add
-button, reading \#add-task. Every task title in the list is underlined
+at the new-task title field, reading \#task_title, and at the Add
+button, reading \#add_task. Every task title in the list is underlined
 in blue, and a blue callout reading .task-title points at the first
 one.](paparazzi_files/figure-html/unnamed-chunk-4-1.png)
 
@@ -116,8 +116,8 @@ script reads as one chain of steps joined by `|>`. Let’s add a new task,
 ``` r
 
 page |>
-  pz_act_type("Repot the fern", target = "#task-title") |>
-  pz_act_click("#add-task")
+  pz_act_type("Repot the fern", target = "#task_title") |>
+  pz_act_click("#add_task")
 ```
 
 Before an action clicks or types, paparazzi waits for its element to be
@@ -126,7 +126,7 @@ element doesn’t need to be on screen yet: if it’s scrolled out of view,
 paparazzi scrolls to it, then clicks or types.
 
 Let’s check that the new task arrived. Some elements are easy to target:
-the page has only one `#task-title` input and one `#add-task` button.
+the page has only one `#task_title` input and one `#add_task` button.
 But it has a `.task-title` for every task, so we need a more expressive
 way to say which one we want.
 
@@ -253,8 +253,8 @@ page |> pz_nav_reload()
 
 page |>
   pz_record_start(format = "gif", scale = 800) |>
-  pz_act_type("Repot the fern", target = "#task-title") |>
-  pz_act_click("#add-task") |>
+  pz_act_type("Repot the fern", target = "#task_title") |>
+  pz_act_click("#add_task") |>
   pz_expect_visible(fern)
 ```
 
@@ -369,9 +369,9 @@ page |>
     code = {
       page |>
         pz_annotate_caption("Add a task") |>
-        pz_camera("#new-task", wait = TRUE) |>
-        pz_act_type("Repot the fern", target = "#task-title") |>
-        pz_act_click("#add-task") |>
+        pz_camera("#new_task", wait = TRUE) |>
+        pz_act_type("Repot the fern", target = "#task_title") |>
+        pz_act_click("#add_task") |>
         pz_camera_reset() |>
         pz_expect_visible(fern) |>
         pz_annotate(fern, type = "box", pad = 4) |>
@@ -389,7 +389,7 @@ top of the list.](paparazzi_files/figure-html/unnamed-chunk-14-1.gif)
 
 The new lines fall into three groups:
 
-- **Camera.** `pz_camera("#new-task")` zooms in on the form. By default,
+- **Camera.** `pz_camera("#new_task")` zooms in on the form. By default,
   camera moves run alongside the next step, so the camera and the cursor
   would move at the same time; `wait = TRUE` lets the camera arrive
   first.
@@ -444,11 +444,11 @@ page |>
   pz_record(
     format = "gif",
     scale = 800,
-    frame = pz_frame("#new-task", pad = 8),
+    frame = pz_frame("#new_task", pad = 8),
     code = {
       page |>
-        pz_act_click("#task-urgent") |>
-        pz_act_click("#task-urgent", effect = "ring")
+        pz_act_click("#task_urgent") |>
+        pz_act_click("#task_urgent", effect = "ring")
     }
   )
 ```
@@ -629,8 +629,8 @@ test_that("a new task goes to the top of the list", {
   page <- pz_local_page(pz_example("tasks"))
 
   page |>
-    pz_act_type("Repot the fern", target = "#task-title") |>
-    pz_act_click("#add-task") |>
+    pz_act_type("Repot the fern", target = "#task_title") |>
+    pz_act_click("#add_task") |>
     pz_expect_text(
       "Repot the fern",
       target = pz_loc(".task-title", which = "first")

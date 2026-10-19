@@ -26,8 +26,8 @@ library(paparazzi)
 testthat::test_that("adding a task inserts its title first", {
   page <- pz_local_page(pz_example("tasks"), width = 1000, height = 720)
   page |>
-    pz_act_type("Repot the fern", target = "#task-title") |>
-    pz_act_click("#add-task") |>
+    pz_act_type("Repot the fern", target = "#task_title") |>
+    pz_act_click("#add_task") |>
     pz_expect_text(
       "Repot the fern",
       target = pz_loc(".task-title", which = "first"),
@@ -76,7 +76,7 @@ testthat::test_that("help starts hidden and can be opened", {
   page |>
     pz_expect_exists(target = "#help") |>
     pz_expect_hidden(target = "#help") |>
-    pz_act_click("#toggle-help") |>
+    pz_act_click("#toggle_help") |>
     pz_expect_visible(target = "#help")
 })
 ```
@@ -94,9 +94,9 @@ needs exactly that many matches and compares them in document order.
 testthat::test_that("text entry updates the input value", {
   page <- pz_local_page(pz_example("tasks"))
   page |>
-    pz_act_type("Buy milk", target = "#task-title") |>
-    pz_expect_value("Buy milk", target = "#task-title", match = "exact")
-  testthat::expect_identical(pz_get_value(page, target = "#task-title"), "Buy milk")
+    pz_act_type("Buy milk", target = "#task_title") |>
+    pz_expect_value("Buy milk", target = "#task_title", match = "exact")
+  testthat::expect_identical(pz_get_value(page, target = "#task_title"), "Buy milk")
 })
 ```
 
@@ -185,12 +185,12 @@ viewer, and the chain continues.
 ``` r
 
 pz_with_page(pz_example("tasks"), function(page) {
-  page |> pz_expect_visible(target = "#new-task")
+  page |> pz_expect_visible(target = "#new_task")
   pz_inspect(page)
-  pz_get_elements(page, target = "#new-task input")
-  pz_get_attr(page, "type", target = "#task-title")
-  pz_get_style(page, "display", target = "#new-task")
-  page |> pz_screenshot(tempfile(fileext = ".png"), frame = "#new-task")
+  pz_get_elements(page, target = "#new_task input")
+  pz_get_attr(page, "type", target = "#task_title")
+  pz_get_style(page, "display", target = "#new_task")
+  page |> pz_screenshot(tempfile(fileext = ".png"), frame = "#new_task")
 })
 ```
 

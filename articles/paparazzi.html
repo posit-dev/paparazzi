@@ -151,10 +151,10 @@ to save a file instead.</p>
 <p>To add a task, a person using the task tracker would type a title
 into the form and click Add. Our script does the same, but it has to
 tell paparazzi which elements to use. paparazzi finds elements with CSS
-selectors: the title field is <code>#task-title</code>, the Add button
-is <code>#add-task</code>, and each task in the list shows its title in
+selectors: the title field is <code>#task_title</code>, the Add button
+is <code>#add_task</code>, and each task in the list shows its title in
 a <code>.task-title</code> element.</p>
-<p><img src="paparazzi_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="The task tracker with its selectors labeled. Red callouts point down at the new-task title field, reading #task-title, and at the Add button, reading #add-task. Every task title in the list is underlined in blue, and a blue callout reading .task-title points at the first one." width="878"></p>
+<p><img src="paparazzi_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="The task tracker with its selectors labeled. Red callouts point down at the new-task title field, reading #task_title, and at the Add button, reading #add_task. Every task title in the list is underlined in blue, and a blue callout reading .task-title points at the first one." width="878"></p>
 <p><strong>Actions</strong> like <code><a href="../reference/pz_act_type.html">pz_act_type()</a></code> and
 <code><a href="../reference/pz_act_click.html">pz_act_click()</a></code> use the page the way a person using it
 would, with real mouse and keyboard events. Each action takes the page
@@ -163,15 +163,15 @@ first and returns it, so a script reads as one chain of steps joined by
 fern</strong>, by typing it into the title field and clicking Add:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add-task"</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add_task"</span><span class="op">)</span></span></code></pre></div>
 <p>Before an action clicks or types, paparazzi waits for its element to
 be ready: on the page, not hidden, and not covered by anything else. The
 element doesn’t need to be on screen yet: if it’s scrolled out of view,
 paparazzi scrolls to it, then clicks or types.</p>
 <p>Let’s check that the new task arrived. Some elements are easy to
-target: the page has only one <code>#task-title</code> input and one
-<code>#add-task</code> button. But it has a <code>.task-title</code> for
+target: the page has only one <code>#task_title</code> input and one
+<code>#add_task</code> button. But it has a <code>.task-title</code> for
 every task, so we need a more expressive way to say which one we
 want.</p>
 <p><code><a href="../reference/pz_loc.html">pz_loc()</a></code> describes an element more precisely than a
@@ -268,8 +268,8 @@ wide:</p>
 <span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_start.html">pz_record_start</a></span><span class="op">(</span>format <span class="op">=</span> <span class="st">"gif"</span>, scale <span class="op">=</span> <span class="fl">800</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add-task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add_task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span><span class="va">fern</span><span class="op">)</span></span></code></pre></div>
 <p><img src="paparazzi_files/figure-html/unnamed-chunk-10-1.gif" class="r-plt" alt="A cursor fades in on the task form, types Repot the fern, and clicks Add. The new task appears at the top of the list."></p>
 <p>The steps are the ones we ran before, but in the recording it looks
@@ -350,9 +350,9 @@ it does nothing. Here’s the whole script:</p>
 <span>    code <span class="op">=</span> <span class="op">{</span></span>
 <span>      <span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>        <span class="fu"><a href="../reference/pz_annotate_caption.html">pz_annotate_caption</a></span><span class="op">(</span><span class="st">"Add a task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pz_camera.html">pz_camera</a></span><span class="op">(</span><span class="st">"#new-task"</span>, wait <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add-task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>        <span class="fu"><a href="../reference/pz_camera.html">pz_camera</a></span><span class="op">(</span><span class="st">"#new_task"</span>, wait <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>        <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>        <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add_task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>        <span class="fu"><a href="../reference/pz_camera_reset.html">pz_camera_reset</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>        <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span><span class="va">fern</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>        <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="va">fern</span>, type <span class="op">=</span> <span class="st">"box"</span>, pad <span class="op">=</span> <span class="fl">4</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -365,7 +365,7 @@ it does nothing. Here’s the whole script:</p>
 <p>The new lines fall into three groups:</p>
 <ul>
 <li>
-<strong>Camera.</strong> <code>pz_camera("#new-task")</code> zooms
+<strong>Camera.</strong> <code>pz_camera("#new_task")</code> zooms
 in on the form. By default, camera moves run alongside the next step, so
 the camera and the cursor would move at the same time;
 <code>wait = TRUE</code> lets the camera arrive first.
@@ -406,11 +406,11 @@ default press, then unchecks it with <code>effect = "ring"</code>:</p>
 <span>  <span class="fu"><a href="../reference/pz_record.html">pz_record</a></span><span class="op">(</span></span>
 <span>    format <span class="op">=</span> <span class="st">"gif"</span>,</span>
 <span>    scale <span class="op">=</span> <span class="fl">800</span>,</span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">8</span><span class="op">)</span>,</span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">8</span><span class="op">)</span>,</span>
 <span>    code <span class="op">=</span> <span class="op">{</span></span>
 <span>      <span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#task-urgent"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#task-urgent"</span>, effect <span class="op">=</span> <span class="st">"ring"</span><span class="op">)</span></span>
+<span>        <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#task_urgent"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>        <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#task_urgent"</span>, effect <span class="op">=</span> <span class="st">"ring"</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="paparazzi_files/figure-html/unnamed-chunk-16-1.gif" class="r-plt" alt="The cursor glides to the Urgent checkbox and checks it with a brief press, then clicks it again, and a crimson ring spreads out from the click as the box unchecks."></p>
@@ -548,8 +548,8 @@ test:</p>
 <span>  <span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_with_page.html">pz_local_page</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span>  <span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add-task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add_task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span></span>
 <span>      <span class="st">"Repot the fern"</span>,</span>
 <span>      target <span class="op">=</span> <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task-title"</span>, which <span class="op">=</span> <span class="st">"first"</span><span class="op">)</span></span>

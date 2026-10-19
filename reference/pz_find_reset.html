@@ -91,7 +91,7 @@ called on. At the root it is a no-op returning <code>ctx</code> unchanged.</p>
 <span class="r-in"><span>  <span class="fu"><a href="pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">".task-done"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="co"># The help toggle is outside the list, so start again from the root</span></span></span>
 <span class="r-in"><span>  <span class="fu">pz_find_reset</span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle-help"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle_help"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span>target <span class="op">=</span> <span class="st">"#help"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pz_get_text.html">pz_get_text</a></span><span class="op">(</span>target <span class="op">=</span> <span class="st">"#help"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Type a task and press Enter to add it. Edit a title, mark a task done, or drag tasks to reorder them. Nothing is saved: reload or Start over resets the list."</span>

@@ -73,8 +73,8 @@ or
 ``` r
 if (FALSE) { # paparazzi:::examples_run()
 page <- pz_open(pz_example("tasks"))
-page |> pz_act_focus("#task-title")
-pz_expect_focused(page, target = "#task-title")
+page |> pz_act_focus("#task_title")
+pz_expect_focused(page, target = "#task_title")
 pz_close(page)
 }
 ```

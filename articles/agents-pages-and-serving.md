@@ -84,7 +84,7 @@ phone <- pz_open(
   mobile = TRUE,
   color_scheme = "light"
 )
-phone |> pz_expect_visible(target = "#new-task")
+phone |> pz_expect_visible(target = "#new_task")
 pz_close(phone)
 ```
 

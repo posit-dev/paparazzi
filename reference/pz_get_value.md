@@ -36,8 +36,8 @@ A character vector, one entry per match.
 
 ``` r
 page <- pz_open(pz_example("tasks"))
-page |> pz_act_type("Buy milk", target = "#task-title")
-pz_get_value(page, target = list("#task-title", "#task-priority"))
+page |> pz_act_type("Buy milk", target = "#task_title")
+pz_get_value(page, target = list("#task_title", "#task_priority"))
 #> [1] "Buy milk" "normal"  
 pz_close(page)
 ```

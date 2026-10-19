@@ -197,7 +197,7 @@ path <- file.path(tempdir(), "help.mp4")
 # Record the help panel opening, cropped to the page's card
 page |>
   pz_record_start(path, frame = pz_frame("main")) |>
-  pz_act_click("#toggle-help") |>
+  pz_act_click("#toggle_help") |>
   pz_expect_visible(target = "#help") |>
   pz_record_stop()
 file.exists(path)

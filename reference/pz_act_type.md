@@ -100,16 +100,16 @@ for key combos (Enter, Control+A, ...) and
 
 ``` r
 page <- pz_open(pz_example("tasks"))
-page |> pz_act_type("Buy milk", target = "#task-title")
-pz_get_value(page, target = "#task-title")
+page |> pz_act_type("Buy milk", target = "#task_title")
+pz_get_value(page, target = "#task_title")
 #> [1] "Buy milk"
 
 # Typing fires input events, so the page reacts: Add is now enabled
-pz_expect_enabled(page, target = "#add-task")
+pz_expect_enabled(page, target = "#add_task")
 
 # At the root, target = NULL types into the focused element
 page |> pz_act_type(" and eggs")
-pz_get_value(page, target = "#task-title")
+pz_get_value(page, target = "#task_title")
 #> [1] "Buy milk and eggs"
 pz_close(page)
 ```

@@ -188,16 +188,16 @@ Without a recording, actions go straight to their final state.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">page</span> <span class="op">&lt;-</span> <span class="fu"><a href="pz_open.html">pz_open</a></span><span class="op">(</span><span class="fu"><a href="pz_example.html">pz_example</a></span><span class="op">(</span><span class="st">"tasks"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu">pz_act_type</span><span class="op">(</span><span class="st">"Buy milk"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="pz_get_value.html">pz_get_value</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu">pz_act_type</span><span class="op">(</span><span class="st">"Buy milk"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="pz_get_value.html">pz_get_value</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Buy milk"</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Typing fires input events, so the page reacts: Add is now enabled</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="pz_expect_enabled.html">pz_expect_enabled</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="st">"#add-task"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="pz_expect_enabled.html">pz_expect_enabled</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="st">"#add_task"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># At the root, target = NULL types into the focused element</span></span></span>
 <span class="r-in"><span><span class="va">page</span> <span class="op">|&gt;</span> <span class="fu">pz_act_type</span><span class="op">(</span><span class="st">" and eggs"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="pz_get_value.html">pz_get_value</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="pz_get_value.html">pz_get_value</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Buy milk and eggs"</span>
 <span class="r-in"><span><span class="fu"><a href="pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span></span>
 </code></pre></div>

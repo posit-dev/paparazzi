@@ -123,7 +123,7 @@ pz_close(page)
 phone <- pz_open(pz_example("tasks"), width = 390, height = 844, mobile = TRUE)
 pz_evaluate(phone, "window.innerWidth")
 #> [1] 390
-pz_screenshot(phone, frame = pz_frame("#new-task", pad = 16))
+pz_screenshot(phone, frame = pz_frame("#new_task", pad = 16))
 pz_close(phone)
 
 # Splice a shared device profile into each call with `!!!`

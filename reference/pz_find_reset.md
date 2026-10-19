@@ -36,7 +36,7 @@ page |>
   pz_act_click(".task-done") |>
   # The help toggle is outside the list, so start again from the root
   pz_find_reset() |>
-  pz_act_click("#toggle-help") |>
+  pz_act_click("#toggle_help") |>
   pz_expect_visible(target = "#help") |>
   pz_get_text(target = "#help")
 #> [1] "Type a task and press Enter to add it. Edit a title, mark a task done, or drag tasks to reorder them. Nothing is saved: reload or Start over resets the list."

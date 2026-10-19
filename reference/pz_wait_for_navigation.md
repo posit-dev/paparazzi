@@ -80,7 +80,7 @@ pz_get_count(page, target = ".task.done")
 
 # "Start over" is a link to a new copy of the page
 page |>
-  pz_act_click("#start-over") |>
+  pz_act_click("#start_over") |>
   pz_wait_for_navigation()
 pz_get_count(page, target = ".task.done")
 #> [1] 1

@@ -74,8 +74,8 @@ page |> pz_expect_attr(
 )
 
 page |>
-  pz_act_click("#toggle-help") |>
-  pz_expect_attr("#toggle-help", `aria-expanded` = "true")
+  pz_act_click("#toggle_help") |>
+  pz_expect_attr("#toggle_help", `aria-expanded` = "true")
 pz_close(page)
 }
 ```

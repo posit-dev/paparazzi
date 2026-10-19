@@ -71,8 +71,8 @@ Let’s draw one of each, with a `label` naming its type:
 ``` r
 
 page |>
-  pz_annotate("#task-title", type = "box", label = "box") |>
-  pz_annotate("#add-task", type = "circle", label = "circle") |>
+  pz_annotate("#task_title", type = "box", label = "box") |>
+  pz_annotate("#add_task", type = "circle", label = "circle") |>
   pz_annotate(
     pz_loc(".task", has_text = "File tax return"),
     type = "underline",
@@ -156,23 +156,23 @@ monospace badge fits snugly around the Add button:
 ``` r
 
 page |>
-  pz_annotate("#task-title", type = "highlight", pad = 6, color = "#f59e0b") |>
+  pz_annotate("#task_title", type = "highlight", pad = 6, color = "#f59e0b") |>
   pz_annotate(
-    "#add-task",
-    label = "#add-task",
+    "#add_task",
+    label = "#add_task",
     pad = c(2, 6, 2, 6),
     color = "#2563eb",
     font_family = "monospace",
     font_size = 16
   ) |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 24, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 24, target_box = "annotated")
   )
 ```
 
 ![The new-task form with a loose amber highlight around the title field
 and a blue box around the Add button, with a monospace badge reading
-\#add-task.](annotations_files/figure-html/pad-color-1.png)
+\#add_task.](annotations_files/figure-html/pad-color-1.png)
 
 ## Callouts
 
@@ -194,18 +194,18 @@ end. `leader = FALSE` drops the line for a tooltip-style bubble, and
 page |>
   pz_annotate_callout(
     "Name the task",
-    target = "#task-title",
+    target = "#task_title",
     side = "top",
     label = 1
   ) |>
   pz_annotate_callout(
     "Priority is optional",
-    target = "#task-priority",
+    target = "#task_priority",
     side = "bottom",
     leader = FALSE
   ) |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 12, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 12, target_box = "annotated")
   )
 ```
 
@@ -238,7 +238,7 @@ pale yellow bubble to the Add button:
 page |>
   pz_annotate_callout(
     "Add it to the list",
-    target = "#add-task",
+    target = "#add_task",
     side = "bottom",
     leader = c(start = "dot", end = "arrow"),
     distance = 40,
@@ -246,7 +246,7 @@ page |>
     text_color = "#171717"
   ) |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 12, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 12, target_box = "annotated")
   )
 ```
 
@@ -266,7 +266,7 @@ grows the cutouts, and a list of targets gets one cutout each:
 
 page |>
   pz_annotate_spotlight(
-    list("#task-title", "#add-task"),
+    list("#task_title", "#add_task"),
     pad = 8,
     dim = 0.75
   ) |>
@@ -393,9 +393,9 @@ annotation instead of adding a second one:
 ``` r
 
 page |>
-  pz_annotate("#task-title", id = "mark") |>
-  pz_annotate("#add-task", type = "circle", id = "mark") |>
-  pz_screenshot(frame = pz_frame("#new-task", pad = 16))
+  pz_annotate("#task_title", id = "mark") |>
+  pz_annotate("#add_task", type = "circle", id = "mark") |>
+  pz_screenshot(frame = pz_frame("#new_task", pad = 16))
 ```
 
 ![The new-task form with only a circle around the Add button; the box
@@ -426,9 +426,9 @@ page |>
     font_family = "monospace",
     font_size = 24
   ) |>
-  pz_annotate("#add-task", label = "A") |>
+  pz_annotate("#add_task", label = "A") |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 8, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 8, target_box = "annotated")
   )
 ```
 
@@ -487,7 +487,7 @@ page |>
     side = "bottom"
   ) |>
   pz_screenshot(
-    frame = pz_frame("#new-task", pad = 8, target_box = "annotated")
+    frame = pz_frame("#new_task", pad = 8, target_box = "annotated")
   )
 ```
 
@@ -572,17 +572,17 @@ in, then all three reversing out:
 
 page |>
   pz_record_start(
-    frame = pz_frame("#new-task", pad = 40, when = "start"),
+    frame = pz_frame("#new_task", pad = 40, when = "start"),
     scale = 0.6,
     hold = c(0.3, 0.5)
   ) |>
-  pz_annotate("#task-title", type = "box") |>
+  pz_annotate("#task_title", type = "box") |>
   pz_record_hold(0.4) |>
-  pz_annotate("#task-priority", type = "circle") |>
+  pz_annotate("#task_priority", type = "circle") |>
   pz_record_hold(0.4) |>
   pz_annotate_callout(
     "Then press Add",
-    target = "#add-task",
+    target = "#add_task",
     side = "bottom"
   ) |>
   pz_record_hold(1) |>
@@ -616,10 +616,10 @@ we’ll show Enter with Mac symbols:
 
 page |>
   pz_record_start(
-    frame = pz_frame("#new-task", pad = 24, when = "start"),
+    frame = pz_frame("#new_task", pad = 24, when = "start"),
     scale = 0.6
   ) |>
-  pz_act_type("Water the dog", target = "#task-title") |>
+  pz_act_type("Water the dog", target = "#task_title") |>
   pz_act_press("Enter", show_keys = "mac") |>
   pz_expect_text(
     "Water the dog",

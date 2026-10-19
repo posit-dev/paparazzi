@@ -189,19 +189,19 @@ can wait for it and mark it:</p>
 <span>  <span class="fu"><a href="../reference/pz_record_start.html">pz_record_start</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="va">card</span>, fps <span class="op">=</span> <span class="fl">8</span>, scale <span class="op">=</span> <span class="fl">0.6</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_caption.html">pz_annotate_caption</a></span><span class="op">(</span><span class="st">"Add an urgent task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># [1] Zoom in, then act</span></span>
-<span>  <span class="fu"><a href="../reference/pz_camera.html">pz_camera</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, zoom <span class="op">=</span> <span class="fl">1.5</span>, anchor <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span>, wait <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_camera.html">pz_camera</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, zoom <span class="op">=</span> <span class="fl">1.5</span>, anchor <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span>, wait <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># [2] Explain, then move on</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#task-urgent"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#task_urgent"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Urgent tasks are high priority"</span>,</span>
-<span>    target <span class="op">=</span> <span class="st">"#task-urgent"</span>,</span>
+<span>    target <span class="op">=</span> <span class="st">"#task_urgent"</span>,</span>
 <span>    side <span class="op">=</span> <span class="st">"bottom"</span>,</span>
 <span>    id <span class="op">=</span> <span class="st">"urgent"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span>id <span class="op">=</span> <span class="st">"urgent"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># [3] Show the keystroke</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Prepare release notes"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Prepare release notes"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_press.html">pz_act_press</a></span><span class="op">(</span><span class="st">"Enter"</span>, show_keys <span class="op">=</span> <span class="st">"words"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="co"># [4] Pull back for the result</span></span>
 <span>  <span class="fu"><a href="../reference/pz_camera_reset.html">pz_camera_reset</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -363,7 +363,7 @@ video. We’ll set up the page during the pause:</p>
 <span>    id <span class="op">=</span> <span class="st">"private-tasks"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_pause.html">pz_record_resume</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle-help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#toggle_help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span>target <span class="op">=</span> <span class="st">"#help"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 <video controls preload="metadata" src="demo-video_files/figure-html/share-1.mp4"><a href="demo-video_files/figure-html/share-1.mp4">Download

@@ -58,10 +58,10 @@ pz_expect_checked(ctx, target = NULL, ..., not = FALSE, timeout = NULL)
 ``` r
 if (FALSE) { # paparazzi:::examples_run()
 page <- pz_open(pz_example("tasks"))
-page |> pz_expect_checked(target = "#task-urgent", not = TRUE)
+page |> pz_expect_checked(target = "#task_urgent", not = TRUE)
 page |>
-  pz_act_click("#task-urgent") |>
-  pz_expect_checked(target = "#task-urgent")
+  pz_act_click("#task_urgent") |>
+  pz_expect_checked(target = "#task_urgent")
 pz_close(page)
 }
 ```

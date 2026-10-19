@@ -96,8 +96,8 @@ or
 
 ``` r
 page <- pz_open(pz_example("tasks"))
-page |> pz_act_click("#toggle-help")
-pz_get_text(page, target = "#toggle-help")
+page |> pz_act_click("#toggle_help")
+pz_get_text(page, target = "#toggle_help")
 #> [1] "Hide help"
 
 # In a scoped context, target = NULL clicks the scope element

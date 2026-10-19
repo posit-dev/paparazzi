@@ -61,12 +61,12 @@ pz_expect_focused(ctx, target = NULL, ..., not = FALSE, timeout = NULL)
 if (FALSE) { # paparazzi:::examples_run()
 page <- pz_open(pz_example("tasks"))
 page |>
-  pz_act_click("#task-title") |>
-  pz_expect_focused(target = "#task-title")
+  pz_act_click("#task_title") |>
+  pz_expect_focused(target = "#task_title")
 
 page |>
   pz_act_press("Tab") |>
-  pz_expect_focused(target = "#task-priority")
+  pz_expect_focused(target = "#task_priority")
 pz_close(page)
 }
 ```

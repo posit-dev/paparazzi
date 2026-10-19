@@ -48,7 +48,7 @@ writeLines("Agenda: plants, parcel, passport", notes)
 
 page <- pz_open(pz_example("tasks"))
 page |> pz_set_files(notes, target = "#attachment")
-pz_get_text(page, target = "#attachment-name")
+pz_get_text(page, target = "#attachment_name")
 #> [1] "Attached meeting-notes.txt."
 pz_close(page)
 ```

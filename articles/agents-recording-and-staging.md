@@ -39,10 +39,10 @@ page |>
     hold = c(0.5, 1.5)
   ) |>
   pz_annotate_caption("Add a task") |>
-  pz_camera(pz_frame("#new-task", zoom = 2), wait = TRUE) |>
-  pz_act_type("Water the basil", target = "#task-title") |>
+  pz_camera(pz_frame("#new_task", zoom = 2), wait = TRUE) |>
+  pz_act_type("Water the basil", target = "#task_title") |>
   pz_act_click(
-    "#add-task",
+    "#add_task",
     effect = "ring",
     effect_color = "#2563eb"
   ) |>
@@ -118,7 +118,7 @@ for (format in formats) {
     scale = 0.5,
     code = {
       page |>
-        pz_act_click("#toggle-help") |>
+        pz_act_click("#toggle_help") |>
         pz_expect_visible(target = "#help")
     }
   )
@@ -163,12 +163,12 @@ page |> pz_nav_reload()
 paused_video <- tempfile(fileext = ".webm")
 recording <- pz_record_start(page, paused_video, fps = 10, scale = 0.5)
 recording |>
-  pz_act_click("#toggle-help") |>
+  pz_act_click("#toggle_help") |>
   pz_expect_visible(target = "#help") |>
   pz_record_hold(0.5) |>
   pz_record_pause()
 
-page |> pz_act_click("#toggle-help")
+page |> pz_act_click("#toggle_help")
 recording |>
   pz_record_resume() |>
   pz_expect_hidden(target = "#help") |>
@@ -202,7 +202,7 @@ pz_record(
   scale = 0.5,
   code = {
     page |>
-      pz_act_click("#toggle-help") |>
+      pz_act_click("#toggle_help") |>
       pz_expect_visible(target = "#help") |>
       pz_record_hold(0.5)
   }
@@ -281,16 +281,16 @@ pz_record(
   scale = 0.5,
   code = {
     page |>
-      pz_act_type("Review the garden", target = "#task-title") |>
+      pz_act_type("Review the garden", target = "#task_title") |>
       pz_act_click(
-        "#add-task",
+        "#add_task",
         effect = "ring",
         effect_color = "#16a34a"
       ) |>
       pz_expect_visible(
         pz_loc(".task", has_text = "Review the garden")
       ) |>
-      pz_act_type("Plant the mint", target = "#task-title") |>
+      pz_act_type("Plant the mint", target = "#task_title") |>
       pz_act_press("Enter", show_keys = "mac") |>
       pz_expect_visible(pz_loc(".task", has_text = "Plant the mint"))
   }

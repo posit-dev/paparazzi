@@ -135,8 +135,8 @@ retry, so they wait.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The status line reads "Saving..." and then "Saved"; wait for it to settle</span></span></span>
 <span class="r-in"><span><span class="va">page</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Buy milk"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add-task"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Buy milk"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add_task"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">pz_wait_for_stable</span><span class="op">(</span>target <span class="op">=</span> <span class="st">"#status"</span>, for_ms <span class="op">=</span> <span class="fl">500</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pz_get_text.html">pz_get_text</a></span><span class="op">(</span><span class="va">page</span>, target <span class="op">=</span> <span class="st">"#status"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Saved “Buy milk”."</span>

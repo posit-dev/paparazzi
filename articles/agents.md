@@ -41,8 +41,8 @@ library(paparazzi)
 image <- tempfile(fileext = ".png")
 pz_with_page(pz_example("tasks"), function(page) {
   page |>
-    pz_act_type("Repot the fern", target = "#task-title") |>
-    pz_act_click("#add-task") |>
+    pz_act_type("Repot the fern", target = "#task_title") |>
+    pz_act_click("#add_task") |>
     pz_expect_text(
       "Repot the fern",
       target = pz_loc(".task-title", which = "first"),
@@ -66,8 +66,8 @@ pz_with_page(pz_example("tasks"), function(page) {
   page <- page |> pz_stage(enter = "bottom", pause = 0.5)
   page |> pz_record(video, code = {
     page |>
-      pz_act_type("Repot the fern", target = "#task-title") |>
-      pz_act_click("#add-task") |>
+      pz_act_type("Repot the fern", target = "#task_title") |>
+      pz_act_click("#add_task") |>
       pz_expect_visible(pz_loc(".task", has_text = "Repot the fern")) |>
       pz_record_hold(0.5)
   }, fps = 8, scale = 0.5)

@@ -90,9 +90,9 @@ to insert text.
 ``` r
 page <- pz_open(pz_example("tasks"))
 page |>
-  pz_act_type("Buy milkk", target = "#task-title") |>
+  pz_act_type("Buy milkk", target = "#task_title") |>
   pz_act_press("Backspace")
-pz_get_value(page, target = "#task-title")
+pz_get_value(page, target = "#task_title")
 #> [1] "Buy milk"
 
 # Enter submits the form; the page shows "Saving..." before the task appears
@@ -103,6 +103,6 @@ pz_get_text(page, target = pz_loc(".task-title", which = "first"))
 
 # A vector presses keys in sequence; + joins keys pressed together
 page |> pz_act_press(c("Tab", "Shift+Tab"))
-pz_expect_focused(page, target = "#task-title")
+pz_expect_focused(page, target = "#task_title")
 pz_close(page)
 ```

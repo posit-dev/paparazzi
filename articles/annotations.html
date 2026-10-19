@@ -145,8 +145,8 @@ blended with the page.</li>
 type:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-title"</span>, type <span class="op">=</span> <span class="st">"box"</span>, label <span class="op">=</span> <span class="st">"box"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, type <span class="op">=</span> <span class="st">"circle"</span>, label <span class="op">=</span> <span class="st">"circle"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task_title"</span>, type <span class="op">=</span> <span class="st">"box"</span>, label <span class="op">=</span> <span class="st">"box"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add_task"</span>, type <span class="op">=</span> <span class="st">"circle"</span>, label <span class="op">=</span> <span class="st">"circle"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, has_text <span class="op">=</span> <span class="st">"File tax return"</span><span class="op">)</span>,</span>
 <span>    type <span class="op">=</span> <span class="st">"underline"</span>,</span>
@@ -212,19 +212,19 @@ defaults</a> explains.</p>
 a monospace badge fits snugly around the Add button:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-title"</span>, type <span class="op">=</span> <span class="st">"highlight"</span>, pad <span class="op">=</span> <span class="fl">6</span>, color <span class="op">=</span> <span class="st">"#f59e0b"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task_title"</span>, type <span class="op">=</span> <span class="st">"highlight"</span>, pad <span class="op">=</span> <span class="fl">6</span>, color <span class="op">=</span> <span class="st">"#f59e0b"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span></span>
-<span>    <span class="st">"#add-task"</span>,</span>
-<span>    label <span class="op">=</span> <span class="st">"#add-task"</span>,</span>
+<span>    <span class="st">"#add_task"</span>,</span>
+<span>    label <span class="op">=</span> <span class="st">"#add_task"</span>,</span>
 <span>    pad <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">6</span>, <span class="fl">2</span>, <span class="fl">6</span><span class="op">)</span>,</span>
 <span>    color <span class="op">=</span> <span class="st">"#2563eb"</span>,</span>
 <span>    font_family <span class="op">=</span> <span class="st">"monospace"</span>,</span>
 <span>    font_size <span class="op">=</span> <span class="fl">16</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">24</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">24</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="annotations_files/figure-html/pad-color-1.png" class="r-plt" alt="The new-task form with a loose amber highlight around the title field and a blue box around the Add button, with a monospace badge reading #add-task." width="604"></p>
+<p><img src="annotations_files/figure-html/pad-color-1.png" class="r-plt" alt="The new-task form with a loose amber highlight around the title field and a blue box around the Add button, with a monospace badge reading #add_task." width="604"></p>
 </div>
 </div>
 <div class="section level2">
@@ -247,18 +247,18 @@ marks.</p>
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Name the task"</span>,</span>
-<span>    target <span class="op">=</span> <span class="st">"#task-title"</span>,</span>
+<span>    target <span class="op">=</span> <span class="st">"#task_title"</span>,</span>
 <span>    side <span class="op">=</span> <span class="st">"top"</span>,</span>
 <span>    label <span class="op">=</span> <span class="fl">1</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Priority is optional"</span>,</span>
-<span>    target <span class="op">=</span> <span class="st">"#task-priority"</span>,</span>
+<span>    target <span class="op">=</span> <span class="st">"#task_priority"</span>,</span>
 <span>    side <span class="op">=</span> <span class="st">"bottom"</span>,</span>
 <span>    leader <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">12</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">12</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/callouts-1.png" class="r-plt" alt="The new-task form with a numbered callout above the title field pointing down at it, and a tooltip-style callout without an arrow below the priority dropdown." width="561"></p>
 <p>Like a mark, a callout hides while its target is hidden or scrolled
@@ -285,7 +285,7 @@ button:</p>
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Add it to the list"</span>,</span>
-<span>    target <span class="op">=</span> <span class="st">"#add-task"</span>,</span>
+<span>    target <span class="op">=</span> <span class="st">"#add_task"</span>,</span>
 <span>    side <span class="op">=</span> <span class="st">"bottom"</span>,</span>
 <span>    leader <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>start <span class="op">=</span> <span class="st">"dot"</span>, end <span class="op">=</span> <span class="st">"arrow"</span><span class="op">)</span>,</span>
 <span>    distance <span class="op">=</span> <span class="fl">40</span>,</span>
@@ -293,7 +293,7 @@ button:</p>
 <span>    text_color <span class="op">=</span> <span class="st">"#171717"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">12</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">12</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/callout-styles-1.png" class="r-plt" alt="The new-task form with a pale yellow callout below the Add button, joined to it by a long line with a dot at the bubble and an arrow at the button." width="573"></p>
 </div>
@@ -309,7 +309,7 @@ cutouts, and a list of targets gets one cutout each:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_spotlight.html">pz_annotate_spotlight</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"#task-title"</span>, <span class="st">"#add-task"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"#task_title"</span>, <span class="st">"#add_task"</span><span class="op">)</span>,</span>
 <span>    pad <span class="op">=</span> <span class="fl">8</span>,</span>
 <span>    dim <span class="op">=</span> <span class="fl">0.75</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -401,9 +401,9 @@ id you’ve used before replaces that annotation instead of adding a
 second one:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-title"</span>, id <span class="op">=</span> <span class="st">"mark"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, type <span class="op">=</span> <span class="st">"circle"</span>, id <span class="op">=</span> <span class="st">"mark"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task_title"</span>, id <span class="op">=</span> <span class="st">"mark"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add_task"</span>, type <span class="op">=</span> <span class="st">"circle"</span>, id <span class="op">=</span> <span class="st">"mark"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span>frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/replace-1.png" class="r-plt" alt="The new-task form with only a circle around the Add button; the box that was around the title field is gone." width="548"></p>
 <p>The second <code>id = "mark"</code> call replaced the box around the
 title field, so only the circle remains.</p>
@@ -427,9 +427,9 @@ each chain from it.</p>
 <span>    font_family <span class="op">=</span> <span class="st">"monospace"</span>,</span>
 <span>    font_size <span class="op">=</span> <span class="fl">24</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, label <span class="op">=</span> <span class="st">"A"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add_task"</span>, label <span class="op">=</span> <span class="st">"A"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">8</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">8</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/stage-style-1.png" class="r-plt" alt="The Add button boxed in blue with a large monospace A badge." width="532"></p>
 <p>Staged styles last to the end of the chain, so the blue monospace
@@ -475,7 +475,7 @@ default for the annotations that follow:</p>
 <span>    side <span class="op">=</span> <span class="st">"bottom"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">8</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">8</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="annotations_files/figure-html/web-font-1.png" class="r-plt" alt="The new-task form with a crimson callout below the attachment field, pointing up at it and reading Optional: attach a file in a handwritten font." width="532"></p>
 <p>You can pass the font object anywhere <code>font_family</code> takes
@@ -537,17 +537,17 @@ popping in, then all three reversing out:</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_start.html">pz_record_start</a></span><span class="op">(</span></span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">40</span>, when <span class="op">=</span> <span class="st">"start"</span><span class="op">)</span>,</span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">40</span>, when <span class="op">=</span> <span class="st">"start"</span><span class="op">)</span>,</span>
 <span>    scale <span class="op">=</span> <span class="fl">0.6</span>,</span>
 <span>    hold <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">0.5</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-title"</span>, type <span class="op">=</span> <span class="st">"box"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task_title"</span>, type <span class="op">=</span> <span class="st">"box"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">0.4</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-priority"</span>, type <span class="op">=</span> <span class="st">"circle"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task_priority"</span>, type <span class="op">=</span> <span class="st">"circle"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">0.4</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Then press Add"</span>,</span>
-<span>    target <span class="op">=</span> <span class="st">"#add-task"</span>,</span>
+<span>    target <span class="op">=</span> <span class="st">"#add_task"</span>,</span>
 <span>    side <span class="op">=</span> <span class="st">"bottom"</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_hold.html">pz_record_hold</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -573,10 +573,10 @@ so we’ll show Enter with Mac symbols:</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_record_start.html">pz_record_start</a></span><span class="op">(</span></span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">24</span>, when <span class="op">=</span> <span class="st">"start"</span><span class="op">)</span>,</span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">24</span>, when <span class="op">=</span> <span class="st">"start"</span><span class="op">)</span>,</span>
 <span>    scale <span class="op">=</span> <span class="fl">0.6</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Water the dog"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Water the dog"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_act_press.html">pz_act_press</a></span><span class="op">(</span><span class="st">"Enter"</span>, show_keys <span class="op">=</span> <span class="st">"mac"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_text.html">pz_expect_text</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Water the dog"</span>,</span>

@@ -44,9 +44,9 @@ pz_cursor_hide(ctx, ...)
 ``` r
 page <- pz_open(pz_example("tasks"))
 page |>
-  pz_cursor_show("#add-task") |>
+  pz_cursor_show("#add_task") |>
   pz_cursor_hide() |>
   pz_screenshot(file.path(tempdir(), "no-cursor.png"))
-pz_screenshot(page, frame = pz_frame("#new-task", pad = 24))
+pz_screenshot(page, frame = pz_frame("#new_task", pad = 24))
 pz_close(page)
 ```

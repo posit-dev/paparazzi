@@ -54,7 +54,7 @@ with `not = TRUE` already retry, so they wait.
 ``` r
 page <- pz_open(pz_example("tasks"))
 page |>
-  pz_act_type("Buy milk", target = "#task-title") |>
+  pz_act_type("Buy milk", target = "#task_title") |>
   pz_act_press("Enter") |>
   pz_wait_for_js("document.querySelectorAll('.task').length === 8")
 pz_get_text(page, target = pz_loc(".task-title", which = "first"))

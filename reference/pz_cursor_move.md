@@ -90,8 +90,8 @@ page |>
   pz_record(path, {
     page |>
       pz_cursor_show(".filters", from = "left") |>
-      pz_cursor_move("#toggle-help", duration = 1) |>
-      pz_cursor_move("#add-task", icon = "crosshair")
+      pz_cursor_move("#toggle_help", duration = 1) |>
+      pz_cursor_move("#add_task", icon = "crosshair")
   })
 pz_close(page)
 }

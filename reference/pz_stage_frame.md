@@ -82,12 +82,12 @@ path <- file.path(tempdir(), "tasks.png")
 
 page <- page |> pz_stage_frame(pad = 24)
 # Framed by the default: the form plus 24px of padding
-page |> pz_screenshot(path, frame = "#new-task")
+page |> pz_screenshot(path, frame = "#new_task")
 # Fields not set here still come from the staged default
-page |> pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9))
+page |> pz_screenshot(path, frame = pz_frame("#new_task", ratio = 16/9))
 # FALSE turns framing off for one call
 page |> pz_screenshot(path, frame = FALSE)
 # NULL clears the staged default for this pipeline only
-page |> pz_stage_frame(NULL) |> pz_screenshot(path, frame = "#new-task")
+page |> pz_stage_frame(NULL) |> pz_screenshot(path, frame = "#new_task")
 pz_close(page)
 ```

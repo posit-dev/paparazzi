@@ -81,7 +81,7 @@ page |>
   # font_family takes a CSS family string; use the staged family with
   # a generic fallback
   pz_stage_annotate(font_family = '"Silkscreen", sans-serif') |>
-  pz_annotate("#add-task", label = "New") |>
+  pz_annotate("#add_task", label = "New") |>
   pz_screenshot(file.path(tempdir(), "tasks.png"))
 pz_close(page)
 ```

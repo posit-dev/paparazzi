@@ -216,8 +216,8 @@ The default is <code>"#e11d48"</code>. Supply <code>NULL</code> to restore the d
 <span class="r-in"><span><span class="va">page</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pz_record.html">pz_record</a></span><span class="op">(</span><span class="va">path</span>, <span class="op">{</span></span></span>
 <span class="r-in"><span>    <span class="va">page</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>      <span class="fu"><a href="pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Buy milk"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>      <span class="fu"><a href="pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add-task"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>      <span class="fu"><a href="pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Buy milk"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>      <span class="fu"><a href="pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add_task"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">}</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># NULL restores a setting's built-in default</span></span></span>
@@ -226,8 +226,8 @@ The default is <code>"#e11d48"</code>. Supply <code>NULL</code> to restore the d
 <span class="r-in"><span><span class="co"># cursor = TRUE shows the cursor in screenshots too</span></span></span>
 <span class="r-in"><span><span class="va">page</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">pz_stage</span><span class="op">(</span>cursor <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="pz_act_hover.html">pz_act_hover</a></span><span class="op">(</span><span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"cursor.png"</span><span class="op">)</span>, frame <span class="op">=</span> <span class="st">"#new-task"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="pz_act_hover.html">pz_act_hover</a></span><span class="op">(</span><span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"cursor.png"</span><span class="op">)</span>, frame <span class="op">=</span> <span class="st">"#new_task"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>

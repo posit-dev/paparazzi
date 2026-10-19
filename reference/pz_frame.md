@@ -148,7 +148,7 @@ page |> pz_screenshot(path, frame = pz_frame(list("h1", ".filters"), pad = 16))
 # Unset fields inherit the staged framing
 page |>
   pz_stage_frame(pad = 16) |>
-  pz_screenshot(path, frame = pz_frame("#new-task", ratio = 16/9))
-pz_screenshot(page, frame = pz_frame("#new-task", ratio = 16/9))
+  pz_screenshot(path, frame = pz_frame("#new_task", ratio = 16/9))
+pz_screenshot(page, frame = pz_frame("#new_task", ratio = 16/9))
 pz_close(page)
 ```

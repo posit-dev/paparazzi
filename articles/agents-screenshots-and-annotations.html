@@ -111,8 +111,8 @@ the result of each action before capturing it.</p>
 <span><span class="op">)</span></span>
 <span><span class="va">fern</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pz_loc.html">pz_loc</a></span><span class="op">(</span><span class="st">".task"</span>, has_text <span class="op">=</span> <span class="st">"Repot the fern"</span><span class="op">)</span></span>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task-title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add-task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_type.html">pz_act_type</a></span><span class="op">(</span><span class="st">"Repot the fern"</span>, target <span class="op">=</span> <span class="st">"#task_title"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_act_click.html">pz_act_click</a></span><span class="op">(</span><span class="st">"#add_task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_visible.html">pz_expect_visible</a></span><span class="op">(</span><span class="va">fern</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_expect_count.html">pz_expect_count</a></span><span class="op">(</span><span class="fl">8</span>, target <span class="op">=</span> <span class="st">".task"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
@@ -136,7 +136,7 @@ shorthand for a frame around that target.</p>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>, frame <span class="op">=</span> <span class="st">".task-list"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>,</span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"h1"</span>, <span class="st">"#new-task"</span><span class="op">)</span>, pad <span class="op">=</span> <span class="fl">24</span>, ratio <span class="op">=</span> <span class="fl">16</span> <span class="op">/</span> <span class="fl">9</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"h1"</span>, <span class="st">"#new_task"</span><span class="op">)</span>, pad <span class="op">=</span> <span class="fl">24</span>, ratio <span class="op">=</span> <span class="fl">16</span> <span class="op">/</span> <span class="fl">9</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><code>pad</code> is CSS pixels: one number for every side, or
 <code>c(top, right, bottom, left)</code>. <code>ratio</code> is width
@@ -150,7 +150,7 @@ region.</p>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>,</span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span></span>
-<span>      <span class="st">"#new-task"</span>,</span>
+<span>      <span class="st">"#new_task"</span>,</span>
 <span>      pad <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">16</span>, <span class="fl">24</span>, <span class="fl">16</span>, <span class="fl">24</span><span class="op">)</span>,</span>
 <span>      ratio <span class="op">=</span> <span class="fl">4</span> <span class="op">/</span> <span class="fl">3</span>,</span>
 <span>      anchor <span class="op">=</span> <span class="st">"top"</span>,</span>
@@ -177,7 +177,7 @@ built-in defaults. A scope takes precedence over a staged target when
 the capture has no target of its own.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_stage_frame.html">pz_stage_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_stage_frame.html">pz_stage_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">16</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>,</span>
@@ -202,14 +202,14 @@ only the mark is drawn. Use <code>pad</code> to give the mark room
 around its target.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task-title"</span>, type <span class="op">=</span> <span class="st">"box"</span>, label <span class="op">=</span> <span class="st">"Title"</span>, pad <span class="op">=</span> <span class="fl">4</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, type <span class="op">=</span> <span class="st">"circle"</span>, pad <span class="op">=</span> <span class="fl">6</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#task_title"</span>, type <span class="op">=</span> <span class="st">"box"</span>, label <span class="op">=</span> <span class="st">"Title"</span>, pad <span class="op">=</span> <span class="fl">4</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add_task"</span>, type <span class="op">=</span> <span class="st">"circle"</span>, pad <span class="op">=</span> <span class="fl">6</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"h1"</span>, type <span class="op">=</span> <span class="st">"underline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">".filters a"</span>, type <span class="op">=</span> <span class="st">"highlight"</span>, label <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>,</span>
 <span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span></span>
-<span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"h1"</span>, <span class="st">"#new-task"</span>, <span class="st">".filters"</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"h1"</span>, <span class="st">"#new_task"</span>, <span class="st">".filters"</span><span class="op">)</span>,</span>
 <span>      pad <span class="op">=</span> <span class="fl">16</span>,</span>
 <span>      target_box <span class="op">=</span> <span class="st">"annotated"</span></span>
 <span>    <span class="op">)</span></span>
@@ -253,7 +253,7 @@ restores these defaults. New captions default to the staged
 <span>    font_size <span class="op">=</span> <span class="fl">16</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span></span>
-<span>    <span class="st">"#add-task"</span>,</span>
+<span>    <span class="st">"#add_task"</span>,</span>
 <span>    label <span class="op">=</span> <span class="st">"Add"</span>,</span>
 <span>    id <span class="op">=</span> <span class="st">"button"</span>,</span>
 <span>    label_fill <span class="op">=</span> <span class="st">"#dbeafe"</span>,</span>
@@ -261,7 +261,7 @@ restores these defaults. New captions default to the staged
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>,</span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">16</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">16</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span>id <span class="op">=</span> <span class="st">"button"</span><span class="op">)</span></span></code></pre></div>
 <p><code>reveal</code> chooses how a mark enters during an active,
@@ -283,7 +283,7 @@ viewport before drawing so the text wraps for that size.</p>
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span></span>
 <span>    <span class="st">"New tasks appear first"</span>,</span>
-<span>    target <span class="op">=</span> <span class="st">"#add-task"</span>,</span>
+<span>    target <span class="op">=</span> <span class="st">"#add_task"</span>,</span>
 <span>    side <span class="op">=</span> <span class="st">"bottom"</span>,</span>
 <span>    leader <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>start <span class="op">=</span> <span class="st">"dot"</span>, end <span class="op">=</span> <span class="st">"arrow"</span><span class="op">)</span>,</span>
 <span>    label <span class="op">=</span> <span class="st">"1"</span>,</span>
@@ -291,7 +291,7 @@ viewport before drawing so the text wraps for that size.</p>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>,</span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">12</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">12</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span>id <span class="op">=</span> <span class="st">"explanation"</span><span class="op">)</span></span></code></pre></div>
 <p><code>leader = TRUE</code> draws an arrow at the target;
@@ -313,7 +313,7 @@ page’s one spotlight.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_spotlight.html">pz_annotate_spotlight</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"#task-title"</span>, <span class="st">"#add-task"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"#task_title"</span>, <span class="st">"#add_task"</span><span class="op">)</span>,</span>
 <span>    pad <span class="op">=</span> <span class="fl">6</span>,</span>
 <span>    dim <span class="op">=</span> <span class="fl">0.65</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -373,10 +373,10 @@ fallback.</p>
 <code class="sourceCode R"><span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_stage_fonts.html">pz_stage_fonts</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_font_google.html">pz_font_google</a></span><span class="op">(</span><span class="st">"Inter"</span><span class="op">)</span>, <span class="fu"><a href="../reference/pz_font_bunny.html">pz_font_bunny</a></span><span class="op">(</span><span class="st">"Lato"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_stage_annotate.html">pz_stage_annotate</a></span><span class="op">(</span>font_family <span class="op">=</span> <span class="st">'"Inter", sans-serif'</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add-task"</span>, label <span class="op">=</span> <span class="st">"Add"</span>, font_family <span class="op">=</span> <span class="st">'"Lato", sans-serif'</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate.html">pz_annotate</a></span><span class="op">(</span><span class="st">"#add_task"</span>, label <span class="op">=</span> <span class="st">"Add"</span>, font_family <span class="op">=</span> <span class="st">'"Lato", sans-serif'</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>,</span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">16</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">16</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>For offline work, <code><a href="../reference/pz_font_file.html">pz_font_file()</a></code> reads a local
@@ -395,10 +395,10 @@ they’re loaded into the new page before its first annotation.</p>
 <span><span class="va">page</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_stage_fonts.html">pz_stage_fonts</a></span><span class="op">(</span><span class="fu"><a href="../reference/pz_font_file.html">pz_font_file</a></span><span class="op">(</span><span class="st">"Project Sans"</span>, <span class="va">font_path</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_stage_annotate.html">pz_stage_annotate</a></span><span class="op">(</span>font_family <span class="op">=</span> <span class="st">'"Project Sans", sans-serif'</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span><span class="st">"Ready to add"</span>, target <span class="op">=</span> <span class="st">"#add-task"</span>, side <span class="op">=</span> <span class="st">"bottom"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/pz_annotate_callout.html">pz_annotate_callout</a></span><span class="op">(</span><span class="st">"Ready to add"</span>, target <span class="op">=</span> <span class="st">"#add_task"</span>, side <span class="op">=</span> <span class="st">"bottom"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_screenshot.html">pz_screenshot</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>,</span>
-<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new-task"</span>, pad <span class="op">=</span> <span class="fl">16</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
+<span>    frame <span class="op">=</span> <span class="fu"><a href="../reference/pz_frame.html">pz_frame</a></span><span class="op">(</span><span class="st">"#new_task"</span>, pad <span class="op">=</span> <span class="fl">16</span>, target_box <span class="op">=</span> <span class="st">"annotated"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/pz_annotate_clear.html">pz_annotate_clear</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pz_close.html">pz_close</a></span><span class="op">(</span><span class="va">page</span><span class="op">)</span></span></code></pre></div>

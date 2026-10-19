@@ -89,19 +89,19 @@ page |>
   pz_record_start(frame = card, fps = 8, scale = 0.6) |>
   pz_annotate_caption("Add an urgent task") |>
   # [1] Zoom in, then act
-  pz_camera(pz_frame("#new-task", zoom = 1.5, anchor = "left"), wait = TRUE) |>
+  pz_camera(pz_frame("#new_task", zoom = 1.5, anchor = "left"), wait = TRUE) |>
   # [2] Explain, then move on
-  pz_act_click("#task-urgent") |>
+  pz_act_click("#task_urgent") |>
   pz_annotate_callout(
     "Urgent tasks are high priority",
-    target = "#task-urgent",
+    target = "#task_urgent",
     side = "bottom",
     id = "urgent"
   ) |>
   pz_record_hold(1) |>
   pz_annotate_clear(id = "urgent") |>
   # [3] Show the keystroke
-  pz_act_type("Prepare release notes", target = "#task-title") |>
+  pz_act_type("Prepare release notes", target = "#task_title") |>
   pz_act_press("Enter", show_keys = "words") |>
   # [4] Pull back for the result
   pz_camera_reset() |>
@@ -287,7 +287,7 @@ page |>
     id = "private-tasks"
   ) |>
   pz_record_resume() |>
-  pz_act_click("#toggle-help") |>
+  pz_act_click("#toggle_help") |>
   pz_expect_visible(target = "#help") |>
   pz_record_hold(1)
 ```

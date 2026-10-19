@@ -108,8 +108,8 @@ or
 page <- pz_open(pz_example("tasks"), height = 600)
 
 # With a target, scroll it into view
-page |> pz_act_scroll("#toggle-help")
-pz_expect_in_viewport(page, target = "#toggle-help")
+page |> pz_act_scroll("#toggle_help")
+pz_expect_in_viewport(page, target = "#toggle_help")
 
 # With `to` or `by`, scroll the current scope's container: here the list
 page |>
