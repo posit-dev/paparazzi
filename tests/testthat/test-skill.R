@@ -39,6 +39,8 @@ test_that("skill R examples parse and use exported functions and arguments", {
         expect_true(name %in% exports, info = paste(label, name))
         if (name %in% exports) {
           functions <- c(name, forwarded[[name]])
+          # The real signatures are the whitelist: a skill example passing a
+          # name the API no longer accepts should fail here.
           allowed <- unlist(lapply(functions, function(fn) {
             names(formals(getExportedValue("paparazzi", fn)))
           }))

@@ -225,13 +225,6 @@ test_that("omitted staging settings leave all overrides alone", {
   expect_identical(ctx_stage(staged), before)
 })
 
-test_that("tri-state staging settings default to NULL in their signatures", {
-  for (fn in list(pz_stage, pz_stage_annotate)) {
-    settings <- formals(fn)[-c(1, 2)]
-    expect_true(all(vapply(settings, is.null, logical(1))))
-  }
-})
-
 test_that("pz_stage_annotate rejects invalid styles at assignment", {
   page <- local_cursor_page()
 

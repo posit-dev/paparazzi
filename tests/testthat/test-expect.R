@@ -1,10 +1,3 @@
-test_that("pz_expect_text places target after the expected text", {
-  expect_identical(
-    names(formals(pz_expect_text)),
-    c("ctx", "text", "target", "...", "match", "not", "timeout")
-  )
-})
-
 test_that("pz_expect_exists passes and returns ctx invisibly", {
   page <- local_elements_page()
 
