@@ -1,3 +1,18 @@
+test_that("getters read all regex and predicate survivors in order", {
+  page <- local_page(test_path("fixtures", "matching.html"))
+  spec <- pz_loc(
+    ".label",
+    has_text = pz_regex("^Save now$"),
+    predicate = "el => el.dataset.ready === 'yes'"
+  )
+  expect_identical(pz_get_count(page, spec), 2L)
+  expect_identical(pz_get_attr(page, "id", spec), c("first", "second"))
+  expect_identical(
+    pz_get_text(page, spec, raw = TRUE),
+    c("  Save\u00a0\u2003now  ", "Save now")
+  )
+})
+
 test_that("pz_get_count returns the number of matches as an integer", {
   page <- local_getters_page()
   expect_type(pz_get_count(page, target = ".item"), "integer")

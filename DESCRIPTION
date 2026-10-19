@@ -84,6 +84,7 @@ Collate:
     'open.R'
     'paparazzi-package.R'
     'record.R'
+    'regex.R'
     'resolve.R'
     'scope.R'
     'screenshot.R'

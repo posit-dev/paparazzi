@@ -23,6 +23,31 @@ log_ids <- function(log, id, type = NULL) {
   log[keep]
 }
 
+test_that("actions use qualified targets and retain strict single-match rules", {
+  page <- local_page(test_path("fixtures", "matching.html"))
+  pz_evaluate(
+    page,
+    "document.addEventListener('click', el => { window.matchingClick = {id: el.target.id, trusted: el.isTrusted}; });"
+  )
+  spec <- pz_loc(
+    ".label",
+    has_text = pz_regex("^Save now$"),
+    predicate = "el => el.dataset.ready === 'yes'"
+  )
+  expect_error(pz_act_click(page, spec), class = "paparazzi_error_multiple")
+  single <- pz_loc(
+    ".label",
+    has_text = pz_regex("^Save now$"),
+    predicate = "el => el.dataset.ready === 'yes'",
+    which = "last"
+  )
+  pz_act_click(page, single)
+  expect_identical(
+    pz_evaluate(page, "window.matchingClick"),
+    list(id = "second", trusted = TRUE)
+  )
+})
+
 test_that("the actions chain through the context invisibly", {
   page <- local_actions_page()
 

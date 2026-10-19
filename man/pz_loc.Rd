@@ -2,22 +2,37 @@
 % Please edit documentation in R/loc.R
 \name{pz_loc}
 \alias{pz_loc}
-\title{Locate elements by CSS, with text, position, and scope qualifiers}
+\title{Locate elements by CSS, with text, predicate, position, and scope qualifiers}
 \usage{
-pz_loc(css, ..., has_text = NULL, which = NULL, within = NULL)
+pz_loc(
+  css,
+  ...,
+  has_text = NULL,
+  predicate = NULL,
+  which = NULL,
+  within = NULL
+)
 }
 \arguments{
 \item{css}{A CSS selector string.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{has_text}{Substring the element's text content must contain.
-\code{NULL} omits text filtering. Case-sensitive; whitespace collapses on
-both sides, so
-\code{has_text = "Save now"} matches text reading "Save   now".}
+\item{has_text}{A substring or a \code{\link[=pz_regex]{pz_regex()}} value the element's text
+content must match. Plain strings use case-sensitive substring matching
+with whitespace collapsed on both sides, without trimming. A regex uses
+JavaScript syntax and collapses and trims observed text; its pattern
+source stays unchanged. \code{NULL} omits text filtering.}
+
+\item{predicate}{A trusted JavaScript function-source string receiving
+one candidate element, e.g. \code{"el => el.querySelector('.status') !== null"}
+or \code{"function(el) { return el.parentElement.matches('.ready'); }"}.
+The function must return primitive \code{true} or \code{false}; missing returns,
+other values, Boolean objects, and Promises are errors. Async functions
+and awaiting are not supported. \code{NULL} omits predicate filtering.}
 
 \item{which}{Pick one match by position: \code{"first"}, \code{"last"}, or a
-1-based positive integer. Applied after \code{css} and \code{has_text}
+1-based positive integer. Applied after CSS, text, and predicate
 filtering; an out-of-range position means \emph{no} match, not an error.
 \code{NULL} keeps all matches.}
 
@@ -31,8 +46,9 @@ An S3 object of class \code{paparazzi_loc}.
 }
 \description{
 \code{\link[=pz_loc]{pz_loc()}} builds a page-independent element spec: a CSS selector,
-optionally narrowed by required text content (\code{has_text}), a match
-position (\code{which}), and an ancestor scope (\code{within}). Specs are lazy --
+optionally narrowed by required text content (\code{has_text}), a JavaScript
+condition (\code{predicate}), a match position (\code{which}), and an ancestor
+scope (\code{within}). Specs are lazy --
 they resolve at use time, so they follow DOM changes between uses --
 and can be defined once and reused across sessions.
 
@@ -40,10 +56,28 @@ Wherever a spec is accepted, a bare string is promoted to
 \code{pz_loc(string)}, and a list of specs and strings is a union that
 matches the elements of any member.
 }
+\details{
+paparazzi resolves \code{within}, selects CSS candidates and excludes its
+overlays, filters text, filters the predicate, then applies \code{which}.
+It repeats both filters on every use and auto-wait attempt. A predicate
+returning \code{false} follows normal no-match retry behavior; invalid source,
+non-functions, exceptions, and invalid returns abort as JavaScript errors.
+Invalid source and non-functions error even without candidates; runtime
+and return-value checks require an invocation.
+
+Predicates are read-only by contract, not sandboxed. Only use trusted
+source, keep functions cheap and free of side effects, and start with
+narrow CSS or \code{within} filters. Functions may inspect ancestors,
+descendants, computed styles, and page state outside the candidate scope:
+\code{within} and pinned scopes limit candidates, not what a function can inspect.
+A timeout does not forcibly stop runaway JavaScript.
+}
 \examples{
 # A spec describes elements; nothing is looked up until you use it
 pz_loc(".task")
 pz_loc(".task", has_text = "passport")
+pz_loc("button", has_text = pz_regex("^Save$"))
+pz_loc("tr", predicate = 'el => el.querySelector(".status")?.textContent === "Ready"')
 pz_loc(".task", which = "last")
 pz_loc(".task-done", within = pz_loc(".task", has_text = "dentist"))
 

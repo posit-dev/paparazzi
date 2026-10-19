@@ -14,6 +14,38 @@ test_that("pz_loc validates css and has_text", {
   expect_error(pz_loc(".btn", has_text = c("a", "b")), class = "rlang_error")
 })
 
+test_that("pz_loc accepts regex text and validates predicate shape without Chrome", {
+  regex <- pz_regex("^Save$", "i")
+  predicate <- "el => el.parentElement.matches('.ready')"
+  loc <- pz_loc("button", has_text = regex, predicate = predicate)
+  expect_identical(loc$has_text, regex)
+  expect_identical(loc$predicate, predicate)
+  expect_error(pz_loc("button", predicate = function(el) TRUE), "predicate")
+  expect_error(pz_loc("button", predicate = NA_character_), "predicate")
+  expect_error(pz_loc("button", predicate = c("a", "b")), "predicate")
+  expect_identical(pz_loc("button", predicate = "[")$predicate, "[")
+  expect_identical(
+    pz_loc("button", has_text = pz_regex("["))$has_text$pattern,
+    "["
+  )
+})
+
+test_that("regex and predicate qualifiers appear in target diagnostics", {
+  loc <- pz_loc(
+    "button",
+    has_text = pz_regex("^Save$", "i"),
+    predicate = "el => el.disabled === false",
+    which = "last",
+    within = "form"
+  )
+  expected <- '`button` (has_text: pz_regex("^Save$", flags = "i"), predicate: el => el.disabled === false, which: last, within: `form`)'
+  expect_identical(format_loc(loc), expected)
+  expect_identical(
+    capture.output(print(loc)),
+    paste0("<paparazzi_loc> ", expected)
+  )
+})
+
 test_that("pz_loc validates which", {
   expect_error(pz_loc(".btn", which = "third"), "first")
   expect_error(pz_loc(".btn", which = "third"), class = "rlang_error")
