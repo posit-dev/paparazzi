@@ -36,8 +36,9 @@ page |> pz_expect_count(1, target = passport)
 pz_get_text(page, target = passport_title)
 ```
 
-`has_text` is a case-sensitive substring match on the element's text, with
-whitespace collapsed on both sides. Pick text that identifies the row, then
+`has_text` with a plain string is a case-sensitive substring match on the
+element's text, with whitespace collapsed on both sides and no trimming.
+Pick text that identifies the row, then
 target a control inside it. `within` takes a string or another spec and
 keeps only matches inside it.
 
@@ -48,9 +49,49 @@ page |>
   pz_expect_class("done", target = passport)
 ```
 
+## Match exact labels and relationships
+
+`pz_regex()` creates a page-independent scalar matcher using Chrome's
+JavaScript `RegExp` syntax. paparazzi collapses whitespace and trims observed
+strings for regex matching, leaving pattern source unchanged. Matching is
+case-sensitive unless you include `flags = "i"`. Use anchors to distinguish
+Save from Save draft, or alternatives and digit patterns for dynamic labels.
+
+```r
+save <- pz_loc("button", has_text = pz_regex("^Save$"))
+report <- pz_loc(".report", has_text = pz_regex("^Report \\d+ ready$", "i"))
+```
+
+For relationships that CSS or whole-element text cannot express, pass a
+trusted JavaScript function-source string as `predicate`. Arrow functions
+and function expressions receive one candidate element. This spec checks the
+status cell, not a mention of Ready elsewhere in the row:
+
+```r
+ready_row <- pz_loc(
+  "tr",
+  predicate = 'el => el.querySelector(".status")?.textContent.trim() === "Ready"'
+)
+```
+
+The function must return primitive `true` or `false`. Missing returns,
+non-booleans, Boolean objects and Promises error; paparazzi does not await
+async predicates. Keep predicates read-only, cheap and free of side effects.
+They are trusted executable code, not sandboxed, and may inspect ancestors,
+descendants, computed styles and page state outside `within` or a pinned
+scope. Scopes limit candidates, not what a predicate can inspect.
+
+paparazzi resolves `within`, selects CSS candidates and excludes overlays,
+filters text, filters the predicate, then applies `which`. It repeats the
+filters on every use and auto-wait attempt. False results retry normally;
+JavaScript exceptions abort immediately with the target and source excerpt.
+Invalid regex or predicate source and non-function predicates error even
+without candidates. Runtime and return-type errors require an invocation.
+A timeout does not forcibly stop runaway JavaScript.
+
 ## Choose one match by position
 
-`which` applies after the CSS and text filters, and takes `"first"`,
+`which` applies after the CSS, text and predicate filters, and takes `"first"`,
 `"last"` or a 1-based position. Use it when order is part of the interface,
 like a newest-first task list.
 

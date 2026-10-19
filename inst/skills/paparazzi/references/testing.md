@@ -92,6 +92,33 @@ Getters return plain values and end the chain, so compare them with ordinary
 testthat expectations. `pz_get_count()` reads once and can return zero; use
 `pz_expect_count()` when the count is about to change.
 
+Use `pz_regex()` to share a JavaScript regular expression with a locator or
+across `pz_expect_text()`, `pz_expect_value()`, `pz_expect_attr()`,
+`pz_expect_url()` and `pz_expect_title()`. One scalar regex applies to all
+selected elements. paparazzi collapses whitespace and trims observed strings
+before matching, never the pattern. Missing values remain non-matches.
+
+```r
+pz_with_page(pz_example("tasks"), function(page) {
+  label <- pz_regex("^Renew passport$", flags = "i")
+  passport_title <- pz_loc(".task-title", has_text = label)
+  pz_expect_text(page, label, target = passport_title)
+  pz_expect_attr(
+    page, pz_loc(".task", has_text = "passport"),
+    `data-priority` = pz_regex("^(high|normal)$"), draggable = "true"
+  )
+})
+```
+
+`match` and `.match` govern plain strings only, including string pairs in a
+mixed attribute call; a regex value carries its own semantics. Existing
+string-based `match = "regex"` and `.match = "regex"` keep using R's `grepl()`
+and their existing normalization. Regex values use Chrome's JavaScript
+`RegExp` dialect instead. Construction is browser-free; Chrome validates
+source and flag support at use time, even with empty or negated targets.
+Stateful `g`/`y` flags, duplicate flags and combining `u` with `v` are errors.
+Regex collections and mixed pairwise string/regex vectors are not supported.
+
 ## Wait on conditions, not time
 
 Expectations retry until they pass or time out. `timeout = NULL` uses the

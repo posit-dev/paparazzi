@@ -1,5 +1,17 @@
 # paparazzi 0.0.0.9000
 
+* `pz_regex()` creates a reusable scalar JavaScript regular expression for
+  `pz_loc(has_text = )` and text, value, attribute, URL and title expectations.
+  New regex matching collapses and trims observed strings without changing
+  the pattern. Existing string-based regex expectations still use R's regex
+  engine. `match` and `.match` govern plain strings only.
+
+* `pz_loc()` gains `predicate`, a trusted synchronous JavaScript function
+  receiving each candidate element and returning primitive `true` or `false`.
+  paparazzi filters text and predicates before applying `which`, repeating
+  both filters on each use and auto-wait attempt. Predicates are read-only
+  by contract, not sandboxed; exceptions and invalid returns are errors.
+
 * `pz_act_type()` with `target = NULL` now preserves a held selection in an
   already-focused `contenteditable` descendant of the current scope, provided
   the selection stays within one editing host and doesn't cross non-editable
