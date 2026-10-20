@@ -7,36 +7,41 @@
 pz_regex(pattern, ..., ignore_case = FALSE, fixed = FALSE)
 }
 \arguments{
-\item{pattern}{A single string of JavaScript regular expression source,
-or a literal substring when \code{fixed = TRUE}. An empty pattern is valid.
-Use R string escaping, e.g. \code{"\\\\d+"} for digits.}
+\item{pattern}{A single string containing a regular expression, or a
+literal substring when \code{fixed = TRUE}. Patterns use JavaScript regular
+expression syntax in Unicode-aware mode, not R's regex syntax. An empty
+pattern is valid. Use R string escaping, e.g. \code{"\\\\d+"} for digits.}
 
 \item{...}{Checked empty; reserved for future use.}
 
 \item{ignore_case}{Ignore case differences when matching?}
 
-\item{fixed}{Match a literal substring rather than a regular expression?}
+\item{fixed}{Match \code{pattern} as a literal substring rather than a regular
+expression? With \code{fixed = TRUE}, characters such as \code{(}, \code{.}, and \code{*}
+match themselves rather than having their regex meanings. paparazzi
+collapses and trims whitespace in the substring as well as the text
+being checked. For exact literal matching, use a bare string instead of
+\code{\link[=pz_regex]{pz_regex()}}.}
 }
 \value{
-An S3 object of class \code{paparazzi_regex}.
+A regular expression object of class \code{paparazzi_regex}. Supply
+this object on its own, not in a vector or list of patterns.
 }
 \description{
-\code{\link[=pz_regex]{pz_regex()}} creates a scalar, page-independent matcher for \code{\link[=pz_loc]{pz_loc()}}'s
-\code{match} and \code{\link[=pz_expect_text]{pz_expect_text()}}, \code{\link[=pz_expect_value]{pz_expect_value()}}, \code{\link[=pz_expect_attr]{pz_expect_attr()}},
-\code{\link[=pz_expect_url]{pz_expect_url()}}, and \code{\link[=pz_expect_title]{pz_expect_title()}}. Chrome matches JavaScript
-\code{RegExp} syntax in Unicode-aware mode. paparazzi collapses whitespace and
-trims observed strings, but never changes regex pattern source.
-}
-\details{
-With \code{fixed = TRUE}, paparazzi treats \code{pattern} as a literal substring,
-collapses and trims its whitespace, and escapes regex metacharacters.
-Use a bare string instead of \code{\link[=pz_regex]{pz_regex()}} for exact literal matching.
-Missing values do not match, even an empty pattern.
+Use \code{\link[=pz_regex]{pz_regex()}} to match a text pattern when finding elements or checking
+their content. For example, \code{pz_regex("^Save")} matches text beginning with
+"Save", while the bare string \code{"Save"} matches only that complete text.
+Set \code{ignore_case = TRUE} to match "Save", "save", and "SAVE" alike.
+For a literal substring rather than a regex pattern, use \code{fixed = TRUE}.
 
-Construction checks the inputs without opening a browser. Chrome checks
-pattern syntax when you use the value, including when the target matches
-no elements. One value applies to all selected elements; collections of
-regex values and mixed string/regex vectors are not supported.
+Before comparing text, paparazzi replaces runs of whitespace with a single
+space and removes whitespace at the start and end. It leaves your regex
+pattern unchanged. Missing values never match, even with an empty pattern.
+
+Creating a regex does not search the page. Pass it to a locator or an
+expectation to use it; the same pattern applies to every selected element.
+paparazzi checks regex syntax when you use the pattern, so an invalid
+pattern raises an error then, even if no elements match your selector.
 }
 \examples{
 ready <- pz_regex("^Report \\\\d+ ready$", ignore_case = TRUE)
@@ -44,4 +49,13 @@ pz_loc(".report", match = ready)
 pz_loc("button", match = "Save")
 pz_loc("button", match = pz_regex("Save (draft)", fixed = TRUE))
 
+}
+\seealso{
+\itemize{
+\item \code{\link[=pz_loc]{pz_loc()}} accepts a regex in \code{match} to find elements by their text.
+\item \code{\link[=pz_expect_text]{pz_expect_text()}}, \code{\link[=pz_expect_value]{pz_expect_value()}}, and \code{\link[=pz_expect_attr]{pz_expect_attr()}} accept
+regexes to check element text, input values, and attributes.
+\item \code{\link[=pz_expect_url]{pz_expect_url()}} and \code{\link[=pz_expect_title]{pz_expect_title()}} accept regexes to check the
+page's URL and title.
+}
 }
