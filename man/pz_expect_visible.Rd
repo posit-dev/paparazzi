@@ -55,7 +55,8 @@ page |>
   pz_expect_visible(target = "#help")
 
 # Every match must pass, so check one task or narrow the target
-page |> pz_expect_visible(target = pz_loc(".task", match = pz_regex("passport", fixed = TRUE)))
+page |>
+  pz_expect_visible(target = pz_loc(".task", match = pz_regex("passport")))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

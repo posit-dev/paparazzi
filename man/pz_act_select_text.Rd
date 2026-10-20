@@ -71,7 +71,7 @@ page <- pz_open(pz_example("tasks"))
 
 # Typing replaces the selection
 page |>
-  pz_find(pz_loc(".task", match = pz_regex("Renew passport", fixed = TRUE))) |>
+  pz_find(pz_loc(".task", match = pz_regex("Renew passport"))) |>
   pz_act_click(".task-edit") |>
   pz_find(".task-title") |>
   pz_act_select_text("passport") |>

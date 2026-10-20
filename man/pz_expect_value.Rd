@@ -12,7 +12,7 @@ pz_expect_value(ctx, value, target = NULL, ..., not = FALSE, timeout = NULL)
 \item{value}{A character vector of expected values: length 1 applies
 to every match, length \code{n} is compared pairwise in order. Strings
 compare by exact equality after whitespace normalization. Or a
-single \code{\link[=pz_regex]{pz_regex()}} value, matched against every match in Chrome.}
+single \code{\link[=pz_regex]{pz_regex()}} value to check the same pattern against every element.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
@@ -42,9 +42,9 @@ requires exactly \code{n} matches and compares pairwise, in order. With
 \code{not = TRUE}, the expectation passes when no match satisfies \code{value},
 including when nothing matches.
 
-Pass a single \code{\link[=pz_regex]{pz_regex()}} value instead of strings to match with
-Chrome's JavaScript \code{RegExp} dialect, as in \code{\link[=pz_expect_text]{pz_expect_text()}}. A
-missing value never matches, not even an empty pattern.
+A string checks the complete value; \code{\link[=pz_regex]{pz_regex()}} checks a pattern.
+Whitespace and patterns follow the same rules as \code{\link[=pz_expect_text]{pz_expect_text()}}.
+A missing value never matches, not even an empty pattern.
 
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
@@ -55,11 +55,12 @@ retry, timeout, and bridge behavior shared by all expectations.
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_expect_value("normal", target = "#task_priority")
-page |> pz_expect_value(pz_regex("^(low|normal|high)$"), target = "#task_priority")
+page |>
+  pz_expect_value(pz_regex("^(low|normal|high)$"), target = "#task_priority")
 
 page |>
   pz_act_type("Buy milk", target = "#task_title") |>
-  pz_expect_value(pz_regex("milk", fixed = TRUE), target = "#task_title")
+  pz_expect_value(pz_regex("milk"), target = "#task_title")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

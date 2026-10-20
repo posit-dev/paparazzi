@@ -9,10 +9,9 @@ pz_expect_title(ctx, title, ..., not = FALSE, timeout = NULL)
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{title}{The expected page title: a single string compared by
-exact equality after whitespace normalization, or a single
-\code{\link[=pz_regex]{pz_regex()}} value matched in Chrome with JavaScript \code{RegExp}
-syntax.}
+\item{title}{The expected complete page title as a single string, or a
+single \code{\link[=pz_regex]{pz_regex()}} pattern. Strings compare exactly after whitespace
+normalization.}
 
 \item{...}{Checked empty; reserved for future use.}
 

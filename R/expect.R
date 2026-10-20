@@ -178,7 +178,8 @@ pz_expect_count <- function(
 #'   pz_expect_visible(target = "#help")
 #'
 #' # Every match must pass, so check one task or narrow the target
-#' page |> pz_expect_visible(target = pz_loc(".task", match = pz_regex("passport", fixed = TRUE)))
+#' page |>
+#'   pz_expect_visible(target = pz_loc(".task", match = pz_regex("passport")))
 #' pz_close(page)
 #'
 #' @export
@@ -230,12 +231,16 @@ pz_expect_hidden <- function(
 #' `not = TRUE`, the expectation passes when no match satisfies `text`,
 #' including when nothing matches.
 #'
-#' Bare strings compare by exact, case-sensitive equality with the
-#' element's text. Pass a single [pz_regex()] value instead of strings
-#' to match with Chrome's JavaScript `RegExp` dialect (`fixed = TRUE`
-#' for substring matching). paparazzi collapses whitespace and trims
-#' each element's text in the browser before matching, but never
-#' changes the pattern source; one regex value applies to every match.
+#' A string checks the complete text, with the same capitalization.
+#' Pass [pz_regex()] to check a pattern instead: `pz_regex("^Save")` checks
+#' whether the text begins with "Save". For a literal substring, use
+#' `pz_regex("Save (draft)", fixed = TRUE)`; the parentheses then match
+#' themselves rather than having their regex meanings.
+#'
+#' The same regex checks every selected element. paparazzi collapses and
+#' trims whitespace in the text without changing your regex pattern.
+#' Missing text never matches, even with an empty pattern. See [pz_regex()]
+#' for pattern syntax and options.
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
 #' `"paparazzi_expectation_failure"`; inside testthat, the failure is
@@ -245,7 +250,7 @@ pz_expect_hidden <- function(
 #' @inheritParams pz_act_click
 #' @param text A character vector of expected text: length 1 applies to
 #'   every match, length `n` is compared pairwise in order. Or a single
-#'   [pz_regex()] value, matched against every match in Chrome.
+#'   [pz_regex()] value to check the same pattern against every element.
 #' @inheritParams pz_expect_exists
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
@@ -509,9 +514,9 @@ pz_expect_in_viewport <- function(
 #' `not = TRUE`, the expectation passes when no match satisfies `value`,
 #' including when nothing matches.
 #'
-#' Pass a single [pz_regex()] value instead of strings to match with
-#' Chrome's JavaScript `RegExp` dialect, as in [pz_expect_text()]. A
-#' missing value never matches, not even an empty pattern.
+#' A string checks the complete value; [pz_regex()] checks a pattern.
+#' Whitespace and patterns follow the same rules as [pz_expect_text()].
+#' A missing value never matches, not even an empty pattern.
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
 #' `"paparazzi_expectation_failure"`; inside testthat, the failure is
@@ -522,17 +527,18 @@ pz_expect_in_viewport <- function(
 #' @param value A character vector of expected values: length 1 applies
 #'   to every match, length `n` is compared pairwise in order. Strings
 #'   compare by exact equality after whitespace normalization. Or a
-#'   single [pz_regex()] value, matched against every match in Chrome.
+#'   single [pz_regex()] value to check the same pattern against every element.
 #'
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_expect_value("normal", target = "#task_priority")
-#' page |> pz_expect_value(pz_regex("^(low|normal|high)$"), target = "#task_priority")
+#' page |>
+#'   pz_expect_value(pz_regex("^(low|normal|high)$"), target = "#task_priority")
 #'
 #' page |>
 #'   pz_act_type("Buy milk", target = "#task_title") |>
-#'   pz_expect_value(pz_regex("milk", fixed = TRUE), target = "#task_title")
+#'   pz_expect_value(pz_regex("milk"), target = "#task_title")
 #' pz_close(page)
 #'
 #' @export
@@ -566,11 +572,10 @@ pz_expect_value <- function(
 #' Missing attributes satisfy no pair. String values compare by exact
 #' equality after whitespace normalization.
 #'
-#' A pair's value may instead be a single [pz_regex()], matched in Chrome
-#' with JavaScript `RegExp` syntax against the whitespace-collapsed,
-#' trimmed attribute (`fixed = TRUE` for substring matching). Regex and
-#' string pairs can mix in one call, and a missing attribute never
-#' matches one, not even an empty pattern.
+#' Use [pz_regex()] as a pair's value to check a pattern instead of the
+#' complete attribute. You can mix strings and regexes in one call.
+#' Whitespace and patterns follow the same rules as [pz_expect_text()];
+#' a missing attribute never matches, not even an empty pattern.
 #'
 #' A length-1 value applies to every element. A vector requires exactly
 #' that many matches and compares pairwise, in order. With `.not = TRUE`,
@@ -596,7 +601,7 @@ pz_expect_value <- function(
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_expect_attr(
-#'   pz_loc(".task", match = pz_regex("tax", fixed = TRUE)),
+#'   pz_loc(".task", match = pz_regex("tax")),
 #'   `data-priority` = "high"
 #' )
 #'
@@ -644,7 +649,7 @@ pz_expect_attr <- function(
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' water <- pz_loc(".task", match = pz_regex("Water", fixed = TRUE))
+#' water <- pz_loc(".task", match = pz_regex("Water"))
 #' page |> pz_expect_class("done", target = water, not = TRUE)
 #'
 #' page |>
@@ -752,10 +757,10 @@ pz_expect_js <- function(
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
 #' @inheritParams pz_act_click
-#' @param url The expected URL: a single string compared by exact
-#'   equality after whitespace normalization, or a single [pz_regex()]
-#'   value matched in Chrome with JavaScript `RegExp` syntax
-#'   (`fixed = TRUE` for substring matching).
+#' @param url The expected complete URL as a single string, or a single
+#'   [pz_regex()] pattern. Strings compare exactly after whitespace
+#'   normalization. Use `pz_regex(..., fixed = TRUE)` for a literal
+#'   substring, so punctuation such as `.` matches itself.
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
@@ -805,10 +810,9 @@ pz_expect_url <- function(
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
 #' @inheritParams pz_expect_url
-#' @param title The expected page title: a single string compared by
-#'   exact equality after whitespace normalization, or a single
-#'   [pz_regex()] value matched in Chrome with JavaScript `RegExp`
-#'   syntax.
+#' @param title The expected complete page title as a single string, or a
+#'   single [pz_regex()] pattern. Strings compare exactly after whitespace
+#'   normalization.
 #'
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()

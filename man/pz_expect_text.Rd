@@ -11,7 +11,7 @@ pz_expect_text(ctx, text, target = NULL, ..., not = FALSE, timeout = NULL)
 
 \item{text}{A character vector of expected text: length 1 applies to
 every match, length \code{n} is compared pairwise in order. Or a single
-\code{\link[=pz_regex]{pz_regex()}} value, matched against every match in Chrome.}
+\code{\link[=pz_regex]{pz_regex()}} value to check the same pattern against every element.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 specs and strings (a union matching any of them). \code{NULL} means the
@@ -40,12 +40,16 @@ exactly \code{n} matches and compares pairwise, in order. With
 \code{not = TRUE}, the expectation passes when no match satisfies \code{text},
 including when nothing matches.
 
-Bare strings compare by exact, case-sensitive equality with the
-element's text. Pass a single \code{\link[=pz_regex]{pz_regex()}} value instead of strings
-to match with Chrome's JavaScript \code{RegExp} dialect (\code{fixed = TRUE}
-for substring matching). paparazzi collapses whitespace and trims
-each element's text in the browser before matching, but never
-changes the pattern source; one regex value applies to every match.
+A string checks the complete text, with the same capitalization.
+Pass \code{\link[=pz_regex]{pz_regex()}} to check a pattern instead: \code{pz_regex("^Save")} checks
+whether the text begins with "Save". For a literal substring, use
+\code{pz_regex("Save (draft)", fixed = TRUE)}; the parentheses then match
+themselves rather than having their regex meanings.
+
+The same regex checks every selected element. paparazzi collapses and
+trims whitespace in the text without changing your regex pattern.
+Missing text never matches, even with an empty pattern. See \code{\link[=pz_regex]{pz_regex()}}
+for pattern syntax and options.
 
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is

@@ -128,7 +128,7 @@ pz_get_text(page, target = ".task-title")
 # The tasks are HTML5 drag sources; drop "Water the plants" on the first task
 page |>
   pz_act_drag(
-    pz_loc(".task", match = pz_regex("plants", fixed = TRUE)),
+    pz_loc(".task", match = pz_regex("plants")),
     to = pz_loc(".task", which = "first")
   )
 pz_get_text(page, target = ".task-title")

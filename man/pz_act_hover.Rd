@@ -53,7 +53,7 @@ To set a value directly instead, without staging, use \code{\link[=pz_set_value]
 \examples{
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-passport <- pz_loc(".task", match = pz_regex("passport", fixed = TRUE))
+passport <- pz_loc(".task", match = pz_regex("passport"))
 
 # Tasks change colour on :hover
 pz_get_style(page, "background-color", target = passport)

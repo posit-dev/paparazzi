@@ -48,9 +48,13 @@ page <- pz_open(pz_example("tasks"))
 
 # Inside a scope, targets resolve among the scope's descendants
 page |>
-  pz_find(pz_loc(".task", match = pz_regex("dentist", fixed = TRUE))) |>
+  pz_find(pz_loc(".task", match = pz_regex("dentist"))) |>
   pz_act_click(".task-done")
-pz_get_attr(page, "class", target = pz_loc(".task", match = pz_regex("dentist", fixed = TRUE)))
+pz_get_attr(
+  page,
+  "class",
+  target = pz_loc(".task", match = pz_regex("dentist"))
+)
 
 # Assign a scoped context to start more than one chain from it
 task_list <- pz_find(page, ".task-list")

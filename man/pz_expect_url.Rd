@@ -9,10 +9,10 @@ pz_expect_url(ctx, url, ..., not = FALSE, timeout = NULL)
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{url}{The expected URL: a single string compared by exact
-equality after whitespace normalization, or a single \code{\link[=pz_regex]{pz_regex()}}
-value matched in Chrome with JavaScript \code{RegExp} syntax
-(\code{fixed = TRUE} for substring matching).}
+\item{url}{The expected complete URL as a single string, or a single
+\code{\link[=pz_regex]{pz_regex()}} pattern. Strings compare exactly after whitespace
+normalization. Use \code{pz_regex(..., fixed = TRUE)} for a literal
+substring, so punctuation such as \code{.} matches itself.}
 
 \item{...}{Checked empty; reserved for future use.}
 

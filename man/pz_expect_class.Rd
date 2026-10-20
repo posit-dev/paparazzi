@@ -41,7 +41,7 @@ retry, timeout, and bridge behavior shared by all expectations.
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-water <- pz_loc(".task", match = pz_regex("Water", fixed = TRUE))
+water <- pz_loc(".task", match = pz_regex("Water"))
 page |> pz_expect_class("done", target = water, not = TRUE)
 
 page |>

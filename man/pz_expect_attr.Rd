@@ -30,11 +30,10 @@ matched element satisfies every named attribute/value pair in \code{...}.
 Missing attributes satisfy no pair. String values compare by exact
 equality after whitespace normalization.
 
-A pair's value may instead be a single \code{\link[=pz_regex]{pz_regex()}}, matched in Chrome
-with JavaScript \code{RegExp} syntax against the whitespace-collapsed,
-trimmed attribute (\code{fixed = TRUE} for substring matching). Regex and
-string pairs can mix in one call, and a missing attribute never
-matches one, not even an empty pattern.
+Use \code{\link[=pz_regex]{pz_regex()}} as a pair's value to check a pattern instead of the
+complete attribute. You can mix strings and regexes in one call.
+Whitespace and patterns follow the same rules as \code{\link[=pz_expect_text]{pz_expect_text()}};
+a missing attribute never matches, not even an empty pattern.
 
 A length-1 value applies to every element. A vector requires exactly
 that many matches and compares pairwise, in order. With \code{.not = TRUE},
@@ -50,7 +49,7 @@ retry, timeout, and bridge behavior shared by all expectations.
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_expect_attr(
-  pz_loc(".task", match = pz_regex("tax", fixed = TRUE)),
+  pz_loc(".task", match = pz_regex("tax")),
   `data-priority` = "high"
 )
 

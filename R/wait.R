@@ -328,7 +328,7 @@ pz_wait_for_stable <- function(
 #'   pz_act_click(
 #'     pz_loc(
 #'       ".task-done",
-#'       within = pz_loc(".task", match = pz_regex("bank", fixed = TRUE))
+#'       within = pz_loc(".task", match = pz_regex("bank"))
 #'     )
 #'   )
 #' pz_get_count(page, target = ".task.done")

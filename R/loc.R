@@ -68,11 +68,14 @@
 #' @examples
 #' # A spec describes elements; nothing is looked up until you use it
 #' pz_loc(".task")
-#' pz_loc(".task", match = pz_regex("passport", fixed = TRUE))
+#' pz_loc(".task", match = pz_regex("passport"))
 #' pz_loc("button", match = "Save")
-#' pz_loc("tr", match = pz_js('el => el.querySelector(".status")?.textContent === "Ready"'))
+#' pz_loc(
+#'   "tr",
+#'   match = pz_js('el => el.querySelector(".status")?.textContent === "Ready"')
+#' )
 #' pz_loc(".task", which = "last")
-#' pz_loc(".task-done", within = pz_loc(".task", match = pz_regex("dentist", fixed = TRUE)))
+#' pz_loc(".task-done", within = pz_loc(".task", match = pz_regex("dentist")))
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
