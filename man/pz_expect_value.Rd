@@ -4,21 +4,14 @@
 \alias{pz_expect_value}
 \title{Expect element values}
 \usage{
-pz_expect_value(
-  ctx,
-  value,
-  target = NULL,
-  ...,
-  match = c("contains", "exact", "regex"),
-  not = FALSE,
-  timeout = NULL
-)
+pz_expect_value(ctx, value, target = NULL, ..., not = FALSE, timeout = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
 \item{value}{A character vector of expected values: length 1 applies
-to every match, length \code{n} is compared pairwise in order. Or a
+to every match, length \code{n} is compared pairwise in order. Strings
+compare by exact equality after whitespace normalization. Or a
 single \code{\link[=pz_regex]{pz_regex()}} value, matched against every match in Chrome.}
 
 \item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
@@ -28,10 +21,6 @@ body at the root, so \code{pz_expect_text(page, "Welcome")} checks the
 page text.}
 
 \item{...}{Checked empty; reserved for future use.}
-
-\item{match}{How to compare \code{text} when it's a character vector:
-\code{"contains"} (substring), \code{"exact"}, or \code{"regex"} (an R regex
-matched with \code{\link[=grepl]{grepl()}}). Ignored for \code{\link[=pz_regex]{pz_regex()}} values.}
 
 \item{not}{Invert the check.}
 
@@ -65,12 +54,12 @@ retry, timeout, and bridge behavior shared by all expectations.
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_expect_value("normal", target = "#task_priority", match = "exact")
+page |> pz_expect_value("normal", target = "#task_priority")
 page |> pz_expect_value(pz_regex("^(low|normal|high)$"), target = "#task_priority")
 
 page |>
   pz_act_type("Buy milk", target = "#task_title") |>
-  pz_expect_value("milk", target = "#task_title")
+  pz_expect_value(pz_regex("milk", fixed = TRUE), target = "#task_title")
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

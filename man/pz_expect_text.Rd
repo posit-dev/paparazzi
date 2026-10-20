@@ -4,15 +4,7 @@
 \alias{pz_expect_text}
 \title{Expect element text content}
 \usage{
-pz_expect_text(
-  ctx,
-  text,
-  target = NULL,
-  ...,
-  match = c("contains", "exact", "regex"),
-  not = FALSE,
-  timeout = NULL
-)
+pz_expect_text(ctx, text, target = NULL, ..., not = FALSE, timeout = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -28,10 +20,6 @@ body at the root, so \code{pz_expect_text(page, "Welcome")} checks the
 page text.}
 
 \item{...}{Checked empty; reserved for future use.}
-
-\item{match}{How to compare \code{text} when it's a character vector:
-\code{"contains"} (substring), \code{"exact"}, or \code{"regex"} (an R regex
-matched with \code{\link[=grepl]{grepl()}}). Ignored for \code{\link[=pz_regex]{pz_regex()}} values.}
 
 \item{not}{Invert the check.}
 
@@ -52,12 +40,12 @@ exactly \code{n} matches and compares pairwise, in order. With
 \code{not = TRUE}, the expectation passes when no match satisfies \code{text},
 including when nothing matches.
 
-Pass a single \code{\link[=pz_regex]{pz_regex()}} value instead of strings to match with
-Chrome's JavaScript \code{RegExp} dialect. paparazzi collapses whitespace
-and trims each element's text in the browser before matching, but
-never changes the pattern source; one regex value applies to every
-match. \code{match} governs plain strings only, because a regex value
-carries its own flags.
+Bare strings compare by exact, case-sensitive equality with the
+element's text. Pass a single \code{\link[=pz_regex]{pz_regex()}} value instead of strings
+to match with Chrome's JavaScript \code{RegExp} dialect (\code{fixed = TRUE}
+for substring matching). paparazzi collapses whitespace and trims
+each element's text in the browser before matching, but never
+changes the pattern source; one regex value applies to every match.
 
 Outside of testthat, a failure aborts with a classed error of class
 \code{"paparazzi_expectation_failure"}; inside testthat, the failure is
@@ -67,16 +55,19 @@ retry, timeout, and bridge behavior shared by all expectations.
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_expect_text("Tasks", target = "h1", match = "exact")
-page |> pz_expect_text("passport", target = pz_loc(".task", which = "first"))
+page |> pz_expect_text("Tasks", target = "h1")
+
+# Substring matching uses pz_regex() with fixed = TRUE
+page |>
+  pz_expect_text(
+    pz_regex("passport", fixed = TRUE),
+    target = pz_loc(".task", which = "first")
+  )
 
 # A vector compares pairwise with the matches, in order
 page |> pz_expect_text(c("All", "Open", "Done"), target = ".filters a")
 
-# Regular expressions use R's syntax
-page |> pz_expect_text("^[A-Z]", target = ".task-title", match = "regex")
-
-# A pz_regex() value uses the browser's JavaScript dialect instead
+# Regular expressions use the browser's JavaScript dialect
 page |> pz_expect_text(pz_regex("^[A-Z]"), target = ".task-title")
 
 # On failure, the error shows the target and the last text seen

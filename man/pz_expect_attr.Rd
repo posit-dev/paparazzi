@@ -4,14 +4,7 @@
 \alias{pz_expect_attr}
 \title{Expect attributes}
 \usage{
-pz_expect_attr(
-  ctx,
-  .target = NULL,
-  ...,
-  .match = c("exact", "contains", "regex"),
-  .not = FALSE,
-  .timeout = NULL
-)
+pz_expect_attr(ctx, .target = NULL, ..., .not = FALSE, .timeout = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -24,10 +17,6 @@ or single \code{\link[=pz_regex]{pz_regex()}} values; use backticks for names su
 \code{aria-expanded}. Dynamic dots support splicing a named list with
 \verb{!!!}.}
 
-\item{.match}{Comparison mode for string pairs: \code{"exact"} (default),
-\code{"contains"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).
-\code{\link[=pz_regex]{pz_regex()}} values carry their own flags and ignore \code{.match}.}
-
 \item{.not}{Invert the combined expectation?}
 
 \item{.timeout}{Seconds to wait; \code{NULL} uses the session default.}
@@ -38,14 +27,13 @@ or single \code{\link[=pz_regex]{pz_regex()}} values; use backticks for names su
 \description{
 \code{\link[=pz_expect_attr]{pz_expect_attr()}} passes when at least one element matches and every
 matched element satisfies every named attribute/value pair in \code{...}.
-Missing attributes satisfy no pair. Comparisons are exact by default;
-\code{.match = "contains"} or \code{"regex"} applies to all string pairs in the
-call.
+Missing attributes satisfy no pair. String values compare by exact
+equality after whitespace normalization.
 
 A pair's value may instead be a single \code{\link[=pz_regex]{pz_regex()}}, matched in Chrome
 with JavaScript \code{RegExp} syntax against the whitespace-collapsed,
-trimmed attribute. Regex and string pairs can mix in one call;
-\code{.match} doesn't apply to regex values, and a missing attribute never
+trimmed attribute (\code{fixed = TRUE} for substring matching). Regex and
+string pairs can mix in one call, and a missing attribute never
 matches one, not even an empty pattern.
 
 A length-1 value applies to every element. A vector requires exactly
@@ -62,7 +50,8 @@ retry, timeout, and bridge behavior shared by all expectations.
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_expect_attr(
-  pz_loc(".task", has_text = "tax"), `data-priority` = "high"
+  pz_loc(".task", match = pz_regex("tax", fixed = TRUE)),
+  `data-priority` = "high"
 )
 
 page |>

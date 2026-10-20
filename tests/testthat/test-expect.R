@@ -127,64 +127,42 @@ test_that("pz_expect_hidden is pz_expect_visible(not = TRUE)", {
   )
 })
 
-test_that("pz_expect_text contains, exact, and regex, whitespace-collapsed", {
+test_that("pz_expect_text matches exactly, whitespace-collapsed", {
   page <- local_elements_page()
 
-  pz_expect_text(page, "otters", target = ".story")
-  pz_expect_text(page, "otters", ".story")
-  pz_expect_text(
-    page,
-    "Once there were otters.",
-    target = ".story",
-    match = "exact"
+  pz_expect_text(page, "Once there were otters.", target = ".story")
+  pz_expect_text(page, "Once there were otters.", ".story")
+  # Bare strings are exact: a substring no longer passes.
+  testthat::expect_failure(
+    pz_expect_text(page, "otters", target = ".story", timeout = 0)
   )
-  pz_expect_text(page, "ott+ers", target = ".story", match = "regex")
+  # Substring matching is a conscious pz_regex(fixed = TRUE) choice.
+  pz_expect_text(page, pz_regex("otters", fixed = TRUE), target = ".story")
+  pz_expect_text(page, pz_regex("ott+ers"), target = ".story")
   # The fixture text runs "  Once   there were   otters.  "; both sides
   # collapse before comparing.
-  pz_expect_text(
-    page,
-    "Once   there were otters.",
-    target = ".story",
-    match = "exact"
-  )
+  pz_expect_text(page, "Once   there were otters.", target = ".story")
   # A single value applies to every match.
-  pz_expect_text(page, "same words", target = ".twin", match = "exact")
+  pz_expect_text(page, "same words", target = ".twin")
 })
 
 test_that("pz_expect_text compares vectors pairwise in order", {
   page <- local_elements_page()
   texts <- c("What's the weather?", "The weather is sunny.", "Bring a hat.")
 
-  pz_expect_text(page, texts, target = ".message", match = "exact")
-  pz_expect_text(
-    page,
-    c("same words", "same words"),
-    target = ".twin",
-    match = "exact"
-  )
+  pz_expect_text(page, texts, target = ".message")
+  pz_expect_text(page, c("same words", "same words"), target = ".twin")
 
   local_outside_testthat()
   # Wrong order: pairwise comparison fails.
   expect_error(
-    pz_expect_text(
-      page,
-      rev(texts),
-      target = ".message",
-      match = "exact",
-      timeout = 0
-    ),
+    pz_expect_text(page, rev(texts), target = ".message", timeout = 0),
     class = "paparazzi_expectation_failure"
   )
   # Length n requires exactly n matches: two values against three
   # elements never passes.
   expect_error(
-    pz_expect_text(
-      page,
-      texts[1:2],
-      target = ".message",
-      match = "exact",
-      timeout = 0
-    ),
+    pz_expect_text(page, texts[1:2], target = ".message", timeout = 0),
     class = "paparazzi_expectation_failure"
   )
 })
@@ -198,7 +176,13 @@ test_that("pz_expect_text with not = TRUE", {
   # Partial satisfaction fails the negation too: 3 of 6 .btn contain
   # "Save", and the SPEC's negation needs NO match to satisfy.
   testthat::expect_failure(
-    pz_expect_text(page, "Save", target = ".btn", not = TRUE, timeout = 0)
+    pz_expect_text(
+      page,
+      pz_regex("Save", fixed = TRUE),
+      target = ".btn",
+      not = TRUE,
+      timeout = 0
+    )
   )
   # Same for vectors: the first .twin satisfies its pairwise text, so
   # the negation fails even though the second pair doesn't match.
@@ -243,16 +227,18 @@ test_that("pz_expect_text failure shows the last seen text", {
     class = "paparazzi_expectation_failure"
   )
   msg <- conditionMessage(err)
-  expect_match(msg, 'Expected text to contain "penguins"', fixed = TRUE)
+  expect_match(msg, 'Expected text to be "penguins"', fixed = TRUE)
   expect_match(msg, "Target: `.story`", fixed = TRUE)
-  expect_match(msg, 'Last seen: "Once there were otters."', fixed = TRUE)
+  # Diagnostics keep the raw text: the fixture's leading whitespace
+  # survives as a space after the quote (cli collapses the runs).
+  expect_match(msg, '" Once there were otters.', fixed = TRUE)
   expect_match(msg, "Waited", fixed = TRUE)
 })
 
 test_that("target = NULL at the root resolves to document.body", {
   page <- local_elements_page()
 
-  pz_expect_text(page, "otters")
+  pz_expect_text(page, pz_regex("otters", fixed = TRUE))
 
   local_outside_testthat()
   err <- expect_error(
@@ -321,10 +307,6 @@ test_that("expectations validate their inputs", {
   expect_error(pz_expect_exists(page, target = ".btn", timeout = -1), "timeout")
   expect_error(pz_expect_text(page, 1), "character")
   expect_error(
-    pz_expect_text(page, "x", target = ".btn", match = "near"),
-    "contains"
-  )
-  expect_error(
     pz_expect_visible(page, target = list()),
     class = "paparazzi_error_target"
   )
@@ -389,11 +371,18 @@ test_that("expectations resolve inside the current scope", {
     ctx |> pz_expect_count(1, target = ".sc-label", timeout = 0)
   )
   expect_invisible(
-    ctx |> pz_expect_text("shared", target = ".sc-target", timeout = 0)
+    ctx |>
+      pz_expect_text(
+        pz_regex("shared", fixed = TRUE),
+        target = ".sc-target",
+        timeout = 0
+      )
   )
   # NULL means the scope itself: the pinned #scope-b section.
   expect_invisible(ctx |> pz_expect_count(1, timeout = 0))
-  expect_invisible(ctx |> pz_expect_text("B1", timeout = 0))
+  expect_invisible(
+    ctx |> pz_expect_text(pz_regex("B1", fixed = TRUE), timeout = 0)
+  )
   # A narrowed scope's own element.
   item <- pz_find_nth(ctx, 1, target = ".sc-item")
   expect_invisible(item |> pz_expect_text("B1", timeout = 0))
@@ -590,54 +579,43 @@ test_that("state expectations work from a scoped context", {
 test_that("pz_expect_value compares the value property", {
   page <- local_state_page()
 
-  pz_expect_value(page, "hello", target = "#val-text")
-  pz_expect_value(page, "hello world", target = "#val-text", match = "exact")
-  pz_expect_value(page, "^h", target = "#val-text", match = "regex")
+  pz_expect_value(page, "hello world", target = "#val-text")
+  # Substrings need an explicit fixed matcher now.
+  pz_expect_value(page, pz_regex("hello", fixed = TRUE), target = "#val-text")
+  pz_expect_value(page, pz_regex("^h"), target = "#val-text")
   # A select's value is its selected option.
-  pz_expect_value(page, "b", target = "#val-select", match = "exact")
+  pz_expect_value(page, "b", target = "#val-select")
   # A checkbox's value is its value attribute, checked or not.
-  pz_expect_value(page, "cb-custom", target = "#val-check", match = "exact")
+  pz_expect_value(page, "cb-custom", target = "#val-check")
 })
 
 test_that("pz_expect_value collapses whitespace on both sides", {
   page <- local_state_page()
 
   # The textarea holds "line one\nline two"; both sides collapse.
+  pz_expect_value(page, "line one line two", target = "#val-area")
+  # A fixed needle normalizes too before substring matching.
   pz_expect_value(
     page,
-    "line one line two",
-    target = "#val-area",
-    match = "exact"
+    pz_regex("line   one", fixed = TRUE),
+    target = "#val-area"
   )
-  pz_expect_value(page, "line   one", target = "#val-area")
 })
 
 test_that("pz_expect_value compares vectors pairwise in order", {
   page <- local_state_page()
   values <- c("alpha", "beta", "gamma")
 
-  pz_expect_value(page, values, target = ".val-line", match = "exact")
+  pz_expect_value(page, values, target = ".val-line")
 
   local_outside_testthat()
   expect_error(
-    pz_expect_value(
-      page,
-      rev(values),
-      target = ".val-line",
-      match = "exact",
-      timeout = 0
-    ),
+    pz_expect_value(page, rev(values), target = ".val-line", timeout = 0),
     class = "paparazzi_expectation_failure"
   )
   # Length n requires exactly n matches.
   expect_error(
-    pz_expect_value(
-      page,
-      values[1:2],
-      target = ".val-line",
-      match = "exact",
-      timeout = 0
-    ),
+    pz_expect_value(page, values[1:2], target = ".val-line", timeout = 0),
     class = "paparazzi_expectation_failure"
   )
 })
@@ -665,7 +643,7 @@ test_that("pz_expect_value treats a missing value property as unsatisfied", {
   )
   expect_match(
     conditionMessage(err),
-    'Expected value to contain "anything"',
+    'Expected value to be "anything"',
     fixed = TRUE
   )
   expect_match(conditionMessage(err), 'Last seen: "NA"', fixed = TRUE)
@@ -678,7 +656,7 @@ test_that("pz_expect_value follows a typed value", {
     page,
     "document.getElementById('val-text').value = 'typed otters'"
   )
-  pz_expect_value(page, "typed otters", target = "#val-text", match = "exact")
+  pz_expect_value(page, "typed otters", target = "#val-text")
 
   # And it retries: the input only carries the text after a timer.
   pz_evaluate(
@@ -688,13 +666,7 @@ test_that("pz_expect_value follows a typed value", {
   }, 300)",
     await = FALSE
   )
-  pz_expect_value(
-    page,
-    "later",
-    target = "#val-line-1",
-    match = "exact",
-    timeout = 5
-  )
+  pz_expect_value(page, "later", target = "#val-line-1", timeout = 5)
 })
 
 test_that("pz_expect_attr checks named attribute pairs", {
@@ -706,8 +678,12 @@ test_that("pz_expect_attr checks named attribute pairs", {
     href = "https://example.com/page",
     target = "_blank"
   )
-  pz_expect_attr(page, "#link-one", href = "example.com", .match = "contains")
-  pz_expect_attr(page, "#link-one", href = "^https://", .match = "regex")
+  pz_expect_attr(
+    page,
+    "#link-one",
+    href = pz_regex("example.com", fixed = TRUE)
+  )
+  pz_expect_attr(page, "#link-one", href = pz_regex("^https://"))
   pz_expect_attr(page, "#no-href", href = "whatever", .not = TRUE, .timeout = 0)
   pz_expect_attr(
     page,
@@ -769,6 +745,18 @@ test_that("pz_expect_attr compares vectors pairwise in order", {
 
   pz_expect_attr(page, ".attr-line", href = hrefs)
   pz_expect_attr(page, ".attr-line", href = hrefs, class = "attr-line")
+  testthat::expect_failure(
+    pz_expect_attr(page, "#attr-line-1", href = hrefs, .timeout = 0)
+  )
+  pz_expect_attr(page, "#attr-line-1", href = hrefs, .not = TRUE, .timeout = 0)
+  pz_expect_attr(
+    page,
+    "#attr-line-1",
+    href = hrefs,
+    class = "attr-line",
+    .not = TRUE,
+    .timeout = 0
+  )
 
   local_outside_testthat()
   err <- expect_error(
@@ -937,12 +925,12 @@ test_that("pz_expect_js works from a scoped context", {
   ctx |> pz_expect_js("el => el.scrollTop > 0")
 })
 
-test_that("pz_expect_title matches contains, exact, and regex", {
+test_that("pz_expect_title matches exactly or by pz_regex", {
   page <- local_state_page()
 
-  pz_expect_title(page, "state fixture")
-  pz_expect_title(page, "paparazzi state fixture", match = "exact")
-  pz_expect_title(page, "state|unit", match = "regex")
+  pz_expect_title(page, "paparazzi state fixture")
+  pz_expect_title(page, pz_regex("state fixture", fixed = TRUE))
+  pz_expect_title(page, pz_regex("state|unit"))
   pz_expect_title(page, "renamed", not = TRUE)
 })
 
@@ -955,7 +943,7 @@ test_that("pz_expect_title failure uses the classed format", {
     class = "paparazzi_expectation_failure"
   )
   msg <- conditionMessage(err)
-  expect_match(msg, 'Expected title to contain "nope"', fixed = TRUE)
+  expect_match(msg, 'Expected title to be "nope"', fixed = TRUE)
   expect_match(msg, "Target: the page", fixed = TRUE)
   expect_match(msg, 'Last seen: "paparazzi state fixture"', fixed = TRUE)
   expect_match(msg, "Waited", fixed = TRUE)
@@ -972,12 +960,12 @@ test_that("pz_expect_title retries until the title changes", {
   pz_expect_title(page, "renamed title", timeout = 5)
 })
 
-test_that("pz_expect_url matches contains, exact, and regex", {
+test_that("pz_expect_url matches exactly or by pz_regex", {
   page <- local_state_page()
 
-  pz_expect_url(page, "state.html")
-  pz_expect_url(page, pz_get_url(page), match = "exact")
-  pz_expect_url(page, "state[.]html$", match = "regex")
+  pz_expect_url(page, pz_get_url(page))
+  pz_expect_url(page, pz_regex("state.html", fixed = TRUE))
+  pz_expect_url(page, pz_regex("state[.]html$"))
   # Fixture pages never load external hosts.
   pz_expect_url(page, "example.com", not = TRUE)
 })
@@ -993,7 +981,7 @@ test_that("pz_expect_url failure uses the classed format", {
   msg <- conditionMessage(err)
   expect_match(
     msg,
-    'Expected URL to contain "https://example.com"',
+    'Expected URL to be "https://example.com"',
     fixed = TRUE
   )
   expect_match(msg, "Target: the page", fixed = TRUE)
@@ -1008,15 +996,15 @@ test_that("pz_expect_url retries until the hash lands", {
     "setTimeout(function () { location.hash = 'later'; }, 300)",
     await = FALSE
   )
-  pz_expect_url(page, "#later", timeout = 5)
+  pz_expect_url(page, pz_regex("#later", fixed = TRUE), timeout = 5)
 })
 
 test_that("page-level expectations work from a scoped context", {
   page <- local_state_page()
   ctx <- pz_find(page, "#btn-one")
 
-  ctx |> pz_expect_title("state fixture")
-  ctx |> pz_expect_url("state.html")
+  ctx |> pz_expect_title("paparazzi state fixture")
+  ctx |> pz_expect_url(pz_regex("state.html", fixed = TRUE))
 })
 
 test_that("pz_expect_text matches a pz_regex in Chrome, collapsed and trimmed", {
@@ -1044,20 +1032,34 @@ test_that("pz_expect_text matches a pz_regex in Chrome, collapsed and trimmed", 
       timeout = 0
     )
   )
-  pz_expect_text(page, pz_regex("^once there", flags = "i"), target = ".story")
+  pz_expect_text(
+    page,
+    pz_regex("^once there", ignore_case = TRUE),
+    target = ".story"
+  )
 })
 
 test_that("one regex value normalizes Unicode observations across matching APIs", {
   page <- local_page(test_path("fixtures", "matching.html"))
   label <- pz_regex("^Save now$")
-  target <- pz_loc(".label", has_text = label)
+  target <- pz_loc(".label", match = label)
   expect_identical(pz_get_attr(page, "id", target), c("first", "second"))
   pz_expect_text(page, label, target)
+  # Bare strings normalize identically, scalars and pairwise vectors.
+  pz_expect_text(page, "Save now", target)
+  pz_expect_text(page, c("Save now", "Save now"), target)
   pz_evaluate(
     page,
     "(() => { const label = document.querySelector('#first').textContent; document.querySelector('#invoice').value = label; document.querySelector('#first').setAttribute('data-label', label); document.title = label; location.hash = 'report-42'; })()"
   )
   pz_expect_value(page, label, "#invoice")
+  # Mixed pairs: exact strings and regexes normalize the same way.
+  pz_expect_attr(
+    page,
+    "#first",
+    `data-label` = "Save now",
+    id = pz_regex("^first$")
+  )
   pz_expect_attr(page, "#first", `data-label` = label)
   pz_expect_title(page, label)
   pz_expect_url(page, pz_regex("#report-\\d+$"))
@@ -1073,19 +1075,14 @@ test_that("pz_regex matching uses the JavaScript dialect, not R's", {
     pz_regex("^Once there were (?=otters)otters[.]$"),
     target = ".story"
   )
-  # Unicode property escapes need the u flag.
-  pz_expect_text(page, pz_regex("^\\p{Lu}nce", flags = "u"), target = ".story")
+  # Unicode property escapes work: u mode is always on.
+  pz_expect_text(page, pz_regex("^\\p{Lu}nce"), target = ".story")
 
-  # POSIX classes keep their R meaning in legacy string matching...
-  pz_evaluate(page, "document.querySelector('.story').textContent = 'abc'")
-  pz_expect_text(page, "^[[:alpha:]]+$", target = ".story", match = "regex")
-  # ...but JavaScript reads [[:alpha:]] as a plain character class.
-  pz_expect_text(
-    page,
-    pz_regex("^[[:alpha:]]+$"),
-    target = ".story",
-    not = TRUE,
-    timeout = 0
+  # The POSIX class syntax accepted by R is invalid in Unicode JS mode.
+  expect_error(
+    pz_expect_text(page, pz_regex("^[[:alpha:]]+$"), target = ".story"),
+    "Invalid pz_regex",
+    class = "paparazzi_error_js"
   )
 })
 
@@ -1099,6 +1096,8 @@ test_that("pz_regex transport is verbatim and Unicode whitespace collapses", {
     "document.querySelector('.story').textContent = 'Caf\\u00e9 \\u00a0\\u00a0 au lait'"
   )
   pz_expect_text(page, pz_regex("^Caf\\u00e9 au lait$"), target = ".story")
+  # Bare strings normalize in the same pass, so plain spaces match too.
+  pz_expect_text(page, "Caf\u00e9 au lait", target = ".story")
 
   # Quotes, backticks, $, and braces cross to Chrome unchanged.
   pz_evaluate(
@@ -1124,12 +1123,86 @@ test_that("pz_regex transport is verbatim and Unicode whitespace collapses", {
   )
 })
 
-test_that("match governs strings only when the value is a pz_regex", {
+test_that("the removed match mode arguments are rejected", {
+  page <- local_state_page()
+
+  expect_error(
+    pz_expect_text(page, "x", target = "p", match = "contains"),
+    "match"
+  )
+  expect_error(
+    pz_expect_value(page, "x", target = "#val-text", match = "exact"),
+    "match"
+  )
+  expect_error(pz_expect_url(page, "x", match = "regex"), "match")
+  expect_error(pz_expect_title(page, "x", match = "exact"), "match")
+  expect_error(
+    pz_expect_attr(page, "#link-one", href = "x", .match = "contains"),
+    "removed"
+  )
+})
+
+test_that("content expectations reject mixed pairwise matcher collections", {
+  page <- local_elements_page()
+  mixed <- c("same words", pz_regex("same"))
+  expect_error(pz_expect_text(page, mixed, target = ".twin"), "character")
+  expect_error(pz_expect_value(page, mixed, target = ".twin"), "character")
+  expect_error(pz_expect_attr(page, ".twin", class = mixed), "character")
+})
+
+test_that("invalid regex source aborts a nonzero expectation wait", {
+  page <- local_elements_page()
+  expect_error(
+    pz_expect_text(
+      page,
+      pz_regex("["),
+      target = ".never",
+      not = TRUE,
+      timeout = 5
+    ),
+    "Invalid pz_regex",
+    class = "paparazzi_error_js"
+  )
+})
+
+test_that("pz_js() values are rejected by content expectations", {
+  page <- local_state_page()
+  js <- pz_js("el => true")
+
+  expect_error(pz_expect_text(page, js, target = "p"), "character")
+  expect_error(pz_expect_value(page, js, target = "#val-text"), "character")
+  expect_error(pz_expect_url(page, js), "string")
+  expect_error(pz_expect_title(page, js), "string")
+  expect_error(pz_expect_attr(page, "#link-one", href = js), "character")
+})
+
+test_that("pz_regex(fixed = TRUE) matches metacharacters literally", {
   page <- local_elements_page()
 
-  # With match = "exact" a plain string would have to equal the whole
-  # text; the regex value matches on its own terms.
-  pz_expect_text(page, pz_regex("^same"), target = ".twin", match = "exact")
+  literal <- "a+b (c) [x] $5 C:\\path"
+  pz_evaluate(
+    page,
+    paste0(
+      "document.querySelector('.story').textContent = ",
+      js_literal(literal)
+    )
+  )
+  expect_identical(pz_get_text(page, ".story", raw = TRUE), literal)
+  pz_expect_text(page, pz_regex(literal, fixed = TRUE), target = ".story")
+  # As a regex the same source means something else and does not match.
+  pz_expect_text(
+    page,
+    pz_regex("a+b (c) [x] $5"),
+    target = ".story",
+    not = TRUE,
+    timeout = 0
+  )
+  # ignore_case applies to fixed needles too.
+  pz_expect_text(
+    page,
+    pz_regex("A+B (C)", fixed = TRUE, ignore_case = TRUE),
+    target = ".story"
+  )
 })
 
 test_that("pz_expect_text regex failure shows the raw text", {
@@ -1143,7 +1216,7 @@ test_that("pz_expect_text regex failure shows the raw text", {
   msg <- conditionMessage(err)
   expect_match(
     msg,
-    'Expected text to match pz_regex("^Once$", flags = "")',
+    'Expected text to match pz_regex("^Once$")',
     fixed = TRUE
   )
   expect_match(msg, "Target: `.story`", fixed = TRUE)
@@ -1280,7 +1353,11 @@ test_that("pz_expect_value matches a pz_regex and reports the raw value", {
   page <- local_state_page()
 
   pz_expect_value(page, pz_regex("^hello world$"), target = "#val-text")
-  pz_expect_value(page, pz_regex("^HELLO", flags = "i"), target = "#val-text")
+  pz_expect_value(
+    page,
+    pz_regex("^HELLO", ignore_case = TRUE),
+    target = "#val-text"
+  )
   # The textarea holds "line one\nline two"; Chrome collapses before
   # matching.
   pz_expect_value(page, pz_regex("^line one line two$"), target = "#val-area")
@@ -1302,7 +1379,7 @@ test_that("pz_expect_value matches a pz_regex and reports the raw value", {
   msg <- conditionMessage(err)
   expect_match(
     msg,
-    'Expected value to match pz_regex("^nope$", flags = "")',
+    'Expected value to match pz_regex("^nope$")',
     fixed = TRUE
   )
   # Diagnostics show the raw value: the leading whitespace survives as a
@@ -1314,20 +1391,18 @@ test_that("pz_expect_value matches a pz_regex and reports the raw value", {
 test_that("pz_expect_attr mixes pz_regex and string pairs", {
   page <- local_state_page()
 
-  # .match governs only the string pair; the regex carries its own flags.
+  # String pairs compare exactly; regex pairs carry their own options.
   pz_expect_attr(
     page,
     "#link-one",
-    href = pz_regex("^HTTPS://EXAMPLE[.]COM/PAGE$", flags = "i"),
-    target = "_bla",
-    .match = "contains"
+    href = pz_regex("^HTTPS://EXAMPLE[.]COM/PAGE$", ignore_case = TRUE),
+    target = "_blank"
   )
   pz_expect_attr(
     page,
     "#link-one",
     href = pz_regex("^https:"),
-    target = "_bl[a-z]+$",
-    .match = "regex"
+    target = pz_regex("_bl[a-z]+$")
   )
   # String vectors still compare pairwise while the regex checks each
   # element.
@@ -1382,7 +1457,7 @@ test_that("pz_expect_attr regex pairs report the raw attribute", {
   msg <- conditionMessage(err)
   expect_match(
     msg,
-    'Expected attribute "data-note" to match pz_regex("^b$", flags = "")',
+    'Expected attribute "data-note" to match pz_regex("^b$")',
     fixed = TRUE
   )
   # Raw diagnostics again: a space after the quote, not the collapsed
@@ -1394,14 +1469,14 @@ test_that("pz_expect_url and pz_expect_title accept a pz_regex", {
   page <- local_state_page()
 
   pz_expect_url(page, pz_regex("state[.]html$"))
-  pz_expect_url(page, pz_regex("STATE[.]HTML$", flags = "i"))
+  pz_expect_url(page, pz_regex("STATE[.]HTML$", ignore_case = TRUE))
   pz_expect_url(page, pz_regex("^data:"), not = TRUE, timeout = 0)
 
   pz_expect_title(page, pz_regex("^paparazzi state fixture$"))
   testthat::expect_failure(
     pz_expect_title(page, pz_regex("^PAPARAZZI"), timeout = 0)
   )
-  pz_expect_title(page, pz_regex("^PAPARAZZI", flags = "i"))
+  pz_expect_title(page, pz_regex("^PAPARAZZI", ignore_case = TRUE))
 })
 
 test_that("page-level pz_regex failures keep the classed format", {
@@ -1415,7 +1490,7 @@ test_that("page-level pz_regex failures keep the classed format", {
   msg <- conditionMessage(err)
   expect_match(
     msg,
-    'Expected title to match pz_regex("^nope$", flags = "")',
+    'Expected title to match pz_regex("^nope$")',
     fixed = TRUE
   )
   expect_match(msg, "Target: the page", fixed = TRUE)

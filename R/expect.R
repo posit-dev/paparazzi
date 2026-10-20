@@ -178,7 +178,7 @@ pz_expect_count <- function(
 #'   pz_expect_visible(target = "#help")
 #'
 #' # Every match must pass, so check one task or narrow the target
-#' page |> pz_expect_visible(target = pz_loc(".task", has_text = "passport"))
+#' page |> pz_expect_visible(target = pz_loc(".task", match = pz_regex("passport", fixed = TRUE)))
 #' pz_close(page)
 #'
 #' @export
@@ -230,12 +230,12 @@ pz_expect_hidden <- function(
 #' `not = TRUE`, the expectation passes when no match satisfies `text`,
 #' including when nothing matches.
 #'
-#' Pass a single [pz_regex()] value instead of strings to match with
-#' Chrome's JavaScript `RegExp` dialect. paparazzi collapses whitespace
-#' and trims each element's text in the browser before matching, but
-#' never changes the pattern source; one regex value applies to every
-#' match. `match` governs plain strings only, because a regex value
-#' carries its own flags.
+#' Bare strings compare by exact, case-sensitive equality with the
+#' element's text. Pass a single [pz_regex()] value instead of strings
+#' to match with Chrome's JavaScript `RegExp` dialect (`fixed = TRUE`
+#' for substring matching). paparazzi collapses whitespace and trims
+#' each element's text in the browser before matching, but never
+#' changes the pattern source; one regex value applies to every match.
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
 #' `"paparazzi_expectation_failure"`; inside testthat, the failure is
@@ -246,9 +246,6 @@ pz_expect_hidden <- function(
 #' @param text A character vector of expected text: length 1 applies to
 #'   every match, length `n` is compared pairwise in order. Or a single
 #'   [pz_regex()] value, matched against every match in Chrome.
-#' @param match How to compare `text` when it's a character vector:
-#'   `"contains"` (substring), `"exact"`, or `"regex"` (an R regex
-#'   matched with [grepl()]). Ignored for [pz_regex()] values.
 #' @inheritParams pz_expect_exists
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
 #'   specs and strings (a union matching any of them). `NULL` means the
@@ -259,16 +256,19 @@ pz_expect_hidden <- function(
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_expect_text("Tasks", target = "h1", match = "exact")
-#' page |> pz_expect_text("passport", target = pz_loc(".task", which = "first"))
+#' page |> pz_expect_text("Tasks", target = "h1")
+#'
+#' # Substring matching uses pz_regex() with fixed = TRUE
+#' page |>
+#'   pz_expect_text(
+#'     pz_regex("passport", fixed = TRUE),
+#'     target = pz_loc(".task", which = "first")
+#'   )
 #'
 #' # A vector compares pairwise with the matches, in order
 #' page |> pz_expect_text(c("All", "Open", "Done"), target = ".filters a")
 #'
-#' # Regular expressions use R's syntax
-#' page |> pz_expect_text("^[A-Z]", target = ".task-title", match = "regex")
-#'
-#' # A pz_regex() value uses the browser's JavaScript dialect instead
+#' # Regular expressions use the browser's JavaScript dialect
 #' page |> pz_expect_text(pz_regex("^[A-Z]"), target = ".task-title")
 #'
 #' # On failure, the error shows the target and the last text seen
@@ -281,30 +281,20 @@ pz_expect_text <- function(
   text,
   target = NULL,
   ...,
-  match = c("contains", "exact", "regex"),
   not = FALSE,
   timeout = NULL
 ) {
   check_dots_empty()
-  if (is_regex(text)) {
-    return(expect_impl(
-      ctx = ctx,
-      target = target,
-      not = not,
-      timeout = timeout,
-      check = check_regex_text(text, not),
-      description = expect_headline_regex(text, not)
-    ))
+  if (!is_regex(text)) {
+    check_character(text)
   }
-  check_character(text)
-  match <- arg_match(match)
   expect_impl(
     ctx = ctx,
     target = target,
     not = not,
     timeout = timeout,
-    check = check_text(collapse_ws(text), match, not),
-    description = expect_headline_text(text, match, not)
+    check = check_text(text, not),
+    description = expect_headline_text(text, not)
   )
 }
 
@@ -530,18 +520,19 @@ pz_expect_in_viewport <- function(
 #'
 #' @inheritParams pz_expect_text
 #' @param value A character vector of expected values: length 1 applies
-#'   to every match, length `n` is compared pairwise in order. Or a
+#'   to every match, length `n` is compared pairwise in order. Strings
+#'   compare by exact equality after whitespace normalization. Or a
 #'   single [pz_regex()] value, matched against every match in Chrome.
 #'
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_expect_value("normal", target = "#task_priority", match = "exact")
+#' page |> pz_expect_value("normal", target = "#task_priority")
 #' page |> pz_expect_value(pz_regex("^(low|normal|high)$"), target = "#task_priority")
 #'
 #' page |>
 #'   pz_act_type("Buy milk", target = "#task_title") |>
-#'   pz_expect_value("milk", target = "#task_title")
+#'   pz_expect_value(pz_regex("milk", fixed = TRUE), target = "#task_title")
 #' pz_close(page)
 #'
 #' @export
@@ -550,30 +541,20 @@ pz_expect_value <- function(
   value,
   target = NULL,
   ...,
-  match = c("contains", "exact", "regex"),
   not = FALSE,
   timeout = NULL
 ) {
   check_dots_empty()
-  if (is_regex(value)) {
-    return(expect_impl(
-      ctx = ctx,
-      target = target,
-      not = not,
-      timeout = timeout,
-      check = check_regex_value(value, not),
-      description = expect_headline_regex(value, not, label = "value")
-    ))
+  if (!is_regex(value)) {
+    check_character(value)
   }
-  check_character(value)
-  match <- arg_match(match)
   expect_impl(
     ctx = ctx,
     target = target,
     not = not,
     timeout = timeout,
-    check = check_text_like(get_value_js, collapse_ws(value), match, not),
-    description = expect_headline_text(value, match, not, label = "value")
+    check = check_value(value, not),
+    description = expect_headline_text(value, not, label = "value")
   )
 }
 
@@ -582,14 +563,13 @@ pz_expect_value <- function(
 #' @description
 #' [pz_expect_attr()] passes when at least one element matches and every
 #' matched element satisfies every named attribute/value pair in `...`.
-#' Missing attributes satisfy no pair. Comparisons are exact by default;
-#' `.match = "contains"` or `"regex"` applies to all string pairs in the
-#' call.
+#' Missing attributes satisfy no pair. String values compare by exact
+#' equality after whitespace normalization.
 #'
 #' A pair's value may instead be a single [pz_regex()], matched in Chrome
 #' with JavaScript `RegExp` syntax against the whitespace-collapsed,
-#' trimmed attribute. Regex and string pairs can mix in one call;
-#' `.match` doesn't apply to regex values, and a missing attribute never
+#' trimmed attribute (`fixed = TRUE` for substring matching). Regex and
+#' string pairs can mix in one call, and a missing attribute never
 #' matches one, not even an empty pattern.
 #'
 #' A length-1 value applies to every element. A vector requires exactly
@@ -609,9 +589,6 @@ pz_expect_value <- function(
 #'   or single [pz_regex()] values; use backticks for names such as
 #'   `aria-expanded`. Dynamic dots support splicing a named list with
 #'   `!!!`.
-#' @param .match Comparison mode for string pairs: `"exact"` (default),
-#'   `"contains"`, or `"regex"` (an R regex matched with [grepl()]).
-#'   [pz_regex()] values carry their own flags and ignore `.match`.
 #' @param .not Invert the combined expectation?
 #' @param .timeout Seconds to wait; `NULL` uses the session default.
 #'
@@ -619,7 +596,8 @@ pz_expect_value <- function(
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
 #' page |> pz_expect_attr(
-#'   pz_loc(".task", has_text = "tax"), `data-priority` = "high"
+#'   pz_loc(".task", match = pz_regex("tax", fixed = TRUE)),
+#'   `data-priority` = "high"
 #' )
 #'
 #' page |>
@@ -633,24 +611,17 @@ pz_expect_attr <- function(
   ctx,
   .target = NULL,
   ...,
-  .match = c("exact", "contains", "regex"),
   .not = FALSE,
   .timeout = NULL
 ) {
   pairs <- expect_attr_pairs(list2(...), call = environment())
-  .match <- arg_match(.match)
-  check <- if (any(map_lgl(pairs, is_regex))) {
-    check_attr_pairs_regex(pairs, .match, .not)
-  } else {
-    check_attr_pairs(pairs, .match, .not)
-  }
   expect_impl(
     ctx = ctx,
     target = .target,
     not = .not,
     timeout = .timeout,
-    check = check,
-    description = expect_headline_attrs(pairs, .match, .not)
+    check = check_attr_pairs(pairs, .not),
+    description = expect_headline_attrs(pairs, .not)
   )
 }
 
@@ -673,7 +644,7 @@ pz_expect_attr <- function(
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' water <- pz_loc(".task", has_text = "Water")
+#' water <- pz_loc(".task", match = pz_regex("Water", fixed = TRUE))
 #' page |> pz_expect_class("done", target = water, not = TRUE)
 #'
 #' page |>
@@ -781,11 +752,10 @@ pz_expect_js <- function(
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
 #' @inheritParams pz_act_click
-#' @param url The expected URL: a single string, or a single [pz_regex()]
-#'   value matched in Chrome with JavaScript `RegExp` syntax.
-#' @param match How to compare `url` when it's a string: `"contains"`
-#'   (substring), `"exact"`, or `"regex"` (an R regex matched with
-#'   [grepl()]). Ignored for [pz_regex()] values.
+#' @param url The expected URL: a single string compared by exact
+#'   equality after whitespace normalization, or a single [pz_regex()]
+#'   value matched in Chrome with JavaScript `RegExp` syntax
+#'   (`fixed = TRUE` for substring matching).
 #' @param not Invert the check.
 #' @param timeout Seconds to wait for the expectation to pass; `NULL`
 #'   (default) uses the session default, `0` checks once.
@@ -793,11 +763,10 @@ pz_expect_js <- function(
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_expect_url("tasks.html")
+#' page |> pz_expect_url(pz_regex("tasks.html", fixed = TRUE))
 #'
 #' page |>
-#'   pz_act_click(pz_loc(".filters a", has_text = "Done")) |>
-#'   pz_expect_url("#done$", match = "regex") |>
+#'   pz_act_click(pz_loc(".filters a", match = "Done")) |>
 #'   pz_expect_url(pz_regex("#done$"))
 #' pz_close(page)
 #'
@@ -806,31 +775,20 @@ pz_expect_url <- function(
   ctx,
   url,
   ...,
-  match = c("contains", "exact", "regex"),
   not = FALSE,
   timeout = NULL
 ) {
   check_dots_empty()
-  if (is_regex(url)) {
-    return(expect_page_regex_impl(
-      ctx = ctx,
-      x = url,
-      not = not,
-      timeout = timeout,
-      read = "location.href",
-      description = expect_headline_regex(url, not, label = "URL")
-    ))
+  if (!is_regex(url)) {
+    check_string(url)
   }
-  check_string(url)
-  match <- arg_match(match)
   expect_page_impl(
     ctx = ctx,
-    values = url,
-    match = match,
+    x = url,
     not = not,
     timeout = timeout,
-    read = function() pz_evaluate(ctx, "location.href"),
-    description = expect_headline_text(url, match, not, label = "URL")
+    read = "location.href",
+    description = expect_headline_text(url, not, label = "URL")
   )
 }
 
@@ -847,15 +805,16 @@ pz_expect_url <- function(
 #' retry, timeout, and bridge behavior shared by all expectations.
 #'
 #' @inheritParams pz_expect_url
-#' @param title The expected page title: a single string, or a single
+#' @param title The expected page title: a single string compared by
+#'   exact equality after whitespace normalization, or a single
 #'   [pz_regex()] value matched in Chrome with JavaScript `RegExp`
 #'   syntax.
 #'
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_expect_title("Tasks", match = "exact")
-#' page |> pz_expect_title(pz_regex("^tasks$", flags = "i"))
+#' page |> pz_expect_title("Tasks")
+#' page |> pz_expect_title(pz_regex("^tasks$", ignore_case = TRUE))
 #' pz_close(page)
 #'
 #' @export
@@ -863,31 +822,20 @@ pz_expect_title <- function(
   ctx,
   title,
   ...,
-  match = c("contains", "exact", "regex"),
   not = FALSE,
   timeout = NULL
 ) {
   check_dots_empty()
-  if (is_regex(title)) {
-    return(expect_page_regex_impl(
-      ctx = ctx,
-      x = title,
-      not = not,
-      timeout = timeout,
-      read = "document.title",
-      description = expect_headline_regex(title, not, label = "title")
-    ))
+  if (!is_regex(title)) {
+    check_string(title)
   }
-  check_string(title)
-  match <- arg_match(match)
   expect_page_impl(
     ctx = ctx,
-    values = title,
-    match = match,
+    x = title,
     not = not,
     timeout = timeout,
-    read = function() pz_evaluate(ctx, "document.title"),
-    description = expect_headline_text(title, match, not, label = "title")
+    read = "document.title",
+    description = expect_headline_text(title, not, label = "title")
   )
 }
 
@@ -992,34 +940,6 @@ expect_report <- function(
 
 expect_page_impl <- function(
   ctx,
-  values,
-  match,
-  not,
-  timeout,
-  read,
-  description,
-  call = caller_env()
-) {
-  check_bool(not, call = call)
-  check_context(ctx, call = call)
-  timeout <- resolve_timeout(timeout, ctx$page, call = call)
-  expected <- collapse_ws(values)
-  start <- Sys.time()
-  result <- expect_retry(
-    fn = function() {
-      observed <- read()
-      hit <- expect_text_hit(collapse_ws(observed), expected, match)
-      list(pass = if (not) !hit else hit, observed = paste0('"', observed, '"'))
-    },
-    timeout = timeout,
-    loop = ctx$page$child_loop
-  )
-  waited <- round(as.numeric(difftime(Sys.time(), start, units = "secs")), 1)
-  expect_report(ctx, result, description, "the page", waited, call = call)
-}
-
-expect_page_regex_impl <- function(
-  ctx,
   x,
   not,
   timeout,
@@ -1030,7 +950,7 @@ expect_page_regex_impl <- function(
   check_bool(not, call = call)
   check_context(ctx, call = call)
   timeout <- resolve_timeout(timeout, ctx$page, call = call)
-  js <- expect_page_regex_js(x, read)
+  js <- expect_page_js(x, read)
   start <- Sys.time()
   result <- expect_retry(
     fn = function() {
@@ -1119,11 +1039,43 @@ expect_text_js <- "function() {
   return this.map((el) => el.textContent);
 }"
 
-expect_attrs_js <- function(names) {
+# Expected values travel as JSON inside the function text (the
+# expect_class_js pattern): Chrome receives string and regex specs
+# verbatim, and no CDP argument serialization choices apply.
+expect_attrs_js <- function(pairs) {
+  specs <- vapply(
+    pairs,
+    function(value) {
+      if (is_regex(value)) {
+        js_literal(regex_spec_fields(value))
+      } else {
+        js_literal(list(type = "exact", values = as.list(unname(value))))
+      }
+    },
+    character(1)
+  )
   paste0(
-    "function() { const names = ",
-    js_literal(names, auto_unbox = FALSE),
-    "; return this.map((el) => names.map((name) => el.getAttribute(name))); }"
+    "function() {\n",
+    regex_js_helpers,
+    "  const names = ",
+    js_literal(names(pairs), auto_unbox = FALSE),
+    ";\n  const matchers = [",
+    paste(specs, collapse = ", "),
+    "].map((spec) => {\n",
+    "    if (spec.type === 'regex') {\n",
+    "      const regex = compileRegex(spec);\n",
+    "      return (value) => matchesRegex(value, regex);\n",
+    "    }\n",
+    "    return (value, i) => {\n",
+    "      if (spec.values.length !== 1 && spec.values.length !== this.length) return false;\n",
+    "      const expected = spec.values[spec.values.length === 1 ? 0 : i];\n",
+    "      return expected !== undefined && matchesExact(value, expected);\n",
+    "    };\n",
+    "  });\n",
+    "  return this.map((el, i) => names.map((name, p) => {\n",
+    "    const value = el.getAttribute(name);\n",
+    "    return { value: value, hit: matchers[p](value, i) };\n",
+    "  }));\n}"
   )
 }
 
@@ -1146,75 +1098,64 @@ expect_js_predicate <- function(expr) {
   )
 }
 
-# The regex spec travels as JSON inside the function text (the
-# expect_attrs_js/expect_class_js pattern): Chrome receives the pattern
-# source verbatim, and no CDP argument serialization choices apply.
-expect_regex_values_js <- function(x, read) {
+# Strings and pz_regex() values share one comparison path: the
+# expected values ship as tagged specs, and Chrome collapses, trims and
+# matches while raw values come back for diagnostics. A length-1 spec
+# list broadcasts over every element; length n compares pairwise.
+expect_values_js <- function(values, read) {
+  if (is_regex(values)) {
+    values <- list(values)
+  }
+  specs <- lapply(values, function(value) {
+    if (is_regex(value)) {
+      regex_spec_fields(value)
+    } else {
+      list(type = "exact", value = value)
+    }
+  })
   paste0(
     "function() {\n",
     regex_js_helpers,
-    "  const regex = compileRegex(",
-    js_literal(regex_spec_fields(x)),
-    ");\n  const values = this.map((el) => ",
+    "  const matchers = ",
+    js_literal(specs),
+    ".map((spec) => {\n",
+    "    if (spec.type === 'regex') {\n",
+    "      const regex = compileRegex(spec);\n",
+    "      return (value) => matchesRegex(value, regex);\n",
+    "    }\n",
+    "    return (value) => matchesExact(value, spec.value);\n",
+    "  });\n",
+    "  const values = this.map((el) => ",
     read,
     ");\n",
-    "  return { values: values, hits: values.map((value) => matchesRegex(value, regex)) };\n}"
+    "  const hits = values.map((value, i) => {\n",
+    "    const matcher = matchers[matchers.length === 1 ? 0 : i];\n",
+    "    return matcher === undefined ? false : matcher(value);\n",
+    "  });\n",
+    "  return { values: values, hits: hits };\n}"
   )
 }
 
-expect_regex_text_js <- function(x) {
-  expect_regex_values_js(x, "el.textContent")
-}
-
-expect_regex_value_js <- function(x) {
-  expect_regex_values_js(
-    x,
-    "el.value == null ? null : String(el.value)"
-  )
-}
-
-expect_attrs_regex_js <- function(pairs) {
-  specs <- vapply(
-    pairs,
-    function(value) {
-      if (is_regex(value)) {
-        js_literal(regex_spec_fields(value))
-      } else {
-        "null"
-      }
-    },
-    character(1)
-  )
-  paste0(
-    "function() {\n",
-    regex_js_helpers,
-    "  const names = ",
-    js_literal(names(pairs), auto_unbox = FALSE),
-    ";\n  const regexes = [",
-    paste(specs, collapse = ", "),
-    "].map((spec) => (spec === null ? null : compileRegex(spec)));",
-    "\n  return this.map((el) => names.map((name, p) => {",
-    "\n    const value = el.getAttribute(name);",
-    "\n    const regex = regexes[p];",
-    "\n    return { value: value, hit: regex === null ? null : matchesRegex(value, regex) };",
-    "\n  }));\n}"
-  )
-}
-
-expect_page_regex_js <- function(x, read) {
+expect_page_js <- function(x, read) {
+  spec <- if (is_regex(x)) {
+    js_literal(regex_spec_fields(x))
+  } else {
+    js_literal(list(type = "exact", value = x))
+  }
   paste0(
     "(() => {\n",
     regex_js_helpers,
-    "  const regex = compileRegex(",
-    js_literal(regex_spec_fields(x)),
-    ");\n  const value = ",
+    "  const spec = ",
+    spec,
+    ";\n  const value = ",
     read,
-    ";\n  return { value: value, hit: matchesRegex(value, regex) };\n})()"
+    ";\n  const hit = spec.type === 'regex' ?",
+    " matchesRegex(value, compileRegex(spec)) : matchesExact(value, spec.value);\n",
+    "  return { value: value, hit: hit };\n})()"
   )
 }
 
 regex_compile_js <- function(specs) {
-  specs <- Filter(Negate(is.null), specs)
   paste0(
     "(() => {\n",
     regex_js_helpers,
@@ -1296,58 +1237,51 @@ check_visible <- function(not) {
   check_state(expect_visible_js, not, "visible")
 }
 
-check_text_like <- function(js, values, match, not) {
+# One value applies to every match; vectors require an exact count and
+# pairwise matches. Negation requires no matching pair.
+check_text_like <- function(js, values, not) {
+  n <- if (is_regex(values)) 1L else length(values)
   function(els) {
     if (els$count == 0L) {
+      regex_specs_attempt(els, values)
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
-    vals <- collapse_ws(chr_or_na(els_values(els, js)))
+    res <- els_values(els, js)
+    vals <- chr_or_na(res$values)
     observed <- expect_seen_texts(vals)
-    if (length(values) > 1L && els$count != length(values)) {
+    if (n > 1L && els$count != n) {
       return(list(pass = not, observed = observed))
     }
-    hits <- if (length(values) == 1L) {
-      map_lgl(vals, expect_text_hit, pattern = values, match = match)
-    } else {
-      vapply(
-        seq_along(values),
-        function(i) expect_text_hit(vals[[i]], values[[i]], match),
-        logical(1)
-      )
-    }
+    hits <- map_lgl(res$hits, isTRUE)
     pass <- if (not) !any(hits) else all(hits)
     list(pass = pass, observed = observed)
   }
 }
 
-check_text <- function(text, match, not) {
-  check_text_like(expect_text_js, text, match, not)
+check_text <- function(text, not) {
+  check_text_like(expect_values_js(text, "el.textContent"), text, not)
 }
 
-# The regex path mirrors check_text_like's scalar semantics (one value
-# against every match; negation needs no match at all) but reads raw
-# values for diagnostics: Chrome, not R, does the collapsing, trimming
-# and matching.
-check_regex_text_like <- function(js, x, not) {
-  function(els) {
-    if (els$count == 0L) {
-      regex_compile_attempt(els, list(regex_spec_fields(x)))
-      return(list(pass = not, observed = expect_seen_count(0L)))
-    }
-    res <- els_values(els, js)
-    vals <- chr_or_na(res$values)
-    hits <- map_lgl(res$hits, isTRUE)
-    pass <- if (not) !any(hits) else all(hits)
-    list(pass = pass, observed = expect_seen_texts(vals))
+check_value <- function(value, not) {
+  check_text_like(
+    expect_values_js(value, "el.value == null ? null : String(el.value)"),
+    value,
+    not
+  )
+}
+
+regex_specs_attempt <- function(els, values, call = caller_env()) {
+  if (is_regex(values)) {
+    values <- list(values)
   }
-}
-
-check_regex_text <- function(x, not) {
-  check_regex_text_like(expect_regex_text_js(x), x, not)
-}
-
-check_regex_value <- function(x, not) {
-  check_regex_text_like(expect_regex_value_js(x), x, not)
+  specs <- lapply(values, function(value) {
+    if (is_regex(value)) regex_spec_fields(value)
+  })
+  specs <- Filter(Negate(is.null), specs)
+  if (length(specs) > 0L) {
+    regex_compile_attempt(els, specs, call = call)
+  }
+  invisible(TRUE)
 }
 
 expect_attr_pairs <- function(dots, call = caller_env()) {
@@ -1355,6 +1289,16 @@ expect_attr_pairs <- function(dots, call = caller_env()) {
   if (length(dots) == 0L || is.null(nms) || !all(nzchar(nms))) {
     cli::cli_abort(
       "Provide at least one named attribute/value pair in {.arg ...}.",
+      class = "paparazzi_error_input",
+      call = call
+    )
+  }
+  if (".match" %in% nms) {
+    cli::cli_abort(
+      c(
+        "{.arg .match} was removed from {.fn pz_expect_attr}.",
+        i = "String pairs compare exactly; use {.fn pz_regex} with {.code fixed = TRUE} for substring matching."
+      ),
       class = "paparazzi_error_input",
       call = call
     )
@@ -1371,60 +1315,18 @@ expect_attr_pairs <- function(dots, call = caller_env()) {
       return(value)
     }
     check_character(value, arg = nm, call = call)
-    collapse_ws(value)
+    value
   })
 }
 
-check_attr_pairs <- function(pairs, match, not) {
-  js <- expect_attrs_js(names(pairs))
+# Mixed string/regex calls keep the legacy combined condition (all
+# pairs hold, or under .not not all hold). Chrome computes every hit;
+# diagnostics report the raw attributes.
+check_attr_pairs <- function(pairs, not) {
+  js <- expect_attrs_js(pairs)
   function(els) {
     if (els$count == 0L) {
-      return(list(pass = not, observed = expect_seen_count(0L)))
-    }
-    vals <- lapply(els_values(els, js), chr_or_na)
-    hits <- matrix(FALSE, nrow = els$count, ncol = length(pairs))
-    observed <- character(length(pairs))
-    for (p in seq_along(pairs)) {
-      actual <- collapse_ws(map_chr(vals, `[[`, p))
-      expected <- pairs[[p]]
-      if (length(expected) == 1L || length(expected) == els$count) {
-        hits[, p] <- vapply(
-          seq_along(actual),
-          function(i) {
-            expect_text_hit(
-              actual[[i]],
-              expected[[if (length(expected) == 1L) 1L else i]],
-              match
-            )
-          },
-          logical(1)
-        )
-      }
-      observed[[p]] <- expect_seen_texts(actual)
-    }
-    seen <- if (length(pairs) == 1L) {
-      observed[[1]]
-    } else {
-      expect_truncate(paste0(names(pairs), ": ", observed, collapse = "; "))
-    }
-    list(pass = if (not) !all(hits) else all(hits), observed = seen)
-  }
-}
-
-# Mixed calls keep the legacy combined condition (all pairs hold, or
-# under .not not all hold). String pairs compare in R exactly as the
-# all-string path does; regex pairs carry precomputed Chrome hits and
-# report raw attributes.
-check_attr_pairs_regex <- function(pairs, match, not) {
-  js <- expect_attrs_regex_js(pairs)
-  function(els) {
-    if (els$count == 0L) {
-      regex_compile_attempt(
-        els,
-        lapply(pairs, function(value) {
-          if (is_regex(value)) regex_spec_fields(value) else NULL
-        })
-      )
+      regex_specs_attempt(els, pairs)
       return(list(pass = not, observed = expect_seen_count(0L)))
     }
     res <- els_values(els, js)
@@ -1432,27 +1334,8 @@ check_attr_pairs_regex <- function(pairs, match, not) {
     observed <- character(length(pairs))
     for (p in seq_along(pairs)) {
       raw <- chr_or_na(lapply(res, function(el) el[[p]]$value))
-      if (is_regex(pairs[[p]])) {
-        hits[, p] <- map_lgl(res, function(el) isTRUE(el[[p]]$hit))
-        observed[[p]] <- expect_seen_texts(raw)
-      } else {
-        actual <- collapse_ws(raw)
-        expected <- pairs[[p]]
-        if (length(expected) == 1L || length(expected) == els$count) {
-          hits[, p] <- vapply(
-            seq_along(actual),
-            function(i) {
-              expect_text_hit(
-                actual[[i]],
-                expected[[if (length(expected) == 1L) 1L else i]],
-                match
-              )
-            },
-            logical(1)
-          )
-        }
-        observed[[p]] <- expect_seen_texts(actual)
-      }
+      hits[, p] <- map_lgl(res, function(el) isTRUE(el[[p]]$hit))
+      observed[[p]] <- expect_seen_texts(raw)
     }
     seen <- if (length(pairs) == 1L) {
       observed[[1]]
@@ -1463,18 +1346,13 @@ check_attr_pairs_regex <- function(pairs, match, not) {
   }
 }
 
-expect_headline_attrs <- function(pairs, match, not) {
+expect_headline_attrs <- function(pairs, not) {
   if (length(pairs) == 1L) {
     name <- names(pairs)[[1]]
-    label <- paste0("attribute \"", name, "\"")
-    if (is_regex(pairs[[1]])) {
-      return(expect_headline_regex(pairs[[1]], not, label = label))
-    }
     return(expect_headline_text(
       pairs[[1]],
-      match,
       not,
-      label = label,
+      label = paste0("attribute \"", name, "\""),
       plural = paste0("attributes \"", name, "\"")
     ))
   }
@@ -1497,19 +1375,6 @@ expect_headline_attrs <- function(pairs, match, not) {
     " to match ",
     paste(what, collapse = "; ")
   )
-}
-
-expect_text_matches <- function(x, pattern, match) {
-  switch(
-    match,
-    contains = grepl(pattern, x, fixed = TRUE),
-    exact = identical(x, pattern),
-    regex = grepl(pattern, x)
-  )
-}
-
-expect_text_hit <- function(x, pattern, match) {
-  isTRUE(expect_text_matches(x, pattern, match))
 }
 
 expect_headline_js <- function(expr, not) {
@@ -1546,18 +1411,14 @@ expect_headline_count <- function(n, min, max, not) {
 
 expect_headline_text <- function(
   text,
-  match,
   not,
   label = "text",
   plural = paste0(label, "s")
 ) {
-  what <- switch(
-    match,
-    contains = paste0('"', text, '"', collapse = ", "),
-    exact = paste0('"', text, '"', collapse = ", "),
-    regex = paste0("/", text, "/", collapse = ", ")
-  )
-  verb <- switch(match, contains = "contain", exact = "be", regex = "match")
+  if (is_regex(text)) {
+    return(expect_headline_regex(text, not, label = label))
+  }
+  what <- paste0('"', text, '"', collapse = ", ")
   label <- if (length(text) == 1L) label else plural
-  paste0("Expected ", label, if (not) " not", " to ", verb, " ", what)
+  paste0("Expected ", label, if (not) " not", " to be ", what)
 }

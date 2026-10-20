@@ -4,26 +4,17 @@
 \alias{pz_expect_url}
 \title{Expect the page URL}
 \usage{
-pz_expect_url(
-  ctx,
-  url,
-  ...,
-  match = c("contains", "exact", "regex"),
-  not = FALSE,
-  timeout = NULL
-)
+pz_expect_url(ctx, url, ..., not = FALSE, timeout = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{url}{The expected URL: a single string, or a single \code{\link[=pz_regex]{pz_regex()}}
-value matched in Chrome with JavaScript \code{RegExp} syntax.}
+\item{url}{The expected URL: a single string compared by exact
+equality after whitespace normalization, or a single \code{\link[=pz_regex]{pz_regex()}}
+value matched in Chrome with JavaScript \code{RegExp} syntax
+(\code{fixed = TRUE} for substring matching).}
 
 \item{...}{Checked empty; reserved for future use.}
-
-\item{match}{How to compare \code{url} when it's a string: \code{"contains"}
-(substring), \code{"exact"}, or \code{"regex"} (an R regex matched with
-\code{\link[=grepl]{grepl()}}). Ignored for \code{\link[=pz_regex]{pz_regex()}} values.}
 
 \item{not}{Invert the check.}
 
@@ -46,11 +37,10 @@ retry, timeout, and bridge behavior shared by all expectations.
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_expect_url("tasks.html")
+page |> pz_expect_url(pz_regex("tasks.html", fixed = TRUE))
 
 page |>
-  pz_act_click(pz_loc(".filters a", has_text = "Done")) |>
-  pz_expect_url("#done$", match = "regex") |>
+  pz_act_click(pz_loc(".filters a", match = "Done")) |>
   pz_expect_url(pz_regex("#done$"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
