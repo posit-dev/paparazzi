@@ -2,8 +2,9 @@ test_that("getters read all regex and predicate survivors in order", {
   page <- local_page(test_path("fixtures", "matching.html"))
   spec <- pz_loc(
     ".label",
-    has_text = pz_regex("^Save now$"),
-    predicate = "el => el.dataset.ready === 'yes'"
+    match = pz_js(
+      "el => el.dataset.ready === 'yes' && el.textContent.replace(/\\s+/g, ' ').trim() === 'Save now'"
+    )
   )
   expect_identical(pz_get_count(page, spec), 2L)
   expect_identical(pz_get_attr(page, "id", spec), c("first", "second"))

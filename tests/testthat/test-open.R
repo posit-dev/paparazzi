@@ -143,7 +143,7 @@ test_that("explicit and auto Shiny opening invokes idle on the destination", {
 
     expect_identical(calls$urls, page$app$url)
     expect_true(shiny_idle_state(page)$connected)
-    pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+    pz_expect_text(page, "reactive ready", target = "#slow")
 
     pz_close(page)
   }
@@ -173,7 +173,7 @@ test_that("new-session Shiny waits anchor to the destination commit", {
   for (wait in c("shiny", "auto")) {
     page <- pz_open(app, wait = wait, timeout = 5)
     withr::defer(pz_close(page))
-    pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+    pz_expect_text(page, "reactive ready", target = "#slow")
     pz_close(page)
   }
 
@@ -194,7 +194,7 @@ test_that("auto routes Shiny app files and shared handles to idle wait", {
     withr::defer(pz_close(page))
     expect_identical(calls$urls, page$app$url)
     expect_true(shiny_idle_state(page)$connected)
-    pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+    pz_expect_text(page, "reactive ready", target = "#slow")
     pz_close(page)
   }
 })

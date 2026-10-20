@@ -14,8 +14,9 @@ test_that("find variants select from qualified survivors without mutating the pa
   page <- local_page(test_path("fixtures", "matching.html"))
   spec <- pz_loc(
     ".label",
-    has_text = pz_regex("^Save now$"),
-    predicate = "el => el.dataset.ready === 'yes'"
+    match = pz_js(
+      "el => el.dataset.ready === 'yes' && el.textContent.replace(/\\s+/g, ' ').trim() === 'Save now'"
+    )
   )
   pinned <- expect_visible(pz_find(page, spec))
   expect_identical(pz_get_attr(pinned, "id"), c("first", "second"))

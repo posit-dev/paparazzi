@@ -27,7 +27,10 @@ demo <- pz_open(
   color_scheme = "light"
 )
 demo <- demo |> pz_stage(enter = "bottom", pause = 0.3)
-fern <- pz_loc(".task", has_text = "Repot the fern")
+fern <- pz_loc(
+  ".task",
+  match = pz_regex("Repot the fern", fixed = TRUE)
+)
 
 demo |>
   pz_record(
@@ -159,10 +162,15 @@ page |>
 paparazzi calls a `pz_loc()` description a **location spec**. A spec doesn't find anything when you create it: paparazzi looks up the elements each time you use it, so one spec keeps working as the page changes. That's how `first_task_title` found "Renew passport" the first time and "Repot the fern" once the new task arrived. We'll describe the new task with a spec, too, and use it in the video:
 
 ```{r}
-fern <- pz_loc(".task", has_text = "Repot the fern")
+fern <- pz_loc(
+  ".task",
+  match = pz_regex("Repot the fern", fixed = TRUE)
+)
 ```
 
-`has_text` picks `.task` elements whose text includes "Repot the fern". `pz_loc()` can also pick a match by position with `which`, or look inside another element with `within`.
+With `fixed = TRUE`, paparazzi treats "Repot the fern" as a literal substring of each `.task` element's text. A task row also contains its priority and controls, so its whole text is longer than the title.
+
+A bare string in `match` would require exact equality; use it when targeting a `.task-title` element instead. `pz_loc()` can also pick a match by position with `which`, or look inside another element with `within`.
 
 ## Record it
 

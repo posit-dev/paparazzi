@@ -1340,7 +1340,10 @@ test_that("a fully visible new task keeps every padded outline edge", {
   page |>
     pz_act_type("Prepare release notes", target = "#task_title") |>
     pz_act_click("#add_task")
-  target <- pz_loc(".task", has_text = "Prepare release notes")
+  target <- pz_loc(
+    ".task",
+    match = pz_regex("Prepare release notes", fixed = TRUE)
+  )
   pz_expect_visible(page, target)
 
   path <- withr::local_tempfile(fileext = ".png")

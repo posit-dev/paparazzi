@@ -31,14 +31,16 @@ test_that("actions use qualified targets and retain strict single-match rules", 
   )
   spec <- pz_loc(
     ".label",
-    has_text = pz_regex("^Save now$"),
-    predicate = "el => el.dataset.ready === 'yes'"
+    match = pz_js(
+      "el => el.dataset.ready === 'yes' && el.textContent.replace(/\\s+/g, ' ').trim() === 'Save now'"
+    )
   )
   expect_error(pz_act_click(page, spec), class = "paparazzi_error_multiple")
   single <- pz_loc(
     ".label",
-    has_text = pz_regex("^Save now$"),
-    predicate = "el => el.dataset.ready === 'yes'",
+    match = pz_js(
+      "el => el.dataset.ready === 'yes' && el.textContent.replace(/\\s+/g, ' ').trim() === 'Save now'"
+    ),
     which = "last"
   )
   pz_act_click(page, single)
@@ -1671,7 +1673,10 @@ for (scenario in names(held_selection_fallbacks)) {
 
 test_that("scoped typing replaces a selected word in a task title", {
   page <- local_page(pz_example("tasks"))
-  task <- pz_find(page, pz_loc(".task", has_text = "Book dentist appointment"))
+  task <- pz_find(
+    page,
+    pz_loc(".task", match = pz_regex("Book dentist appointment", fixed = TRUE))
+  )
 
   task |>
     pz_act_click(".task-edit") |>

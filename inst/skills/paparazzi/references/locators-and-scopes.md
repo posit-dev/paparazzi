@@ -30,17 +30,21 @@ expectation or getter uses it. The same spec works across DOM updates,
 pages and sessions, and in a test, a screenshot and a recording alike.
 
 ```r
-passport <- pz_loc(".task", has_text = "passport")
+passport <- pz_loc(".task", match = pz_regex("passport", fixed = TRUE))
 passport_title <- pz_loc(".task-title", within = passport)
 page |> pz_expect_count(1, target = passport)
 pz_get_text(page, target = passport_title)
 ```
 
-`has_text` with a plain string is a case-sensitive substring match on the
-element's text, with whitespace collapsed on both sides and no trimming.
-Pick text that identifies the row, then
-target a control inside it. `within` takes a string or another spec and
-keeps only matches inside it.
+`match` accepts one bare string, `pz_regex()` value, or `pz_js()` value.
+For strings and regex values, paparazzi matches the element's text with
+whitespace collapsed and trimmed. A bare string means exact,
+case-sensitive equality with the whole text; `pz_regex()` matches a pattern,
+or a literal substring with `fixed = TRUE`. Because a `.task` row's text
+spans its title, priority badge and buttons, a substring needle is the way
+to find the row. Pick text that identifies it, then target a control inside
+it. `within` takes a string or another spec and keeps only matches inside
+it.
 
 ```r
 passport_button <- pz_loc(".task-done", within = passport)
@@ -52,46 +56,54 @@ page |>
 ## Match exact labels and relationships
 
 `pz_regex()` creates a page-independent scalar matcher using Chrome's
-JavaScript `RegExp` syntax. paparazzi collapses whitespace and trims observed
-strings for regex matching, leaving pattern source unchanged. Matching is
-case-sensitive unless you include `flags = "i"`. Use anchors to distinguish
-Save from Save draft, or alternatives and digit patterns for dynamic labels.
+JavaScript `RegExp` syntax, always Unicode-aware. paparazzi collapses
+whitespace and trims observed strings for regex matching, leaving the
+pattern source unchanged. Matching is case-sensitive unless you set
+`ignore_case = TRUE`; `fixed = TRUE` matches a literal substring instead.
+A bare string distinguishes Save from Save draft; use regex alternatives
+and digit patterns for dynamic labels.
 
 ```r
-save <- pz_loc("button", has_text = pz_regex("^Save$"))
-report <- pz_loc(".report", has_text = pz_regex("^Report \\d+ ready$", "i"))
+save <- pz_loc("button", match = "Save")
+report <- pz_loc(
+  ".report",
+  match = pz_regex("^Report \\d+ ready$", ignore_case = TRUE)
+)
 ```
 
-For relationships that CSS or whole-element text cannot express, pass a
-trusted JavaScript function-source string as `predicate`. Arrow functions
-and function expressions receive one candidate element. This spec checks the
+For relationships that CSS or text cannot express, wrap a trusted
+JavaScript function-source string in `pz_js()`. Arrow functions and
+function expressions receive one candidate element. This spec checks the
 status cell, not a mention of Ready elsewhere in the row:
 
 ```r
 ready_row <- pz_loc(
   "tr",
-  predicate = 'el => el.querySelector(".status")?.textContent.trim() === "Ready"'
+  match = pz_js('el => el.querySelector(".status")?.textContent.trim() === "Ready"')
 )
 ```
 
 The function must return primitive `true` or `false`. Missing returns,
 non-booleans, Boolean objects and Promises error; paparazzi does not await
-async predicates. Keep predicates read-only, cheap and free of side effects.
-They are trusted executable code, not sandboxed, and may inspect ancestors,
-descendants, computed styles and page state outside `within` or a pinned
-scope. Scopes limit candidates, not what a predicate can inspect.
+async functions. Keep the function read-only, cheap and free of side
+effects. It is trusted executable code, not sandboxed, and may inspect
+ancestors, descendants, computed styles and page state outside `within` or a
+pinned scope. Scopes limit candidates, not what the function can inspect.
+A `pz_js()` matcher belongs to locators. For custom expectations, use
+`pz_expect_js()`, which accepts truthy results rather than requiring a
+primitive boolean.
 
 paparazzi resolves `within`, selects CSS candidates and excludes overlays,
-filters text, filters the predicate, then applies `which`. It repeats the
-filters on every use and auto-wait attempt. False results retry normally;
-JavaScript exceptions abort immediately with the target and source excerpt.
-Invalid regex or predicate source and non-function predicates error even
-without candidates. Runtime and return-type errors require an invocation.
-A timeout does not forcibly stop runaway JavaScript.
+applies the `match` filter, then applies `which`. It repeats the filter on
+every use and auto-wait attempt. False results retry normally; JavaScript
+exceptions abort immediately with the target and source excerpt. Invalid
+regex or JavaScript source and non-function sources error even without
+candidates. Runtime and return-type errors require an invocation. A timeout
+does not forcibly stop runaway JavaScript.
 
 ## Choose one match by position
 
-`which` applies after the CSS, text and predicate filters, and takes `"first"`,
+`which` applies after the CSS and `match` filters, and takes `"first"`,
 `"last"` or a 1-based position. Use it when order is part of the interface,
 like a newest-first task list.
 
@@ -104,7 +116,7 @@ pz_get_text(page, target = last_title)
 pz_get_text(page, target = pz_loc(".task-title", within = second_task))
 ```
 
-Because positions count the filtered matches, `which` and `has_text` combine
+Because positions count the filtered matches, `which` and `match` combine
 naturally. A position past the end matches nothing, and an expectation will
 wait for it to appear.
 

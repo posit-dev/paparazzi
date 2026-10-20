@@ -33,7 +33,7 @@ function.
 library(paparazzi)
 
 pz_with_page(pz_example("tasks"), function(page) {
-  page |> pz_expect_text("Tasks", target = "h1", match = "exact")
+  page |> pz_expect_text("Tasks", target = "h1")
 }, width = 1000, height = 720)
 ```
 
@@ -46,7 +46,7 @@ the file's directory as the server root.
 
 ```r
 page <- pz_open(pz_example("tasks"), width = 1000, height = 720)
-page |> pz_expect_url("http://127.0.0.1", match = "contains")
+page |> pz_expect_url(pz_regex("http://127.0.0.1", fixed = TRUE))
 ```
 
 `pz_serve_static()` creates a handle you can share across pages. For an
@@ -124,22 +124,24 @@ your `pz_loc()` specs and call `pz_find()` again on the new document.
 away when there's no history in that direction.
 
 The task page's filters change the URL fragment. After navigating, expect
-the visible result, since the app may update the page after the load.
+the visible result, since the app may update the page after the load. A bare
+string checks the whole URL exactly; `pz_regex(needle, fixed = TRUE)` checks
+a literal piece of it.
 
 ```r
 base_url <- pz_get_url(page)
 page |>
   pz_nav_goto(paste0(base_url, "#done")) |>
-  pz_expect_url("#done", match = "contains") |>
+  pz_expect_url(pz_regex("#done", fixed = TRUE)) |>
   pz_expect_count(1, target = ".task.done:not(.hidden)")
 
 page |>
   pz_nav_back() |>
-  pz_expect_url(base_url, match = "exact")
+  pz_expect_url(base_url)
 
 page |>
   pz_nav_forward() |>
-  pz_expect_url("#done", match = "contains")
+  pz_expect_url(pz_regex("#done", fixed = TRUE))
 
 page |>
   pz_nav_goto(base_url) |>
@@ -178,7 +180,7 @@ writeLines(c(
 ), doc)
 preview <- pz_serve_quarto(doc, render = TRUE)
 pz_with_page(preview, function(doc_page) {
-  doc_page |> pz_expect_text("Ready", target = pz_loc("h1", has_text = "Ready"))
+  doc_page |> pz_expect_text("Ready", target = pz_loc("h1", match = "Ready"))
 })
 preview$stop()
 unlink(doc_dir, recursive = TRUE)
@@ -204,7 +206,7 @@ py_app <- pz_serve_command(
   wait = "shiny"
 )
 page <- pz_open(py_app)
-page |> pz_expect_text("Ready", target = "h1", match = "exact")
+page |> pz_expect_text("Ready", target = "h1")
 pz_close(page)
 py_app$stop()
 ```

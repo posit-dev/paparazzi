@@ -52,8 +52,8 @@ pz_get_count <- function(ctx, target = NULL, ...) {
 #'
 #' [pz_get_text()] returns the `textContent` of every element matching
 #' `target`, one entry per match. By default runs of whitespace are
-#' collapsed to single spaces and trimmed, matching [pz_expect_text()];
-#' `raw = TRUE` returns the text exactly as the browser holds it.
+#' collapsed to single spaces and trimmed; `raw = TRUE` returns the text
+#' exactly as the browser holds it.
 #'
 #' @param ctx A paparazzi context.
 #' @param target A CSS selector string, a [pz_loc()] spec, or a list of
@@ -258,7 +258,7 @@ pz_get_html <- function(ctx, target = NULL, ...) {
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_act_click(pz_loc(".filters a", has_text = "Open"))
+#' page |> pz_act_click(pz_loc(".filters a", match = "Open"))
 #' basename(pz_get_url(page))
 #' pz_close(page)
 #'

@@ -50,12 +50,12 @@ page |>
   pz_annotate("#task_title", type = "box", label = "box") |>
   pz_annotate("#add_task", type = "circle", label = "circle") |>
   pz_annotate(
-    pz_loc(".task", has_text = "File tax return"),
+    pz_loc(".task", match = pz_regex("File tax return", fixed = TRUE)),
     type = "underline",
     label = "underline"
   ) |>
   pz_annotate(
-    pz_loc(".task", has_text = "Water the plants"),
+    pz_loc(".task", match = pz_regex("Water the plants", fixed = TRUE)),
     type = "highlight",
     label = "highlight"
   )

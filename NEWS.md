@@ -1,28 +1,35 @@
 # paparazzi 0.0.0.9000
 
-* `pz_regex()` creates a reusable scalar JavaScript regular expression for
-  `pz_loc(has_text = )` and text, value, attribute, URL and title expectations.
-  New regex matching collapses and trims observed strings without changing
-  the pattern. Existing string-based regex expectations still use R's regex
-  engine. `match` and `.match` govern plain strings only.
+* Breaking: `pz_loc()` replaces `has_text` and `predicate` with one scalar
+  `match`. A bare string requires exact, case-sensitive text equality;
+  `pz_regex()` matches text patterns or literal substrings with `fixed = TRUE`;
+  `pz_js()` wraps a trusted synchronous DOM-element predicate returning
+  primitive `true` or `false`. paparazzi applies the condition before `which`
+  and re-evaluates it on each use and auto-wait attempt. Predicates are
+  read-only by contract, not sandboxed; exceptions and invalid returns error.
 
-* `pz_loc()` gains `predicate`, a trusted synchronous JavaScript function
-  receiving each candidate element and returning primitive `true` or `false`.
-  paparazzi filters text and predicates before applying `which`, repeating
-  both filters on each use and auto-wait attempt. Predicates are read-only
-  by contract, not sandboxed; exceptions and invalid returns are errors.
+* Breaking: text, value, attribute, URL and title expectations use exact
+  literal matching for bare strings and accept the same scalar `pz_regex()`
+  values as locators. The old `match`/`.match` mode arguments and R-regex
+  matching path are removed. Use `pz_regex(needle, fixed = TRUE)` for literal
+  substring checks; existing pairwise character-vector expectations remain.
+
+* `pz_regex()` uses JavaScript regular expressions in Unicode-aware mode,
+  with named boolean options `ignore_case` and `fixed` instead of `flags`.
+  All string and regex matching collapses whitespace and trims, including
+  literal needles, without changing regex pattern source. There are no
+  special cases for preformatted or code elements; use JavaScript predicates
+  or `pz_get_text(raw = TRUE)` for whitespace-sensitive checks.
 
 * `pz_act_type()` with `target = NULL` now preserves a held selection in an
   already-focused `contenteditable` descendant of the current scope, provided
   the selection stays within one editing host and doesn't cross non-editable
   islands. Explicit targets still click before typing.
 
-* `pz_js()` is renamed to `pz_evaluate()`. "Evaluate" is the established
-  term for running JS in the page and returning the result across
-  Playwright (`page.evaluate()`), Puppeteer, and the Chrome DevTools
-  Protocol; the bare noun in `pz_js()` read like the `JS()` string-marker
-  functions in shiny and htmlwidgets rather than an action. paparazzi is
-  unreleased, so there is no deprecation alias.
+* The JavaScript evaluator formerly named `pz_js()` is renamed to
+  `pz_evaluate()`. "Evaluate" describes running code in the page and returning
+  its result; the new `pz_js()` instead creates a deferred locator predicate.
+  paparazzi is unreleased, so there is no deprecation alias for the evaluator.
 
 * `pz_stage_annotate()` gains `caption_side`, the page default for the side
   of new `pz_annotate_caption()` captions. `"bottom"` remains the default

@@ -152,6 +152,7 @@ reference:
     contents:
       - pz_loc
       - pz_regex
+      - pz_js
       - pz_find
       - pz_find_first
       - pz_find_last

@@ -841,7 +841,11 @@ test_that("pz_serve_command serves an external command and shares the handle con
   expect_identical(server$wait, "load")
 
   page <- local_page(server)
-  pz_expect_text(page, "command served", target = "body")
+  pz_expect_text(
+    page,
+    pz_regex("command served", fixed = TRUE),
+    target = "body"
+  )
   pz_close(page)
   expect_true(server$is_running())
 
@@ -864,8 +868,7 @@ test_that("{port} is substituted in args and envvars", {
   pz_expect_text(
     page,
     paste0("command served on ", server$port),
-    target = "body",
-    match = "exact"
+    target = "body"
   )
 })
 
@@ -876,7 +879,11 @@ test_that("an explicit port is kept, and a taken one fails instead of re-picking
   withr::defer(server$stop())
 
   page <- local_page(server)
-  pz_expect_text(page, "command served", target = "body")
+  pz_expect_text(
+    page,
+    pz_regex("command served", fixed = TRUE),
+    target = "body"
+  )
 
   expect_error(
     command_server(port = server$port, timeout = 1),

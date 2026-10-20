@@ -20,7 +20,7 @@ page <- pz_open(
 )
 page <- page |> pz_stage(enter = "bottom", pause = 0.5, cursor_speed = 480)
 video <- tempfile(fileext = ".mp4")
-basil <- pz_loc(".task", has_text = "Water the basil")
+basil <- pz_loc(".task", match = pz_regex("Water the basil", fixed = TRUE))
 
 page |>
   pz_record_start(
@@ -250,11 +250,13 @@ pz_record(
         effect_color = "#16a34a"
       ) |>
       pz_expect_visible(
-        pz_loc(".task", has_text = "Review the garden")
+        pz_loc(".task", match = pz_regex("Review the garden", fixed = TRUE))
       ) |>
       pz_act_type("Plant the mint", target = "#task_title") |>
       pz_act_press("Enter", show_keys = "mac") |>
-      pz_expect_visible(pz_loc(".task", has_text = "Plant the mint"))
+      pz_expect_visible(
+        pz_loc(".task", match = pz_regex("Plant the mint", fixed = TRUE))
+      )
   }
 )
 ```
@@ -288,7 +290,7 @@ between the click and the result:
 page |>
   pz_act_click("#add") |>
   pz_set_shiny_input("priority", "high", wait = FALSE) |>
-  pz_expect_text("3 tasks", target = "#summary", match = "exact")
+  pz_expect_text("3 tasks", target = "#summary")
 ```
 
 Either way, end on the applied state: the idle wait for a settled page, an
@@ -312,7 +314,7 @@ add_task <- function(ctx, title) {
     pz_act_type(title, target = "#title") |>
     pz_act_click("#add") |>
     pz_wait_for_shiny_idle() |>
-    pz_expect_visible(pz_loc(".task", has_text = title))
+    pz_expect_visible(pz_loc(".task", match = title))
 }
 
 add_task(app, "Check the seedlings")

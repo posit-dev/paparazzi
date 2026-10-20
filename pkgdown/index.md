@@ -103,8 +103,8 @@ page <- pz_open(
   color_scheme = "light"
 )
 
-task_release <- pz_loc(".task", has_text = "Prepare release notes")
-task_dentist <- pz_loc(".task", has_text = "Book dentist appointment")
+task_release <- pz_loc(".task", match = pz_regex("Prepare release notes", fixed = TRUE))
+task_dentist <- pz_loc(".task", match = pz_regex("Book dentist appointment", fixed = TRUE))
 
 page |>
   pz_stage(enter = "bottom", pause = 0.3) |>

@@ -14,7 +14,7 @@ that process, so `pz_close()` stops both.
 library(paparazzi)
 page <- pz_open(pz_example("tasks-app"), width = 720, height = 640)
 page |>
-  pz_expect_text("2 tasks", target = "#summary", match = "exact") |>
+  pz_expect_text("2 tasks", target = "#summary") |>
   pz_expect_count(2, target = ".task")
 ```
 
@@ -40,8 +40,8 @@ rendering the list on purpose, and the expectation absorbs the delay.
 page |>
   pz_set_value("Buy milk", target = "#title") |>
   pz_act_click("#add") |>
-  pz_expect_text("3 tasks", target = "#summary", match = "exact") |>
-  pz_expect_visible(pz_loc(".task", has_text = "Buy milk"))
+  pz_expect_text("3 tasks", target = "#summary") |>
+  pz_expect_visible(pz_loc(".task", match = "Buy milk"))
 ```
 
 `pz_wait_for_shiny_idle()` observes Shiny's connection and busy signal,
@@ -54,7 +54,7 @@ page |>
   pz_set_value("Renew library card", target = "#title") |>
   pz_act_click("#add") |>
   pz_wait_for_shiny_idle() |>
-  pz_expect_text("4 tasks", target = "#summary", match = "exact")
+  pz_expect_text("4 tasks", target = "#summary")
 pz_get_text(page, target = "#summary")
 ```
 
@@ -90,9 +90,9 @@ page |>
   pz_set_shiny_input("priority", "high") |>
   pz_set_value("Water the plants", target = "#title") |>
   pz_act_click("#add") |>
-  pz_expect_text("5 tasks", target = "#summary", match = "exact")
+  pz_expect_text("5 tasks", target = "#summary")
 
-plants <- pz_loc(".task", has_text = "Water the plants")
+plants <- pz_loc(".task", match = "Water the plants")
 stopifnot(identical(pz_get_attr(page, "data-priority", target = plants), "high"))
 ```
 
@@ -117,7 +117,7 @@ page |>
   pz_set_shiny_input("priority", "normal", wait = FALSE) |>
   pz_wait_for_shiny_idle() |>
   pz_act_click("#add") |>
-  pz_expect_text("6 tasks", target = "#summary", match = "exact")
+  pz_expect_text("6 tasks", target = "#summary")
 ```
 
 ## Refind scopes around outputs
@@ -127,7 +127,7 @@ element it found. Keep a `pz_loc()` spec for the output, expect the new
 content, then find it again (see Locators and scopes).
 
 ```r
-smoke <- pz_loc(".task", has_text = "Check smoke alarms")
+smoke <- pz_loc(".task", match = "Check smoke alarms")
 page |> pz_expect_visible(smoke)
 row <- pz_find(page, smoke)
 pz_get_text(row)
@@ -153,9 +153,9 @@ compare_layouts <- function() {
   )
   withr::defer(app$stop())
   pz_with_page(app, function(desktop) {
-    desktop |> pz_expect_text("2 tasks", target = "#summary", match = "exact")
+    desktop |> pz_expect_text("2 tasks", target = "#summary")
     pz_with_page(app, function(phone) {
-      phone |> pz_expect_text("2 tasks", target = "#summary", match = "exact")
+      phone |> pz_expect_text("2 tasks", target = "#summary")
       phone |> pz_screenshot(tempfile(fileext = ".png"))
     }, width = 390, height = 844, mobile = TRUE)
   }, width = 1024, height = 768)
@@ -181,8 +181,8 @@ testthat::test_that("a high-priority task is shown in the list", {
     pz_set_shiny_input("priority", "high") |>
     pz_act_type("Book dentist", target = "#title") |>
     pz_act_click("#add") |>
-    pz_expect_text("3 tasks", target = "#summary", match = "exact") |>
-    pz_expect_visible(pz_loc(".task[data-priority='high']", has_text = "Book dentist"))
+    pz_expect_text("3 tasks", target = "#summary") |>
+    pz_expect_visible(pz_loc(".task[data-priority='high']", match = "Book dentist"))
 })
 ```
 
@@ -218,7 +218,7 @@ page |>
 page |>
   pz_act_click("#add") |>
   pz_set_shiny_input("priority", "high", wait = FALSE) |>
-  pz_expect_text("3 tasks", target = "#summary", match = "exact")
+  pz_expect_text("3 tasks", target = "#summary")
 ```
 
 The Recording and staging reference explains why the wait stays an explicit

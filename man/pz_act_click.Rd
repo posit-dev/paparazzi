@@ -72,7 +72,7 @@ pz_get_text(page, target = "#toggle_help")
 
 # In a scoped context, target = NULL clicks the scope element
 page |>
-  pz_find(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank"))) |>
+  pz_find(pz_loc(".task-done", within = pz_loc(".task", match = pz_regex("bank", fixed = TRUE)))) |>
   pz_act_click()
 pz_get_count(page, target = ".task.done")
 pz_close(page)
