@@ -28,9 +28,7 @@ A regular expression object of class \code{paparazzi_regex}. Supply
 this object on its own, not in a vector or list of patterns.
 }
 \description{
-Use \code{\link[=pz_regex]{pz_regex()}} to match a text pattern when finding elements or checking
-their content. For example, \code{pz_regex("^Save")} matches text beginning with
-"Save", while the bare string \code{"Save"} matches only that complete text.
+Use \code{\link[=pz_regex]{pz_regex()}} to describe a text pattern for a locator or expectation.
 Set \code{ignore_case = TRUE} to match "Save", "save", and "SAVE" alike.
 For a literal substring rather than a regex pattern, use \code{fixed = TRUE}.
 
@@ -38,8 +36,8 @@ Before comparing text, paparazzi replaces runs of whitespace with a single
 space and removes whitespace at the start and end. It leaves your regex
 pattern unchanged. Missing values never match, even with an empty pattern.
 
-Creating a regex does not search the page. Pass it to a locator or an
-expectation to use it; the same pattern applies to every selected element.
+Pass the pattern to a locator or an expectation to use it; the same
+pattern applies to every selected element.
 paparazzi checks regex syntax when you use the pattern, so an invalid
 pattern raises an error then, even if no elements match your selector.
 }

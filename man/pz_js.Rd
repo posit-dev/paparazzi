@@ -7,31 +7,45 @@
 pz_js(source)
 }
 \arguments{
-\item{source}{A single function-source string, e.g.
+\item{source}{A single string defining a JavaScript function, e.g.
 \code{"el => el.parentElement.matches('.ready')"} or
-\code{"function(el) { return el.querySelector('.status') !== null; }"}.}
+\code{"function(el) { return el.querySelector('.status') !== null; }"}.
+The function receives a DOM element as its argument. It must return
+the JavaScript value \code{true} or \code{false}, not a string or another object.
+Missing returns are errors. Async functions and functions returning
+Promises are not supported.}
 }
 \value{
-An S3 object of class \code{paparazzi_js}.
+A JavaScript condition object of class \code{paparazzi_js}.
 }
 \description{
-\code{\link[=pz_js]{pz_js()}} wraps a trusted JavaScript function-source string for \code{\link[=pz_loc]{pz_loc()}}'s
-\code{match}. It does not execute the source or open a browser. paparazzi calls
-the function with each candidate DOM element when it resolves the locator.
-The function must return primitive \code{true} or \code{false}; missing returns,
-other values, Boolean objects, and Promises are errors. Async functions
-and awaiting are not supported.
-}
-\details{
-Keep functions inexpensive and free of side effects. The read-only
-contract is not a sandbox: functions may inspect ancestors, descendants,
-computed styles, and page state outside the candidate scope. Only use
-trusted source. A timeout does not forcibly stop runaway JavaScript.
-Use \code{\link[=pz_evaluate]{pz_evaluate()}} to execute JavaScript immediately, or \code{\link[=pz_expect_js]{pz_expect_js()}}
-for an existing JavaScript expectation.
+Use \code{\link[=pz_js]{pz_js()}} with \code{\link[=pz_loc]{pz_loc()}} to select elements using a JavaScript
+condition. For example, you can select a table row only when its status
+cell says "Ready", rather than checking the text of the whole row. Pass
+the condition to \code{\link[=pz_loc]{pz_loc()}}'s \code{match} argument.
+
+paparazzi calls your function with each element and keeps the element
+when the function returns \code{true}, or excludes it when it returns \code{false}.
+It repeats the check whenever it looks for matching elements, including
+while waiting for an element to become available.
+
+Your function can inspect the element, its parents and children, styles,
+or other parts of the page. Use it to read the page without changing it:
+paparazzi does not prevent your JavaScript from making changes. Use code
+you wrote or understand, and keep the check quick. Code that never
+finishes, such as an endless loop, can leave the browser unresponsive;
+setting a timeout does not guarantee that such code will stop.
 }
 \examples{
 ready <- pz_js('el => el.querySelector(".status")?.textContent === "Ready"')
 pz_loc("tr", match = ready)
 
+}
+\seealso{
+\itemize{
+\item \code{\link[=pz_loc]{pz_loc()}} accepts the condition in \code{match} to select elements.
+\item \code{\link[=pz_regex]{pz_regex()}} describes a text pattern for a locator or expectation.
+\item \code{\link[=pz_evaluate]{pz_evaluate()}} runs JavaScript in the page and returns its result.
+\item \code{\link[=pz_expect_js]{pz_expect_js()}} checks a JavaScript condition on selected elements.
+}
 }

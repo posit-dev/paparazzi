@@ -1,24 +1,38 @@
 #' Describe a JavaScript condition for a locator
 #'
-#' [pz_js()] wraps a trusted JavaScript function-source string for [pz_loc()]'s
-#' `match`. It does not execute the source or open a browser. paparazzi calls
-#' the function with each candidate DOM element when it resolves the locator.
-#' The function must return primitive `true` or `false`; missing returns,
-#' other values, Boolean objects, and Promises are errors. Async functions
-#' and awaiting are not supported.
+#' @description
+#' Use [pz_js()] with [pz_loc()] to select elements using a JavaScript
+#' condition. For example, you can select a table row only when its status
+#' cell says "Ready", rather than checking the text of the whole row. Pass
+#' the condition to [pz_loc()]'s `match` argument.
 #'
-#' Keep functions inexpensive and free of side effects. The read-only
-#' contract is not a sandbox: functions may inspect ancestors, descendants,
-#' computed styles, and page state outside the candidate scope. Only use
-#' trusted source. A timeout does not forcibly stop runaway JavaScript.
-#' Use [pz_evaluate()] to execute JavaScript immediately, or [pz_expect_js()]
-#' for an existing JavaScript expectation.
+#' paparazzi calls your function with each element and keeps the element
+#' when the function returns `true`, or excludes it when it returns `false`.
+#' It repeats the check whenever it looks for matching elements, including
+#' while waiting for an element to become available.
 #'
-#' @param source A single function-source string, e.g.
+#' Your function can inspect the element, its parents and children, styles,
+#' or other parts of the page. Use it to read the page without changing it:
+#' paparazzi does not prevent your JavaScript from making changes. Use code
+#' you wrote or understand, and keep the check quick. Code that never
+#' finishes, such as an endless loop, can leave the browser unresponsive;
+#' setting a timeout does not guarantee that such code will stop.
+#'
+#' @param source A single string defining a JavaScript function, e.g.
 #'   `"el => el.parentElement.matches('.ready')"` or
 #'   `"function(el) { return el.querySelector('.status') !== null; }"`.
+#'   The function receives a DOM element as its argument. It must return
+#'   the JavaScript value `true` or `false`, not a string or another object.
+#'   Missing returns are errors. Async functions and functions returning
+#'   Promises are not supported.
 #'
-#' @return An S3 object of class `paparazzi_js`.
+#' @return A JavaScript condition object of class `paparazzi_js`.
+#' @seealso
+#' * [pz_loc()] accepts the condition in `match` to select elements.
+#' * [pz_regex()] describes a text pattern for a locator or expectation.
+#' * [pz_evaluate()] runs JavaScript in the page and returns its result.
+#' * [pz_expect_js()] checks a JavaScript condition on selected elements.
+#'
 #' @examples
 #' ready <- pz_js('el => el.querySelector(".status")?.textContent === "Ready"')
 #' pz_loc("tr", match = ready)
