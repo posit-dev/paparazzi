@@ -125,8 +125,8 @@ away when there's no history in that direction.
 
 The task page's filters change the URL fragment. After navigating, expect
 the visible result, since the app may update the page after the load. A bare
-string checks the whole URL exactly; `pz_regex(needle, fixed = TRUE)` checks
-a literal piece of it.
+string checks the whole URL exactly; `pz_regex("#done", fixed = TRUE)`
+checks a literal piece of it.
 
 ```r
 base_url <- pz_get_url(page)

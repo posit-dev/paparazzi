@@ -1,25 +1,32 @@
 # paparazzi 0.0.0.9000
 
-* Breaking: `pz_loc()` replaces `has_text` and `predicate` with one scalar
-  `match`. A bare string requires exact, case-sensitive text equality;
-  `pz_regex()` matches text patterns or literal substrings with `fixed = TRUE`;
-  `pz_js()` wraps a trusted synchronous DOM-element predicate returning
-  primitive `true` or `false`. paparazzi applies the condition before `which`
-  and re-evaluates it on each use and auto-wait attempt. Predicates are
-  read-only by contract, not sandboxed; exceptions and invalid returns error.
+* Breaking: `pz_loc()` replaces `has_text` and `predicate` with one `match`
+  argument. A bare string requires exact, case-sensitive equality with the
+  element's whole text; `pz_regex()` matches a pattern, or a literal
+  substring with `fixed = TRUE`; `pz_js()` supplies a JavaScript function
+  that paparazzi calls with each candidate element, keeping the ones where
+  it returns `true`. paparazzi filters by `match` before applying `which`,
+  and re-checks the condition on every use and auto-wait attempt. Write the
+  function to read the page, not change it: paparazzi doesn't restrict what
+  it can do, and a source that isn't a function, a function that throws,
+  and a return value other than `true` or `false` all raise errors.
 
-* Breaking: text, value, attribute, URL and title expectations use exact
-  literal matching for bare strings and accept the same scalar `pz_regex()`
-  values as locators. The old `match`/`.match` mode arguments and R-regex
-  matching path are removed. Use `pz_regex(needle, fixed = TRUE)` for literal
-  substring checks; existing pairwise character-vector expectations remain.
+* Breaking: text, value, attribute, URL and title expectations compare bare
+  strings by exact, case-sensitive equality, and accept the same
+  `pz_regex()` values as `pz_loc()`. The old `match`/`.match` mode
+  arguments and R-regex matching are removed. For exact checks, remove
+  the mode argument. For substring checks, wrap the expected string in
+  `pz_regex(..., fixed = TRUE)`. For regex checks, use `pz_regex()` with
+  JavaScript pattern syntax. Character vectors still compare pairwise,
+  one value per match in order.
 
-* `pz_regex()` uses JavaScript regular expressions in Unicode-aware mode,
-  with named boolean options `ignore_case` and `fixed` instead of `flags`.
-  All string and regex matching collapses whitespace and trims, including
-  literal needles, without changing regex pattern source. There are no
-  special cases for preformatted or code elements; use JavaScript predicates
-  or `pz_get_text(raw = TRUE)` for whitespace-sensitive checks.
+* `pz_regex()` creates JavaScript regular expressions, always in
+  Unicode-aware mode, with named boolean options `ignore_case` and `fixed`
+  instead of `flags`. paparazzi collapses whitespace and trims both the text
+  it reads and a literal expected string before comparing, but never
+  changes your pattern source. There are no special cases for preformatted
+  or code elements; use a JavaScript function in `pz_loc()`'s `match`, or
+  `pz_get_text(raw = TRUE)`, for whitespace-sensitive checks.
 
 * `pz_act_type()` with `target = NULL` now preserves a held selection in an
   already-focused `contenteditable` descendant of the current scope, provided

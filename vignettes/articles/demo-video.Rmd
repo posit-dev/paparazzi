@@ -60,10 +60,7 @@ First, we'll show the viewer how to add a new task. The viewer needs to see the 
 We'll describe the new task with a [location spec](../reference/pz_loc.html) first, so the script can wait for it and mark it:
 
 ```{r add-task}
-release_notes <- pz_loc(
-  ".task",
-  match = pz_regex("Prepare release notes", fixed = TRUE)
-)
+release_notes <- pz_loc(".task", match = pz_regex("Prepare release notes"))
 
 page |>
   pz_record_start(frame = card, fps = 8, scale = 0.6) |>
@@ -108,18 +105,9 @@ page |> pz_annotate_clear()
 The second section shows three ways to organize the list: renaming a task, dragging a task to a new place, and marking a task done. These steps act on individual tasks, so we'll describe the tasks first. There's a lot for the viewer to follow, so we'll also slow this section down:
 
 ```{r organize}
-dentist <- pz_loc(
-  ".task",
-  match = pz_regex("Book dentist appointment", fixed = TRUE)
-)
-plants <- pz_loc(
-  ".task",
-  match = pz_regex("Water the plants", fixed = TRUE)
-)
-taxes <- pz_loc(
-  ".task",
-  match = pz_regex("File tax return", fixed = TRUE)
-)
+dentist <- pz_loc(".task", match = pz_regex("Book dentist appointment"))
+plants <- pz_loc(".task", match = pz_regex("Water the plants"))
+taxes <- pz_loc(".task", match = pz_regex("File tax return"))
 
 page |>
   # [1] Slow down

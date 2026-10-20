@@ -58,9 +58,7 @@ pz_with_page(pz_example("tasks"), function(page) {
     page |>
       pz_act_type("Repot the fern", target = "#task_title") |>
       pz_act_click("#add_task") |>
-      pz_expect_visible(
-        pz_loc(".task", match = pz_regex("Repot the fern", fixed = TRUE))
-      ) |>
+      pz_expect_visible(pz_loc(".task", match = pz_regex("Repot the fern"))) |>
       pz_record_hold(0.5)
   }, fps = 8, scale = 0.5)
 }, width = 800, height = 600)

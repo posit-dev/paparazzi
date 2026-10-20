@@ -20,7 +20,7 @@ page <- pz_open(
 )
 page <- page |> pz_stage(enter = "bottom", pause = 0.5, cursor_speed = 480)
 video <- tempfile(fileext = ".mp4")
-basil <- pz_loc(".task", match = pz_regex("Water the basil", fixed = TRUE))
+basil <- pz_loc(".task", match = pz_regex("Water the basil"))
 
 page |>
   pz_record_start(
@@ -250,13 +250,11 @@ pz_record(
         effect_color = "#16a34a"
       ) |>
       pz_expect_visible(
-        pz_loc(".task", match = pz_regex("Review the garden", fixed = TRUE))
+        pz_loc(".task", match = pz_regex("Review the garden"))
       ) |>
       pz_act_type("Plant the mint", target = "#task_title") |>
       pz_act_press("Enter", show_keys = "mac") |>
-      pz_expect_visible(
-        pz_loc(".task", match = pz_regex("Plant the mint", fixed = TRUE))
-      )
+      pz_expect_visible(pz_loc(".task", match = pz_regex("Plant the mint")))
   }
 )
 ```

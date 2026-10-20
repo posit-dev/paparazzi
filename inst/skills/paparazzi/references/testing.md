@@ -74,7 +74,7 @@ testthat::test_that("help starts hidden and can be opened", {
 
 `pz_expect_text()` collapses whitespace and trims on both sides. A bare
 string checks exact, case-sensitive equality with the whole observed text;
-pass `pz_regex()` for a pattern, or `pz_regex(needle, fixed = TRUE)` for a
+pass `pz_regex()` for a pattern, or `pz_regex()` with `fixed = TRUE` for a
 literal substring. One expected value applies to every match; a character
 vector needs exactly that many matches and compares them in document order.
 
@@ -92,12 +92,17 @@ Getters return plain values and end the chain, so compare them with ordinary
 testthat expectations. `pz_get_count()` reads once and can return zero; use
 `pz_expect_count()` when the count is about to change.
 
-Use `pz_regex()` to share one JavaScript regular expression between a
-locator and `pz_expect_text()`, `pz_expect_value()`, `pz_expect_attr()`,
-`pz_expect_url()` or `pz_expect_title()`. One scalar regex applies to all
-selected elements. paparazzi collapses whitespace and trims observed strings
-before matching, never the pattern source; with `fixed = TRUE` it normalizes
-and escapes the literal needle instead. Missing values remain non-matches.
+Use `pz_regex()` to share one pattern between a locator and
+`pz_expect_text()`, `pz_expect_value()`, `pz_expect_attr()`,
+`pz_expect_url()` or `pz_expect_title()`. The same value applies to every
+matched element. paparazzi collapses whitespace and trims the text it
+reads before matching, but leaves regex pattern source unchanged. With
+`fixed = TRUE`, it also collapses and trims whitespace in the literal
+substring. A missing value never matches, not even an empty pattern.
+Pass one regex value rather than a vector or
+list of them, and don't mix regex values with strings inside one expected
+vector. paparazzi checks the pattern when the value is used, so an invalid
+pattern errors at that point, even when nothing matches the target.
 
 ```r
 pz_with_page(pz_example("tasks"), function(page) {
@@ -105,16 +110,15 @@ pz_with_page(pz_example("tasks"), function(page) {
   passport_title <- pz_loc(".task-title", match = label)
   pz_expect_text(page, label, target = passport_title)
   pz_expect_attr(
-    page, pz_loc(".task", match = pz_regex("passport", fixed = TRUE)),
+    page, pz_loc(".task", match = pz_regex("passport")),
     !!!list(`data-priority` = pz_regex("^(high|normal)$"), draggable = "true")
   )
 })
 ```
 
-Attribute calls also accept a named list spliced with `!!!`, as above, and
-mix bare strings with regex values. Construction is browser-free; Chrome
-validates pattern source at use time, even with empty or negated targets.
-Regex collections and mixed pairwise string/regex vectors are not supported.
+Attribute calls also accept a named list spliced with `!!!`, as above. One
+pair's value can be a bare string while another is a `pz_regex()`. Each
+pair accepts a character vector or one regex, not a vector of regexes.
 
 ## Wait on conditions, not time
 
