@@ -18,12 +18,9 @@
 #'   text content. [pz_regex()] matches text with a regular expression or,
 #'   with `fixed = TRUE`, a literal substring. paparazzi collapses whitespace
 #'   and trims both observed text and literal expected text, but never
-#'   changes regex pattern source. [pz_js()] supplies a trusted JavaScript
-#'   function receiving one candidate DOM element. The function must return
-#'   primitive `true` or `false`; other values, missing returns, Boolean
-#'   objects, and Promises are errors. Async functions and awaiting are not
-#'   supported. Matcher lists are not supported; express combined conditions
-#'   inside one JavaScript function. `NULL` omits matching.
+#'   changes regex pattern source. [pz_js()] supplies a JavaScript function;
+#'   see "JavaScript conditions" below. Matcher lists are not supported.
+#'   `NULL` omits matching.
 #' @param which Pick one match by position: `"first"`, `"last"`, or a
 #'   1-based positive integer. Applied after CSS and condition
 #'   filtering; an out-of-range position means *no* match, not an error.
@@ -42,12 +39,30 @@
 #' Invalid source and non-functions error even without candidates; runtime
 #' and return-value checks require an invocation.
 #'
-#' Predicates are read-only by contract, not sandboxed. Only use trusted
-#' source, keep functions cheap and free of side effects, and start with
-#' narrow CSS or `within` filters. Functions may inspect ancestors,
-#' descendants, computed styles, and page state outside the candidate scope:
-#' `within` and pinned scopes limit candidates, not what a function can inspect.
-#' A timeout does not forcibly stop runaway JavaScript.
+#' @section JavaScript conditions:
+#' Use `match = pz_js(...)` to select elements using a JavaScript condition.
+#' For example, you can select a table row only when its status cell says
+#' "Ready", rather than checking the text of the whole row. You can combine
+#' several checks inside one function.
+#'
+#' paparazzi calls your function with each element and keeps the element
+#' when the function returns `true`, or excludes it when it returns `false`.
+#' It repeats the check whenever it looks for matching elements, including
+#' while waiting for an element to become available. Return the JavaScript
+#' value `true` or `false` directly: returning a string or another object,
+#' or omitting the return, is an error. Async functions and functions returning
+#' Promises are not supported.
+#'
+#' Your function can inspect the element, its parents and children, styles,
+#' or other parts of the page. `within` and pinned scopes limit which elements
+#' paparazzi considers, not what your function can inspect. Use the function
+#' to read the page without changing it: paparazzi does not prevent your
+#' JavaScript from making changes.
+#'
+#' Use code you wrote or understand, and keep the check quick. Narrow the
+#' elements to check with CSS or `within` where possible. Code that never
+#' finishes, such as an endless loop, can leave the browser unresponsive;
+#' setting a timeout does not guarantee that such code will stop.
 #'
 #' @return An S3 object of class `paparazzi_loc`.
 #' @examples

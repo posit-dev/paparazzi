@@ -25,11 +25,11 @@ page <- pz_open(
 
 task_release <- pz_loc(
   ".task",
-  match = pz_regex("Prepare release notes", fixed = TRUE)
+  match = pz_regex("Prepare release notes")
 )
 task_dentist <- pz_loc(
   ".task",
-  match = pz_regex("Book dentist appointment", fixed = TRUE)
+  match = pz_regex("Book dentist appointment")
 )
 
 page |>

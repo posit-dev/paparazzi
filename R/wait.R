@@ -324,7 +324,13 @@ pz_wait_for_stable <- function(
 #' @seealso [pz_find_reset()], [pz_wait_for_js()], [pz_wait_for_stable()]
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_act_click(pz_loc(".task-done", within = pz_loc(".task", match = pz_regex("bank", fixed = TRUE))))
+#' page |>
+#'   pz_act_click(
+#'     pz_loc(
+#'       ".task-done",
+#'       within = pz_loc(".task", match = pz_regex("bank", fixed = TRUE))
+#'     )
+#'   )
 #' pz_get_count(page, target = ".task.done")
 #'
 #' # "Start over" is a link to a new copy of the page

@@ -16,12 +16,9 @@ Bare strings require exact, case-sensitive equality with the element's
 text content. \code{\link[=pz_regex]{pz_regex()}} matches text with a regular expression or,
 with \code{fixed = TRUE}, a literal substring. paparazzi collapses whitespace
 and trims both observed text and literal expected text, but never
-changes regex pattern source. \code{\link[=pz_js]{pz_js()}} supplies a trusted JavaScript
-function receiving one candidate DOM element. The function must return
-primitive \code{true} or \code{false}; other values, missing returns, Boolean
-objects, and Promises are errors. Async functions and awaiting are not
-supported. Matcher lists are not supported; express combined conditions
-inside one JavaScript function. \code{NULL} omits matching.}
+changes regex pattern source. \code{\link[=pz_js]{pz_js()}} supplies a JavaScript function;
+see "JavaScript conditions" below. Matcher lists are not supported.
+\code{NULL} omits matching.}
 
 \item{which}{Pick one match by position: \code{"first"}, \code{"last"}, or a
 1-based positive integer. Applied after CSS and condition
@@ -55,14 +52,34 @@ returning \code{false} follows normal no-match retry behavior; invalid source,
 non-functions, exceptions, and invalid returns abort as JavaScript errors.
 Invalid source and non-functions error even without candidates; runtime
 and return-value checks require an invocation.
-
-Predicates are read-only by contract, not sandboxed. Only use trusted
-source, keep functions cheap and free of side effects, and start with
-narrow CSS or \code{within} filters. Functions may inspect ancestors,
-descendants, computed styles, and page state outside the candidate scope:
-\code{within} and pinned scopes limit candidates, not what a function can inspect.
-A timeout does not forcibly stop runaway JavaScript.
 }
+\section{JavaScript conditions}{
+
+Use \code{match = pz_js(...)} to select elements using a JavaScript condition.
+For example, you can select a table row only when its status cell says
+"Ready", rather than checking the text of the whole row. You can combine
+several checks inside one function.
+
+paparazzi calls your function with each element and keeps the element
+when the function returns \code{true}, or excludes it when it returns \code{false}.
+It repeats the check whenever it looks for matching elements, including
+while waiting for an element to become available. Return the JavaScript
+value \code{true} or \code{false} directly: returning a string or another object,
+or omitting the return, is an error. Async functions and functions returning
+Promises are not supported.
+
+Your function can inspect the element, its parents and children, styles,
+or other parts of the page. \code{within} and pinned scopes limit which elements
+paparazzi considers, not what your function can inspect. Use the function
+to read the page without changing it: paparazzi does not prevent your
+JavaScript from making changes.
+
+Use code you wrote or understand, and keep the check quick. Narrow the
+elements to check with CSS or \code{within} where possible. Code that never
+finishes, such as an endless loop, can leave the browser unresponsive;
+setting a timeout does not guarantee that such code will stop.
+}
+
 \examples{
 # A spec describes elements; nothing is looked up until you use it
 pz_loc(".task")

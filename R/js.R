@@ -1,32 +1,18 @@
-#' Describe a JavaScript condition for a locator
+#' Describe a JavaScript function
 #'
 #' @description
-#' Use [pz_js()] with [pz_loc()] to select elements using a JavaScript
-#' condition. For example, you can select a table row only when its status
-#' cell says "Ready", rather than checking the text of the whole row. Pass
-#' the condition to [pz_loc()]'s `match` argument.
+#' Use [pz_js()] to describe a JavaScript function in R. Supply the function
+#' as a string of JavaScript code.
 #'
-#' paparazzi calls your function with each element and keeps the element
-#' when the function returns `true`, or excludes it when it returns `false`.
-#' It repeats the check whenever it looks for matching elements, including
-#' while waiting for an element to become available.
-#'
-#' Your function can inspect the element, its parents and children, styles,
-#' or other parts of the page. Use it to read the page without changing it:
-#' paparazzi does not prevent your JavaScript from making changes. Use code
-#' you wrote or understand, and keep the check quick. Code that never
-#' finishes, such as an endless loop, can leave the browser unresponsive;
-#' setting a timeout does not guarantee that such code will stop.
+#' [pz_loc()] accepts this object in its `match` argument to select elements
+#' using a JavaScript condition. See its "JavaScript conditions" section for
+#' how paparazzi calls the function and what it must return.
 #'
 #' @param source A single string defining a JavaScript function, e.g.
 #'   `"el => el.parentElement.matches('.ready')"` or
 #'   `"function(el) { return el.querySelector('.status') !== null; }"`.
-#'   The function receives a DOM element as its argument. It must return
-#'   the JavaScript value `true` or `false`, not a string or another object.
-#'   Missing returns are errors. Async functions and functions returning
-#'   Promises are not supported.
 #'
-#' @return A JavaScript condition object of class `paparazzi_js`.
+#' @return An object of class `paparazzi_js` containing the function code.
 #' @seealso
 #' * [pz_loc()] accepts the condition in `match` to select elements.
 #' * [pz_regex()] describes a text pattern for a locator or expectation.

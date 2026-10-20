@@ -2,39 +2,25 @@
 % Please edit documentation in R/js.R
 \name{pz_js}
 \alias{pz_js}
-\title{Describe a JavaScript condition for a locator}
+\title{Describe a JavaScript function}
 \usage{
 pz_js(source)
 }
 \arguments{
 \item{source}{A single string defining a JavaScript function, e.g.
 \code{"el => el.parentElement.matches('.ready')"} or
-\code{"function(el) { return el.querySelector('.status') !== null; }"}.
-The function receives a DOM element as its argument. It must return
-the JavaScript value \code{true} or \code{false}, not a string or another object.
-Missing returns are errors. Async functions and functions returning
-Promises are not supported.}
+\code{"function(el) { return el.querySelector('.status') !== null; }"}.}
 }
 \value{
-A JavaScript condition object of class \code{paparazzi_js}.
+An object of class \code{paparazzi_js} containing the function code.
 }
 \description{
-Use \code{\link[=pz_js]{pz_js()}} with \code{\link[=pz_loc]{pz_loc()}} to select elements using a JavaScript
-condition. For example, you can select a table row only when its status
-cell says "Ready", rather than checking the text of the whole row. Pass
-the condition to \code{\link[=pz_loc]{pz_loc()}}'s \code{match} argument.
+Use \code{\link[=pz_js]{pz_js()}} to describe a JavaScript function in R. Supply the function
+as a string of JavaScript code.
 
-paparazzi calls your function with each element and keeps the element
-when the function returns \code{true}, or excludes it when it returns \code{false}.
-It repeats the check whenever it looks for matching elements, including
-while waiting for an element to become available.
-
-Your function can inspect the element, its parents and children, styles,
-or other parts of the page. Use it to read the page without changing it:
-paparazzi does not prevent your JavaScript from making changes. Use code
-you wrote or understand, and keep the check quick. Code that never
-finishes, such as an endless loop, can leave the browser unresponsive;
-setting a timeout does not guarantee that such code will stop.
+\code{\link[=pz_loc]{pz_loc()}} accepts this object in its \code{match} argument to select elements
+using a JavaScript condition. See its "JavaScript conditions" section for
+how paparazzi calls the function and what it must return.
 }
 \examples{
 ready <- pz_js('el => el.querySelector(".status")?.textContent === "Ready"')
