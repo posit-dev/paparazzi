@@ -51,7 +51,7 @@ test_example_chunk <- function(chunk, n_chunks = example_n_chunks) {
           "Waited <elapsed>s."
         ),
         "pz_expect_text.Rd" = c(
-          "Error : Expected text to contain \"otters\"",
+          "Error : Expected text to be \"otters\"",
           "Target: `h1`",
           "Last seen: \"Tasks\"",
           "Waited <elapsed>s."

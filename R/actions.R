@@ -301,7 +301,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 #'
 #' # Enter submits the form; the page shows "Saving..." before the task appears
 #' page |> pz_act_press("Enter")
-#' pz_expect_text(page, "Saved", target = "#status")
+#' pz_expect_text(page, pz_regex("Saved", fixed = TRUE), target = "#status")
 #' pz_get_text(page, target = pz_loc(".task-title", which = "first"))
 #'
 #' # A vector presses keys in sequence; + joins keys pressed together

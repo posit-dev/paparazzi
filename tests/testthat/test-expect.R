@@ -931,7 +931,7 @@ test_that("pz_expect_title matches exactly or by pz_regex", {
   pz_expect_title(page, "paparazzi state fixture")
   pz_expect_title(page, pz_regex("state fixture", fixed = TRUE))
   pz_expect_title(page, pz_regex("state|unit"))
-  pz_expect_title(page, "renamed", not = TRUE)
+  pz_expect_title(page, pz_regex("renamed", fixed = TRUE), not = TRUE)
 })
 
 test_that("pz_expect_title failure uses the classed format", {
@@ -967,7 +967,7 @@ test_that("pz_expect_url matches exactly or by pz_regex", {
   pz_expect_url(page, pz_regex("state.html", fixed = TRUE))
   pz_expect_url(page, pz_regex("state[.]html$"))
   # Fixture pages never load external hosts.
-  pz_expect_url(page, "example.com", not = TRUE)
+  pz_expect_url(page, pz_regex("example.com", fixed = TRUE), not = TRUE)
 })
 
 test_that("pz_expect_url failure uses the classed format", {
@@ -1036,6 +1036,23 @@ test_that("pz_expect_text matches a pz_regex in Chrome, collapsed and trimmed", 
     page,
     pz_regex("^once there", ignore_case = TRUE),
     target = ".story"
+  )
+})
+
+test_that("partial regex satisfaction fails both text expectation polarities", {
+  page <- local_elements_page()
+  target <- ".story, .twin"
+  matcher <- pz_regex("^same words$")
+
+  expect_identical(
+    pz_get_text(page, target),
+    c("Once there were otters.", "same words", "same words")
+  )
+  testthat::expect_failure(
+    pz_expect_text(page, matcher, target = target, timeout = 0)
+  )
+  testthat::expect_failure(
+    pz_expect_text(page, matcher, target = target, not = TRUE, timeout = 0)
   )
 })
 
