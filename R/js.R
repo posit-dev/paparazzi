@@ -1,12 +1,12 @@
 #' Describe a JavaScript function
 #'
 #' @description
-#' Use [pz_js()] to describe a JavaScript function in R. Supply the function
-#' as a string of JavaScript code.
+#' Use [pz_js()] to describe a JavaScript function in R. Supply the function as
+#' a string of JavaScript code.
 #'
 #' [pz_loc()] accepts this object in its `match` argument to select elements
-#' using a JavaScript condition. See its "JavaScript conditions" section for
-#' how paparazzi calls the function and what it must return.
+#' using a JavaScript condition. See its "JavaScript conditions" section for how
+#' paparazzi calls the function and what it must return.
 #'
 #' @param source A single string defining a JavaScript function, e.g.
 #'   `"el => el.parentElement.matches('.ready')"` or

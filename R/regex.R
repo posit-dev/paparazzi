@@ -1,34 +1,33 @@
 #' Share a regular expression across locators and expectations
 #'
 #' @description
-#' Use [pz_regex()] to describe a text pattern for a locator or expectation.
-#' Set `ignore_case = TRUE` to match "Save", "save", and "SAVE" alike.
-#' For a literal substring rather than a regex pattern, use `fixed = TRUE`.
+#' Use [pz_regex()] to describe a text pattern for a locator or expectation. Set
+#' `ignore_case = TRUE` to match "Save", "save", and "SAVE" alike. For a literal
+#' substring rather than a regex pattern, use `fixed = TRUE`.
 #'
 #' Before comparing text, paparazzi replaces runs of whitespace with a single
 #' space and removes whitespace at the start and end. It leaves your regex
 #' pattern unchanged. Missing values never match, even with an empty pattern.
 #'
-#' Pass the pattern to a locator or an expectation to use it; the same
-#' pattern applies to every selected element.
-#' paparazzi checks regex syntax when you use the pattern, so an invalid
-#' pattern raises an error then, even if no elements match your selector.
+#' Pass the pattern to a locator or an expectation to use it; the same pattern
+#' applies to every selected element. paparazzi checks regex syntax when you use
+#' the pattern, so an invalid pattern raises an error then, even if no elements
+#' match your selector.
 #'
-#' @param pattern A single string containing a regular expression, or a
-#'   literal substring when `fixed = TRUE`. Patterns use JavaScript regular
-#'   expression syntax in Unicode-aware mode, not R's regex syntax. An empty
-#'   pattern is valid. Use R string escaping, e.g. `"\\d+"` for digits.
+#' @param pattern A single string containing a regular expression, or a literal
+#'   substring when `fixed = TRUE`. Patterns use JavaScript regular expression
+#'   syntax in Unicode-aware mode, not R's regex syntax. An empty pattern is
+#'   valid. Use R string escaping, e.g. `"\\d+"` for digits.
 #' @param ignore_case Ignore case differences when matching?
 #' @param fixed Match `pattern` as a literal substring rather than a regular
-#'   expression? With `fixed = TRUE`, characters such as `(`, `.`, and `*`
-#'   match themselves rather than having their regex meanings. paparazzi
-#'   collapses and trims whitespace in the substring as well as the text
-#'   being checked. For exact literal matching, use a bare string instead of
-#'   [pz_regex()].
+#'   expression? With `fixed = TRUE`, characters such as `(`, `.`, and `*` match
+#'   themselves rather than having their regex meanings. paparazzi collapses and
+#'   trims whitespace in the substring as well as the text being checked. For
+#'   exact literal matching, use a bare string instead of [pz_regex()].
 #' @inheritParams pz_act_click
 #'
-#' @return A regular expression object of class `paparazzi_regex`. Supply
-#'   this object on its own, not in a vector or list of patterns.
+#' @return A regular expression object of class `paparazzi_regex`. Supply this
+#'   object on its own, not in a vector or list of patterns.
 #' @seealso
 #' * [pz_loc()] accepts a regex in `match` to find elements by their text.
 #' * [pz_expect_text()], [pz_expect_value()], and [pz_expect_attr()] accept

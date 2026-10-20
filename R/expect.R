@@ -221,42 +221,40 @@ pz_expect_hidden <- function(
 #' Expect element text content
 #'
 #' @description
-#' [pz_expect_text()] passes when at least one element matches and the
-#' text of every match satisfies `text`. Whitespace collapses on both
-#' sides before comparing, so `"Save   now"` matches text reading
-#' "Save now".
+#' [pz_expect_text()] passes when at least one element matches and the text of
+#' every match satisfies `text`. Whitespace collapses on both sides before
+#' comparing, so `"Save   now"` matches text reading "Save now".
 #'
 #' A length-1 `text` applies to every match. A length-`n` `text` requires
-#' exactly `n` matches and compares pairwise, in order. With
-#' `not = TRUE`, the expectation passes when no match satisfies `text`,
-#' including when nothing matches.
+#' exactly `n` matches and compares pairwise, in order. With `not = TRUE`, the
+#' expectation passes when no match satisfies `text`, including when nothing
+#' matches.
 #'
-#' A string checks the complete text, with the same capitalization.
-#' Pass [pz_regex()] to check a pattern instead: `pz_regex("^Save")` checks
-#' whether the text begins with "Save". For a literal substring, use
-#' `pz_regex("Save (draft)", fixed = TRUE)`; the parentheses then match
-#' themselves rather than having their regex meanings.
+#' A string checks the complete text, with the same capitalization. Pass
+#' [pz_regex()] to check a pattern instead: `pz_regex("^Save")` checks whether
+#' the text begins with "Save". For a literal substring, use `pz_regex("Save
+#' (draft)", fixed = TRUE)`; the parentheses then match themselves rather than
+#' having their regex meanings.
 #'
-#' The same regex checks every selected element. paparazzi collapses and
-#' trims whitespace in the text without changing your regex pattern.
-#' Missing text never matches, even with an empty pattern. See [pz_regex()]
-#' for pattern syntax and options.
+#' The same regex checks every selected element. paparazzi collapses and trims
+#' whitespace in the text without changing your regex pattern. Missing text
+#' never matches, even with an empty pattern. See [pz_regex()] for pattern
+#' syntax and options.
 #'
 #' Outside of testthat, a failure aborts with a classed error of class
-#' `"paparazzi_expectation_failure"`; inside testthat, the failure is
-#' reported as a test failure instead. See [pz_expect_exists()] for the
-#' retry, timeout, and bridge behavior shared by all expectations.
+#' `"paparazzi_expectation_failure"`; inside testthat, the failure is reported
+#' as a test failure instead. See [pz_expect_exists()] for the retry, timeout,
+#' and bridge behavior shared by all expectations.
 #'
 #' @inheritParams pz_act_click
-#' @param text A character vector of expected text: length 1 applies to
-#'   every match, length `n` is compared pairwise in order. Or a single
-#'   [pz_regex()] value to check the same pattern against every element.
+#' @param text A character vector of expected text: length 1 applies to every
+#'   match, length `n` is compared pairwise in order. Or a single [pz_regex()]
+#'   value to check the same pattern against every element.
 #' @inheritParams pz_expect_exists
-#' @param target A CSS selector string, a [pz_loc()] spec, or a list of
-#'   specs and strings (a union matching any of them). `NULL` means the
-#'   current context: the pinned set at a scoped context, or the page
-#'   body at the root, so `pz_expect_text(page, "Welcome")` checks the
-#'   page text.
+#' @param target A CSS selector string, a [pz_loc()] spec, or a list of specs
+#'   and strings (a union matching any of them). `NULL` means the current
+#'   context: the pinned set at a scoped context, or the page body at the root,
+#'   so `pz_expect_text(page, "Welcome")` checks the page text.
 #'
 #' @return `ctx`, invisibly.
 #' @examplesIf paparazzi:::examples_run()

@@ -1,63 +1,61 @@
 #' Describe elements by CSS, matching condition, position, and scope
 #'
 #' @description
-#' [pz_loc()] builds a page-independent element spec: a CSS selector,
-#' optionally narrowed by a matching condition (`match`), a match position
-#' (`which`), and an ancestor scope (`within`). Specs are lazy --
-#' they resolve at use time, so they follow DOM changes between uses --
-#' and can be defined once and reused across sessions.
+#' [pz_loc()] builds a page-independent element spec: a CSS selector, optionally
+#' narrowed by a matching condition (`match`), a match position (`which`), and
+#' an ancestor scope (`within`). Specs are lazy -- they resolve at use time, so
+#' they follow DOM changes between uses -- and can be defined once and reused
+#' across sessions.
 #'
-#' Wherever a spec is accepted, a bare string is promoted to
-#' `pz_loc(string)`, and a list of specs and strings is a union that
-#' matches the elements of any member.
+#' Wherever a spec is accepted, a bare string is promoted to `pz_loc(string)`,
+#' and a list of specs and strings is a union that matches the elements of any
+#' member.
 #'
 #' @param css A CSS selector string.
 #' @inheritParams pz_act_click
 #' @param match A single bare string, [pz_regex()] value, or [pz_js()] value.
-#'   Bare strings require exact, case-sensitive equality with the element's
-#'   text content. [pz_regex()] matches text with a regular expression or,
-#'   with `fixed = TRUE`, a literal substring. paparazzi collapses whitespace
-#'   and trims both observed text and literal expected text, but never
-#'   changes regex pattern source. [pz_js()] supplies a JavaScript function;
-#'   see "JavaScript conditions" below. Matcher lists are not supported.
-#'   `NULL` omits matching.
-#' @param which Pick one match by position: `"first"`, `"last"`, or a
-#'   1-based positive integer. Applied after CSS and condition
-#'   filtering; an out-of-range position means *no* match, not an error.
-#'   `NULL` keeps all matches.
-#' @param within Only match descendants of elements matching this spec
-#'   (a string or [pz_loc()], itself fully qualified). If `within`
-#'   matches nothing, the whole spec matches nothing. `NULL` omits the
-#'   ancestor qualifier.
+#'   Bare strings require exact, case-sensitive equality with the element's text
+#'   content. [pz_regex()] matches text with a regular expression or, with
+#'   `fixed = TRUE`, a literal substring. paparazzi collapses whitespace and
+#'   trims both observed text and literal expected text, but never changes regex
+#'   pattern source. [pz_js()] supplies a JavaScript function; see "JavaScript
+#'   conditions" below. Matcher lists are not supported. `NULL` omits matching.
+#' @param which Pick one match by position: `"first"`, `"last"`, or a 1-based
+#'   positive integer. Applied after CSS and condition filtering; an
+#'   out-of-range position means *no* match, not an error. `NULL` keeps all
+#'   matches.
+#' @param within Only match descendants of elements matching this spec (a string
+#'   or [pz_loc()], itself fully qualified). If `within` matches nothing, the
+#'   whole spec matches nothing. `NULL` omits the ancestor qualifier.
 #'
 #' @details
 #' paparazzi resolves `within`, selects CSS candidates and excludes its
-#' overlays, filters the matching condition, then applies `which`.
-#' It repeats the condition on every use and auto-wait attempt. A predicate
-#' returning `false` follows normal no-match retry behavior; invalid source,
+#' overlays, filters the matching condition, then applies `which`. It repeats
+#' the condition on every use and auto-wait attempt. A predicate returning
+#' `false` follows normal no-match retry behavior; invalid source,
 #' non-functions, exceptions, and invalid returns abort as JavaScript errors.
-#' Invalid source and non-functions error even without candidates; runtime
-#' and return-value checks require an invocation.
+#' Invalid source and non-functions error even without candidates; runtime and
+#' return-value checks require an invocation.
 #'
 #' @section JavaScript conditions:
-#' Use `match = pz_js(...)` to select elements using a JavaScript condition.
-#' For example, you can select a table row only when its status cell says
-#' "Ready", rather than checking the text of the whole row. You can combine
-#' several checks inside one function.
+#' Use `match = pz_js(...)` to select elements using a JavaScript condition. For
+#' example, you can select a table row only when its status cell says "Ready",
+#' rather than checking the text of the whole row. You can combine several
+#' checks inside one function.
 #'
-#' paparazzi calls your function with each element and keeps the element
-#' when the function returns `true`, or excludes it when it returns `false`.
-#' It repeats the check whenever it looks for matching elements, including
-#' while waiting for an element to become available. Return the JavaScript
-#' value `true` or `false` directly: returning a string or another object,
-#' or omitting the return, is an error. Async functions and functions returning
-#' Promises are not supported.
+#' paparazzi calls your function with each element and keeps the element when
+#' the function returns `true`, or excludes it when it returns `false`. It
+#' repeats the check whenever it looks for matching elements, including while
+#' waiting for an element to become available. Return the JavaScript value
+#' `true` or `false` directly: returning a string or another object, or omitting
+#' the return, is an error. Async functions and functions returning Promises are
+#' not supported.
 #'
-#' Your function can inspect the element, its parents and children, styles,
-#' or other parts of the page. `within` and pinned scopes limit which elements
-#' paparazzi considers, not what your function can inspect. Use the function
-#' to read the page without changing it: paparazzi does not prevent your
-#' JavaScript from making changes.
+#' Your function can inspect the element, its parents and children, styles, or
+#' other parts of the page. `within` and pinned scopes limit which elements
+#' paparazzi considers, not what your function can inspect. Use the function to
+#' read the page without changing it: paparazzi does not prevent your JavaScript
+#' from making changes.
 #'
 #' Use code you wrote or understand, and keep the check quick. Narrow the
 #' elements to check with CSS or `within` where possible. Code that never

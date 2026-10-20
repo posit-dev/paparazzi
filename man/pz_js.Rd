@@ -15,12 +15,12 @@ pz_js(source)
 An object of class \code{paparazzi_js} containing the function code.
 }
 \description{
-Use \code{\link[=pz_js]{pz_js()}} to describe a JavaScript function in R. Supply the function
-as a string of JavaScript code.
+Use \code{\link[=pz_js]{pz_js()}} to describe a JavaScript function in R. Supply the function as
+a string of JavaScript code.
 
 \code{\link[=pz_loc]{pz_loc()}} accepts this object in its \code{match} argument to select elements
-using a JavaScript condition. See its "JavaScript conditions" section for
-how paparazzi calls the function and what it must return.
+using a JavaScript condition. See its "JavaScript conditions" section for how
+paparazzi calls the function and what it must return.
 }
 \examples{
 ready <- pz_js('el => el.querySelector(".status")?.textContent === "Ready"')

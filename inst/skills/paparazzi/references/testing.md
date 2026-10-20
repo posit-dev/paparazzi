@@ -98,7 +98,8 @@ Use `pz_regex()` to share one pattern between a locator and
 matched element. paparazzi collapses whitespace and trims the text it
 reads before matching, but leaves regex pattern source unchanged. With
 `fixed = TRUE`, it also collapses and trims whitespace in the literal
-substring. A missing value never matches, not even an empty pattern.
+substring. An empty string can match an empty pattern, but an absent
+attribute or value property never matches.
 Pass one regex value rather than a vector or
 list of them, and don't mix regex values with strings inside one expected
 vector. paparazzi checks the pattern when the value is used, so an invalid

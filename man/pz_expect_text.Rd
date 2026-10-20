@@ -9,15 +9,14 @@ pz_expect_text(ctx, text, target = NULL, ..., not = FALSE, timeout = NULL)
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{text}{A character vector of expected text: length 1 applies to
-every match, length \code{n} is compared pairwise in order. Or a single
-\code{\link[=pz_regex]{pz_regex()}} value to check the same pattern against every element.}
+\item{text}{A character vector of expected text: length 1 applies to every
+match, length \code{n} is compared pairwise in order. Or a single \code{\link[=pz_regex]{pz_regex()}}
+value to check the same pattern against every element.}
 
-\item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
-specs and strings (a union matching any of them). \code{NULL} means the
-current context: the pinned set at a scoped context, or the page
-body at the root, so \code{pz_expect_text(page, "Welcome")} checks the
-page text.}
+\item{target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of specs
+and strings (a union matching any of them). \code{NULL} means the current
+context: the pinned set at a scoped context, or the page body at the root,
+so \code{pz_expect_text(page, "Welcome")} checks the page text.}
 
 \item{...}{Checked empty; reserved for future use.}
 
@@ -30,31 +29,29 @@ page text.}
 \code{ctx}, invisibly.
 }
 \description{
-\code{\link[=pz_expect_text]{pz_expect_text()}} passes when at least one element matches and the
-text of every match satisfies \code{text}. Whitespace collapses on both
-sides before comparing, so \code{"Save   now"} matches text reading
-"Save now".
+\code{\link[=pz_expect_text]{pz_expect_text()}} passes when at least one element matches and the text of
+every match satisfies \code{text}. Whitespace collapses on both sides before
+comparing, so \code{"Save   now"} matches text reading "Save now".
 
 A length-1 \code{text} applies to every match. A length-\code{n} \code{text} requires
-exactly \code{n} matches and compares pairwise, in order. With
-\code{not = TRUE}, the expectation passes when no match satisfies \code{text},
-including when nothing matches.
+exactly \code{n} matches and compares pairwise, in order. With \code{not = TRUE}, the
+expectation passes when no match satisfies \code{text}, including when nothing
+matches.
 
-A string checks the complete text, with the same capitalization.
-Pass \code{\link[=pz_regex]{pz_regex()}} to check a pattern instead: \code{pz_regex("^Save")} checks
-whether the text begins with "Save". For a literal substring, use
-\code{pz_regex("Save (draft)", fixed = TRUE)}; the parentheses then match
-themselves rather than having their regex meanings.
+A string checks the complete text, with the same capitalization. Pass
+\code{\link[=pz_regex]{pz_regex()}} to check a pattern instead: \code{pz_regex("^Save")} checks whether
+the text begins with "Save". For a literal substring, use \code{pz_regex("Save (draft)", fixed = TRUE)}; the parentheses then match themselves rather than
+having their regex meanings.
 
-The same regex checks every selected element. paparazzi collapses and
-trims whitespace in the text without changing your regex pattern.
-Missing text never matches, even with an empty pattern. See \code{\link[=pz_regex]{pz_regex()}}
-for pattern syntax and options.
+The same regex checks every selected element. paparazzi collapses and trims
+whitespace in the text without changing your regex pattern. Missing text
+never matches, even with an empty pattern. See \code{\link[=pz_regex]{pz_regex()}} for pattern
+syntax and options.
 
 Outside of testthat, a failure aborts with a classed error of class
-\code{"paparazzi_expectation_failure"}; inside testthat, the failure is
-reported as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect_exists()}} for the
-retry, timeout, and bridge behavior shared by all expectations.
+\code{"paparazzi_expectation_failure"}; inside testthat, the failure is reported
+as a test failure instead. See \code{\link[=pz_expect_exists]{pz_expect_exists()}} for the retry, timeout,
+and bridge behavior shared by all expectations.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
