@@ -1,58 +1,45 @@
-#' Share a JavaScript regular expression across locators and expectations
+#' Share a regular expression across locators and expectations
 #'
-#' [pz_regex()] creates a scalar, page-independent matcher for
-#' [pz_loc()]'s `has_text` and [pz_expect_text()], [pz_expect_value()],
-#' [pz_expect_attr()], [pz_expect_url()], and [pz_expect_title()].
-#' Chrome uses JavaScript `RegExp` syntax to match it. paparazzi collapses
-#' whitespace and trims observed strings before matching, but never changes
-#' the pattern source. Missing values do not match, even an empty pattern.
+#' [pz_regex()] creates a scalar, page-independent matcher for [pz_loc()]'s
+#' `match` and [pz_expect_text()], [pz_expect_value()], [pz_expect_attr()],
+#' [pz_expect_url()], and [pz_expect_title()]. Chrome matches JavaScript
+#' `RegExp` syntax in Unicode-aware mode. paparazzi collapses whitespace and
+#' trims observed strings, but never changes regex pattern source.
 #'
-#' A regex value carries its own matching semantics: `match` and `.match`
-#' govern only plain strings. Existing string-based `match = "regex"`
-#' and `.match = "regex"` expectations still use R's [grepl()] and their
-#' existing whitespace normalization. Use a regex value to share a matcher
-#' with a locator.
+#' With `fixed = TRUE`, paparazzi treats `pattern` as a literal substring,
+#' collapses and trims its whitespace, and escapes regex metacharacters.
+#' Use a bare string instead of [pz_regex()] for exact literal matching.
+#' Missing values do not match, even an empty pattern.
 #'
 #' Construction checks the inputs without opening a browser. Chrome checks
-#' pattern syntax and flag support when you use the value, including when
-#' the target matches no elements. One value applies to all selected elements;
-#' collections of regex values and mixed string/regex vectors are not supported.
+#' pattern syntax when you use the value, including when the target matches
+#' no elements. One value applies to all selected elements; collections of
+#' regex values and mixed string/regex vectors are not supported.
 #'
-#' @param pattern A single string of JavaScript regular expression source.
-#'   An empty pattern is valid. Use R string escaping, e.g. `"\\d+"` for digits.
-#' @param flags A single string of distinct JavaScript flags: `d`, `i`, `m`,
-#'   `s`, `u`, or `v`. Matching is case-sensitive unless you include `i`.
-#'   Stateful flags `g` and `y`, duplicate flags, and combining `u` with `v`
-#'   are errors. Support for individual flags depends on your Chrome version.
+#' @param pattern A single string of JavaScript regular expression source,
+#'   or a literal substring when `fixed = TRUE`. An empty pattern is valid.
+#'   Use R string escaping, e.g. `"\\d+"` for digits.
+#' @param ignore_case Ignore case differences when matching?
+#' @param fixed Match a literal substring rather than a regular expression?
+#' @inheritParams pz_act_click
 #'
-#' @return An S3 object of class `paparazzi_regex`, containing pattern and flags.
+#' @return An S3 object of class `paparazzi_regex`.
 #' @examples
-#' ready <- pz_regex("^Report \\d+ ready$", flags = "i")
-#' pz_loc(".report", has_text = ready)
-#' pz_loc("button", has_text = pz_regex("^Save$"))
+#' ready <- pz_regex("^Report \\d+ ready$", ignore_case = TRUE)
+#' pz_loc(".report", match = ready)
+#' pz_loc("button", match = "Save")
+#' pz_loc("button", match = pz_regex("Save (draft)", fixed = TRUE))
 #'
 #' @export
-pz_regex <- function(pattern, flags = "") {
+pz_regex <- function(pattern, ..., ignore_case = FALSE, fixed = FALSE) {
+  check_dots_empty()
   check_string(pattern)
-  check_string(flags)
-  chars <- strsplit(flags, "", fixed = TRUE)[[1]]
-  if (any(chars %in% c("g", "y"))) {
-    cli::cli_abort(
-      "{.arg flags} must not include stateful flags {.val g} or {.val y}."
-    )
-  }
-  if (!all(chars %in% c("d", "i", "m", "s", "u", "v"))) {
-    cli::cli_abort(
-      "{.arg flags} may contain only {.val d}, {.val i}, {.val m}, {.val s}, {.val u}, or {.val v}."
-    )
-  }
-  if (anyDuplicated(chars)) {
-    cli::cli_abort("{.arg flags} must not contain duplicate flags.")
-  }
-  if (all(c("u", "v") %in% chars)) {
-    cli::cli_abort("{.arg flags} must not combine {.val u} and {.val v}.")
-  }
-  structure(list(pattern = pattern, flags = flags), class = "paparazzi_regex")
+  check_bool(ignore_case)
+  check_bool(fixed)
+  structure(
+    list(pattern = pattern, ignore_case = ignore_case, fixed = fixed),
+    class = "paparazzi_regex"
+  )
 }
 
 #' @export
@@ -66,27 +53,36 @@ is_regex <- function(x) {
 }
 
 regex_spec_fields <- function(x) {
-  list(type = "regex", pattern = x$pattern, flags = x$flags)
+  list(
+    type = "regex",
+    pattern = x$pattern,
+    ignore_case = x$ignore_case,
+    fixed = x$fixed
+  )
 }
 
 format_regex <- function(x) {
   paste0(
     "pz_regex(",
     encodeString(x$pattern, quote = '"'),
-    ", flags = ",
-    encodeString(x$flags, quote = '"'),
+    if (x$ignore_case) ", ignore_case = TRUE",
+    if (x$fixed) ", fixed = TRUE",
     ")"
   )
 }
 
-regex_js_helpers <- r"(const compileRegex = (spec) => {
+regex_js_helpers <- r"(const normalizeText = (value) => String(value).replace(/\s+/g, ' ').trim();
+const matchesExact = (value, expected) => value != null &&
+  normalizeText(value) === normalizeText(expected);
+const compileRegex = (spec) => {
+  const pattern = spec.fixed ?
+    normalizeText(spec.pattern).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : spec.pattern;
   try {
-    return new RegExp(spec.pattern, spec.flags);
+    return new RegExp(pattern, spec.ignore_case ? 'iu' : 'u');
   } catch (err) {
-    throw new Error('Invalid pz_regex(' + JSON.stringify(spec.pattern) +
-      ', flags = ' + JSON.stringify(spec.flags) + '): ' + String(err));
+    throw new Error('Invalid pz_regex(' + JSON.stringify(spec.pattern) + '): ' + String(err));
   }
 };
 const matchesRegex = (value, regex) => value != null &&
-  regex.test(String(value).replace(/\s+/g, ' ').trim());
+  regex.test(normalizeText(value));
 )"

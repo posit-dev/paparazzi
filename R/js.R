@@ -1,3 +1,40 @@
+#' Describe a JavaScript condition for a locator
+#'
+#' [pz_js()] wraps a trusted JavaScript function-source string for [pz_loc()]'s
+#' `match`. It does not execute the source or open a browser. paparazzi calls
+#' the function with each candidate DOM element when it resolves the locator.
+#' The function must return primitive `true` or `false`; missing returns,
+#' other values, Boolean objects, and Promises are errors. Async functions
+#' and awaiting are not supported.
+#'
+#' Keep functions inexpensive and free of side effects. The read-only
+#' contract is not a sandbox: functions may inspect ancestors, descendants,
+#' computed styles, and page state outside the candidate scope. Only use
+#' trusted source. A timeout does not forcibly stop runaway JavaScript.
+#' Use [pz_evaluate()] to execute JavaScript immediately, or [pz_expect_js()]
+#' for an existing JavaScript expectation.
+#'
+#' @param source A single function-source string, e.g.
+#'   `"el => el.parentElement.matches('.ready')"` or
+#'   `"function(el) { return el.querySelector('.status') !== null; }"`.
+#'
+#' @return An S3 object of class `paparazzi_js`.
+#' @examples
+#' ready <- pz_js('el => el.querySelector(".status")?.textContent === "Ready"')
+#' pz_loc("tr", match = ready)
+#'
+#' @export
+pz_js <- function(source) {
+  check_string(source)
+  structure(list(source = source), class = "paparazzi_js")
+}
+
+#' @export
+print.paparazzi_js <- function(x, ...) {
+  cli::cat_line("<paparazzi_js> ", format_js(x))
+  invisible(x)
+}
+
 #' Evaluate JavaScript in the page
 #'
 #' Evaluates `expr` in the page, optionally awaiting a returned promise, and
@@ -88,6 +125,14 @@ pz_evaluate <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
 pz_chromote <- function(ctx) {
   check_context(ctx)
   ctx$page$session
+}
+
+is_js <- function(x) {
+  inherits(x, "paparazzi_js")
+}
+
+format_js <- function(x) {
+  paste0("pz_js(", encodeString(x$source, quote = '"'), ")")
 }
 
 # CDP reports NaN/Infinity/-Infinity/-0/BigInt as unserializableValue

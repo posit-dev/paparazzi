@@ -3,46 +3,46 @@ test_that("pz_loc builds a spec with the given fields", {
 
   expect_s3_class(loc, "paparazzi_loc")
   expect_identical(loc$css, "#chat .ProseMirror")
-  expect_null(loc$has_text)
+  expect_null(loc$match)
   expect_null(loc$which)
   expect_null(loc$within)
 })
 
-test_that("pz_loc validates css and has_text", {
+test_that("pz_loc validates scalar matchers and rejects old qualifiers", {
   expect_error(pz_loc(1), class = "rlang_error")
-  expect_error(pz_loc(".btn", has_text = 1), class = "rlang_error")
-  expect_error(pz_loc(".btn", has_text = c("a", "b")), class = "rlang_error")
+  expect_error(pz_loc(".btn", match = 1), "match")
+  expect_error(pz_loc(".btn", match = c("a", "b")), "match")
+  expect_error(pz_loc(".btn", match = list(pz_regex("a"))), "match")
+  expect_error(pz_loc(".btn", match = function(el) TRUE), "match")
+  expect_error(pz_loc(".btn", has_text = "Save"), "empty")
+  expect_error(pz_loc(".btn", predicate = "el => true"), "empty")
 })
 
-test_that("pz_loc accepts regex text and validates predicate shape without Chrome", {
-  regex <- pz_regex("^Save$", "i")
-  predicate <- "el => el.parentElement.matches('.ready')"
-  loc <- pz_loc("button", has_text = regex, predicate = predicate)
-  expect_identical(loc$has_text, regex)
-  expect_identical(loc$predicate, predicate)
-  expect_error(pz_loc("button", predicate = function(el) TRUE), "predicate")
-  expect_error(pz_loc("button", predicate = NA_character_), "predicate")
-  expect_error(pz_loc("button", predicate = c("a", "b")), "predicate")
-  expect_identical(pz_loc("button", predicate = "[")$predicate, "[")
-  expect_identical(
-    pz_loc("button", has_text = pz_regex("["))$has_text$pattern,
-    "["
-  )
+test_that("pz_loc accepts regex and JS matchers without Chrome", {
+  regex <- pz_regex("^Save$", ignore_case = TRUE)
+  js <- pz_js("el => el.parentElement.matches('.ready')")
+  expect_identical(pz_loc("button", match = regex)$match, regex)
+  expect_identical(pz_loc("button", match = js)$match, js)
+  expect_identical(pz_loc("button", match = pz_js("["))$match$source, "[")
+  expect_identical(pz_loc("button", match = pz_regex("["))$match$pattern, "[")
 })
 
-test_that("regex and predicate qualifiers appear in target diagnostics", {
+test_that("regex and JS matchers appear in target diagnostics", {
   loc <- pz_loc(
     "button",
-    has_text = pz_regex("^Save$", "i"),
-    predicate = "el => el.disabled === false",
+    match = pz_regex("^Save$", ignore_case = TRUE),
     which = "last",
     within = "form"
   )
-  expected <- '`button` (has_text: pz_regex("^Save$", flags = "i"), predicate: el => el.disabled === false, which: last, within: `form`)'
+  expected <- '`button` (match: pz_regex("^Save$", ignore_case = TRUE), which: last, within: `form`)'
   expect_identical(format_loc(loc), expected)
   expect_identical(
     capture.output(print(loc)),
     paste0("<paparazzi_loc> ", expected)
+  )
+  expect_identical(
+    format_loc(pz_loc("button", match = pz_js("el => !el.disabled"))),
+    '`button` (match: pz_js("el => !el.disabled"))'
   )
 })
 
@@ -68,7 +68,7 @@ test_that("pz_loc promotes a bare string within", {
 })
 
 test_that("pz_loc accepts a fully qualified within spec", {
-  within <- pz_loc(".panel", has_text = "Delete", which = "first")
+  within <- pz_loc(".panel", match = "Delete", which = "first")
   loc <- pz_loc(".btn", within = within)
   expect_identical(loc$within, within)
 })
@@ -121,17 +121,17 @@ test_that("format_loc renders css and qualifiers in fixed order", {
     format_loc(
       pz_loc(
         ".shiny-tool-request",
-        has_text = "get_weather",
+        match = "get_weather",
         which = "last",
         within = ".chat"
       )
     ),
-    '`.shiny-tool-request` (has_text: "get_weather", which: last, within: `.chat`)'
+    '`.shiny-tool-request` (match: "get_weather", which: last, within: `.chat`)'
   )
   expect_identical(format_loc(pz_loc(".btn", which = 3)), "`.btn` (which: 3)")
   expect_identical(
-    format_loc(pz_loc(".btn", within = pz_loc(".panel", has_text = "Delete"))),
-    '`.btn` (within: `.panel` (has_text: "Delete"))'
+    format_loc(pz_loc(".btn", within = pz_loc(".panel", match = "Delete"))),
+    '`.btn` (within: `.panel` (match: "Delete"))'
   )
 })
 

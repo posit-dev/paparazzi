@@ -20,17 +20,17 @@ test_that("loc_resolve checks its inputs", {
   )
 })
 
-test_that("loc_resolve resolves has_text, collapsed and case-sensitive", {
+test_that("literal match is exact, normalized and case-sensitive", {
   page <- local_elements_page()
-  els <- loc_resolve(page, pz_loc(".btn", has_text = "Save"), multiple = "all")
+  els <- loc_resolve(page, pz_loc(".btn", match = "Save"), multiple = "all")
   withr::defer(release_elements(els))
-  expect_identical(els$count, 3L)
-  expect_identical(elements_text(els), c("Save", "Save   now", "Save"))
+  expect_identical(els$count, 2L)
+  expect_identical(elements_text(els), c("Save", "Save"))
 
   # Whitespace collapses on both sides of the match.
   collapsed <- loc_resolve(
     page,
-    pz_loc(".btn", has_text = "Save   now"),
+    pz_loc(".btn", match = "  Save   now  "),
     multiple = "all"
   )
   withr::defer(release_elements(collapsed))
@@ -39,7 +39,7 @@ test_that("loc_resolve resolves has_text, collapsed and case-sensitive", {
 
   # Case-sensitive: "save" matches nothing.
   expect_error(
-    loc_resolve(page, pz_loc(".btn", has_text = "save"), timeout = 0),
+    loc_resolve(page, pz_loc(".btn", match = "save"), timeout = 0),
     class = "paparazzi_error_timeout"
   )
 })
@@ -64,11 +64,12 @@ test_that("loc_resolve applies which after filtering", {
   expect_identical(elements_text(nth), "Cancel")
 })
 
-test_that("which applies after has_text filtering", {
+test_that("which applies after substring matching", {
   page <- local_elements_page()
-  # Matching .btn[has_text = Save] is "Save", "Save   now", "Save"; which = 2
-  # picks the second *filtered* match, not the second .btn overall.
-  els <- loc_resolve(page, pz_loc(".btn", has_text = "Save", which = 2))
+  els <- loc_resolve(
+    page,
+    pz_loc(".btn", match = pz_regex("Save", fixed = TRUE), which = 2)
+  )
   withr::defer(release_elements(els))
   expect_identical(els$count, 1L)
   expect_identical(elements_text(els), "Save   now")
@@ -113,7 +114,7 @@ test_that("loc_resolve scopes within a container, recursively", {
     page,
     pz_loc(
       ".btn",
-      within = pz_loc(".panel", has_text = "Delete"),
+      within = pz_loc(".panel", match = pz_regex("Delete", fixed = TRUE)),
       which = "last"
     )
   )
@@ -169,7 +170,7 @@ test_that("resolution ignores elements inside #paparazzi-overlay-root", {
     page,
     pz_loc(
       ".shiny-tool-request",
-      has_text = "get_weather",
+      match = "get_weather",
       which = "last",
       within = ".chat"
     ),
@@ -181,7 +182,7 @@ test_that("resolution ignores elements inside #paparazzi-overlay-root", {
 
 test_that("multiple = 'error' aborts with count, description, and a hint", {
   page <- local_elements_page()
-  target <- pz_loc(".btn", has_text = "Save")
+  target <- pz_loc(".btn", match = pz_regex("Save", fixed = TRUE))
 
   err <- expect_error(
     loc_resolve(page, target),
@@ -190,7 +191,7 @@ test_that("multiple = 'error' aborts with count, description, and a hint", {
   msg <- conditionMessage(err)
   expect_match(msg, "3 elements", fixed = TRUE)
   expect_match(msg, format_loc(target), fixed = TRUE)
-  expect_match(msg, "has_text", fixed = TRUE)
+  expect_match(msg, "match", fixed = TRUE)
   expect_match(msg, "which", fixed = TRUE)
   expect_match(msg, "within", fixed = TRUE)
 })
@@ -204,7 +205,7 @@ test_that("multiple = 'all' returns the whole set", {
 
 test_that("loc_resolve times out with a classed error showing the description", {
   page <- local_elements_page()
-  target <- pz_loc(".never", has_text = "get_weather")
+  target <- pz_loc(".never", match = "get_weather")
 
   err <- expect_error(
     loc_resolve(page, target, timeout = 0.1),
@@ -212,11 +213,11 @@ test_that("loc_resolve times out with a classed error showing the description", 
   )
   msg <- conditionMessage(err)
   expect_match(msg, "Timed out after 0.1s", fixed = TRUE)
-  # `what` is interpolated as plain text, so the quotes has_text adds
+  # `what` is interpolated as plain text, so the quotes match adds
   # reach the message verbatim.
   expect_match(
     msg,
-    '`.never` (has_text: "get_weather")',
+    '`.never` (match: "get_weather")',
     fixed = TRUE
   )
 })
@@ -249,13 +250,13 @@ test_that("re-resolving the same spec follows DOM changes", {
   expect_identical(after$count, 2L)
 })
 
-test_that("regex locators anchor normalized text and honor flags", {
+test_that("regex locators anchor normalized text and honor ignore_case", {
   page <- local_page(test_path("fixtures", "matching.html"))
   expect_identical(
     pz_get_attr(
       page,
       "id",
-      pz_loc(".label", has_text = pz_regex("^Save now$"))
+      pz_loc(".label", match = pz_regex("^Save now$"))
     ),
     c("first", "second")
   )
@@ -263,7 +264,7 @@ test_that("regex locators anchor normalized text and honor flags", {
     pz_get_attr(
       page,
       "id",
-      pz_loc(".label", has_text = pz_regex("^save now$", "i"))
+      pz_loc(".label", match = pz_regex("^save now$", ignore_case = TRUE))
     ),
     c("first", "second", "lower")
   )
@@ -271,7 +272,7 @@ test_that("regex locators anchor normalized text and honor flags", {
     pz_get_attr(
       page,
       "id",
-      pz_loc("tr", has_text = pz_regex("Report \\d+ ready"))
+      pz_loc("tr", match = pz_regex("Report \\d+ ready"))
     ),
     "ready"
   )
@@ -279,12 +280,12 @@ test_that("regex locators anchor normalized text and honor flags", {
     pz_get_attr(
       page,
       "id",
-      pz_loc(".label", has_text = pz_regex("^(Save|save) now$"))
+      pz_loc(".label", match = pz_regex("^(Save|save) now$"))
     ),
     c("first", "second", "lower")
   )
   expect_identical(
-    pz_get_count(page, pz_loc(".label", has_text = pz_regex(""))),
+    pz_get_count(page, pz_loc(".label", match = pz_regex(""))),
     5L
   )
 })
@@ -300,54 +301,59 @@ test_that("regex transport preserves escapes, quotes, Unicode and source whitesp
     )
   )
   expect_identical(
-    pz_get_count(page, pz_loc(".story", has_text = pz_regex(source))),
+    pz_get_count(page, pz_loc(".story", match = pz_regex(source))),
     1L
   )
   expect_identical(
-    pz_get_count(page, pz_loc(".story", has_text = pz_regex("  雪"))),
+    pz_get_count(page, pz_loc(".story", match = pz_regex("  雪"))),
     0L
   )
   expect_identical(
-    pz_get_count(page, pz_loc(".story", has_text = pz_regex("雪  "))),
+    pz_get_count(page, pz_loc(".story", match = pz_regex("雪  "))),
     0L
   )
 })
 
-test_that("Unicode regex flags and invalid Unicode escapes reach Chrome", {
+test_that("regexes are always Unicode-aware and reject invalid Unicode escapes", {
   page <- local_elements_page()
   pz_evaluate(page, "document.querySelector('.story').textContent = '雪'")
   expect_identical(
     pz_get_count(
       page,
-      pz_loc(".story", has_text = pz_regex("^\\p{Letter}+$", "u"))
+      pz_loc(".story", match = pz_regex("^\\p{Letter}+$"))
     ),
     1L
   )
   expect_error(
-    pz_get_count(page, pz_loc(".never", has_text = pz_regex("\\q", "u"))),
+    pz_get_count(page, pz_loc(".never", match = pz_regex("\\q"))),
     "Invalid pz_regex",
     class = "paparazzi_error_js"
   )
 })
 
-test_that("plain has_text still collapses whitespace without trimming", {
+test_that("literal matching trims both sides without matching longer labels", {
   page <- local_elements_page()
-  expect_identical(pz_get_count(page, pz_loc(".btn", has_text = " Save ")), 1L)
-  expect_identical(pz_get_count(page, pz_loc(".btn", has_text = " save ")), 0L)
+  expect_identical(pz_get_count(page, pz_loc(".btn", match = " Save ")), 2L)
+  expect_identical(pz_get_count(page, pz_loc(".btn", match = " save ")), 0L)
+  expect_identical(pz_get_count(page, pz_loc(".btn", match = "Save now")), 1L)
+  expect_identical(
+    pz_get_count(page, pz_loc(".btn", match = pz_regex("Save", fixed = TRUE))),
+    3L
+  )
 })
 
 test_that("invalid regex source errors even with empty nested scopes and unions", {
   page <- local_elements_page()
   bad <- pz_regex("[")
   expect_error(
-    pz_get_count(page, pz_loc(".never", has_text = bad)),
+    pz_get_count(page, pz_loc(".never", match = bad)),
     "Invalid pz_regex",
     class = "paparazzi_error_js"
   )
   expect_error(
     loc_resolve(
       page,
-      pz_loc(".btn", has_text = bad, within = ".never"),
+      pz_loc(".btn", match = bad, within = ".never"),
       timeout = 0
     ),
     "Invalid pz_regex",
@@ -356,20 +362,20 @@ test_that("invalid regex source errors even with empty nested scopes and unions"
   expect_error(
     pz_get_count(
       page,
-      pz_loc(".never", within = pz_loc(".never", has_text = bad))
+      pz_loc(".never", within = pz_loc(".never", match = bad))
     ),
     "Invalid pz_regex",
     class = "paparazzi_error_js"
   )
   expect_error(
-    pz_get_count(page, list(".btn", pz_loc(".never", has_text = bad))),
+    pz_get_count(page, list(".btn", pz_loc(".never", match = bad))),
     "Invalid pz_regex",
     class = "paparazzi_error_js"
   )
   expect_error(
     pz_expect_exists(
       page,
-      pz_loc(".never", has_text = bad),
+      pz_loc(".never", match = bad),
       not = TRUE,
       timeout = 0
     ),
@@ -377,12 +383,13 @@ test_that("invalid regex source errors even with empty nested scopes and unions"
   )
 })
 
-test_that("text and predicate filters run before all positional selections", {
+test_that("a combined JS condition runs before all positional selections", {
   page <- local_page(test_path("fixtures", "matching.html"))
   spec <- pz_loc(
     ".label",
-    has_text = pz_regex("^Save(?: now)?$"),
-    predicate = "el => el.dataset.ready === 'yes'"
+    match = pz_js(
+      r"(el => /^Save(?: now)?$/u.test(el.textContent.replace(/\s+/g, ' ').trim()) && el.dataset.ready === 'yes')"
+    )
   )
   expect_identical(pz_get_attr(page, "id", spec), c("first", "second"))
   first <- spec
@@ -399,7 +406,7 @@ test_that("text and predicate filters run before all positional selections", {
   expect_identical(pz_get_count(page, past), 0L)
   expect_error(
     loc_resolve(page, spec, timeout = 0),
-    "predicate",
+    "pz_js",
     class = "paparazzi_error_multiple"
   )
   expect_identical(
@@ -408,21 +415,21 @@ test_that("text and predicate filters run before all positional selections", {
   )
 })
 
-test_that("predicate invocations happen after text filtering and overlay exclusion", {
+test_that("predicates run after overlay exclusion and not without candidates", {
   page <- local_page(test_path("fixtures", "matching.html"))
   spec <- pz_loc(
     ".label",
-    has_text = pz_regex("^Save now$"),
-    predicate = "el => { if (!el.id) throw new Error('overlay'); return true; }"
+    match = pz_js(
+      r"(el => { if (!el.id) throw new Error('overlay'); return /^Save now$/u.test(el.textContent.replace(/\s+/g, ' ').trim()); })"
+    )
   )
   expect_identical(pz_get_attr(page, "id", spec), c("first", "second"))
   expect_identical(
     pz_get_count(
       page,
       pz_loc(
-        ".label",
-        has_text = "no survivors",
-        predicate = "el => { throw new Error('should not run'); }"
+        ".never",
+        match = pz_js("el => { throw new Error('should not run'); }")
       )
     ),
     0L
@@ -433,20 +440,23 @@ test_that("predicates distinguish status children from whole-row notes", {
   page <- local_page(test_path("fixtures", "matching.html"))
   spec <- pz_loc(
     "tr",
-    has_text = "Ready",
-    predicate = 'function(el) { return el.querySelector(".status")?.textContent === "Ready"; }',
+    match = pz_js(
+      'function(el) { return el.querySelector(".status")?.textContent === "Ready"; }'
+    ),
     within = pz_loc("tbody", within = "#reports")
   )
   expect_identical(
-    pz_get_count(page, pz_loc("tr", has_text = "Ready", within = "#reports")),
+    pz_get_count(
+      page,
+      pz_loc("tr", match = pz_regex("Ready", fixed = TRUE), within = "#reports")
+    ),
     3L
   )
   expect_identical(pz_get_attr(page, "id", spec), "ready")
   scope <- pz_find(page, "#reports")
   scoped_spec <- pz_loc(
     "tr",
-    has_text = "Ready",
-    predicate = spec$predicate,
+    match = spec$match,
     within = "tbody"
   )
   expect_identical(pz_get_attr(scope, "id", scoped_spec), "ready")
@@ -455,11 +465,11 @@ test_that("predicates distinguish status children from whole-row notes", {
 test_that("candidate scopes do not restrict parent and page inspection", {
   page <- local_page(test_path("fixtures", "matching.html"))
   predicate <- "el => el.closest('#outside').dataset.ready === 'yes' && document.querySelector('#ready') !== null && getComputedStyle(el).display !== 'none'"
-  spec <- pz_loc(".label", predicate = predicate, within = "#scope")
+  spec <- pz_loc(".label", match = pz_js(predicate), within = "#scope")
   expect_identical(pz_get_count(page, spec), 5L)
   scope <- pz_find(page, "#scope")
   expect_identical(
-    pz_get_count(scope, pz_loc(".label", predicate = predicate)),
+    pz_get_count(scope, pz_loc(".label", match = pz_js(predicate))),
     5L
   )
   expect_identical(pz_get_count(page), 1L)
@@ -472,7 +482,7 @@ test_that("predicate compilation works at root and pinned scope under restrictiv
     "(() => { const script = document.createElement('script'); script.textContent = 'window.cspScriptRan = true'; document.body.append(script); })()"
   )
   expect_true(pz_evaluate(page, "window.cspScriptRan === undefined"))
-  spec <- pz_loc(".label", predicate = "el => el.id === 'second'")
+  spec <- pz_loc(".label", match = pz_js("el => el.id === 'second'"))
   expect_identical(pz_get_attr(page, "id", spec), "second")
   scope <- pz_find(page, "#scope")
   expect_identical(pz_get_attr(scope, "id", spec), "second")
@@ -481,19 +491,19 @@ test_that("predicate compilation works at root and pinned scope under restrictiv
 test_that("malformed and non-function predicates error without candidates", {
   page <- local_elements_page()
   expect_error(
-    pz_get_count(page, pz_loc(".never", predicate = "el => {")),
-    "predicate",
+    pz_get_count(page, pz_loc(".never", match = pz_js("el => {"))),
+    "pz_js",
     class = "paparazzi_error_js"
   )
   expect_error(
-    pz_get_count(page, pz_loc(".btn", predicate = "42", within = ".never")),
+    pz_get_count(page, pz_loc(".btn", match = pz_js("42"), within = ".never")),
     "must evaluate to a function",
     class = "paparazzi_error_js"
   )
   expect_error(
     pz_get_count(
       page,
-      pz_loc(".never", within = pz_loc(".never", predicate = "null"))
+      pz_loc(".never", within = pz_loc(".never", match = pz_js("null")))
     ),
     "must evaluate to a function",
     class = "paparazzi_error_js"
@@ -501,7 +511,7 @@ test_that("malformed and non-function predicates error without candidates", {
   expect_error(
     pz_expect_exists(
       page,
-      list(".btn", pz_loc(".never", predicate = "true")),
+      list(".btn", pz_loc(".never", match = pz_js("true"))),
       not = TRUE,
       timeout = 0
     ),
@@ -526,12 +536,12 @@ for (name in names(invalid_predicate_returns)) {
   test_that(paste("locator predicates reject", name, "returns"), {
     page <- local_elements_page()
     expect_error(
-      loc_resolve(page, pz_loc(".btn", predicate = source), timeout = 0),
+      loc_resolve(page, pz_loc(".btn", match = pz_js(source)), timeout = 0),
       "must return primitive true or false",
       class = "paparazzi_error_js"
     )
     expect_identical(
-      pz_get_count(page, pz_loc(".never", predicate = source)),
+      pz_get_count(page, pz_loc(".never", match = pz_js(source))),
       0L
     )
   })
@@ -543,7 +553,7 @@ test_that("predicate exceptions abort immediately with target and thrown value",
   err <- expect_error(
     loc_resolve(
       page,
-      pz_loc(".btn", predicate = source, within = "#panel-inner"),
+      pz_loc(".btn", match = pz_js(source), within = "#panel-inner"),
       timeout = 5
     ),
     "status failed",
@@ -554,23 +564,23 @@ test_that("predicate exceptions abort immediately with target and thrown value",
   expect_error(
     pz_get_count(
       page,
-      pz_loc(".btn", predicate = "el => { throw 'plain failure'; }")
+      pz_loc(".btn", match = pz_js("el => { throw 'plain failure'; }"))
     ),
     "plain failure",
     class = "paparazzi_error_js"
   )
   expect_error(
-    pz_get_count(page, pz_loc(".btn", predicate = "el => { throw 42; }")),
+    pz_get_count(page, pz_loc(".btn", match = pz_js("el => { throw 42; }"))),
     "42",
     class = "paparazzi_error_js"
   )
   expect_error(
-    pz_get_count(page, pz_loc(".btn", predicate = "el => { throw null; }")),
+    pz_get_count(page, pz_loc(".btn", match = pz_js("el => { throw null; }"))),
     "null",
     class = "paparazzi_error_js"
   )
   expect_error(
-    pz_get_count(page, pz_loc(".btn", predicate = "el => { throw 42n; }")),
+    pz_get_count(page, pz_loc(".btn", match = pz_js("el => { throw 42n; }"))),
     "42",
     class = "paparazzi_error_js"
   )
@@ -579,7 +589,7 @@ test_that("predicate exceptions abort immediately with target and thrown value",
       page,
       pz_loc(
         ".btn",
-        predicate = "el => { const err = {}; err.self = err; throw err; }"
+        match = pz_js("el => { const err = {}; err.self = err; throw err; }")
       )
     ),
     "Locator predicate threw \\[object Object\\]",
@@ -587,12 +597,24 @@ test_that("predicate exceptions abort immediately with target and thrown value",
   )
 })
 
-test_that("late eligibility re-runs regex and predicate during normal auto-wait", {
+test_that("late text eligibility re-runs a regex matcher during auto-wait", {
+  page <- local_elements_page()
+  spec <- pz_loc(".late-text", match = pz_regex("^Ready \\d+$"))
+  pz_evaluate(
+    page,
+    "setTimeout(() => { document.querySelector('.late-text').textContent = 'Ready 42'; }, 100)",
+    await = FALSE
+  )
+  expect_identical(pz_get_text(page, spec), "Ready 42")
+})
+
+test_that("late eligibility re-runs a combined matcher during normal auto-wait", {
   page <- local_elements_page()
   spec <- pz_loc(
     ".late-text",
-    has_text = pz_regex("^Ready \\d+$"),
-    predicate = "el => el.querySelector('.status')?.textContent === 'Ready 42'"
+    match = pz_js(
+      r"(el => /^Ready \d+$/u.test(el.textContent.replace(/\s+/g, ' ').trim()) && el.querySelector('.status')?.textContent === 'Ready 42')"
+    )
   )
   pz_evaluate(
     page,
@@ -604,7 +626,7 @@ test_that("late eligibility re-runs regex and predicate during normal auto-wait"
 
 test_that("reusing qualifiers follows replaced nodes and changed live properties", {
   page <- local_page(test_path("fixtures", "matching.html"))
-  spec <- pz_loc("#invoice", predicate = "el => el.value === 'INV-42'")
+  spec <- pz_loc("#invoice", match = pz_js("el => el.value === 'INV-42'"))
   pz_evaluate(
     page,
     "setTimeout(() => { document.querySelector('#invoice').value = 'INV-42'; }, 100)",
@@ -618,6 +640,114 @@ test_that("reusing qualifiers follows replaced nodes and changed live properties
   expect_identical(pz_get_count(page, spec), 0L)
   pz_evaluate(page, "document.querySelector('#invoice').value = 'INV-42'")
   expect_identical(pz_get_value(page, spec), "INV-42")
+})
+
+test_that("an empty literal matches only normalized empty text", {
+  page <- local_elements_page()
+  expect_identical(
+    pz_get_count(page, pz_loc(".late-text, .story", match = "")),
+    1L
+  )
+  expect_identical(pz_get_count(page, pz_loc(".story", match = " ")), 0L)
+  expect_identical(
+    pz_get_count(page, pz_loc(".late-text, .story", match = pz_regex(""))),
+    2L
+  )
+})
+
+test_that("bare-string equality treats regex metacharacters as literal data", {
+  page <- local_elements_page()
+  literal <- "C++ [preview]"
+  pz_evaluate(
+    page,
+    paste0(
+      "document.querySelector('.story').textContent = ",
+      js_literal(literal)
+    )
+  )
+  expect_identical(pz_get_count(page, pz_loc(".story", match = literal)), 1L)
+})
+
+test_that("fixed matching escapes punctuation and preserves literal substring intent", {
+  page <- local_elements_page()
+  literal <- 'C++ [draft] (a.b)? ^$ {2} | * \\ / - 雪'
+  pz_evaluate(
+    page,
+    paste0(
+      "document.querySelector('.story').textContent = ",
+      js_literal(paste0("Before ", literal, " after"))
+    )
+  )
+  expect_identical(pz_get_count(page, pz_loc(".story", match = literal)), 0L)
+  expect_identical(
+    pz_get_count(
+      page,
+      pz_loc(".story", match = pz_regex(literal, fixed = TRUE))
+    ),
+    1L
+  )
+  expect_identical(
+    pz_get_count(
+      page,
+      pz_loc(
+        ".story",
+        match = pz_regex("  c++  [DRAFT]  ", fixed = TRUE, ignore_case = TRUE)
+      )
+    ),
+    1L
+  )
+})
+
+test_that("literal and fixed matching share Unicode whitespace normalization", {
+  page <- local_page(test_path("fixtures", "matching.html"))
+  expect_identical(
+    pz_get_attr(page, "id", pz_loc(".label", match = " Save\u00a0\u2003now ")),
+    c("first", "second")
+  )
+  literal <- pz_regex(" SAVE\u00a0\u2003now ", fixed = TRUE, ignore_case = TRUE)
+  expect_identical(
+    pz_get_attr(page, "id", pz_loc(".label", match = literal)),
+    c("first", "second", "lower")
+  )
+})
+
+test_that("Unicode mode treats an astral character as one code point", {
+  page <- local_elements_page()
+  pz_evaluate(page, "document.querySelector('.story').textContent = '😀'")
+  expect_identical(
+    pz_get_count(page, pz_loc(".story", match = pz_regex("^.$"))),
+    1L
+  )
+})
+
+test_that("preformatted and code text follow the same normalization contract", {
+  page <- local_elements_page()
+  pz_evaluate(
+    page,
+    r"(document.body.insertAdjacentHTML('beforeend', '<pre>first\n    second</pre><code>first\n    second</code>'))"
+  )
+  expect_identical(
+    pz_get_count(page, pz_loc("pre, code", match = "first second")),
+    2L
+  )
+  expect_identical(
+    pz_get_text(page, "pre, code", raw = TRUE),
+    rep("first\n    second", 2)
+  )
+  expect_identical(
+    pz_get_count(page, pz_loc("pre, code", match = pz_regex("\\n"))),
+    0L
+  )
+  expect_identical(
+    pz_get_count(
+      page,
+      pz_loc(
+        "pre, code",
+        match = pz_js(r"(el => el.textContent.includes('\n    '))")
+      )
+    ),
+    2L
+  )
 })
 
 test_that("release_elements frees the remote handle", {

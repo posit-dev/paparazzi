@@ -1,10 +1,9 @@
-#' Locate elements by CSS, with text, predicate, position, and scope qualifiers
+#' Describe elements by CSS, matching condition, position, and scope
 #'
 #' @description
 #' [pz_loc()] builds a page-independent element spec: a CSS selector,
-#' optionally narrowed by required text content (`has_text`), a JavaScript
-#' condition (`predicate`), a match position (`which`), and an ancestor
-#' scope (`within`). Specs are lazy --
+#' optionally narrowed by a matching condition (`match`), a match position
+#' (`which`), and an ancestor scope (`within`). Specs are lazy --
 #' they resolve at use time, so they follow DOM changes between uses --
 #' and can be defined once and reused across sessions.
 #'
@@ -14,19 +13,19 @@
 #'
 #' @param css A CSS selector string.
 #' @inheritParams pz_act_click
-#' @param has_text A substring or a [pz_regex()] value the element's text
-#'   content must match. Plain strings use case-sensitive substring matching
-#'   with whitespace collapsed on both sides, without trimming. A regex uses
-#'   JavaScript syntax and collapses and trims observed text; its pattern
-#'   source stays unchanged. `NULL` omits text filtering.
-#' @param predicate A trusted JavaScript function-source string receiving
-#'   one candidate element, e.g. `"el => el.querySelector('.status') !== null"`
-#'   or `"function(el) { return el.parentElement.matches('.ready'); }"`.
-#'   The function must return primitive `true` or `false`; missing returns,
-#'   other values, Boolean objects, and Promises are errors. Async functions
-#'   and awaiting are not supported. `NULL` omits predicate filtering.
+#' @param match A single bare string, [pz_regex()] value, or [pz_js()] value.
+#'   Bare strings require exact, case-sensitive equality with the element's
+#'   text content. [pz_regex()] matches text with a regular expression or,
+#'   with `fixed = TRUE`, a literal substring. paparazzi collapses whitespace
+#'   and trims both observed text and literal expected text, but never
+#'   changes regex pattern source. [pz_js()] supplies a trusted JavaScript
+#'   function receiving one candidate DOM element. The function must return
+#'   primitive `true` or `false`; other values, missing returns, Boolean
+#'   objects, and Promises are errors. Async functions and awaiting are not
+#'   supported. Matcher lists are not supported; express combined conditions
+#'   inside one JavaScript function. `NULL` omits matching.
 #' @param which Pick one match by position: `"first"`, `"last"`, or a
-#'   1-based positive integer. Applied after CSS, text, and predicate
+#'   1-based positive integer. Applied after CSS and condition
 #'   filtering; an out-of-range position means *no* match, not an error.
 #'   `NULL` keeps all matches.
 #' @param within Only match descendants of elements matching this spec
@@ -36,8 +35,8 @@
 #'
 #' @details
 #' paparazzi resolves `within`, selects CSS candidates and excludes its
-#' overlays, filters text, filters the predicate, then applies `which`.
-#' It repeats both filters on every use and auto-wait attempt. A predicate
+#' overlays, filters the matching condition, then applies `which`.
+#' It repeats the condition on every use and auto-wait attempt. A predicate
 #' returning `false` follows normal no-match retry behavior; invalid source,
 #' non-functions, exceptions, and invalid returns abort as JavaScript errors.
 #' Invalid source and non-functions error even without candidates; runtime
@@ -54,11 +53,11 @@
 #' @examples
 #' # A spec describes elements; nothing is looked up until you use it
 #' pz_loc(".task")
-#' pz_loc(".task", has_text = "passport")
-#' pz_loc("button", has_text = pz_regex("^Save$"))
-#' pz_loc("tr", predicate = 'el => el.querySelector(".status")?.textContent === "Ready"')
+#' pz_loc(".task", match = pz_regex("passport", fixed = TRUE))
+#' pz_loc("button", match = "Save")
+#' pz_loc("tr", match = pz_js('el => el.querySelector(".status")?.textContent === "Ready"'))
 #' pz_loc(".task", which = "last")
-#' pz_loc(".task-done", within = pz_loc(".task", has_text = "dentist"))
+#' pz_loc(".task-done", within = pz_loc(".task", match = pz_regex("dentist", fixed = TRUE)))
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
@@ -75,18 +74,14 @@
 pz_loc <- function(
   css,
   ...,
-  has_text = NULL,
-  predicate = NULL,
+  match = NULL,
   which = NULL,
   within = NULL
 ) {
   check_dots_empty()
   check_string(css)
-  if (!is.null(has_text) && !is_regex(has_text)) {
-    check_string(has_text)
-  }
-  if (!is.null(predicate)) {
-    check_string(predicate)
+  if (!is.null(match) && !is_regex(match) && !is_js(match)) {
+    check_string(match)
   }
   if (!is.null(which)) {
     which <- check_which(which)
@@ -97,8 +92,7 @@ pz_loc <- function(
   structure(
     list(
       css = css,
-      has_text = has_text,
-      predicate = predicate,
+      match = match,
       which = which,
       within = within
     ),
@@ -158,16 +152,15 @@ format_loc <- function(loc) {
   }
   out <- paste0("`", loc$css, "`")
   quals <- character()
-  if (!is.null(loc$has_text)) {
-    text <- if (is_regex(loc$has_text)) {
-      format_regex(loc$has_text)
+  if (!is.null(loc$match)) {
+    condition <- if (is_regex(loc$match)) {
+      format_regex(loc$match)
+    } else if (is_js(loc$match)) {
+      expect_truncate(format_js(loc$match), 80)
     } else {
-      paste0('"', loc$has_text, '"')
+      encodeString(loc$match, quote = '"')
     }
-    quals <- c(quals, paste0("has_text: ", text))
-  }
-  if (!is.null(loc$predicate)) {
-    quals <- c(quals, paste0("predicate: ", expect_truncate(loc$predicate, 60)))
+    quals <- c(quals, paste0("match: ", condition))
   }
   if (!is.null(loc$which)) {
     quals <- c(quals, paste0("which: ", loc$which))

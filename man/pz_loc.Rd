@@ -2,37 +2,29 @@
 % Please edit documentation in R/loc.R
 \name{pz_loc}
 \alias{pz_loc}
-\title{Locate elements by CSS, with text, predicate, position, and scope qualifiers}
+\title{Describe elements by CSS, matching condition, position, and scope}
 \usage{
-pz_loc(
-  css,
-  ...,
-  has_text = NULL,
-  predicate = NULL,
-  which = NULL,
-  within = NULL
-)
+pz_loc(css, ..., match = NULL, which = NULL, within = NULL)
 }
 \arguments{
 \item{css}{A CSS selector string.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{has_text}{A substring or a \code{\link[=pz_regex]{pz_regex()}} value the element's text
-content must match. Plain strings use case-sensitive substring matching
-with whitespace collapsed on both sides, without trimming. A regex uses
-JavaScript syntax and collapses and trims observed text; its pattern
-source stays unchanged. \code{NULL} omits text filtering.}
-
-\item{predicate}{A trusted JavaScript function-source string receiving
-one candidate element, e.g. \code{"el => el.querySelector('.status') !== null"}
-or \code{"function(el) { return el.parentElement.matches('.ready'); }"}.
-The function must return primitive \code{true} or \code{false}; missing returns,
-other values, Boolean objects, and Promises are errors. Async functions
-and awaiting are not supported. \code{NULL} omits predicate filtering.}
+\item{match}{A single bare string, \code{\link[=pz_regex]{pz_regex()}} value, or \code{\link[=pz_js]{pz_js()}} value.
+Bare strings require exact, case-sensitive equality with the element's
+text content. \code{\link[=pz_regex]{pz_regex()}} matches text with a regular expression or,
+with \code{fixed = TRUE}, a literal substring. paparazzi collapses whitespace
+and trims both observed text and literal expected text, but never
+changes regex pattern source. \code{\link[=pz_js]{pz_js()}} supplies a trusted JavaScript
+function receiving one candidate DOM element. The function must return
+primitive \code{true} or \code{false}; other values, missing returns, Boolean
+objects, and Promises are errors. Async functions and awaiting are not
+supported. Matcher lists are not supported; express combined conditions
+inside one JavaScript function. \code{NULL} omits matching.}
 
 \item{which}{Pick one match by position: \code{"first"}, \code{"last"}, or a
-1-based positive integer. Applied after CSS, text, and predicate
+1-based positive integer. Applied after CSS and condition
 filtering; an out-of-range position means \emph{no} match, not an error.
 \code{NULL} keeps all matches.}
 
@@ -46,9 +38,8 @@ An S3 object of class \code{paparazzi_loc}.
 }
 \description{
 \code{\link[=pz_loc]{pz_loc()}} builds a page-independent element spec: a CSS selector,
-optionally narrowed by required text content (\code{has_text}), a JavaScript
-condition (\code{predicate}), a match position (\code{which}), and an ancestor
-scope (\code{within}). Specs are lazy --
+optionally narrowed by a matching condition (\code{match}), a match position
+(\code{which}), and an ancestor scope (\code{within}). Specs are lazy --
 they resolve at use time, so they follow DOM changes between uses --
 and can be defined once and reused across sessions.
 
@@ -58,8 +49,8 @@ matches the elements of any member.
 }
 \details{
 paparazzi resolves \code{within}, selects CSS candidates and excludes its
-overlays, filters text, filters the predicate, then applies \code{which}.
-It repeats both filters on every use and auto-wait attempt. A predicate
+overlays, filters the matching condition, then applies \code{which}.
+It repeats the condition on every use and auto-wait attempt. A predicate
 returning \code{false} follows normal no-match retry behavior; invalid source,
 non-functions, exceptions, and invalid returns abort as JavaScript errors.
 Invalid source and non-functions error even without candidates; runtime
@@ -75,11 +66,11 @@ A timeout does not forcibly stop runaway JavaScript.
 \examples{
 # A spec describes elements; nothing is looked up until you use it
 pz_loc(".task")
-pz_loc(".task", has_text = "passport")
-pz_loc("button", has_text = pz_regex("^Save$"))
-pz_loc("tr", predicate = 'el => el.querySelector(".status")?.textContent === "Ready"')
+pz_loc(".task", match = pz_regex("passport", fixed = TRUE))
+pz_loc("button", match = "Save")
+pz_loc("tr", match = pz_js('el => el.querySelector(".status")?.textContent === "Ready"'))
 pz_loc(".task", which = "last")
-pz_loc(".task-done", within = pz_loc(".task", has_text = "dentist"))
+pz_loc(".task-done", within = pz_loc(".task", match = pz_regex("dentist", fixed = TRUE)))
 
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))

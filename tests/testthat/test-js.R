@@ -1,3 +1,23 @@
+test_that("pz_js wraps source without executing it or opening Chrome", {
+  source <- "el => el.querySelector('.status') !== null"
+  js <- pz_js(source)
+  expect_s3_class(js, "paparazzi_js")
+  expect_identical(js$source, source)
+  expect_identical(pz_js("[")$source, "[")
+  expect_identical(
+    capture.output(out <- print(js)),
+    paste0("<paparazzi_js> ", format_js(js))
+  )
+  expect_identical(out, js)
+})
+
+test_that("pz_js validates a single source string", {
+  expect_error(pz_js(function(el) TRUE), "source")
+  expect_error(pz_js(NA_character_), "source")
+  expect_error(pz_js(c("a", "b")), "source")
+  expect_error(pz_js("el => true", extra = TRUE), "unused argument")
+})
+
 test_that("pz_evaluate evaluates JS and returns values", {
   page <- local_page()
   expect_identical(pz_evaluate(page, "1 + 1"), 2L)

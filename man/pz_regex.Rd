@@ -2,45 +2,46 @@
 % Please edit documentation in R/regex.R
 \name{pz_regex}
 \alias{pz_regex}
-\title{Share a JavaScript regular expression across locators and expectations}
+\title{Share a regular expression across locators and expectations}
 \usage{
-pz_regex(pattern, flags = "")
+pz_regex(pattern, ..., ignore_case = FALSE, fixed = FALSE)
 }
 \arguments{
-\item{pattern}{A single string of JavaScript regular expression source.
-An empty pattern is valid. Use R string escaping, e.g. \code{"\\\\d+"} for digits.}
+\item{pattern}{A single string of JavaScript regular expression source,
+or a literal substring when \code{fixed = TRUE}. An empty pattern is valid.
+Use R string escaping, e.g. \code{"\\\\d+"} for digits.}
 
-\item{flags}{A single string of distinct JavaScript flags: \code{d}, \code{i}, \code{m},
-\code{s}, \code{u}, or \code{v}. Matching is case-sensitive unless you include \code{i}.
-Stateful flags \code{g} and \code{y}, duplicate flags, and combining \code{u} with \code{v}
-are errors. Support for individual flags depends on your Chrome version.}
+\item{...}{Checked empty; reserved for future use.}
+
+\item{ignore_case}{Ignore case differences when matching?}
+
+\item{fixed}{Match a literal substring rather than a regular expression?}
 }
 \value{
-An S3 object of class \code{paparazzi_regex}, containing pattern and flags.
+An S3 object of class \code{paparazzi_regex}.
 }
 \description{
-\code{\link[=pz_regex]{pz_regex()}} creates a scalar, page-independent matcher for
-\code{\link[=pz_loc]{pz_loc()}}'s \code{has_text} and \code{\link[=pz_expect_text]{pz_expect_text()}}, \code{\link[=pz_expect_value]{pz_expect_value()}},
-\code{\link[=pz_expect_attr]{pz_expect_attr()}}, \code{\link[=pz_expect_url]{pz_expect_url()}}, and \code{\link[=pz_expect_title]{pz_expect_title()}}.
-Chrome uses JavaScript \code{RegExp} syntax to match it. paparazzi collapses
-whitespace and trims observed strings before matching, but never changes
-the pattern source. Missing values do not match, even an empty pattern.
+\code{\link[=pz_regex]{pz_regex()}} creates a scalar, page-independent matcher for \code{\link[=pz_loc]{pz_loc()}}'s
+\code{match} and \code{\link[=pz_expect_text]{pz_expect_text()}}, \code{\link[=pz_expect_value]{pz_expect_value()}}, \code{\link[=pz_expect_attr]{pz_expect_attr()}},
+\code{\link[=pz_expect_url]{pz_expect_url()}}, and \code{\link[=pz_expect_title]{pz_expect_title()}}. Chrome matches JavaScript
+\code{RegExp} syntax in Unicode-aware mode. paparazzi collapses whitespace and
+trims observed strings, but never changes regex pattern source.
 }
 \details{
-A regex value carries its own matching semantics: \code{match} and \code{.match}
-govern only plain strings. Existing string-based \code{match = "regex"}
-and \code{.match = "regex"} expectations still use R's \code{\link[=grepl]{grepl()}} and their
-existing whitespace normalization. Use a regex value to share a matcher
-with a locator.
+With \code{fixed = TRUE}, paparazzi treats \code{pattern} as a literal substring,
+collapses and trims its whitespace, and escapes regex metacharacters.
+Use a bare string instead of \code{\link[=pz_regex]{pz_regex()}} for exact literal matching.
+Missing values do not match, even an empty pattern.
 
 Construction checks the inputs without opening a browser. Chrome checks
-pattern syntax and flag support when you use the value, including when
-the target matches no elements. One value applies to all selected elements;
-collections of regex values and mixed string/regex vectors are not supported.
+pattern syntax when you use the value, including when the target matches
+no elements. One value applies to all selected elements; collections of
+regex values and mixed string/regex vectors are not supported.
 }
 \examples{
-ready <- pz_regex("^Report \\\\d+ ready$", flags = "i")
-pz_loc(".report", has_text = ready)
-pz_loc("button", has_text = pz_regex("^Save$"))
+ready <- pz_regex("^Report \\\\d+ ready$", ignore_case = TRUE)
+pz_loc(".report", match = ready)
+pz_loc("button", match = "Save")
+pz_loc("button", match = pz_regex("Save (draft)", fixed = TRUE))
 
 }
