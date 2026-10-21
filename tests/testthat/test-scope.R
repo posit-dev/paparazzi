@@ -10,6 +10,34 @@ scope_ids <- function(els) {
   )
 }
 
+test_that("find variants select from qualified survivors without mutating the parent", {
+  page <- local_page(test_path("fixtures", "matching.html"))
+  spec <- pz_loc(
+    ".label",
+    match = pz_js(
+      "el => el.dataset.ready === 'yes' && el.textContent.replace(/\\s+/g, ' ').trim() === 'Save now'"
+    )
+  )
+  pinned <- expect_visible(pz_find(page, spec))
+  expect_identical(pz_get_attr(pinned, "id"), c("first", "second"))
+  expect_identical(
+    pz_get_attr(expect_visible(pz_find_first(page, spec)), "id"),
+    "first"
+  )
+  expect_identical(
+    pz_get_attr(expect_visible(pz_find_last(page, spec)), "id"),
+    "second"
+  )
+  expect_identical(
+    pz_get_attr(expect_visible(pz_find_nth(page, 2, spec)), "id"),
+    "second"
+  )
+  expect_identical(pz_get_count(page), 1L)
+  pz_evaluate(page, "document.querySelector('#first').dataset.ready = 'no'")
+  expect_identical(pz_get_attr(pinned, "id"), c("first", "second"))
+  expect_identical(pz_get_attr(page, "id", spec), "second")
+})
+
 test_that("pz_find pins the matched set and pushes it immutably", {
   page <- local_elements_page()
   ctx <- expect_visible(pz_find(page, ".panel"))

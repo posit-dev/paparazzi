@@ -24,8 +24,8 @@ A character vector, one entry per match.
 \description{
 \code{\link[=pz_get_text]{pz_get_text()}} returns the \code{textContent} of every element matching
 \code{target}, one entry per match. By default runs of whitespace are
-collapsed to single spaces and trimmed, matching \code{\link[=pz_expect_text]{pz_expect_text()}};
-\code{raw = TRUE} returns the text exactly as the browser holds it.
+collapsed to single spaces and trimmed; \code{raw = TRUE} returns the text
+exactly as the browser holds it.
 }
 \examples{
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}

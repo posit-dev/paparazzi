@@ -30,16 +30,21 @@ expectation or getter uses it. The same spec works across DOM updates,
 pages and sessions, and in a test, a screenshot and a recording alike.
 
 ```r
-passport <- pz_loc(".task", has_text = "passport")
+passport <- pz_loc(".task", match = pz_regex("passport"))
 passport_title <- pz_loc(".task-title", within = passport)
 page |> pz_expect_count(1, target = passport)
 pz_get_text(page, target = passport_title)
 ```
 
-`has_text` is a case-sensitive substring match on the element's text, with
-whitespace collapsed on both sides. Pick text that identifies the row, then
-target a control inside it. `within` takes a string or another spec and
-keeps only matches inside it.
+`match` accepts one bare string, `pz_regex()` value, or `pz_js()` value.
+For strings and regex values, paparazzi matches the element's text with
+whitespace collapsed and trimmed. A bare string means exact,
+case-sensitive equality with the whole text; `pz_regex()` matches a pattern,
+or a literal substring with `fixed = TRUE`. Because a `.task` row's text
+spans its title, priority badge and buttons, a substring is the way
+to find the row. Pick text that identifies it, then target a control inside
+it. `within` takes a string or another spec and keeps only matches inside
+it.
 
 ```r
 passport_button <- pz_loc(".task-done", within = passport)
@@ -48,9 +53,58 @@ page |>
   pz_expect_class("done", target = passport)
 ```
 
+## Match exact labels and relationships
+
+Use `pz_regex()` to describe a text pattern. Patterns use the JavaScript
+syntax Chrome runs, not R's, and matching is always Unicode-aware.
+paparazzi collapses whitespace and trims the text it reads before
+matching, but it never changes your pattern. Matching is case-sensitive
+unless you set `ignore_case = TRUE`; `fixed = TRUE` matches a literal
+substring instead. A bare string distinguishes Save from Save draft; use
+regex alternatives and digit patterns for dynamic labels.
+
+```r
+save <- pz_loc("button", match = "Save")
+report <- pz_loc(
+  ".report",
+  match = pz_regex("^Report \\d+ ready$", ignore_case = TRUE)
+)
+```
+
+For relationships that CSS or text cannot express, `pz_js()` describes a
+JavaScript function as a string: write an arrow function or a function
+expression, and paparazzi calls it with each candidate element. This spec
+checks the status cell, not a mention of Ready elsewhere in the row:
+
+```r
+ready_row <- pz_loc(
+  "tr",
+  match = pz_js('el => el.querySelector(".status")?.textContent.trim() === "Ready"')
+)
+```
+
+Return `true` or `false` directly: a missing return, or any other value,
+is an error. Async functions are not supported. Use code you wrote or
+understand, keep the check quick, and
+use it to read the page rather than change it: paparazzi runs it with
+full access to the page and does not restrict what it can do. `within`
+and pinned scopes limit which elements paparazzi checks, not what the
+function can inspect, so it may look at ancestors, descendants, computed
+styles and other page state. Use the function in `pz_loc()`'s `match`; for
+custom expectations, use `pz_expect_js()`, which accepts any truthy result
+rather than exactly `true` or `false`.
+
+paparazzi resolves `within`, selects CSS candidates and excludes overlays,
+applies the `match` filter, then applies `which`. It repeats the filter on
+every use and auto-wait attempt. False results retry normally; JavaScript
+exceptions abort immediately with the target and source excerpt. Invalid
+regex or JavaScript source and non-function sources error even without
+candidates. Runtime and return-value errors need an element to check. A
+timeout does not forcibly stop runaway JavaScript.
+
 ## Choose one match by position
 
-`which` applies after the CSS and text filters, and takes `"first"`,
+`which` applies after the CSS and `match` filters, and takes `"first"`,
 `"last"` or a 1-based position. Use it when order is part of the interface,
 like a newest-first task list.
 
@@ -63,7 +117,7 @@ pz_get_text(page, target = last_title)
 pz_get_text(page, target = pz_loc(".task-title", within = second_task))
 ```
 
-Because positions count the filtered matches, `which` and `has_text` combine
+Because positions count the filtered matches, `which` and `match` combine
 naturally. A position past the end matches nothing, and an expectation will
 wait for it to appear.
 

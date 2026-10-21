@@ -36,7 +36,7 @@ rects
 # Each row's element column is a context scoped to that match
 rects$element[[3]] |>
   pz_act_click() |>
-  pz_expect_url("#done")
+  pz_expect_url(pz_regex("#done$"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

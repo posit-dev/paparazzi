@@ -4,14 +4,7 @@
 \alias{pz_expect_attr}
 \title{Expect attributes}
 \usage{
-pz_expect_attr(
-  ctx,
-  .target = NULL,
-  ...,
-  .match = c("exact", "contains", "regex"),
-  .not = FALSE,
-  .timeout = NULL
-)
+pz_expect_attr(ctx, .target = NULL, ..., .not = FALSE, .timeout = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
@@ -19,12 +12,10 @@ pz_expect_attr(
 \item{.target}{A CSS selector string, a \code{\link[=pz_loc]{pz_loc()}} spec, or a list of
 either. \code{NULL} selects the current context.}
 
-\item{...}{Named attribute/value pairs. Values are character vectors;
-use backticks for names such as \code{aria-expanded}. Dynamic dots support
-splicing a named list with \verb{!!!}.}
-
-\item{.match}{Comparison mode for all pairs: \code{"exact"} (default),
-\code{"contains"}, or \code{"regex"}.}
+\item{...}{Named attribute/value pairs. Values are character vectors
+or single \code{\link[=pz_regex]{pz_regex()}} values; use backticks for names such as
+\code{aria-expanded}. Dynamic dots support splicing a named list with
+\verb{!!!}.}
 
 \item{.not}{Invert the combined expectation?}
 
@@ -36,8 +27,13 @@ splicing a named list with \verb{!!!}.}
 \description{
 \code{\link[=pz_expect_attr]{pz_expect_attr()}} passes when at least one element matches and every
 matched element satisfies every named attribute/value pair in \code{...}.
-Missing attributes satisfy no pair. Comparisons are exact by default;
-\code{.match = "contains"} or \code{"regex"} applies to all pairs in the call.
+Missing attributes satisfy no pair. String values compare by exact
+equality after whitespace normalization.
+
+Use \code{\link[=pz_regex]{pz_regex()}} as a pair's value to check a pattern instead of the
+complete attribute. You can mix strings and regexes in one call.
+Whitespace and patterns follow the same rules as \code{\link[=pz_expect_text]{pz_expect_text()}};
+a missing attribute never matches, not even an empty pattern.
 
 A length-1 value applies to every element. A vector requires exactly
 that many matches and compares pairwise, in order. With \code{.not = TRUE},
@@ -53,12 +49,14 @@ retry, timeout, and bridge behavior shared by all expectations.
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
 page |> pz_expect_attr(
-  pz_loc(".task", has_text = "tax"), `data-priority` = "high"
+  pz_loc(".task", match = pz_regex("tax")),
+  `data-priority` = "high"
 )
 
 page |>
   pz_act_click("#toggle_help") |>
-  pz_expect_attr("#toggle_help", `aria-expanded` = "true")
+  pz_expect_attr("#toggle_help", `aria-expanded` = "true") |>
+  pz_expect_attr("#toggle_help", `aria-expanded` = pz_regex("^true$"))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

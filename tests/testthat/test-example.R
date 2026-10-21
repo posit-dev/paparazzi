@@ -68,7 +68,10 @@ test_that("new tasks get drag affordances", {
   page |>
     pz_act_type("Send documents", target = "#task_title") |>
     pz_act_click("#add_task") |>
-    pz_expect_visible(pz_loc(".task", has_text = "Send documents"))
+    pz_expect_visible(pz_loc(
+      ".task",
+      match = pz_regex("Send documents", fixed = TRUE)
+    ))
 
   expect_true(
     pz_evaluate(
@@ -94,12 +97,18 @@ test_that("walkthrough keeps both high-priority task titles in view", {
       "Prepare release notes",
       target = pz_loc(".task-title", which = "first")
     ) |>
-    pz_find(pz_loc(".task", has_text = "Prepare release notes")) |>
+    pz_find(pz_loc(
+      ".task",
+      match = pz_regex("Prepare release notes", fixed = TRUE)
+    )) |>
     pz_act_click(".task-done") |>
     pz_find_reset() |>
     pz_act_click(".filters a[href='#done']") |>
     pz_act_click(".filters a[href='#all']") |>
-    pz_expect_visible(pz_loc(".task", has_text = "File tax return")) |>
+    pz_expect_visible(pz_loc(
+      ".task",
+      match = pz_regex("File tax return", fixed = TRUE)
+    )) |>
     pz_act_scroll("#toggle_help") |>
     pz_annotate_redact("[data-priority='high'] .task-title")
 
@@ -136,7 +145,10 @@ test_that("walkthrough keeps both high-priority task titles in view", {
 
 test_that("task titles can be edited, committed, and reverted", {
   page <- local_page(pz_example("tasks"))
-  task <- pz_find(page, pz_loc(".task", has_text = "Renew passport"))
+  task <- pz_find(
+    page,
+    pz_loc(".task", match = pz_regex("Renew passport", fixed = TRUE))
+  )
 
   task |> pz_act_click(".task-edit")
   expect_identical(
@@ -202,7 +214,10 @@ test_that("new tasks carry attachments and support inline editing", {
       "Send documents",
       target = pz_loc(".task-title", which = "first")
     )
-  task <- pz_find(page, pz_loc(".task", has_text = "Send documents"))
+  task <- pz_find(
+    page,
+    pz_loc(".task", match = pz_regex("Send documents", fixed = TRUE))
+  )
   expect_match(pz_get_text(task), basename(file), fixed = TRUE)
   expect_identical(pz_get_text(page, "#attachment_name"), "No file attached.")
   expect_equal(

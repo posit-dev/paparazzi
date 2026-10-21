@@ -23,6 +23,33 @@ log_ids <- function(log, id, type = NULL) {
   log[keep]
 }
 
+test_that("actions use qualified targets and retain strict single-match rules", {
+  page <- local_page(test_path("fixtures", "matching.html"))
+  pz_evaluate(
+    page,
+    "document.addEventListener('click', el => { window.matchingClick = {id: el.target.id, trusted: el.isTrusted}; });"
+  )
+  spec <- pz_loc(
+    ".label",
+    match = pz_js(
+      "el => el.dataset.ready === 'yes' && el.textContent.replace(/\\s+/g, ' ').trim() === 'Save now'"
+    )
+  )
+  expect_error(pz_act_click(page, spec), class = "paparazzi_error_multiple")
+  single <- pz_loc(
+    ".label",
+    match = pz_js(
+      "el => el.dataset.ready === 'yes' && el.textContent.replace(/\\s+/g, ' ').trim() === 'Save now'"
+    ),
+    which = "last"
+  )
+  pz_act_click(page, single)
+  expect_identical(
+    pz_evaluate(page, "window.matchingClick"),
+    list(id = "second", trusted = TRUE)
+  )
+})
+
 test_that("the actions chain through the context invisibly", {
   page <- local_actions_page()
 
@@ -1646,7 +1673,10 @@ for (scenario in names(held_selection_fallbacks)) {
 
 test_that("scoped typing replaces a selected word in a task title", {
   page <- local_page(pz_example("tasks"))
-  task <- pz_find(page, pz_loc(".task", has_text = "Book dentist appointment"))
+  task <- pz_find(
+    page,
+    pz_loc(".task", match = pz_regex("Book dentist appointment", fixed = TRUE))
+  )
 
   task |>
     pz_act_click(".task-edit") |>

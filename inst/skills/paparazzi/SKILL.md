@@ -39,8 +39,7 @@ pz_with_page(pz_example("tasks"), function(page) {
     pz_act_click("#add_task") |>
     pz_expect_text(
       "Repot the fern",
-      target = pz_loc(".task-title", which = "first"),
-      match = "exact"
+      target = pz_loc(".task-title", which = "first")
     ) |>
     pz_screenshot(image, frame = pz_frame(".task-list", pad = 16))
 }, width = 1000, height = 720, color_scheme = "light")
@@ -59,7 +58,7 @@ pz_with_page(pz_example("tasks"), function(page) {
     page |>
       pz_act_type("Repot the fern", target = "#task_title") |>
       pz_act_click("#add_task") |>
-      pz_expect_visible(pz_loc(".task", has_text = "Repot the fern")) |>
+      pz_expect_visible(pz_loc(".task", match = pz_regex("Repot the fern"))) |>
       pz_record_hold(0.5)
   }, fps = 8, scale = 0.5)
 }, width = 800, height = 600)
@@ -69,9 +68,11 @@ pz_with_page(pz_example("tasks"), function(page) {
 
 - **Read the page before choosing selectors.** Look at the app's HTML, or
   call `pz_get_elements()` and `pz_inspect()`. Target IDs, data attributes
-  and meaningful classes; add `has_text` when text identifies a row. When
-  nothing built-in fits, `pz_evaluate()` runs custom JavaScript in the
-  page and returns the value.
+  and meaningful classes; add `match` when content identifies an element: a
+  bare string for an exact whole-text label, `pz_regex()` for a pattern or
+  literal substring, `pz_js()` for a trusted, read-only JavaScript
+  relationship test. When nothing built-in fits, `pz_evaluate()` runs custom
+  JavaScript in the page and returns the value.
 - **Keep the root page and scopes apart.** `row <- pz_find(page, spec)`
   leaves `page` unchanged. Use `row` for row-level steps and `page` for
   whole-page checks.
@@ -108,7 +109,8 @@ Read the reference that matches the task.
 - [Pages and serving](references/pages-and-serving.md): what `pz_open()`
   accepts, device settings, HTTP servers, navigation and cleanup.
 - [Locators and scopes](references/locators-and-scopes.md): `pz_loc()` specs,
-  text and position filters, scoped contexts and moving between scopes.
+  text, regex and JavaScript matchers, position filters, scoped contexts and
+  moving between scopes.
 - [Testing](references/testing.md): choosing expectations, waiting on
   conditions, testthat integration and inspecting failures.
 - [Screenshots and annotations](references/screenshots-and-annotations.md):

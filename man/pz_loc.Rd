@@ -2,50 +2,93 @@
 % Please edit documentation in R/loc.R
 \name{pz_loc}
 \alias{pz_loc}
-\title{Locate elements by CSS, with text, position, and scope qualifiers}
+\title{Describe elements by CSS, matching condition, position, and scope}
 \usage{
-pz_loc(css, ..., has_text = NULL, which = NULL, within = NULL)
+pz_loc(css, ..., match = NULL, which = NULL, within = NULL)
 }
 \arguments{
 \item{css}{A CSS selector string.}
 
 \item{...}{Checked empty; reserved for future use.}
 
-\item{has_text}{Substring the element's text content must contain.
-\code{NULL} omits text filtering. Case-sensitive; whitespace collapses on
-both sides, so
-\code{has_text = "Save now"} matches text reading "Save   now".}
+\item{match}{A single bare string, \code{\link[=pz_regex]{pz_regex()}} value, or \code{\link[=pz_js]{pz_js()}} value.
+Bare strings require exact, case-sensitive equality with the element's text
+content. \code{\link[=pz_regex]{pz_regex()}} matches text with a regular expression or, with
+\code{fixed = TRUE}, a literal substring. paparazzi collapses whitespace and
+trims both observed text and literal expected text, but never changes regex
+pattern source. \code{\link[=pz_js]{pz_js()}} supplies a JavaScript function; see "JavaScript
+conditions" below. Matcher lists are not supported. \code{NULL} omits matching.}
 
-\item{which}{Pick one match by position: \code{"first"}, \code{"last"}, or a
-1-based positive integer. Applied after \code{css} and \code{has_text}
-filtering; an out-of-range position means \emph{no} match, not an error.
-\code{NULL} keeps all matches.}
+\item{which}{Pick one match by position: \code{"first"}, \code{"last"}, or a 1-based
+positive integer. Applied after CSS and condition filtering; an
+out-of-range position means \emph{no} match, not an error. \code{NULL} keeps all
+matches.}
 
-\item{within}{Only match descendants of elements matching this spec
-(a string or \code{\link[=pz_loc]{pz_loc()}}, itself fully qualified). If \code{within}
-matches nothing, the whole spec matches nothing. \code{NULL} omits the
-ancestor qualifier.}
+\item{within}{Only match descendants of elements matching this spec (a string
+or \code{\link[=pz_loc]{pz_loc()}}, itself fully qualified). If \code{within} matches nothing, the
+whole spec matches nothing. \code{NULL} omits the ancestor qualifier.}
 }
 \value{
 An S3 object of class \code{paparazzi_loc}.
 }
 \description{
-\code{\link[=pz_loc]{pz_loc()}} builds a page-independent element spec: a CSS selector,
-optionally narrowed by required text content (\code{has_text}), a match
-position (\code{which}), and an ancestor scope (\code{within}). Specs are lazy --
-they resolve at use time, so they follow DOM changes between uses --
-and can be defined once and reused across sessions.
+\code{\link[=pz_loc]{pz_loc()}} builds a page-independent element spec: a CSS selector, optionally
+narrowed by a matching condition (\code{match}), a match position (\code{which}), and
+an ancestor scope (\code{within}). Specs are lazy -- they resolve at use time, so
+they follow DOM changes between uses -- and can be defined once and reused
+across sessions.
 
-Wherever a spec is accepted, a bare string is promoted to
-\code{pz_loc(string)}, and a list of specs and strings is a union that
-matches the elements of any member.
+Wherever a spec is accepted, a bare string is promoted to \code{pz_loc(string)},
+and a list of specs and strings is a union that matches the elements of any
+member.
 }
+\details{
+paparazzi resolves \code{within}, selects CSS candidates and excludes its
+overlays, filters the matching condition, then applies \code{which}. It repeats
+the condition on every use and auto-wait attempt. A predicate returning
+\code{false} follows normal no-match retry behavior; invalid source,
+non-functions, exceptions, and invalid returns abort as JavaScript errors.
+Invalid source and non-functions error even without candidates; runtime and
+return-value checks require an invocation.
+}
+\section{JavaScript conditions}{
+
+Use \code{match = pz_js(...)} to select elements using a JavaScript condition. For
+example, you can select a table row only when its status cell says "Ready",
+rather than checking the text of the whole row. You can combine several
+checks inside one function.
+
+paparazzi calls your function with each element and keeps the element when
+the function returns \code{true}, or excludes it when it returns \code{false}. It
+repeats the check whenever it looks for matching elements, including while
+waiting for an element to become available. Return the JavaScript value
+\code{true} or \code{false} directly: returning a string or another object, or omitting
+the return, is an error. Async functions and functions returning Promises are
+not supported.
+
+Your function can inspect the element, its parents and children, styles, or
+other parts of the page. \code{within} and pinned scopes limit which elements
+paparazzi considers, not what your function can inspect. Use the function to
+read the page without changing it: paparazzi does not prevent your JavaScript
+from making changes.
+
+Use code you wrote or understand, and keep the check quick. Narrow the
+elements to check with CSS or \code{within} where possible. Code that never
+finishes, such as an endless loop, can leave the browser unresponsive;
+setting a timeout does not guarantee that such code will stop.
+}
+
 \examples{
 # A spec describes elements; nothing is looked up until you use it
 pz_loc(".task")
-pz_loc(".task", has_text = "passport")
+pz_loc(".task", match = pz_regex("passport"))
+pz_loc("button", match = "Save")
+pz_loc(
+  "tr",
+  match = pz_js('el => el.querySelector(".status")?.textContent === "Ready"')
+)
 pz_loc(".task", which = "last")
-pz_loc(".task-done", within = pz_loc(".task", has_text = "dentist"))
+pz_loc(".task-done", within = pz_loc(".task", match = pz_regex("dentist")))
 
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))

@@ -56,7 +56,7 @@ pz_wait <- function(ctx, seconds) {
 #'   pz_set_value("Buy milk", target = "#title") |>
 #'   pz_act_click("#add") |>
 #'   pz_wait_for_shiny_idle() |>
-#'   pz_expect_text("3 tasks", target = "#summary", match = "exact")
+#'   pz_expect_text("3 tasks", target = "#summary")
 #' pz_get_text(page, target = "#summary")
 #' pz_close(page)
 #'
@@ -324,7 +324,13 @@ pz_wait_for_stable <- function(
 #' @seealso [pz_find_reset()], [pz_wait_for_js()], [pz_wait_for_stable()]
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' page |> pz_act_click(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank")))
+#' page |>
+#'   pz_act_click(
+#'     pz_loc(
+#'       ".task-done",
+#'       within = pz_loc(".task", match = pz_regex("bank"))
+#'     )
+#'   )
 #' pz_get_count(page, target = ".task.done")
 #'
 #' # "Start over" is a link to a new copy of the page
@@ -553,7 +559,7 @@ pz_poll <- function(
     cli::cli_abort(
       c(
         # Plain interpolation: descriptions may carry their own quotes
-        # (has_text: "..."), and {.val} would escape them.
+        # (match: "..."), and {.val} would escape them.
         "Timed out after {timeout}s waiting for {what}.",
         if (length(info) > 0) rlang::set_names(info, "i")
       ),

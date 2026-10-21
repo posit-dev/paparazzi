@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="script-src 'none'; style-src 'unsafe-inline'">
+  <title>Matching fixture</title>
+</head>
+<body>
+  <section id="outside" data-ready="yes">
+    <div id="scope">
+      <button class="label" id="draft" data-ready="yes">Save draft</button>
+      <button class="label" id="blocked" data-ready="no">Save</button>
+      <button class="label" id="first" data-ready="yes">  Save&#160;&#8195;now  </button>
+      <button class="label" id="second" data-ready="yes">Save now</button>
+      <button class="label" id="lower" data-ready="yes">save now</button>
+      <input id="invoice" value="INV-12">
+    </div>
+  </section>
+  <table id="reports">
+    <tbody>
+      <tr id="notes-only"><td>Ready in notes</td></tr>
+      <tr id="pending"><td class="status">Pending</td><td>Ready in notes</td></tr>
+      <tr id="ready"><td class="status">Ready</td><td>Report 42 ready</td></tr>
+    </tbody>
+  </table>
+  <div id="paparazzi-overlay-root">
+    <button class="label" data-ready="yes">Save now</button>
+    <table><tr><td class="status">Ready</td></tr></table>
+  </div>
+</body>
+</html>

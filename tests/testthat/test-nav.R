@@ -274,12 +274,12 @@ test_that("explicit Shiny navigation invokes idle on the destination", {
   pz_nav_goto(page, app$url, wait = "shiny")
   expect_identical(calls$urls, app$url)
   expect_identical(pz_get_url(page), app$url)
-  pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+  pz_expect_text(page, "reactive ready", target = "#slow")
 
   calls$urls <- character()
   pz_nav_reload(page, wait = "shiny")
   expect_identical(calls$urls, app$url)
-  pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+  pz_expect_text(page, "reactive ready", target = "#slow")
 })
 
 test_that("app-backed auto waits for Shiny only on its own origin", {
@@ -287,18 +287,18 @@ test_that("app-backed auto waits for Shiny only on its own origin", {
   page <- pz_open(shiny_idle_fixture(), wait = "shiny")
   withr::defer(pz_close(page))
 
-  pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+  pz_expect_text(page, "reactive ready", target = "#slow")
   calls <- local_shiny_idle_spy()
   app_url <- pz_get_url(page)
 
   pz_nav_reload(page)
   expect_identical(calls$urls, app_url)
-  pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+  pz_expect_text(page, "reactive ready", target = "#slow")
 
   calls$urls <- character()
   pz_nav_goto(page, app_url)
   expect_identical(calls$urls, app_url)
-  pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+  pz_expect_text(page, "reactive ready", target = "#slow")
 
   calls$urls <- character()
   pz_nav_goto(page, nav_fixture_url("b"))
@@ -306,7 +306,7 @@ test_that("app-backed auto waits for Shiny only on its own origin", {
   expect_identical(pz_evaluate(page, "document.title"), "paparazzi nav B")
   pz_nav_goto(page, app_url)
   expect_identical(calls$urls, app_url)
-  pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+  pz_expect_text(page, "reactive ready", target = "#slow")
   pz_nav_back(page)
   expect_identical(calls$urls, app_url)
   expect_identical(pz_evaluate(page, "document.title"), "paparazzi nav B")
@@ -334,10 +334,10 @@ test_that("shared app handle uses Shiny auto on its origin", {
   app <- local_shiny_app(shiny_idle_fixture())
   page <- pz_open(app, wait = "shiny")
   withr::defer(pz_close(page))
-  pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+  pz_expect_text(page, "reactive ready", target = "#slow")
   calls <- local_shiny_idle_spy()
 
   pz_nav_reload(page)
   expect_identical(calls$urls, app$url)
-  pz_expect_text(page, "reactive ready", target = "#slow", match = "exact")
+  pz_expect_text(page, "reactive ready", target = "#slow")
 })

@@ -1,3 +1,40 @@
+#' Describe a JavaScript function
+#'
+#' @description
+#' Use [pz_js()] to describe a JavaScript function in R. Supply the function as
+#' a string of JavaScript code.
+#'
+#' [pz_loc()] accepts this object in its `match` argument to select elements
+#' using a JavaScript condition. See its "JavaScript conditions" section for how
+#' paparazzi calls the function and what it must return.
+#'
+#' @param source A single string defining a JavaScript function, e.g.
+#'   `"el => el.parentElement.matches('.ready')"` or
+#'   `"function(el) { return el.querySelector('.status') !== null; }"`.
+#'
+#' @return An object of class `paparazzi_js` containing the function code.
+#' @seealso
+#' * [pz_loc()] accepts the condition in `match` to select elements.
+#' * [pz_regex()] describes a text pattern for a locator or expectation.
+#' * [pz_evaluate()] runs JavaScript in the page and returns its result.
+#' * [pz_expect_js()] checks a JavaScript condition on selected elements.
+#'
+#' @examples
+#' ready <- pz_js('el => el.querySelector(".status")?.textContent === "Ready"')
+#' pz_loc("tr", match = ready)
+#'
+#' @export
+pz_js <- function(source) {
+  check_string(source)
+  structure(list(source = source), class = "paparazzi_js")
+}
+
+#' @export
+print.paparazzi_js <- function(x, ...) {
+  cli::cat_line("<paparazzi_js> ", format_js(x))
+  invisible(x)
+}
+
 #' Evaluate JavaScript in the page
 #'
 #' Evaluates `expr` in the page, optionally awaiting a returned promise, and
@@ -88,6 +125,14 @@ pz_evaluate <- function(ctx, expr, ..., await = TRUE, timeout = NULL) {
 pz_chromote <- function(ctx) {
   check_context(ctx)
   ctx$page$session
+}
+
+is_js <- function(x) {
+  inherits(x, "paparazzi_js")
+}
+
+format_js <- function(x) {
+  paste0("pz_js(", encodeString(x$source, quote = '"'), ")")
 }
 
 # CDP reports NaN/Infinity/-Infinity/-0/BigInt as unserializableValue

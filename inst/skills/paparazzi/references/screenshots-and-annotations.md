@@ -21,7 +21,7 @@ page <- pz_open(
   color_scheme = "light",
   reduced_motion = TRUE
 )
-fern <- pz_loc(".task", has_text = "Repot the fern")
+fern <- pz_loc(".task", match = pz_regex("Repot the fern"))
 page |>
   pz_act_type("Repot the fern", target = "#task_title") |>
   pz_act_click("#add_task") |>

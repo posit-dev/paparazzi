@@ -44,7 +44,7 @@ page |>
   pz_set_value("Buy milk", target = "#title") |>
   pz_act_click("#add") |>
   pz_wait_for_shiny_idle() |>
-  pz_expect_text("3 tasks", target = "#summary", match = "exact")
+  pz_expect_text("3 tasks", target = "#summary")
 pz_get_text(page, target = "#summary")
 pz_close(page)
 \dontshow{\}) # examplesIf}

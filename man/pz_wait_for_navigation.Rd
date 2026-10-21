@@ -57,7 +57,13 @@ their next use instead of acting on a stale set.
 \examples{
 \dontshow{if (paparazzi:::examples_run(site = TRUE)) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_act_click(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank")))
+page |>
+  pz_act_click(
+    pz_loc(
+      ".task-done",
+      within = pz_loc(".task", match = pz_regex("bank"))
+    )
+  )
 pz_get_count(page, target = ".task.done")
 
 # "Start over" is a link to a new copy of the page

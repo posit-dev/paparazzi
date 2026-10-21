@@ -4,24 +4,16 @@
 \alias{pz_expect_title}
 \title{Expect the page title}
 \usage{
-pz_expect_title(
-  ctx,
-  title,
-  ...,
-  match = c("contains", "exact", "regex"),
-  not = FALSE,
-  timeout = NULL
-)
+pz_expect_title(ctx, title, ..., not = FALSE, timeout = NULL)
 }
 \arguments{
 \item{ctx}{A paparazzi context.}
 
-\item{title}{The expected page title, a single string.}
+\item{title}{The expected complete page title as a single string, or a
+single \code{\link[=pz_regex]{pz_regex()}} pattern. Strings compare exactly after whitespace
+normalization.}
 
 \item{...}{Checked empty; reserved for future use.}
-
-\item{match}{How to compare \code{url}: \code{"contains"} (substring),
-\code{"exact"}, or \code{"regex"} (an R regex matched with \code{\link[=grepl]{grepl()}}).}
 
 \item{not}{Invert the check.}
 
@@ -44,7 +36,8 @@ retry, timeout, and bridge behavior shared by all expectations.
 \examples{
 \dontshow{if (paparazzi:::examples_run()) withAutoprint(\{ # examplesIf}
 page <- pz_open(pz_example("tasks"))
-page |> pz_expect_title("Tasks", match = "exact")
+page |> pz_expect_title("Tasks")
+page |> pz_expect_title(pz_regex("^tasks$", ignore_case = TRUE))
 pz_close(page)
 \dontshow{\}) # examplesIf}
 }

@@ -6,7 +6,7 @@ test_that("Shiny idle settles on a real app and returns its context invisibly", 
 
   # Output delivery does not anchor idle; the controlled busy/idle tests
   # below pin the hold's duration.
-  page |> pz_expect_text("reactive ready", target = "#slow", match = "exact")
+  page |> pz_expect_text("reactive ready", target = "#slow")
 
   result <- withVisible(pz_wait_for_shiny_idle(page, timeout = 5))
   expect_false(result$visible)
@@ -143,7 +143,7 @@ test_that("Shiny idle settles with a suspended output on a hidden tab", {
   )
 
   # Arrange visible delivery; the hidden output stays recalculating.
-  page |> pz_expect_text("fast ready", target = "#fast", match = "exact")
+  page |> pz_expect_text("fast ready", target = "#fast")
   state <- pz_evaluate(
     page,
     "({fast: document.querySelector('#fast').className, slow: document.querySelector('#slow').className})"
@@ -187,7 +187,7 @@ test_that("Shiny idle and wait=TRUE setters work after invalidating a suspended 
   # expect delivered text separately.
   page |>
     pz_set_shiny_input("tabs", "Slow") |>
-    pz_expect_text("slow ready", target = "#slow", match = "exact")
+    pz_expect_text("slow ready", target = "#slow")
   # Delivery and the class clear happen in the same message processing.
   expect_false(pz_evaluate(
     page,
@@ -213,7 +213,7 @@ test_that("Shiny idle settles after a suspended output resumes", {
     timeout = 5
   )
   pz_wait_for_shiny_idle(page, timeout = 5)
-  page |> pz_expect_text("slow ready", target = "#slow", match = "exact")
+  page |> pz_expect_text("slow ready", target = "#slow")
 })
 
 test_that("Shiny idle settles for a Shiny for Python app with a suspended tab output", {
@@ -226,7 +226,7 @@ test_that("Shiny idle settles for a Shiny for Python app with a suspended tab ou
   withr::defer(pz_close(page))
 
   # As in R, arrange delivery before testing the suspended-output state.
-  page |> pz_expect_text("fast ready", target = "#fast", match = "exact")
+  page |> pz_expect_text("fast ready", target = "#fast")
   state <- pz_evaluate(
     page,
     "({fast: document.querySelector('#fast').className, slow: document.querySelector('#slow').className})"
@@ -245,7 +245,7 @@ test_that("Shiny idle settles for a Shiny for Python app with a suspended tab ou
     pz_act_click("#go") |>
     pz_wait_for_shiny_idle(timeout = 5) |>
     pz_set_shiny_input("tabs", "Slow") |>
-    pz_expect_text("slow ready", target = "#slow", match = "exact")
+    pz_expect_text("slow ready", target = "#slow")
   # Delivery and the class clear happen in the same message processing.
   expect_false(pz_evaluate(
     page,
@@ -512,7 +512,7 @@ test_that("pz_wait_for_stable waits for text to stop changing", {
   expect_identical(res$value, page)
 
   # Once stable, the settled text is there.
-  pz_expect_text(page, "settled", target = "#ticker", match = "exact")
+  pz_expect_text(page, "settled", target = "#ticker")
 })
 
 test_that("pz_wait_for_stable samples layout with prop = 'rect'", {
@@ -574,7 +574,7 @@ test_that("pz_wait_for_stable accepts a context instead of a target", {
 
   ctx |> pz_wait_for_stable(for_ms = 300, timeout = 10)
   # target = NULL is the pinned set: #ticker itself.
-  ctx |> pz_expect_text("settled", match = "exact")
+  ctx |> pz_expect_text("settled")
 })
 
 test_that("pz_wait_for_stable samples any single property", {
@@ -689,7 +689,7 @@ test_that("a completed link navigation is caught once after the click", {
   clicked <- pz_act_click(page, "#fast-link")
   # Ensure the new document has already completed before starting the wait.
   clicked |>
-    pz_expect_text("B", target = "#page", match = "exact") |>
+    pz_expect_text("B", target = "#page") |>
     pz_wait_for_js("document.readyState === 'complete'")
 
   reset <- pz_wait_for_navigation(clicked, timeout = 2)
@@ -950,7 +950,7 @@ test_that("pz_wait_for_navigation waits for a pending navigation and resets scop
 
   # The reset context works against the new page.
   reset |>
-    pz_expect_text("You made it.", target = "#target-text", match = "exact")
+    pz_expect_text("You made it.", target = "#target-text")
 
   # The pre-navigation scope is dead: the navigation destroyed the
   # execution context its pins lived in, and the object group was
@@ -970,7 +970,7 @@ test_that("pz_wait_for_navigation follows a clicked link", {
   reset <- ctx |> pz_act_click() |> pz_wait_for_navigation(timeout = 5)
   expect_length(reset$scope, 0)
   expect_match(pz_get_url(reset), "nav-target.html", fixed = TRUE)
-  reset |> pz_expect_title("paparazzi navigation target", match = "exact")
+  reset |> pz_expect_title("paparazzi navigation target")
 
   # The same dead-scope verdict on the click-driven navigation: the
   # old pinned set's context is gone, and its next use maps to the
@@ -1000,8 +1000,7 @@ test_that("pz_wait_for_navigation(wait = 'none') resets without waiting", {
   page |>
     pz_expect_text(
       "Go to the target page",
-      target = "#nav-link",
-      match = "exact"
+      target = "#nav-link"
     )
 })
 
@@ -1030,7 +1029,7 @@ setTimeout(() => location.href = '%s', 100)
 
   pz_wait_for_navigation(page, wait = "shiny", timeout = 5)
   expect_identical(spy$urls, app$url)
-  page |> pz_expect_text("reactive ready", target = "#slow", match = "exact")
+  page |> pz_expect_text("reactive ready", target = "#slow")
 })
 
 test_that("post-action auto waits for app-backed Shiny but not a different origin", {
@@ -1043,7 +1042,7 @@ test_that("post-action auto waits for app-backed Shiny but not a different origi
   pz_evaluate(page, "setTimeout(() => location.reload(), 100)", await = FALSE)
   pz_wait_for_navigation(page, timeout = 5)
   expect_identical(spy$urls, app$url)
-  page |> pz_expect_text("reactive ready", target = "#slow", match = "exact")
+  page |> pz_expect_text("reactive ready", target = "#slow")
 
   pz_evaluate(
     page,

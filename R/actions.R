@@ -74,7 +74,9 @@ NULL
 #'
 #' # In a scoped context, target = NULL clicks the scope element
 #' page |>
-#'   pz_find(pz_loc(".task-done", within = pz_loc(".task", has_text = "bank"))) |>
+#'   pz_find(
+#'     pz_loc(".task-done", within = pz_loc(".task", match = pz_regex("bank")))
+#'   ) |>
 #'   pz_act_click()
 #' pz_get_count(page, target = ".task.done")
 #' pz_close(page)
@@ -128,7 +130,7 @@ pz_act_click <- function(
 #'
 #' @examplesIf paparazzi:::examples_run(site = TRUE)
 #' page <- pz_open(pz_example("tasks"))
-#' passport <- pz_loc(".task", has_text = "passport")
+#' passport <- pz_loc(".task", match = pz_regex("passport"))
 #'
 #' # Tasks change colour on :hover
 #' pz_get_style(page, "background-color", target = passport)
@@ -301,7 +303,7 @@ pz_act_type <- function(ctx, text, ..., target = NULL) {
 #'
 #' # Enter submits the form; the page shows "Saving..." before the task appears
 #' page |> pz_act_press("Enter")
-#' pz_expect_text(page, "Saved", target = "#status")
+#' pz_expect_text(page, pz_regex("Saved"), target = "#status")
 #' pz_get_text(page, target = pz_loc(".task-title", which = "first"))
 #'
 #' # A vector presses keys in sequence; + joins keys pressed together
@@ -636,7 +638,7 @@ pz_set_files <- function(ctx, files, ..., target = NULL) {
 #'
 #' # Typing replaces the selection
 #' page |>
-#'   pz_find(pz_loc(".task", has_text = "Renew passport")) |>
+#'   pz_find(pz_loc(".task", match = pz_regex("Renew passport"))) |>
 #'   pz_act_click(".task-edit") |>
 #'   pz_find(".task-title") |>
 #'   pz_act_select_text("passport") |>
@@ -915,7 +917,7 @@ pz_act_scroll <- function(
 #' # The tasks are HTML5 drag sources; drop "Water the plants" on the first task
 #' page |>
 #'   pz_act_drag(
-#'     pz_loc(".task", has_text = "plants"),
+#'     pz_loc(".task", match = pz_regex("plants")),
 #'     to = pz_loc(".task", which = "first")
 #'   )
 #' pz_get_text(page, target = ".task-title")

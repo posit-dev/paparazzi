@@ -7,12 +7,56 @@
 # callers never see an expression, only the function.
 loc_resolver_js <- function(locs) {
   specs <- js_literal(lapply(locs, loc_spec_fields), auto_unbox = TRUE)
+  # CDP compiles these function expressions without page-side eval, so
+  # predicates also work on pages whose CSP forbids unsafe-eval.
+  sources <- unique(unlist(lapply(locs, loc_js_sources)))
+  factories <- vapply(
+    sources,
+    function(source) {
+      paste0(
+        "[",
+        js_literal(source),
+        ", function() { return (\n",
+        source,
+        "\n); }]"
+      )
+    },
+    character(1)
+  )
   sprintf(
     r"(function() {
-const specs = %s;
-const collapse = (s) => s.replace(/\s+/g, ' ');
-const matchesText = (el, text) =>
-  text == null || collapse(el.textContent).indexOf(collapse(text)) !== -1;
+%s
+const predicateFactories = new Map([%s]);
+const prepareSpec = (spec) => {
+  const prepared = {...spec};
+  if (spec.match && spec.match.type === 'regex') {
+    prepared.textRegex = compileRegex(spec.match);
+  }
+  if (spec.match && spec.match.type === 'js') {
+    prepared.testCandidate = predicateFactories.get(spec.match.source)();
+    if (typeof prepared.testCandidate !== 'function') {
+      throw new Error('Locator predicate must evaluate to a function: ' + spec.match.source.slice(0, 60));
+    }
+  }
+  if (spec.within) prepared.within = prepareSpec(spec.within);
+  return prepared;
+};
+const specs = %s.map(prepareSpec);
+const matchesCandidate = (el, spec) => {
+  if (spec.match.type === 'exact') return matchesExact(el.textContent, spec.match.value);
+  if (spec.match.type === 'regex') return matchesRegex(el.textContent, spec.textRegex);
+  let value;
+  try {
+    value = spec.testCandidate(el);
+  } catch (err) {
+    throw new Error('Locator predicate threw ' + String(err) + ': ' + spec.match.source.slice(0, 60));
+  }
+  if (typeof value !== 'boolean') {
+    throw new Error('Locator predicate must return primitive true or false, not ' +
+      Object.prototype.toString.call(value) + ': ' + spec.match.source.slice(0, 60));
+  }
+  return value;
+};
 
 const resolveSpec = (spec) => {
   let roots;
@@ -30,8 +74,8 @@ const resolveSpec = (spec) => {
     }
   }
   els = els.filter((el) => el.closest('#%s') === null);
-  if (spec.has_text != null) {
-    els = els.filter((el) => matchesText(el, spec.has_text));
+  if (spec.match != null) {
+    els = els.filter((el) => matchesCandidate(el, spec));
   }
   if (spec.which != null) {
     if (spec.which === 'first') {
@@ -56,6 +100,8 @@ for (const spec of specs) {
 }
 return out.length ? out : null;
 })",
+    regex_js_helpers,
+    paste(factories, collapse = ",\n"),
     specs,
     OVERLAY_HOST_ID
   )
@@ -72,11 +118,24 @@ target_resolver <- function(target, call = caller_env()) {
   list(fn = loc_resolver_js(locs), description = format_loc(locs))
 }
 
+loc_js_sources <- function(loc) {
+  c(
+    if (is_js(loc$match)) loc$match$source,
+    if (!is.null(loc$within)) loc_js_sources(loc$within)
+  )
+}
+
 # A spec as a plain nested list (jsonlite won't serialize classed lists).
 loc_spec_fields <- function(loc) {
   spec <- list(css = loc$css)
-  if (!is.null(loc$has_text)) {
-    spec$has_text <- loc$has_text
+  if (!is.null(loc$match)) {
+    spec$match <- if (is_regex(loc$match)) {
+      regex_spec_fields(loc$match)
+    } else if (is_js(loc$match)) {
+      list(type = "js", source = loc$match$source)
+    } else {
+      list(type = "exact", value = loc$match)
+    }
   }
   if (!is.null(loc$which)) {
     spec$which <- loc$which
@@ -137,7 +196,7 @@ loc_resolve <- function(
     cli::cli_abort(
       c(
         "Found {resolved$count} elements matching {description}.",
-        i = "Narrow the target with {.arg has_text}, {.arg which}, or {.arg within}."
+        i = "Narrow the target with {.arg match}, {.arg which}, or {.arg within}."
       ),
       class = "paparazzi_error_multiple",
       call = call
